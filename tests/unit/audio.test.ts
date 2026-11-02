@@ -19,7 +19,7 @@ describe('planAudio',()=>{
 it('converts frames to seconds, puts the soundtrack first and skips videos without sound',async()=>{const dir=await mkdtemp(join(tmpdir(),'ove-audio-'));try{for(const f of ['music.wav','clip.mp4','quiet.mp4'])await writeFile(join(dir,f),'');
   const c=comp([{id:'v',type:'video',src:'clip',startFrame:30,trimStart:15,volume:.8},{id:'q',type:'video',src:'./quiet.mp4'},{id:'vo',type:'audio',src:'music',fadeInFrames:15,playbackRate:1.5}],{export:{audio:'music'}});
   const mix=(await planAudio(c,dir,async s=>!s.endsWith('quiet.mp4')))!;expect(mix.durationSeconds).toBe(10);
-  expect(mix.clips.map(c=>[c.source.slice(dir.length+1),c.start,c.duration,c.trim,c.rate,c.loop,c.volume,c.fadeIn])).toEqual([['music.wav',0,10,undefined,undefined,true,undefined,undefined],['clip.mp4',1,4,.5,1,false,.8,undefined],['music.wav',0,5,0,1.5,false,1,.5],['music.wav',6,4,0,1,false,1,0]]);
+  expect(mix.clips.map(c=>[c.source.slice(dir.length+1),c.start,c.duration,c.trim,c.rate,c.loop,c.volume,c.fadeIn])).toEqual([['music.wav',0,10,undefined,undefined,true,1,undefined],['clip.mp4',1,4,.5,1,false,.8,undefined],['music.wav',0,5,0,1.5,false,1,.5],['music.wav',6,4,0,1,false,1,0]]);
 }finally{await rm(dir,{recursive:true,force:true})}});
 it('reports a missing source and returns undefined when there is no sound',async()=>{await expect(planAudio(comp([{id:'vo',type:'audio',src:'./nope.wav'}]),tmpdir(),async()=>true)).rejects.toThrow(/not found/);const silent=parseComposition({version:'1.0',id:'s',name:'S',width:10,height:10,fps:30,durationFrames:30,scenes:[{id:'s',name:'S',startFrame:0,durationFrames:30,layers:[]}]});expect(await planAudio(silent,tmpdir())).toBeUndefined();});
 });

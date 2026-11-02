@@ -1,0 +1,139 @@
+﻿{
+    "words":  [
+                  {
+                      "text":  "An",
+                      "start":  0.11,
+                      "end":  0.255
+                  },
+                  {
+                      "text":  "AI",
+                      "start":  0.255,
+                      "end":  0.6
+                  },
+                  {
+                      "text":  "assistant",
+                      "start":  0.6,
+                      "end":  1.16
+                  },
+                  {
+                      "text":  "answers",
+                      "start":  1.16,
+                      "end":  1.615
+                  },
+                  {
+                      "text":  "your",
+                      "start":  1.615,
+                      "end":  1.79
+                  },
+                  {
+                      "text":  "questions,",
+                      "start":  1.79,
+                      "end":  2.985
+                  },
+                  {
+                      "text":  "and",
+                      "start":  2.985,
+                      "end":  3.125
+                  },
+                  {
+                      "text":  "then",
+                      "start":  3.125,
+                      "end":  3.31
+                  },
+                  {
+                      "text":  "you",
+                      "start":  3.31,
+                      "end":  3.45
+                  },
+                  {
+                      "text":  "decide",
+                      "start":  3.45,
+                      "end":  3.915
+                  },
+                  {
+                      "text":  "what",
+                      "start":  3.915,
+                      "end":  4.105
+                  },
+                  {
+                      "text":  "to",
+                      "start":  4.105,
+                      "end":  4.23
+                  },
+                  {
+                      "text":  "do.",
+                      "start":  4.23,
+                      "end":  5.485
+                  },
+                  {
+                      "text":  "An",
+                      "start":  5.485,
+                      "end":  5.63
+                  },
+                  {
+                      "text":  "AI",
+                      "start":  5.63,
+                      "end":  6.025
+                  },
+                  {
+                      "text":  "agent",
+                      "start":  6.025,
+                      "end":  6.425
+                  },
+                  {
+                      "text":  "takes",
+                      "start":  6.425,
+                      "end":  6.765
+                  },
+                  {
+                      "text":  "a",
+                      "start":  6.765,
+                      "end":  6.825
+                  },
+                  {
+                      "text":  "goal,",
+                      "start":  6.825,
+                      "end":  7.68
+                  },
+                  {
+                      "text":  "works",
+                      "start":  7.68,
+                      "end":  8.035
+                  },
+                  {
+                      "text":  "out",
+                      "start":  8.035,
+                      "end":  8.255
+                  },
+                  {
+                      "text":  "the",
+                      "start":  8.255,
+                      "end":  8.35
+                  },
+                  {
+                      "text":  "steps,",
+                      "start":  8.35,
+                      "end":  9.385
+                  },
+                  {
+                      "text":  "and",
+                      "start":  9.385,
+                      "end":  9.55
+                  },
+                  {
+                      "text":  "gets",
+                      "start":  9.55,
+                      "end":  9.815
+                  },
+                  {
+                      "text":  "it",
+                      "start":  9.815,
+                      "end":  9.94
+                  },
+                  {
+                      "text":  "done.",
+                      "start":  9.94,
+                      "end":  10.44
+                  }
+              ]
+}

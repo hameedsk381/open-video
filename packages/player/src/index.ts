@@ -2,16 +2,19 @@
 // renderer's own canvas runtime, so pictures match renders; timing comes from the wall clock, and frames that cannot be drawn in
 // time are skipped rather than slowing playback. Video layers use <video> elements kept in sync with the playhead (close, not
 // frame-exact like a render), and audio is scheduled with Web Audio, where playbackRate also changes pitch (renders keep pitch).
-import { loadComposition, type Composition } from '@ove/schema'; import { evaluateFrame, audioWindows } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, type DrawOperation } from '@ove/graphics';
+import { loadComposition, parseCaptions, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
 import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 export type PlayerOptions = {
   /** A composition as JSON (variables are resolved with `values`) or an already loaded one. */ composition: unknown; values?: Record<string, unknown>;
+  /** Measured audio and video for compositions that time scenes from their media ({{media[...]}}), from measureMedia in open-video-engine. */ media?: Record<string, MediaInfo>;
   /** Where relative media paths in the composition are resolved from, usually the composition file's URL. Defaults to the page URL. */ assetBase?: string | URL;
+  /** Where the built-in Inter font files are served from. Defaults to the `fonts` folder next to the Player script (the package ships it in `dist/fonts`). */ fontBase?: string | URL;
+  /** Where the built-in sound effects (sfx:…) are served from. Defaults to the `sfx` folder next to the Player script. */ sfxBase?: string | URL;
   controls?: boolean; loop?: boolean; autoplay?: boolean; /** 0–1, multiplies every sound. */ volume?: number };
 export type Player = { readonly element: HTMLElement; readonly composition: Composition; readonly frame: number; readonly playing: boolean;
   play(): Promise<void>; pause(): void; seek(frame: number): Promise<void>; setValues(values: Record<string, unknown>): Promise<void>; on(event: PlayerEvent, listener: (detail: any) => void): () => void; destroy(): void };
-type Clip = { url: string; start: number; duration: number; trim: number; rate: number; loop: boolean; volume: number; fadeIn: number; fadeOut: number };
+type Clip = { url: string; start: number; duration: number; trim: number; rate: number; loop: boolean; volume: number; fadeIn: number; fadeOut: number; envelope?: [number, number][] };
 const isUrl = (src: string) => /^(https?|data|blob):/i.test(src);
 export async function createPlayer(container: HTMLElement, options: PlayerOptions): Promise<Player> {
   const base = new URL(String(options.assetBase ?? location.href), location.href);
@@ -23,19 +26,26 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
   let composition = options.composition as Composition, runtime: CanvasRuntime, videos = new Map<string, HTMLVideoElement>(), clips: Clip[] = [];
   let frame = 0, playing = false, playFrom = 0, playStart = 0, raf = 0, drawing = false, pendingDraw = false, destroyed = false;
   let audio: AudioContext | undefined, master: GainNode | undefined, sources: AudioBufferSourceNode[] = []; const buffers = new Map<string, Promise<AudioBuffer | undefined>>();
-  const resolveSrc = (src: string) => { const target = composition.assets.find(a => a.id === src)?.src ?? src; return isUrl(target) ? target : new URL(target, base).href; };
+  const resolveSrc = (src: string) => { if (src.startsWith('sfx:')) return new URL(`${src.slice(4)}.wav`, new URL(options.sfxBase ?? './sfx/', import.meta.url)).href; const target = composition.assets.find(a => a.id === src)?.src ?? src; return isUrl(target) ? target : new URL(target, base).href; };
   // (Re)loads everything a composition needs: canvas runtime with images and fonts, one <video> per video layer, and the sound clips.
-  async function load(values?: Record<string, unknown>) { composition = loadComposition(options.composition, values ?? options.values ?? {});
+  async function load(values?: Record<string, unknown>) { composition = loadComposition(options.composition, values ?? options.values ?? {}, { media: options.media });
+    // Captions layers without inline cues load their file from the asset URL (word timings are grouped into lines while drawing).
+    const captionLayers = composition.scenes.flatMap(s => flattenAll(s.layers)).filter((l: any) => l.type === 'captions' && !l.cues);
+    await Promise.all(captionLayers.map(async (layer: any) => { const url = resolveSrc(layer.src); const response = await fetch(url); if (!response.ok) throw new Error(`Could not load captions ${layer.src}`); layer.cues = parseCaptions(await response.text(), url, Infinity); }));
     canvas.width = composition.width; canvas.height = composition.height; canvas.style.aspectRatio = `${composition.width} / ${composition.height}`;
     runtime = createCanvasRuntime(canvas, measure);
     const images = Object.fromEntries(collectImageSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, resolveSrc(src)]));
-    const fonts = composition.assets.filter(a => a.type === 'font').map(a => ({ family: a.family ?? a.id, src: a.src, url: resolveSrc(a.src), weight: a.weight ?? 400, style: a.style ?? 'normal' }));
+    // The built-in Inter faces load from fontBase (default: the fonts folder beside this script, as the package and `ove dev` serve it).
+    const fontBase = new URL(options.fontBase ?? './fonts/', import.meta.url);
+    const fonts = [...builtinFontFaces.map(face => ({ ...face, src: `builtin:${face.file}`, url: new URL(face.file, fontBase).href })), ...composition.assets.filter(a => a.type === 'font').map(a => ({ family: a.family ?? a.id, src: a.src, url: resolveSrc(a.src), weight: a.weight ?? 400, style: a.style ?? 'normal' }))];
     await runtime.load(images, fonts);
     for (const video of videos.values()) { video.pause(); video.removeAttribute('src'); video.load(); } videos = new Map();
     const videoLayers = composition.scenes.flatMap(s => flattenAll(s.layers)).filter((l: any) => l.type === 'video');
     await Promise.all(videoLayers.map((layer: any) => new Promise<void>(ok => { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.src = resolveSrc(layer.src); v.addEventListener('loadeddata', () => ok(), { once: true }); v.addEventListener('error', () => { emit('error', new Error(`Could not load video ${layer.src}`)); ok(); }, { once: true }); videos.set(layer.id, v); })));
-    const fps = composition.fps; clips = audioWindows(composition).map(({ layer, startFrame, endFrame }: any) => ({ url: resolveSrc(layer.src), start: startFrame/fps, duration: (endFrame-startFrame)/fps, trim: layer.trimStart/fps, rate: layer.playbackRate, loop: layer.loop, volume: layer.volume, fadeIn: (layer.fadeInFrames ?? 0)/fps, fadeOut: (layer.fadeOutFrames ?? 0)/fps }));
-    if (composition.export.audio) clips.unshift({ url: resolveSrc(composition.export.audio), start: 0, duration: composition.durationFrames/fps, trim: 0, rate: 1, loop: true, volume: 1, fadeIn: 0, fadeOut: 0 });
+    // Volume keyframes and ducking use the same envelopes as renders; ducking follows measured phrases when `media` was given.
+    const fps = composition.fps, others = soundIntervals(composition, options.media ?? {});
+    clips = audioWindows(composition).map(({ layer, startFrame, endFrame }: any) => { const start = startFrame/fps, duration = (endFrame-startFrame)/fps; return { url: resolveSrc(layer.src), start, duration, trim: layer.trimStart/fps, rate: layer.playbackRate, loop: layer.loop, volume: layer.volume, fadeIn: (layer.fadeInFrames ?? 0)/fps, fadeOut: (layer.fadeOutFrames ?? 0)/fps, envelope: volumeEnvelope({ layer, fps, start, duration, duck: layer.duck, others }) }; });
+    if (composition.export.audio) { const duration = composition.durationFrames/fps, volume = composition.export.audioVolume ?? 1; clips.unshift({ url: resolveSrc(composition.export.audio), start: 0, duration, trim: 0, rate: 1, loop: true, volume, fadeIn: 0, fadeOut: 0, envelope: volumeEnvelope({ layer: { volume }, fps, start: 0, duration, duck: composition.export.duck, others }) }); }
     frame = Math.min(frame, composition.durationFrames - 1); updateControls(); await draw(); }
   const flattenAll = (layers: any[]): any[] => layers.flatMap(l => l.type === 'group' ? [l, ...flattenAll(l.children ?? [])] : [l]);
   // Positions each video layer's element at the source time for this frame. Paused: seek exactly and wait. Playing: let it run and only
@@ -47,8 +57,8 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
       else { video.playbackRate = layer.playbackRate; if (Math.abs(video.currentTime - time) > 0.25) video.currentTime = time; if (video.paused) void video.play().catch(() => {}); } }));
     for (const [id, video] of videos) if (!drawables.has(id) && !video.paused) video.pause(); return drawables; }
   async function draw(exact = false) { if (drawing) { pendingDraw = true; return; } drawing = true;
-    try { const operations = prepareOperations(toDrawOperations(evaluateFrame(composition, frame))); const drawables = await syncVideos(operations, exact);
-      await runtime.draw({ width: composition.width, height: composition.height, background: composition.background, transparent: composition.export.transparent, operations }, drawables); emit('frame', frame); }
+    try { const operations = prepareOperations(toDrawOperations(evaluateFrame(composition, frame)), composition.fps); const drawables = await syncVideos(operations, exact);
+      await runtime.draw({ width: composition.width, height: composition.height, background: composition.background, transparent: composition.export.transparent, grain: composition.grain, frame, operations }, drawables); emit('frame', frame); }
     catch (error) { emit('error', error); } finally { drawing = false; if (pendingDraw) { pendingDraw = false; void draw(exact); } } }
   const decode = (url: string) => { let job = buffers.get(url); if (!job) { job = fetch(url).then(r => r.arrayBuffer()).then(data => audio!.decodeAudioData(data)).catch(() => undefined); buffers.set(url, job); } return job; };
   // Schedules every clip that is still to come from `from` seconds, so sound starts mid-clip on a seek, with volume and fades as gain automation.
@@ -59,8 +69,11 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
     decoded.forEach((buffer, i) => { const clip = clips[i]!; if (!buffer) return; const end = clip.start + clip.duration; if (end <= position) return;
       const into = Math.max(0, position - clip.start), remaining = end - Math.max(position, clip.start), when = t0 + Math.max(0, clip.start - position);
       const node = audio!.createBufferSource(); node.buffer = buffer; node.playbackRate.value = clip.rate; node.loop = clip.loop; const gain = audio!.createGain(); node.connect(gain).connect(master!);
-      const level = (t: number) => clip.volume * Math.min(1, clip.fadeIn > 0 ? t/clip.fadeIn : 1, clip.fadeOut > 0 ? (clip.duration - t)/clip.fadeOut : 1);
-      gain.gain.setValueAtTime(Math.max(0, level(into)), when); if (clip.fadeIn > into) gain.gain.linearRampToValueAtTime(clip.volume, when + (clip.fadeIn - into)); if (clip.fadeOut > 0) { const fadeStart = Math.max(into, clip.duration - clip.fadeOut); gain.gain.setValueAtTime(Math.max(0, level(fadeStart)), when + fadeStart - into); gain.gain.linearRampToValueAtTime(0, when + remaining); }
+      // Gain over clip time: the envelope (or plain volume) times the fades, scheduled as ramps between every point where either changes.
+      const envelopeAt = (t: number) => { const e = clip.envelope; if (!e?.length) return clip.volume; if (t <= e[0]![0]) return e[0]![1]; for (let i = 1; i < e.length; i++) if (t <= e[i]![0]) { const [t0, v0] = e[i-1]!, [t1, v1] = e[i]!; return t1 <= t0 ? v1 : v0 + (v1 - v0)*(t - t0)/(t1 - t0); } return e[e.length-1]![1]; };
+      const level = (t: number) => Math.max(0, envelopeAt(t) * Math.min(1, clip.fadeIn > 0 ? t/clip.fadeIn : 1, clip.fadeOut > 0 ? (clip.duration - t)/clip.fadeOut : 1));
+      const stops = [...new Set([...(clip.envelope ?? []).map(p => p[0]), clip.fadeIn, clip.duration - clip.fadeOut, into + remaining])].filter(t => t > into && t <= into + remaining).sort((a, b) => a - b);
+      gain.gain.setValueAtTime(level(into), when); for (const t of stops) gain.gain.linearRampToValueAtTime(level(t), when + (t - into));
       let offset = clip.trim + into*clip.rate; if (clip.loop) offset %= buffer.duration; if (!clip.loop && offset >= buffer.duration) return;
       node.start(Math.max(audio!.currentTime, when), offset); node.stop(Math.max(audio!.currentTime, when) + remaining); sources.push(node); }); }
   const stopAudio = () => { for (const node of sources) { try { node.stop(); } catch {} } sources = []; };

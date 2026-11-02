@@ -75,7 +75,7 @@ function dropPlayer() { if (player) { player.destroy(); player = null; } playerV
 function ensurePlayer() {
   if (player && playerVersion === state.version) return Promise.resolve(player); dropPlayer();
   return fetch('/api/source').then(function (r) { return r.json(); }).then(function (source) { return import('/player.js').then(function (m) {
-    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, assetBase: location.origin + '/media/', controls: false }); }); })
+    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, media: source.media, assetBase: location.origin + '/media/', controls: false }); }); })
     .then(function (p) { player = p; playerVersion = state.version;
       p.on('frame', function (f) { if (playing) { frame = f; draw(); } }); p.on('ended', function () { setPlaying(false); });
       p.on('error', function (e) { $('#status').textContent = 'live playback: ' + (e && e.message ? e.message : e); }); return p; });

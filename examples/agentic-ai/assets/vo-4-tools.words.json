@@ -1,0 +1,114 @@
+﻿{
+    "words":  [
+                  {
+                      "text":  "Tools",
+                      "start":  0.11,
+                      "end":  0.48
+                  },
+                  {
+                      "text":  "turn",
+                      "start":  0.48,
+                      "end":  0.805
+                  },
+                  {
+                      "text":  "answers",
+                      "start":  0.805,
+                      "end":  1.27
+                  },
+                  {
+                      "text":  "into",
+                      "start":  1.27,
+                      "end":  1.54
+                  },
+                  {
+                      "text":  "actions.",
+                      "start":  1.54,
+                      "end":  3.13
+                  },
+                  {
+                      "text":  "An",
+                      "start":  3.13,
+                      "end":  3.275
+                  },
+                  {
+                      "text":  "agent",
+                      "start":  3.275,
+                      "end":  3.685
+                  },
+                  {
+                      "text":  "can",
+                      "start":  3.685,
+                      "end":  3.905
+                  },
+                  {
+                      "text":  "search",
+                      "start":  3.905,
+                      "end":  4.26
+                  },
+                  {
+                      "text":  "for",
+                      "start":  4.26,
+                      "end":  4.455
+                  },
+                  {
+                      "text":  "information,",
+                      "start":  4.455,
+                      "end":  5.71
+                  },
+                  {
+                      "text":  "write",
+                      "start":  5.71,
+                      "end":  5.975
+                  },
+                  {
+                      "text":  "and",
+                      "start":  5.975,
+                      "end":  6.155
+                  },
+                  {
+                      "text":  "run",
+                      "start":  6.155,
+                      "end":  6.405
+                  },
+                  {
+                      "text":  "code,",
+                      "start":  6.405,
+                      "end":  7.26
+                  },
+                  {
+                      "text":  "use",
+                      "start":  7.26,
+                      "end":  7.56
+                  },
+                  {
+                      "text":  "other",
+                      "start":  7.56,
+                      "end":  7.815
+                  },
+                  {
+                      "text":  "apps,",
+                      "start":  7.815,
+                      "end":  8.685
+                  },
+                  {
+                      "text":  "and",
+                      "start":  8.685,
+                      "end":  8.82
+                  },
+                  {
+                      "text":  "remember",
+                      "start":  8.82,
+                      "end":  9.31
+                  },
+                  {
+                      "text":  "what",
+                      "start":  9.31,
+                      "end":  9.51
+                  },
+                  {
+                      "text":  "worked.",
+                      "start":  9.51,
+                      "end":  10.01
+                  }
+              ]
+}

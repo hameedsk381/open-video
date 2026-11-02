@@ -43,7 +43,8 @@ const omit=(o: Record<string, unknown>, ...keys: string[]) => Object.fromEntries
 //    otherwise each {{ }} is inserted as text.
 //  - In layers, children, scenes and repeat bodies: { "if": … } keeps an entry only when true; { "repeat": list, "as": "item", "each": [...] }
 //    emits the `each` entries once per item, with `item`, `index` (from 0) and `count` available; { "use": "component", "with": {…} } becomes a group.
-export function substituteVariables(raw: unknown, values: Record<string, VariableValue>): unknown { const problems: string[]=[];
+// `extra` adds read-only names to every scope, components included (for example `media`, the measured audio and video).
+export function substituteVariables(raw: unknown, values: Record<string, VariableValue>, extra: Record<string, unknown> = {}): unknown { const problems: string[]=[];
   const components=plain(raw) && raw.components !== undefined ? componentsSchema.safeParse(raw.components) : undefined; if (components && !components.success) problems.push(`components: ${components.error.issues.map(i => `${i.path.join('.')} ${i.message}`).join('; ')}`);
   const defs=components?.success ? components.data : {};
   const evaluate=(source: string, scope: Record<string, unknown>, path: string) => { try { return evaluateExpression(source.trim(), scope); } catch (error) { problems.push(`${path}: {{${source.trim()}}}: ${(error as Error).message}`); return undefined; } };
@@ -64,7 +65,7 @@ export function substituteVariables(raw: unknown, values: Record<string, Variabl
       if (stack.includes(component)) { problems.push(`${at}.use: component "${component}" uses itself (${[...stack, component].join(' → ')})`); return []; }
       if ('type' in item) { problems.push(`${at}: a placed component is always a group; remove "type"`); return []; }
       const given=visit(item.with ?? {}, scope, `${at}.with`, stack); let params: Record<string, VariableValue>={}; try { params=resolveVariables(def.params, plain(given) ? given : {}); } catch (error) { for (const problem of (error as VariableError).problems ?? [(error as Error).message]) problems.push(`${at}.with.${problem}`); return []; }
-      return [{ ...(visit(omit(item, 'use', 'with'), scope, at, stack) as object), type: 'group', children: expandList(def.layers, { ...values, ...params }, `components.${component}.layers`, [...stack, component]) }]; }
+      return [{ ...(visit(omit(item, 'use', 'with'), scope, at, stack) as object), type: 'group', children: expandList(def.layers, { ...extra, ...values, ...params }, `components.${component}.layers`, [...stack, component]) }]; }
     return [visit(item, scope, at, stack)]; });
-  const result=visit(raw, values, '', []); if (problems.length) throw new VariableError(problems); return result; }
+  const result=visit(raw, { ...extra, ...values }, '', []); if (problems.length) throw new VariableError(problems); return result; }
 export const interpolate = (template: string, values: Record<string, VariableValue>) => substituteVariables(template, values) as string;

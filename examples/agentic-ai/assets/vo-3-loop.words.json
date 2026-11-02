@@ -1,0 +1,149 @@
+﻿{
+    "words":  [
+                  {
+                      "text":  "Agents",
+                      "start":  0.11,
+                      "end":  0.57
+                  },
+                  {
+                      "text":  "work",
+                      "start":  0.57,
+                      "end":  0.87
+                  },
+                  {
+                      "text":  "in",
+                      "start":  0.87,
+                      "end":  0.97
+                  },
+                  {
+                      "text":  "a",
+                      "start":  0.97,
+                      "end":  1.045
+                  },
+                  {
+                      "text":  "loop.",
+                      "start":  1.045,
+                      "end":  2.385
+                  },
+                  {
+                      "text":  "They",
+                      "start":  2.385,
+                      "end":  2.52
+                  },
+                  {
+                      "text":  "perceive",
+                      "start":  2.52,
+                      "end":  3.015
+                  },
+                  {
+                      "text":  "the",
+                      "start":  3.015,
+                      "end":  3.11
+                  },
+                  {
+                      "text":  "situation,",
+                      "start":  3.11,
+                      "end":  4.37
+                  },
+                  {
+                      "text":  "plan",
+                      "start":  4.37,
+                      "end":  4.68
+                  },
+                  {
+                      "text":  "the",
+                      "start":  4.68,
+                      "end":  4.75
+                  },
+                  {
+                      "text":  "next",
+                      "start":  4.75,
+                      "end":  5.1
+                  },
+                  {
+                      "text":  "step,",
+                      "start":  5.1,
+                      "end":  6.01
+                  },
+                  {
+                      "text":  "act",
+                      "start":  6.01,
+                      "end":  6.29
+                  },
+                  {
+                      "text":  "on",
+                      "start":  6.29,
+                      "end":  6.47
+                  },
+                  {
+                      "text":  "it,",
+                      "start":  6.47,
+                      "end":  7.12
+                  },
+                  {
+                      "text":  "and",
+                      "start":  7.12,
+                      "end":  7.255
+                  },
+                  {
+                      "text":  "reflect",
+                      "start":  7.255,
+                      "end":  7.74
+                  },
+                  {
+                      "text":  "on",
+                      "start":  7.74,
+                      "end":  7.885
+                  },
+                  {
+                      "text":  "the",
+                      "start":  7.885,
+                      "end":  7.99
+                  },
+                  {
+                      "text":  "result.",
+                      "start":  7.99,
+                      "end":  9.475
+                  },
+                  {
+                      "text":  "Again",
+                      "start":  9.475,
+                      "end":  9.79
+                  },
+                  {
+                      "text":  "and",
+                      "start":  9.79,
+                      "end":  9.905
+                  },
+                  {
+                      "text":  "again,",
+                      "start":  9.905,
+                      "end":  10.81
+                  },
+                  {
+                      "text":  "until",
+                      "start":  10.81,
+                      "end":  11.16
+                  },
+                  {
+                      "text":  "the",
+                      "start":  11.16,
+                      "end":  11.265
+                  },
+                  {
+                      "text":  "goal",
+                      "start":  11.265,
+                      "end":  11.61
+                  },
+                  {
+                      "text":  "is",
+                      "start":  11.61,
+                      "end":  11.765
+                  },
+                  {
+                      "text":  "met.",
+                      "start":  11.765,
+                      "end":  12.265
+                  }
+              ]
+}

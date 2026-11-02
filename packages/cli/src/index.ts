@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
+import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
 const usage = `Usage:
   ove init <dir> [--force] [--no-skill]
   ove schema [--output composition.schema.json]
@@ -8,8 +8,10 @@ const usage = `Usage:
   ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   ove dev <composition.json> [--port 3000] [variables]
   ove validate <composition.json> [variables]
-  ove inspect <composition.json> [variables]
+  ove inspect <composition.json> [variables]          scenes, timing and measured media
+  ove captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
   ove still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
+  ove review <composition.json> [--output review.png] [--every 15] [--frames 20] [--json] [variables]   contact sheet and design checks
   ove render <composition.json> [--output output.mp4] [render options] [variables]
   ove render <composition.json> --batch rows.json --output "out/{{name}}.mp4" [render options]
 
@@ -18,6 +20,10 @@ Render options:
   --codec h264|h265               mp4 only
   --transparent                   keep the background transparent (webm, mov, png)
   --frames 30-89                  render only these frames (inclusive)
+  --crf 18 | --bitrate 8M         video quality: constant quality (lower = better) or a data rate; --audio-bitrate 256k
+  --scale 0.5                     render smaller for a quick draft
+  --loudness -14                  make the sound this loud overall (LUFS), with peaks limited
+  --no-motion-blur                skip the composition's motion blur, for a quicker draft
   --concurrency n --preset veryfast
   --workers URL,URL [--chunk-size 60] [--token T]   split the render across "ove worker" processes (mp4, webm, mov)
 Variables: --var name=value (repeatable) and/or --vars values.json; --var wins.`;
@@ -27,12 +33,14 @@ async function suppliedValues(): Promise<Record<string, unknown>> { const fromFi
 function renderSettings() { const concurrency=Number(option('--concurrency') ?? defaultConcurrency()); if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error('--concurrency must be a positive integer'); const preset=(option('--preset') ?? defaultPreset) as X264Preset; if (!x264Presets.includes(preset)) throw new Error(`--preset must be one of: ${x264Presets.join(', ')}`);
   const format=option('--format') as OutputFormat | undefined; if (format !== undefined && !outputFormats.includes(format)) throw new Error(`--format must be one of: ${outputFormats.join(', ')}`); const codec=option('--codec'); if (codec !== undefined && codec !== 'h264' && codec !== 'h265') throw new Error('--codec must be h264 or h265');
   const frames=option('--frames'), range=frames === undefined ? undefined : /^(\d+)-(\d+)$/.exec(frames); if (frames !== undefined && !range) throw new Error('--frames takes first-last, e.g. --frames 30-89');
-  return { concurrency, preset, format, codec: codec as 'h264' | 'h265' | undefined, transparent: flag('--transparent') ? true : undefined, frameRange: range ? [Number(range[1]), Number(range[2])] as [number, number] : undefined }; }
+  const number=(name: string) => { const v=option(name); if (v === undefined) return undefined; const n=Number(v); if (!Number.isFinite(n)) throw new Error(`${name} needs a number`); return n; };
+  return { concurrency, preset, format, codec: codec as 'h264' | 'h265' | undefined, transparent: flag('--transparent') ? true : undefined, frameRange: range ? [Number(range[1]), Number(range[2])] as [number, number] : undefined,
+    crf: number('--crf'), bitrate: option('--bitrate'), audioBitrate: option('--audio-bitrate'), scale: number('--scale'), loudness: number('--loudness'), motionBlur: flag('--no-motion-blur') ? false : undefined }; }
 const workerToken=() => { const token=option('--token') ?? process.env.OVE_WORKER_TOKEN; if (!token) throw new Error("--workers needs the workers' token: --token T or OVE_WORKER_TOKEN"); return token; };
 async function renderVideo(composition: Composition, baseDir: string, output: string, settings: ReturnType<typeof renderSettings>) { const started=Date.now(); let lastReport=0;
   const workers=option('--workers'); if (workers) { const chunkSize=option('--chunk-size') === undefined ? undefined : Number(option('--chunk-size')); if (chunkSize !== undefined && !(Number.isInteger(chunkSize) && chunkSize > 0)) throw new Error('--chunk-size must be a positive whole number of frames'); const token=workerToken();
     if (settings.format && !['mp4','webm','mov'].includes(settings.format)) throw new Error('--workers renders mp4, webm or mov');
-    const result=await renderDistributed(composition, { baseDir, output, workers: workers.split(',').map(url => httpWorker(url.trim(), token)), chunkSize, frameRange: settings.frameRange, format: settings.format as 'mp4' | 'webm' | 'mov' | undefined, codec: settings.codec, transparent: settings.transparent, preset: settings.preset,
+    const result=await renderDistributed(composition, { baseDir, output, workers: workers.split(',').map(url => httpWorker(url.trim(), token)), chunkSize, frameRange: settings.frameRange, format: settings.format as 'mp4' | 'webm' | 'mov' | undefined, codec: settings.codec, transparent: settings.transparent, preset: settings.preset, crf: settings.crf, bitrate: settings.bitrate, audioBitrate: settings.audioBitrate, scale: settings.scale, loudness: settings.loudness, motionBlur: settings.motionBlur,
       onProgress: ({ rendered, total, chunk, worker }) => console.log(`Chunk ${chunk} done by ${worker} (${rendered}/${total} frames)`), onWorkerError: (worker, error) => console.log(`${worker} failed a chunk, retrying elsewhere: ${error.message.split(/\r?\n/)[0]}`) });
     console.log(`Created ${result.output} (${result.format}, ${result.frames} frames, ${result.durationSeconds.toFixed(2)} seconds; rendered in ${((Date.now()-started)/1000).toFixed(1)}s on ${workers.split(',').length} worker${workers.includes(',') ? 's' : ''})`); return; }
   const result=await renderMedia(composition, { ...settings, baseDir, output, onProgress: ({ rendered, total }) => { if (rendered === total || Date.now()-lastReport > 1000) { lastReport=Date.now(); console.log(`Rendered ${rendered}/${total}`); } } });
@@ -43,7 +51,8 @@ async function renderBatch(raw: any, baseDir: string) { const rows=await readJso
   // Values become file names here, so line breaks and characters Windows or POSIX reject (including / and \, which would let a row
   // write outside the output folder) are replaced.
   const fileSafe=(values: Record<string, unknown>) => Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v).replace(/[\r\n\t]+/g, ' ').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').trim()]));
-  const jobs=rows.map((row, i) => { try { const values=resolveVariables(declarations, row); return { composition: loadComposition(raw, row), output: resolve(interpolate(pattern, fileSafe(values))) }; } catch (error) { throw new Error(`Row ${i+1}: ${(error as Error).message}`); } });
+  const jobs: { composition: Composition; output: string }[]=[];
+  for (const [i, row] of rows.entries()) { try { const values=resolveVariables(declarations, row); jobs.push({ composition: await prepareComposition(raw, row, baseDir), output: resolve(interpolate(pattern, fileSafe(values))) }); } catch (error) { throw new Error(`Row ${i+1}: ${describeError(error)}`); } }
   const seen=new Map<string, number>(); jobs.forEach((job, i) => { const first=seen.get(job.output); if (first !== undefined) throw new Error(`Rows ${first+1} and ${i+1} both write ${job.output}; make --output depend on a variable that differs`); seen.set(job.output, i); });
   for (const [i, job] of jobs.entries()) { console.log(`\n[${i+1}/${jobs.length}] ${job.output}`); await renderVideo(job.composition, baseDir, job.output, settings); } }
 // Reports everything a render depends on, so setup problems show up before a render fails halfway.
@@ -70,10 +79,18 @@ Press Ctrl+C to stop.`);
     const stop=() => { dev.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
-    else { const composition=loadComposition(raw, await suppliedValues());
+    else { const values=await suppliedValues(), composition=await prepareComposition(raw, values, baseDir);
       if (command === 'validate') console.log(`Valid: ${composition.name} (${composition.durationFrames} frames)`);
-      else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, scenes:composition.scenes.length, export:composition.export, variables:composition.variables, assets:composition.assets},null,2));
+      else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
+      else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
       else if (command === 'still') { const frame=Number(option('--frame') ?? 0); if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`); const output=resolve(option('--output') ?? `still-${frame}.png`); await renderStill(composition, { frame, output, baseDir, transparent: flag('--transparent') ? true : undefined }); console.log(`Created ${output}`); }
+      else if (command === 'review') { const output=resolve(option('--output') ?? 'review.png'), every=option('--every') === undefined ? undefined : Number(option('--every')), sheetFrames=option('--frames') === undefined ? undefined : Number(option('--frames'));
+        if (every !== undefined && !(Number.isInteger(every) && every > 0)) throw new Error('--every must be a whole number of frames'); if (sheetFrames !== undefined && !(Number.isInteger(sheetFrames) && sheetFrames > 0 && sheetFrames <= 60)) throw new Error('--frames must be from 1 to 60');
+        const result=await reviewComposition(composition, { baseDir, every, sheetFrames, onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
+        if (flag('--json')) console.log(JSON.stringify({ sheet: output, sheetFrames: result.sheetFrames, sampledFrames: result.sampledFrames, loudness: result.loudness, issues: result.issues }, null, 2));
+        else { process.stderr.write('\n'); const mark={ error: 'ERROR', warning: 'warn ', info: 'info ' }; for (const issue of result.issues) console.log(`${mark[issue.severity]}  ${issue.frame === undefined ? '' : `frame ${issue.frame} (${(issue.frame/composition.fps).toFixed(1)} s)  `}${issue.message}${issue.layer ? `  [${issue.layer}]` : ''}`);
+          const count=(s: string) => result.issues.filter(i => i.severity === s).length; console.log(`${result.issues.length ? '\n' : ''}${count('error')} errors, ${count('warning')} warnings, ${count('info')} notes from ${result.sampledFrames} sampled frames${result.loudness ? `; sound ${result.loudness.integrated.toFixed(1)} LUFS, peak ${result.loudness.truePeak.toFixed(1)} dBTP` : ''}\nContact sheet: ${output} (frames ${result.sheetFrames.join(', ')})`); }
+        if (result.issues.some(i => i.severity === 'error')) process.exitCode=1; }
       else if (command === 'render') await renderVideo(composition, baseDir, resolve(option('--output') ?? 'output.mp4'), renderSettings());
       else throw new Error(`Unknown command ${command}\n${usage}`); } }
 } catch (error) { console.error(describeError(error)); process.exitCode=1; }

@@ -20,6 +20,8 @@ pnpm ove still my-video/composition.json --frame 45 --output still.png
 pnpm ove render my-video/composition.json --output my-video/out.mp4
 ```
 
+Text uses Inter by default, an open-licence font built into OVE, so videos look the same on every machine with no fonts installed. Compositions can set a gradient `background` and `grain` (moving film grain). Text can animate word by word, letter by letter or line by line (`split`, with presets such as `rise`, `pop`, `blur` and `typewriter`), and `export.loudness` (or `--loudness -14`) makes the sound a set loudness. A scene `camera` pans, zooms, turns and shakes the whole scene (layers marked `fixed`, such as captions, stay put), and `motionBlur` blurs fast motion like a film camera. Paths can morph from one shape into another, transitions include iris, push, dip and blur, `sfx:whoosh` and six other built-in sound effects need no files, a `tempo` gives expressions `beat()`, `bar()` and `beats()` so cuts land on the music, and captions drop filler words and can emphasise key words.
+
 `init` creates a 1920×1080, five-second starter that renders as-is:
 
 - `composition.json`, the video. Edit it to make your own.
@@ -54,6 +56,12 @@ player.on('ended', () => console.log('done'));
 
 It takes the composition JSON (variables are resolved with `values`), loads media relative to `assetBase`, and offers `play`, `pause`, `seek`, `setValues`, `destroy` and events (`frame`, `play`, `pause`, `ended`, `error`). Audio uses Web Audio, so `playbackRate` changes pitch in the Player (renders keep it).
 
+## Narration-driven timing and captions
+
+Scenes can size themselves to their voiceover. OVE measures each audio and video asset (length, and the phrases between pauses) when a composition uses `media`, so `"durationFrames": "{{18 + media['vo-intro'].soundEndFrames + 38}}"` fits a scene to its narration and `"startFrame": "{{18 + media['vo-loop'].segments[2].startFrame}}"` brings something in on the third phrase. Scenes without `startFrame` follow one another automatically, and `"durationFrames": "auto"` ends the video with its last scene. `pnpm ove inspect video.json` shows the measured media and the timing it produces.
+
+`captions` layers show SRT, WebVTT or JSON captions; with word timings the word being said is highlighted. `pnpm ove captions video.json --output video.srt` exports them as a subtitle file. [examples/agentic-ai](examples/agentic-ai/composition.json) uses all of this: its narration comes from `make-narration.ps1` (Windows' built-in voices, with word timings for the captions), and nothing in it is timed by hand.
+
 ## Distributed rendering
 
 Split one render across machines (or processes) running `ove worker`:
@@ -80,7 +88,7 @@ Templates can also take lists and build layers from them: `{{ }}` holds expressi
 
 ## Making a video with a coding agent
 
-Run `pnpm ove init my-video`, open `my-video` in your agent, and describe the video you want. The skill tells the agent to edit `composition.json`, run `ove validate`, look at frames with `ove still`, and only then `ove render`. The skill source lives in [packages/cli/skills/ove/SKILL.md](packages/cli/skills/ove/SKILL.md).
+Run `pnpm ove init my-video`, open `my-video` in your agent, and describe the video you want. The skill tells the agent to edit `composition.json`, run `ove validate`, look at frames with `ove still`, check the whole video with `ove review`, and only then `ove render`. The skill source lives in [packages/cli/skills/ove/SKILL.md](packages/cli/skills/ove/SKILL.md).
 
 ## Commands
 
@@ -95,10 +103,11 @@ Run `pnpm ove init my-video`, open `my-video` in your agent, and describe the vi
 | `ove validate <composition.json>` | Check a composition and report errors |
 | `ove inspect <composition.json>` | Print duration, scenes, variables and assets |
 | `ove still <composition.json> [--frame n] [--output file.png]` | Render one frame to PNG |
-| `ove render <composition.json> [--output file.mp4] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--concurrency n] [--preset name]` | Render the video. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
+| `ove review <composition.json> [--output review.png] [--json]` | Contact sheet plus design checks: text cut off, off the frame, too small or overlapping; inconsistent type sizes and colours; frozen stretches; uniform scene lengths; mixed transitions; loudness. Exits with an error when it finds errors |
+| `ove render <composition.json> [--output file.mp4] [--loudness -14] [--no-motion-blur] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--crf n | --bitrate 8M] [--scale 0.5] [--concurrency n] [--preset name]` | Render the video. `--crf`/`--bitrate` (and `--audio-bitrate`) set quality (default crf 20 for H.264); `--scale 0.5` makes a quick half-size draft. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
 | `ove render <composition.json> --batch rows.json --output "dir/{{var}}.mp4"` | Render one video per row of variable values |
 
-`validate`, `inspect`, `still`, `render` and `dev` all accept `--var name=value` (repeatable) and `--vars values.json`.
+`validate`, `inspect`, `still`, `review`, `render` and `dev` all accept `--var name=value` (repeatable) and `--vars values.json`.
 
 Run them as `pnpm ove <command>` from this repository. Paths are relative to the repository root, and media paths inside a composition are relative to the composition file.
 

@@ -1,0 +1,94 @@
+﻿{
+    "words":  [
+                  {
+                      "text":  "But",
+                      "start":  0.11,
+                      "end":  0.275
+                  },
+                  {
+                      "text":  "autonomy",
+                      "start":  0.275,
+                      "end":  0.89
+                  },
+                  {
+                      "text":  "needs",
+                      "start":  0.89,
+                      "end":  1.18
+                  },
+                  {
+                      "text":  "guardrails.",
+                      "start":  1.18,
+                      "end":  3.015
+                  },
+                  {
+                      "text":  "Clear",
+                      "start":  3.015,
+                      "end":  3.33
+                  },
+                  {
+                      "text":  "goals",
+                      "start":  3.33,
+                      "end":  3.715
+                  },
+                  {
+                      "text":  "and",
+                      "start":  3.715,
+                      "end":  3.895
+                  },
+                  {
+                      "text":  "limits.",
+                      "start":  3.895,
+                      "end":  5.41
+                  },
+                  {
+                      "text":  "Permission",
+                      "start":  5.41,
+                      "end":  5.895
+                  },
+                  {
+                      "text":  "before",
+                      "start":  5.895,
+                      "end":  6.27
+                  },
+                  {
+                      "text":  "risky",
+                      "start":  6.27,
+                      "end":  6.76
+                  },
+                  {
+                      "text":  "actions.",
+                      "start":  6.76,
+                      "end":  8.355
+                  },
+                  {
+                      "text":  "And",
+                      "start":  8.355,
+                      "end":  8.515
+                  },
+                  {
+                      "text":  "people",
+                      "start":  8.515,
+                      "end":  8.9
+                  },
+                  {
+                      "text":  "who",
+                      "start":  8.9,
+                      "end":  9.075
+                  },
+                  {
+                      "text":  "review",
+                      "start":  9.075,
+                      "end":  9.44
+                  },
+                  {
+                      "text":  "the",
+                      "start":  9.44,
+                      "end":  9.565
+                  },
+                  {
+                      "text":  "results.",
+                      "start":  9.565,
+                      "end":  10.065
+                  }
+              ]
+}

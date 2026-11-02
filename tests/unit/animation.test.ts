@@ -2,6 +2,7 @@ import { describe,it,expect } from 'vitest'; import { ease, easingNames, cubicBe
 describe('easing',()=>{
 it('every curve starts at 0 and ends at 1',()=>{for(const k of easingNames){expect(ease(0,k)).toBe(0);expect(ease(1,k)).toBe(1);}});
 it('back and spring overshoot, hold waits for the next keyframe',()=>{expect(ease(.5,'easeOutBack')).toBeGreaterThan(1);expect(Math.max(...[.2,.3,.4].map(t=>ease(t,'spring')))).toBeGreaterThan(1.05);expect(ease(.99,'hold')).toBe(0);});
+it('shapes the role curves for their jobs',()=>{expect(ease(.2,'snap')).toBeGreaterThan(ease(.2,'land'));expect(ease(.2,'land')).toBeGreaterThan(ease(.2,'glide'));expect(ease(.2,'glide')).toBeGreaterThan(ease(.2,'easeOutCubic'));expect(ease(.5,'pop')).toBeGreaterThan(1);expect(ease(.3,'exit')).toBeLessThan(.1);expect(ease(.5,'move')).toBeCloseTo(.5,2);expect(ease(.1,'move')).toBeLessThan(.05);expect(ease(.5,'drift')).toBeCloseTo(.5,2);expect(ease(.5,'easeOutExpo')).toBeCloseTo(1-Math.pow(2,-5),6);expect(ease(.5,'easeInOutQuart')).toBeCloseTo(.5,6);});
 it('matches CSS cubic-bezier values',()=>{expect(cubicBezier(.25,.1,.25,1,.5)).toBeCloseTo(.8024,3);expect(ease(.3,[0,0,1,1])).toBeCloseTo(.3,5);});
 it('schema and engine agree on easing names',()=>{for(const k of easingNames)expect(easingSchema.safeParse(k).success).toBe(true);expect(easingSchema.safeParse('bounce').success).toBe(false);expect(easingSchema.safeParse([.4,0,.2,1]).success).toBe(true);expect(easingSchema.safeParse([1.5,0,.2,1]).success).toBe(false);});
 });
