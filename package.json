@@ -17,6 +17,14 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "devDependencies": {
+    "@ove/animation": "workspace:*",
+    "@ove/assets": "workspace:*",
+    "@ove/core": "workspace:*",
+    "@ove/ffmpeg": "workspace:*",
+    "@ove/graphics": "workspace:*",
+    "@ove/renderer": "workspace:*",
+    "@ove/schema": "workspace:*",
+    "@ove/timeline": "workspace:*",
     "@types/node": "^24.19.2",
     "esbuild": "^0.28.2",
     "playwright": "^1.64.1",
