@@ -89,6 +89,57 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
   - Use it for headlines and short statements: words for most headlines, letters for one or two short words, lines for paragraphs. Keep body text and captions whole.
 - `repeat: n` plays the keyframes n more times after the first; add `reverse: true` to play every other cycle backwards (ping-pong).
 
+## HTML layers
+
+When a layout is easier to say in HTML and CSS than with positioned layers (a card with an icon beside wrapping text, a table, a chart drawn as inline SVG, a UI mock-up, mixed typography), use an `html` layer:
+
+```json
+{ "id": "card", "type": "html", "x": 190, "y": 160, "width": 900, "height": 400,
+  "html": "<div class='card'><img src='logo'><div><h2>Real <em>HTML</em></h2><p>Flexbox, grid and rich text.</p></div><div class='bar'><i></i></div></div>",
+  "css": ".card { display: grid; grid-template-columns: 120px 1fr; gap: 28px; font-family: Inter; color: #f5f7fb } .bar i { display: block; height: 14px; width: calc(var(--progress) * 100%); background: var(--accent) }",
+  "vars": { "--accent": "#22d3ee" },
+  "animations": [{ "property": "--progress", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 45, "value": 0.72, "easing": "land" }] }] }
+```
+
+- The markup is laid out in a `width` × `height` box (overflow hidden) at the layer's `x`, `y`; the layer moves, fades, scales and rotates like any other, and works under the camera, in groups and with transitions.
+- No scripts run: `<script>`, `on…` handlers and `iframe`/`object`/`link` are removed. Nothing loads from the web: refer to pictures by asset id or path (`src="logo"`, `url(./bg.png)`); web URLs are an error. Fonts are Inter and the composition's font assets (`font-family: Inter`, or the asset's family).
+- Motion inside the markup comes from CSS variables. `vars` sets them; animate one with keyframes on `"--name"` (numbers or colours) and use it in the CSS (`width: calc(var(--progress) * 100%)`, `opacity: var(--fade)`). Every frame also gets `--t` (seconds since the layer started) and `--frame`.
+- CSS `@keyframes` work when placed in time with `--t`: `animation: rise 0.6s ease-out both; animation-delay: calc(var(--t) * -1s + 0.3s)` plays `rise` starting 0.3 s into the layer. Animations otherwise stay paused, and transitions are off, so every frame is exact.
+- Each frame where the markup, CSS or variables differ is rasterised again (about 40 ms), so animate the layer itself (x, y, opacity, scale) where you can and keep CSS-variable animation for what changes inside it. `resolution: 2` keeps it sharp when scaled up or under a camera zoom.
+- Prefer ordinary layers for headlines and captions: `ove review` reads their text, but cannot see text inside an html layer.
+
+## Lottie, shaders and layout
+
+**Lottie animations** (exported from After Effects with Bodymovin, or from LottieFiles) play frame-exactly:
+
+```json
+{ "id": "check", "type": "lottie", "src": "check-anim", "x": 860, "y": 400, "width": 200, "height": 200, "startFrame": 30 }
+```
+
+- `src` is a `"type": "lottie"` asset or a `.json` path. `fit` is `contain` (default), `cover` or `fill`; `trimStart`, `playbackRate` and `loop` work as on video layers, and without `loop` it holds its last frame.
+- After Effects expressions are not supported (they are JavaScript), and pictures must be embedded in the JSON. Use Lottie for icons, illustrations and character moments rather than redrawing them as paths.
+
+**Shaders** fill a box with a GLSL fragment shader, for animated gradients, noise, light and textures:
+
+```json
+{ "id": "sky", "type": "shader", "width": 1920, "height": 1080, "resolution": 0.5, "vars": { "--tint": "#8b5cf6" },
+  "fragment": "void main(){ vec2 uv = gl_FragCoord.xy / resolution; gl_FragColor = vec4(tint.rgb * (0.5 + 0.5 * sin(uv.x * 8.0 + time)), 1.0); }" }
+```
+
+- Provided uniforms: `time` (seconds into the layer), `resolution` (pixels), `frame`, and Shadertoy's `iTime`, `iResolution`, `iFrame`; Shadertoy code written as `mainImage(out vec4 fragColor, in vec2 fragCoord)` works as is. Each var becomes a uniform without its dashes (`--tint` → `tint`): numbers as `float`, colours as `vec4`; animate them with keyframes on `"--tint"`.
+- `resolution: 0.5` renders at half size and scales up, four times faster; fine for soft backgrounds. Renders use a software GPU so pixels match on every machine; a shader that is slow there (many loop iterations per pixel) makes renders slow.
+- A shader that does not compile stops the render with the compiler's message and the layer's id.
+
+**Layout**: give a group `layout` and its children are placed one after another, measured as they draw (text included), so cards, lists and rows reflow when text changes:
+
+```json
+{ "id": "row", "type": "group", "x": 120, "y": 120, "width": 1680, "layout": { "direction": "row", "gap": 24, "align": "center", "justify": "space-between" },
+  "children": [ { "id": "title", "type": "text", "content": "{{title}}", "fontSize": 64 }, { "id": "badge", "type": "html", "width": 220, "height": 64, "html": "…" } ] }
+```
+
+- `direction` `row` or `column`; `gap` between children; `padding` inside the group; `align` across the direction (`start`, `center`, `end`); `justify` along it (`start`, `center`, `end`, `space-between`) within the group's `width` (row) or `height` (column).
+- Children are measured by their width and height (circles by diameter, text by its lines, groups with a layout by their content); give paths and captions a width and height. A child's own `x` and `y` offset it from its place, so entrance animations still work.
+
 ## Camera and motion blur
 
 A scene's `camera` moves the view of the whole scene, like a camera over a set, instead of every layer moving on its own:

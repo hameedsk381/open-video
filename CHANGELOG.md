@@ -2,6 +2,14 @@
 
 All notable changes to Open Video Engine. The published package is `open-video-engine` (built from `packages/ove`).
 
+## Unreleased
+
+### Added
+- `html` layers: HTML and CSS (flexbox, grid, rich text, inline SVG) drawn as part of the frame, with no scripts and nothing fetched from the web. CSS variables can be animated with keyframes on `--name`, and `--t` places CSS `@keyframes` frame-exactly. Example: `examples/html-card`.
+- `lottie` layers: Lottie animations (light player, no expressions) seeked frame-exactly, with fit, trim, speed and loop.
+- `shader` layers: GLSL fragment shaders (Shadertoy `mainImage` too) with time, resolution and animatable variables as uniforms; renders use SwiftShader so pixels match on every machine.
+- `layout` on groups: children placed in a row or column with gap, padding, align and justify, measured as drawn. Example: `examples/expressive`.
+
 ## 0.2.0 (2026-11-02)
 
 ### Added

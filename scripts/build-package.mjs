@@ -36,6 +36,7 @@ const { builtinFontDir } = await import('../packages/graphics/src/fonts.ts'); co
 for (const face of builtinFontFaces) await cp(join(builtinFontDir(), face.file), join(dist, 'fonts', face.file)); await cp(join(builtinFontDir(), '..', 'LICENSE'), join(dist, 'fonts', 'LICENSE-Inter.txt'));
 // The drawing runtime and text layout, read as text by the bundled code from dist/runtime.
 await cp(join(root, 'packages/graphics/runtime'), join(dist, 'runtime'), { recursive: true });
+const { lottiePlayerPath } = await import('../packages/graphics/src/runtime.ts'); await cp(lottiePlayerPath(), join(dist, 'runtime', 'lottie_light_canvas.min.js'));
 // The built-in sound effects, for the Player (renders make their own in the cache folder).
 const { sfxFile } = await import('../packages/core/src/audio.ts'); const { sfxNames } = await import('../packages/schema/src/index.ts'); await mkdir(join(dist, 'sfx'), { recursive: true });
 for (const name of sfxNames) await cp(await sfxFile(name), join(dist, 'sfx', `${name}.wav`));

@@ -2,7 +2,7 @@
 // renderer's own canvas runtime, so pictures match renders; timing comes from the wall clock, and frames that cannot be drawn in
 // time are skipped rather than slowing playback. Video layers use <video> elements kept in sync with the playhead (close, not
 // frame-exact like a render), and audio is scheduled with Web Audio, where playbackRate also changes pitch (renders keep pitch).
-import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
+import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, collectLottieSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
 import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 export type PlayerOptions = {
@@ -38,7 +38,8 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
     // The built-in Inter faces load from fontBase (default: the fonts folder beside this script, as the package and `ove dev` serve it).
     const fontBase = new URL(options.fontBase ?? './fonts/', import.meta.url);
     const fonts = [...builtinFontFaces.map(face => ({ ...face, src: `builtin:${face.file}`, url: new URL(face.file, fontBase).href })), ...composition.assets.filter(a => a.type === 'font').map(a => ({ family: a.family ?? a.id, src: a.src, url: resolveSrc(a.src), weight: a.weight ?? 400, style: a.style ?? 'normal' }))];
-    await runtime.load(images, fonts);
+    const lotties = Object.fromEntries(collectLottieSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, resolveSrc(src)]));
+    await runtime.load(images, fonts, lotties);
     for (const video of videos.values()) { video.pause(); video.removeAttribute('src'); video.load(); } videos = new Map();
     const videoLayers = composition.scenes.flatMap(s => flattenAll(s.layers)).filter((l: any) => l.type === 'video');
     await Promise.all(videoLayers.map((layer: any) => new Promise<void>(ok => { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.src = resolveSrc(layer.src); v.addEventListener('loadeddata', () => ok(), { once: true }); v.addEventListener('error', () => { emit('error', new Error(`Could not load video ${layer.src}`)); ok(); }, { once: true }); videos.set(layer.id, v); })));
