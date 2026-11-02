@@ -1,7 +1,7 @@
 // Distributed rendering: the frame range is split into chunks, workers render each chunk as a silent segment, and the segments are
 // joined without re-encoding while the composition's audio is mixed once over the whole result (so there are no audio seams).
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { dirname, extname, isAbsolute, join, resolve } from 'node:path'; import { timingSafeEqual } from 'node:crypto';
-import { exportSchema, type Composition } from '@ove/schema'; import { isUrl } from '@ove/assets'; import { concatSegments, probe, defaultPreset, type X264Preset } from '@ove/ffmpeg'; import { masterAudio } from './audio';
+import { exportSchema, isBuiltinSound, type Composition } from '@ove/schema'; import { isUrl } from '@ove/assets'; import { concatSegments, probe, defaultPreset, type X264Preset } from '@ove/ffmpeg'; import { masterAudio } from './audio';
 import type { OutputFormat, RenderMediaResult, RenderProgress } from './index';
 export type ChunkFormat = 'mp4' | 'webm' | 'mov';
 export type ChunkSettings = { format: ChunkFormat; codec: 'h264' | 'h265'; transparent: boolean; preset: X264Preset; crf?: number; bitrate?: string; scale?: number };
@@ -12,7 +12,7 @@ export function planChunks(first: number, last: number, chunkSize: number): Chun
   for (let start=first, index=0; start <= last; start+=chunkSize, index++) jobs.push({ index, frameRange: [start, Math.min(last, start+chunkSize-1)] }); return jobs; }
 // Workers may run elsewhere, so relative media paths become absolute here. They must still exist at those paths on each worker
 // (same machine or a shared drive) unless the composition uses URLs.
-export function absolutizeSources(composition: Composition, baseDir: string): Composition { const abs=(src: string) => isUrl(src) || isAbsolute(src) || composition.assets.some(a => a.id === src) ? src : resolve(baseDir, src);
+export function absolutizeSources(composition: Composition, baseDir: string): Composition { const abs=(src: string) => isUrl(src) || isAbsolute(src) || isBuiltinSound(src) || composition.assets.some(a => a.id === src) ? src : resolve(baseDir, src);
   const fix=(layer: any): any => ({ ...layer, ...(typeof layer.src === 'string' ? { src: abs(layer.src) } : {}), ...(layer.children ? { children: layer.children.map(fix) } : {}) });
   return { ...composition, assets: composition.assets.map(a => ({ ...a, src: isUrl(a.src) || isAbsolute(a.src) ? a.src : resolve(baseDir, a.src) })), scenes: composition.scenes.map(s => ({ ...s, layers: s.layers.map(fix) })), export: { ...composition.export, audio: composition.export.audio && !composition.assets.some(a => a.id === composition.export.audio) ? abs(composition.export.audio) : composition.export.audio } }; }
 export type RenderDistributedOptions = { output: string; baseDir?: string; workers: RenderWorker[]; chunkSize?: number; frameRange?: [number, number]; format?: ChunkFormat; codec?: 'h264' | 'h265'; transparent?: boolean; preset?: X264Preset; crf?: number; bitrate?: string; audioBitrate?: string; scale?: number; loudness?: number; motionBlur?: boolean;

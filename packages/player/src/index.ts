@@ -2,7 +2,7 @@
 // renderer's own canvas runtime, so pictures match renders; timing comes from the wall clock, and frames that cannot be drawn in
 // time are skipped rather than slowing playback. Video layers use <video> elements kept in sync with the playhead (close, not
 // frame-exact like a render), and audio is scheduled with Web Audio, where playbackRate also changes pitch (renders keep pitch).
-import { loadComposition, parseCaptions, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
+import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
 import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 export type PlayerOptions = {
@@ -26,7 +26,7 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
   let composition = options.composition as Composition, runtime: CanvasRuntime, videos = new Map<string, HTMLVideoElement>(), clips: Clip[] = [];
   let frame = 0, playing = false, playFrom = 0, playStart = 0, raf = 0, drawing = false, pendingDraw = false, destroyed = false;
   let audio: AudioContext | undefined, master: GainNode | undefined, sources: AudioBufferSourceNode[] = []; const buffers = new Map<string, Promise<AudioBuffer | undefined>>();
-  const resolveSrc = (src: string) => { if (src.startsWith('sfx:')) return new URL(`${src.slice(4)}.wav`, new URL(options.sfxBase ?? './sfx/', import.meta.url)).href; const target = composition.assets.find(a => a.id === src)?.src ?? src; return isUrl(target) ? target : new URL(target, base).href; };
+  const resolveSrc = (src: string) => { if (isBuiltinSound(src)) return new URL(`${builtinSoundName(src)}.wav`, new URL(options.sfxBase ?? './sfx/', import.meta.url)).href; const target = composition.assets.find(a => a.id === src)?.src ?? src; return isUrl(target) ? target : new URL(target, base).href; };
   // (Re)loads everything a composition needs: canvas runtime with images and fonts, one <video> per video layer, and the sound clips.
   async function load(values?: Record<string, unknown>) { composition = loadComposition(options.composition, values ?? options.values ?? {}, { media: options.media });
     // Captions layers without inline cues load their file from the asset URL (word timings are grouped into lines while drawing).
