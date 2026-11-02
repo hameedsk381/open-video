@@ -99,6 +99,8 @@ The drawing code lives in `canvasRuntimeSource` (`@ove/graphics`) as a factory, 
 
 ## Studio
 
+The dev server listens on 127.0.0.1, but pages elsewhere in the same browser can still send it requests (a POST with a text/plain body is a CORS simple request, sent without a preflight) or reach it through a domain resolving to 127.0.0.1 (DNS rebinding). Every request must therefore name the server itself as its `Host` (127.0.0.1, localhost or [::1] on its port, plus `allowHosts`), and every request that changes state must carry the server's own `Origin` and an `application/json` body, which a cross-site page cannot send without a preflight the server never grants. `tests/integration/dev-server.test.ts` covers both.
+
 `packages/cli/src/studio.ts` maps the expanded composition back to the file: `layerTimeline` lists layers with absolute frame windows, and a layer is editable when exactly one object with its id is written literally in the file's scenes (not inside a repeat body or a component definition). `applyLayerEdit` changes plain fields on a copy, refusing structural keys and non-scalar values; the dev server validates the result with `loadComposition` before writing it in the file's own indentation, and keeps the previous text for undo, which restores the file byte for byte.
 
 ## Media-driven timing and captions

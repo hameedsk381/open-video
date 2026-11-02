@@ -143,7 +143,7 @@ function showPropsError(message) { var e = document.querySelector('#propsError')
 function editLayer(set, unset) { showPropsError(''); $('#status').textContent = 'saving…';
   fetch('/api/layer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: selected, set: set, unset: unset }) }).then(function (r) { return r.json(); })
     .then(function (result) { if (!result.ok) { showPropsError(result.error); renderLayers(); $('#status').textContent = 'not saved'; } }); }
-function undo() { fetch('/api/undo', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (result) { if (!result.ok) $('#status').textContent = result.error; }); }
+function undo() { fetch('/api/undo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); }).then(function (result) { if (!result.ok) $('#status').textContent = result.error; }); }
 function renderTimeline() {
   var c = comp(), box = $('#scenes'); box.innerHTML = ''; if (!c) return;
   c.scenes.forEach(function (s) { var el = document.createElement('div'); el.className = 'scene'; el.textContent = s.name; el.title = s.name + ' · frames ' + s.startFrame + '–' + (s.startFrame + s.durationFrames - 1);

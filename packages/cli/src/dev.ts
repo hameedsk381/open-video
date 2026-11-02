@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'; import { watch } from 'node:fs'; import { readFile, writeFile } from 'node:fs/promises'; import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 import { loadComposition, sfxNames, variablesSchema, resolveVariables, describeError, type Composition, type MediaInfo } from '@ove/schema'; import { measureMedia, attachCaptions, sfxFile } from '@ove/core'; import { createRenderer, defaultConcurrency, type Renderer } from '@ove/renderer'; import { builtinFontFaces } from '@ove/graphics'; import { builtinFontDir } from '@ove/graphics/fonts'; import { devPage } from './dev-page'; import { findRawLayers, layerTimeline, applyLayerEdit, formatLike } from './studio';
-export type DevOptions = { port?: number; values?: Record<string, unknown>; concurrency?: number };
+// allowHosts: extra host names (e.g. a reverse proxy's) the server answers to, besides 127.0.0.1 and localhost.
+export type DevOptions = { port?: number; values?: Record<string, unknown>; concurrency?: number; allowHosts?: string[] };
 const mediaTypes: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf' };
 // The installed package ships a prebuilt player.js next to the CLI; from source it is bundled on first use (needs esbuild, a dev dependency).
 let playerCode: Promise<string> | undefined;
@@ -24,7 +25,15 @@ export async function startDevServer(file: string, options: DevOptions = {}): Pr
   const writeComposition=async (next: unknown) => { loadComposition(next, values, { media: await measureMedia(next, baseDir) }); const previous=await readFile(path, 'utf8'); history.push(previous); if (history.length > 100) history.shift(); await writeFile(path, formatLike(previous, next)); };
   const send=(res: ServerResponse, status: number, type: string, body: string | Buffer) => { res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' }); res.end(body); };
   const readBody=(req: IncomingMessage) => new Promise<string>((ok, fail) => { let body=''; req.on('data', chunk => { body+=chunk; if (body.length > 1e6) fail(new Error('Body too large')); }); req.on('end', () => ok(body)); req.on('error', fail); });
-  const server=createServer(async (req, res) => { const url=new URL(req.url ?? '/', 'http://localhost'); try {
+  // The server listens on 127.0.0.1 only, but a web page open in the same browser can still reach it: by sending requests (a POST with a
+  // text/plain body needs no CORS preflight) or by pointing a domain it controls at 127.0.0.1 (DNS rebinding). So every request must
+  // name this server as its Host, and every request that changes something must come from this server's own page (Origin) and carry
+  // JSON, which a cross-site page cannot send without the browser asking first.
+  const hostAllowed=(host: string) => { const name=host.toLowerCase().replace(/:\d+$/, ''), hostPort=Number(/:(\d+)$/.exec(host)?.[1]); return hostPort === port && (name === '127.0.0.1' || name === 'localhost' || name === '[::1]' || (options.allowHosts ?? []).some(h => h.toLowerCase() === name)); };
+  const refusal=(req: IncomingMessage): string | undefined => { const host=req.headers.host ?? ''; if (!hostAllowed(host)) return `Host "${host}" is not allowed; open the preview at http://127.0.0.1:${port}/ (or pass --allow-host)`;
+    if (req.method === 'GET' || req.method === 'HEAD') return undefined; if (req.headers.origin !== `http://${host}`) return 'Changes are only accepted from the preview page itself';
+    if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) return 'Changes must be sent as application/json'; return undefined; };
+  const server=createServer(async (req, res) => { const url=new URL(req.url ?? '/', 'http://localhost'); const refused=refusal(req); if (refused) return send(res, 403, 'text/plain', refused); try {
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', devPage);
       if (req.method === 'GET' && url.pathname === '/api/state') return send(res, 200, 'application/json', JSON.stringify(state()));
       if (req.method === 'GET' && url.pathname === '/api/layer') { const id=url.searchParams.get('id') ?? '', matches=findRawLayers(raw, id); return send(res, 200, 'application/json', JSON.stringify({ id, editable: matches.length === 1, layer: matches[0] ?? null, reason: matches.length === 1 ? null : matches.length ? 'Several layers share this id; give them unique ids to edit them here.' : 'This layer comes from a repeat or a component, so it can only be changed in that template.' })); }
@@ -52,5 +61,6 @@ export async function startDevServer(file: string, options: DevOptions = {}): Pr
     } catch (e) { if (!res.headersSent) send(res, 500, 'text/plain', (e as Error).message); } });
   // Editors often save by writing a temp file and renaming it, so the folder is watched rather than the file, and changes are debounced.
   let timer: NodeJS.Timeout | undefined; const watcher=watch(baseDir, (_event, name) => { if (name && basename(String(name)) === basename(path)) { clearTimeout(timer); timer=setTimeout(reload, 150); } });
-  const port=await new Promise<number>((ok, fail) => { let attempt=options.port ?? 3000; const tryListen=() => { server.once('error', (e: NodeJS.ErrnoException) => { if (e.code === 'EADDRINUSE' && attempt < (options.port ?? 3000)+20) { attempt++; tryListen(); } else fail(e); }); server.listen(attempt, '127.0.0.1', () => ok(attempt)); }; tryListen(); });
+  // Read by the request check, which only runs once listening has started.
+  let port=0; port=await new Promise<number>((ok, fail) => { let attempt=options.port ?? 3000; const tryListen=() => { server.once('error', (e: NodeJS.ErrnoException) => { if (e.code === 'EADDRINUSE' && attempt < (options.port ?? 3000)+20) { attempt++; tryListen(); } else fail(e); }); server.listen(attempt, '127.0.0.1', () => ok(attempt)); }; tryListen(); });
   return { url: `http://127.0.0.1:${port}/`, async close() { clearTimeout(timer); watcher.close(); for (const client of clients) client.end(); await new Promise<void>(ok => server.close(() => ok())); await queue; await renderer?.close(); } }; }

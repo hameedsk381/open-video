@@ -42,6 +42,7 @@ Opens a local preview at `http://127.0.0.1:3000/` (the next free port if that on
 - **Studio:** under the timeline every layer has a bar at its real time. Drag a bar to move the layer in time, drag its right edge to change when it ends, or click it to edit its properties (position, size, timing, text, colours…) in the side panel. Edits are checked against the schema and saved to `composition.json` (keeping its indentation; small one-line objects are written out over several lines). Undo (ctrl+z) restores the file exactly. Layers produced by `repeat` or components, and values written as `{{ }}`, are shown read-only.
 - Saving the file in your editor reloads the preview. If it has a mistake, the error appears over the last version that worked until you fix it.
 - The variables panel lists the composition's variables; editing a value re-renders the preview (it does not change the file).
+- The server only answers its own page: it listens on 127.0.0.1, refuses requests addressed to any other host name, and accepts changes only as JSON from the preview page itself, so other websites open in your browser cannot read the project or edit the file. Behind a reverse proxy, name it with `--allow-host preview.example`.
 - Media files are served to the Player from the composition's folder only; media elsewhere (absolute paths outside it) renders but does not play live. Asset files are not watched: re-save the composition after replacing one.
 
 ## Player

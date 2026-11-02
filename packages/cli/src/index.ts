@@ -6,7 +6,7 @@ const usage = `Usage:
   ove doctor                      check Node, FFmpeg encoders and the browser
   ove browser install             download Playwright's Chromium for rendering
   ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
-  ove dev <composition.json> [--port 3000] [variables]
+  ove dev <composition.json> [--port 3000] [--allow-host name] [variables]
   ove validate <composition.json> [variables]
   ove inspect <composition.json> [variables]          scenes, timing and measured media
   ove captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
@@ -75,7 +75,7 @@ Press Ctrl+C to stop.`);
   else if (command === 'schema') { const json=JSON.stringify(compositionJsonSchema,null,2)+'\n'; const output=option('--output'); if (output) { await writeFile(resolve(output),json); console.log(`Wrote ${resolve(output)}`); } else process.stdout.write(json); }
   else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill')}); console.log(`Created ${resolve(file)}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
   else if (command === 'dev') { if (!file || file.startsWith('--')) throw new Error(usage); const port=option('--port') === undefined ? undefined : Number(option('--port')); if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536)) throw new Error('--port must be a port number');
-    const dev=await startDevServer(file, { port, values: await suppliedValues() }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
+    const allowHosts=argv.flatMap((arg, i) => arg === '--allow-host' && argv[i+1] ? [argv[i+1]!] : []); const dev=await startDevServer(file, { port, values: await suppliedValues(), allowHosts }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
     const stop=() => { dev.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
