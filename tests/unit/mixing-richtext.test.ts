@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseComposition } from '@ove/schema'; import { soundIntervals, volumeEnvelope } from '@ove/timeline'; import { envelopeExpression, audioMixArgs } from '@ove/ffmpeg'; import { layoutRich } from '@ove/graphics';
+import { parseComposition } from '@ove/schema'; import { soundIntervals, volumeEnvelope } from '@ove/timeline'; import { envelopeExpression, audioMixArgs } from '@ove/ffmpeg'; import { layoutRich } from '@ove/graphics/runtime';
 // Evaluates the FFmpeg expression subset envelopeExpression produces (if, lt, gte and arithmetic) at time t, by turning it into JS.
 const evalExpr = (expr: string, t: number) => new Function('t', `const iff=(c,a,b)=>c?a:b,lt=(a,b)=>a<b,gte=(a,b)=>a>=b; return ${expr.replace(/\bif\(/g, 'iff(')};`)(t) as number;
 const at = (points: [number, number][], t: number) => { if (t <= points[0]![0]) return points[0]![1]; for (let i = 1; i < points.length; i++) if (t <= points[i]![0]) { const [t0, v0] = points[i-1]!, [t1, v1] = points[i]!; return v0 + (v1 - v0)*(t - t0)/(t1 - t0); } return points.at(-1)![1]; };

@@ -34,6 +34,8 @@ await writeFile(join(dist, 'player.d.ts'), "export * from './types/packages/play
 // The built-in Inter faces with their licence: the renderer reads them from dist/fonts, and the Player loads them from there by URL.
 const { builtinFontDir } = await import('../packages/graphics/src/fonts.ts'); const { builtinFontFaces } = await import('../packages/graphics/src/index.ts'); await mkdir(join(dist, 'fonts'), { recursive: true });
 for (const face of builtinFontFaces) await cp(join(builtinFontDir(), face.file), join(dist, 'fonts', face.file)); await cp(join(builtinFontDir(), '..', 'LICENSE'), join(dist, 'fonts', 'LICENSE-Inter.txt'));
+// The drawing runtime and text layout, read as text by the bundled code from dist/runtime.
+await cp(join(root, 'packages/graphics/runtime'), join(dist, 'runtime'), { recursive: true });
 // The built-in sound effects, for the Player (renders make their own in the cache folder).
 const { sfxFile } = await import('../packages/core/src/audio.ts'); const { sfxNames } = await import('../packages/schema/src/index.ts'); await mkdir(join(dist, 'sfx'), { recursive: true });
 for (const name of sfxNames) await cp(await sfxFile(name), join(dist, 'sfx', `${name}.wav`));

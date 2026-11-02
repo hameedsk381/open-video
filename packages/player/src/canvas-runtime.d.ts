@@ -1,4 +1,4 @@
-// The canvas drawing runtime, generated at build time from canvasRuntimeSource in @ove/graphics (see bundle.ts), so the Player draws
+// The canvas drawing runtime, generated at build time from packages/graphics/runtime/*.js (see bundle.ts), so the Player draws
 // with exactly the code the renderer uses.
 declare module 'ove:canvas-runtime' {
   export type CanvasRuntime = {
