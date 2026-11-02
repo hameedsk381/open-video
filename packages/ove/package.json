@@ -1,6 +1,6 @@
 {
   "name": "open-video-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JSON-first, frame-deterministic video engine: render compositions to MP4, WebM, ProRes, GIF or PNG frames from Node or the command line.",
   "license": "MIT",
   "type": "module",

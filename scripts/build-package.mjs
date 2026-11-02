@@ -17,7 +17,7 @@ await build({ ...common, entryPoints: [join(root, 'packages/cli/src/index.ts')],
 // extensionless relative imports a .js extension so NodeNext consumers resolve them.
 const types=join(dist, 'types'); const tsc=join(root, 'node_modules', 'typescript', 'bin', 'tsc');
 execFileSync(process.execPath, [tsc, '-p', join(root, 'tsconfig.json'), '--noEmit', 'false', '--declaration', '--emitDeclarationOnly', '--outDir', types, '--rootDir', root], { stdio: 'inherit' });
-await rm(join(types, 'tests'), { recursive: true, force: true }); await rm(join(types, 'vitest.config.d.ts'), { force: true });
+await rm(join(types, 'tests'), { recursive: true, force: true }); await rm(join(types, 'vitest.config.d.ts'), { force: true }); await rm(join(types, 'vitest.integration.config.d.ts'), { force: true });
 async function* files(dir) { for (const entry of await readdir(dir, { withFileTypes: true })) { const path=join(dir, entry.name); if (entry.isDirectory()) yield* files(path); else if (path.endsWith('.d.ts')) yield path; } }
 for await (const file of files(types)) { const from=dirname(file); let text=await readFile(file, 'utf8');
   text=text.replace(/(from\s+|import\()(['"])@ove\/([a-z-]+)\2/g, (_, lead, quote, pkg) => { let target=relative(from, join(types, 'packages', pkg, 'src', 'index.js')).split('\\').join('/'); if (!target.startsWith('.')) target=`./${target}`; return `${lead}${quote}${target}${quote}`; });

@@ -2,7 +2,7 @@
 
 All notable changes to Open Video Engine. The published package is `open-video-engine` (built from `packages/ove`).
 
-## Unreleased
+## 0.2.0 (2026-11-02)
 
 ### Added
 - Narration-driven timing: measured media (`media[...]`) in expressions, `durationFrames: "auto"` and automatic scene placement.
