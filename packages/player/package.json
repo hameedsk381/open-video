@@ -1,0 +1,1 @@
+{"name":"@ove/player","version":"0.1.0","type":"module","exports":{".":"./src/index.ts","./bundle":"./src/bundle.ts"},"dependencies":{"@ove/schema":"workspace:*","@ove/timeline":"workspace:*","@ove/graphics":"workspace:*"}}

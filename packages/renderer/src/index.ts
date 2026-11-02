@@ -1,0 +1,37 @@
+import { chromium, type Browser, type Page } from 'playwright'; import { existsSync } from 'node:fs'; import { readFile, writeFile } from 'node:fs/promises'; import { availableParallelism } from 'node:os';
+import type { Composition } from '@ove/schema'; import { evaluateFrame, videoFrameIndex } from '@ove/timeline'; import { toDrawOperations, flattenOperations, collectImageSources, canvasRuntimeSource, prepareOperations, type DrawOperation } from '@ove/graphics'; import { prepareVideos, videoFrameFile } from './video'; import { resolveAssetSource, toDataUrl } from '@ove/assets';
+export type Renderer = { concurrency: number; renderFrame(frame: number): Promise<Buffer>; captureFrame(frame: number, output: string): Promise<void>; close(): Promise<void> };
+export type RendererOptions = { baseDir?: string; concurrency?: number };
+// Frames leave the page as PNG: raw RGBA (8 MB at 1080×1920) costs ~2 s per frame to move out of Chromium through either the
+// Playwright protocol or a page upload, while PNG encoding takes ~35 ms. The canvas runtime keeps the canvas in CPU memory
+// (willReadFrequently), which makes the read-back for encoding far cheaper than reading from a GPU canvas.
+const runtime = `<!doctype html><canvas id="c"></canvas><svg width="0" height="0" style="position:absolute"><path id="measure"/></svg><script>
+${canvasRuntimeSource}
+const rt=createCanvasRuntime(document.querySelector('#c'),document.querySelector('#measure'));
+window.OVE={load:rt.load,draw:async(p)=>{await rt.draw(p);return rt.canvas.toDataURL('image/png').slice('data:image/png;base64,'.length)}};</script>`;
+const allLayers = (composition: Composition) => composition.scenes.flatMap(scene => scene.layers);
+// Browser choice, in order: OVE_CHROMIUM_EXECUTABLE; Playwright's own Chromium (the same build everywhere, so the most consistent
+// pixels across machines); then an installed Google Chrome or Microsoft Edge on any OS. Different browsers can anti-alias and lay out
+// text slightly differently, so pin one (and use font assets) when output must match between machines.
+export const browserInstallHint = 'Install one with "ove browser install" (Playwright\'s Chromium, about 150 MB), install Google Chrome, or set OVE_CHROMIUM_EXECUTABLE to a Chromium-based browser.';
+export async function launchBrowser(): Promise<Browser> { const explicit=process.env.OVE_CHROMIUM_EXECUTABLE;
+  if (explicit) { if (!existsSync(explicit)) throw new Error(`OVE_CHROMIUM_EXECUTABLE points to ${explicit}, which does not exist.`); return chromium.launch({ headless: true, executablePath: explicit }); }
+  if (existsSync(chromium.executablePath())) return chromium.launch({ headless: true });
+  for (const channel of ['chrome', 'msedge']) { try { return await chromium.launch({ headless: true, channel }); } catch {} }
+  throw new Error(`No Chromium-based browser was found. ${browserInstallHint}`); }
+// Which browser launchBrowser would use, for `ove doctor`.
+export async function describeBrowser(): Promise<string> { const browser=await launchBrowser(); try { return `${browser.browserType().name()} ${browser.version()}${process.env.OVE_CHROMIUM_EXECUTABLE ? ` (OVE_CHROMIUM_EXECUTABLE=${process.env.OVE_CHROMIUM_EXECUTABLE})` : existsSync(chromium.executablePath()) ? ' (Playwright Chromium)' : ' (installed Chrome/Edge)'}`; } finally { await browser.close(); } }
+// Past ~4 pages Chromium competes with FFmpeg's encoder for CPU and renders get slower, so the default stays small.
+export const defaultConcurrency = () => Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
+// Each page lives in its own browser context so Chromium gives it a separate renderer process; frames are independent, so any page can draw any frame.
+export async function createRenderer(composition: Composition, options: RendererOptions = {}): Promise<Renderer> { const baseDir=options.baseDir ?? process.cwd(); const concurrency=Math.max(1, Math.floor(options.concurrency ?? 1)); const videos=await prepareVideos(composition, baseDir); const sources=Object.fromEntries(await Promise.all(collectImageSources(allLayers(composition)).map(async src => [src, await toDataUrl(resolveAssetSource(composition, src, baseDir))] as const))); const fonts=await Promise.all(composition.assets.filter(a => a.type === 'font').map(async a => ({ family: a.family ?? a.id, src: a.src, weight: a.weight ?? 400, style: a.style ?? 'normal', url: await toDataUrl(resolveAssetSource(composition, a.src, baseDir)) }))); const browser: Browser = await launchBrowser(); try {
+  const openPage=async () => { const context=await browser.newContext({ viewport: { width: composition.width, height: composition.height }, deviceScaleFactor: 1 }); const page: Page=await context.newPage(); await page.setContent(runtime, { waitUntil: 'load' }); await page.evaluate(async ({ sources, fonts }) => { await (window as any).OVE.load(sources, fonts); }, { sources, fonts }); return page; };
+  const idle: Page[]=await Promise.all(Array.from({ length: concurrency }, openPage)); const waiting: ((page: Page) => void)[]=[];
+  const acquire=() => idle.pop() ?? new Promise<Page>(resolve => waiting.push(resolve)); const release=(page: Page) => { const next=waiting.shift(); if (next) next(page); else idle.push(page); };
+  // Each video operation gets the key of the decoded source frame it shows; frames travel with the payload as JPEG data URLs.
+  const attachVideoFrames=async (operations: DrawOperation[]) => { const videoFrames: Record<string, string>={}; for (const op of flattenOperations(operations).filter(op => op.kind === 'video')) { const layer=op.layer as any, video=videos.get(layer.src)!; const index=videoFrameIndex(layer, layer.localFrame-layer.startFrame, video.count); op.frameKey=`${layer.src}#${index}`; videoFrames[op.frameKey] ??= `data:image/jpeg;base64,${(await readFile(videoFrameFile(video, index))).toString('base64')}`; } return videoFrames; };
+  const renderFrame=async (frame: number) => { const operations=prepareOperations(toDrawOperations(evaluateFrame(composition,frame))); const videoFrames=await attachVideoFrames(operations); const page=await acquire(); try { const png: string=await page.evaluate(payload => (window as any).OVE.draw(payload), {width:composition.width,height:composition.height,background:composition.background,transparent:composition.export.transparent,operations,videoFrames}); return Buffer.from(png,'base64'); } finally { release(page); } };
+  return { concurrency, renderFrame, async captureFrame(frame, output) { await writeFile(output, await renderFrame(frame)); }, close: () => browser.close() }; } catch (error) { await browser.close(); throw error; } }
+// Renders frames [from, to) and yields them strictly in frame order. Up to `lookahead` frames are requested ahead of the consumer
+// (the page pool still draws only `concurrency` at once), so pages keep working while the consumer, e.g. the encoder, is busy.
+export async function* renderFrames(renderer: Pick<Renderer,'renderFrame'|'concurrency'>, from: number, to: number, options: { lookahead?: number } = {}): AsyncGenerator<Buffer> { const lookahead=Math.max(1, options.lookahead ?? renderer.concurrency * 4); const pending: Promise<Buffer>[]=[]; let next=from; const fill=() => { while (next < to && pending.length < lookahead) { const job=renderer.renderFrame(next++); job.catch(() => {}); pending.push(job); } }; try { fill(); while (pending.length) { const png=await pending.shift()!; fill(); yield png; } } finally { await Promise.allSettled(pending); } }

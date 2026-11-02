@@ -1,0 +1,53 @@
+{
+  "name": "open-video-engine",
+  "version": "0.1.0",
+  "description": "JSON-first, frame-deterministic video engine: render compositions to MP4, WebM, ProRes, GIF or PNG frames from Node or the command line.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./player": {
+      "types": "./dist/player.d.ts",
+      "import": "./dist/player.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "ove": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1",
+    "zod": "^4.6.7"
+  },
+  "keywords": [
+    "video",
+    "render",
+    "motion-graphics",
+    "ffmpeg",
+    "json",
+    "template"
+  ],
+  "peerDependencies": {
+    "@types/node": ">=22"
+  },
+  "peerDependenciesMeta": {
+    "@types/node": {
+      "optional": true
+    }
+  }
+}

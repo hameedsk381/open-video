@@ -1,0 +1,1 @@
+export { interpolate, spring } from '@ove/animation'; export type FrameContext={frame:number;fps:number}; export const useFrame=(context:FrameContext)=>context.frame; export const useComposition=(context:FrameContext)=>context; // JSX adapters are the next milestone; untrusted JSX is never accepted by renderer.

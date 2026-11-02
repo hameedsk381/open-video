@@ -1,0 +1,15 @@
+import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path'; import { createHash, randomUUID } from 'node:crypto';
+import type { Composition } from '@ove/schema'; import { flattenLayers } from '@ove/graphics'; import { resolveAssetSource, isUrl } from '@ove/assets'; import { extractFrames } from '@ove/ffmpeg';
+export type VideoFrames = { dir: string; count: number };
+export const videoFrameFile = (video: VideoFrames, index: number) => join(video.dir, `${String(index + 1).padStart(6, '0')}.jpg`);
+export const videoCacheRoot = () => process.env.OVE_CACHE_DIR ?? join(tmpdir(), 'ove-video-cache');
+const complete = '.complete';
+// Each source is decoded once per (file version, fps, size, length) into a cache folder that later renders and stills reuse.
+// Decoding happens in a scratch folder renamed into place only when finished, so an interrupted run never leaves a partial cache.
+async function decode(source: string, key: object): Promise<VideoFrames> { const version=isUrl(source) ? '' : await stat(source).then(s => `${s.size}:${s.mtimeMs}`, () => { throw new Error(`Video not found: ${source}`); }); const dir=join(videoCacheRoot(), createHash('sha256').update(JSON.stringify({ source, version, ...key })).digest('hex').slice(0, 32)); const count=async () => (await readdir(dir)).filter(f => f.endsWith('.jpg')).length;
+  if (await stat(join(dir, complete)).then(() => true, () => false)) return { dir, count: await count() };
+  const scratch=`${dir}.partial-${randomUUID()}`; await mkdir(scratch, { recursive: true }); try { await extractFrames(source, scratch, key as any); await writeFile(join(scratch, complete), ''); await rename(scratch, dir).catch(async error => { if (!(await stat(join(dir, complete)).then(() => true, () => false))) throw error; }); } finally { await rm(scratch, { recursive: true, force: true }); }
+  const frames=await count(); if (frames === 0) throw new Error(`No frames could be decoded from ${source}`); return { dir, count: frames }; }
+// Only the part of each source that can be shown is decoded, unless a layer loops it, in which case the whole source is needed.
+export async function prepareVideos(composition: Composition, baseDir: string): Promise<Map<string, VideoFrames>> { const bySource=new Map<string, any[]>(); for (const layer of flattenLayers(composition.scenes.flatMap(s => s.layers)).filter(l => l.type === 'video')) bySource.set(layer.src, [...(bySource.get(layer.src) ?? []), layer]);
+  return new Map(await Promise.all([...bySource].map(async ([src, layers]) => { const needed=layers.some(l => l.loop) ? undefined : Math.max(...layers.map(l => l.trimStart + Math.ceil(composition.durationFrames*l.playbackRate) + 1)); return [src, await decode(resolveAssetSource(composition, src, baseDir), { fps: composition.fps, maxWidth: composition.width, maxHeight: composition.height, durationSeconds: needed === undefined ? undefined : needed/composition.fps })] as const; }))); }
