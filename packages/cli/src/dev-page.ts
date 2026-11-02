@@ -75,7 +75,7 @@ function dropPlayer() { if (player) { player.destroy(); player = null; } playerV
 function ensurePlayer() {
   if (player && playerVersion === state.version) return Promise.resolve(player); dropPlayer();
   return fetch('/api/source').then(function (r) { return r.json(); }).then(function (source) { return import('/player.js').then(function (m) {
-    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, assetBase: location.origin + '/media/', controls: false }); }); })
+    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, media: source.media, assetBase: location.origin + '/media/', controls: false }); }); })
     .then(function (p) { player = p; playerVersion = state.version;
       p.on('frame', function (f) { if (playing) { frame = f; draw(); } }); p.on('ended', function () { setPlaying(false); });
       p.on('error', function (e) { $('#status').textContent = 'live playback: ' + (e && e.message ? e.message : e); }); return p; });
@@ -143,7 +143,7 @@ function showPropsError(message) { var e = document.querySelector('#propsError')
 function editLayer(set, unset) { showPropsError(''); $('#status').textContent = 'saving…';
   fetch('/api/layer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: selected, set: set, unset: unset }) }).then(function (r) { return r.json(); })
     .then(function (result) { if (!result.ok) { showPropsError(result.error); renderLayers(); $('#status').textContent = 'not saved'; } }); }
-function undo() { fetch('/api/undo', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (result) { if (!result.ok) $('#status').textContent = result.error; }); }
+function undo() { fetch('/api/undo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); }).then(function (result) { if (!result.ok) $('#status').textContent = result.error; }); }
 function renderTimeline() {
   var c = comp(), box = $('#scenes'); box.innerHTML = ''; if (!c) return;
   c.scenes.forEach(function (s) { var el = document.createElement('div'); el.className = 'scene'; el.textContent = s.name; el.title = s.name + ' · frames ' + s.startFrame + '–' + (s.startFrame + s.durationFrames - 1);

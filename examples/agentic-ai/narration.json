@@ -1,0 +1,13 @@
+{
+  "voice": "Microsoft Zira Desktop",
+  "rate": -1,
+  "display": { "A.I.": "AI" },
+  "lines": [
+    { "scene": "intro", "file": "vo-1-intro", "text": "Agentic A.I. Software that doesn't just answer. It plans, acts, and checks its own work." },
+    { "scene": "versus", "file": "vo-2-versus", "text": "An A.I. assistant answers your questions, and then you decide what to do. An A.I. agent takes a goal, works out the steps, and gets it done." },
+    { "scene": "loop", "file": "vo-3-loop", "text": "Agents work in a loop. They perceive the situation, plan the next step, act on it, and reflect on the result. Again and again, until the goal is met." },
+    { "scene": "tools", "file": "vo-4-tools", "text": "Tools turn answers into actions. An agent can search for information, write and run code, use other apps, and remember what worked." },
+    { "scene": "guardrails", "file": "vo-5-guardrails", "text": "But autonomy needs guardrails. Clear goals and limits. Permission before risky actions. And people who review the results." },
+    { "scene": "outro", "file": "vo-6-outro", "text": "Give it a goal. Get an outcome." }
+  ]
+}

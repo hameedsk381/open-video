@@ -3,7 +3,8 @@
 //   literals   12  1.5  'text'  "text"  true  false  null
 //   names      title  item.name  items[0]  items.length
 //   operators  + - * / %   == != < <= > >=   && || !   cond ? a : b   ( )
-//   functions  round(x, digits?) floor ceil abs min max upper lower string number
+//   functions  round(x, digits?) floor ceil abs min max upper lower string number, plus beat(n), bar(n, beat?) and beats(n) from the
+//              composition's tempo (see beatFunctions in index.ts)
 // == and != compare strictly. + joins text when either side is text.
 type Token = { kind: 'num' | 'str' | 'name' | 'op'; value: string };
 type Node = { kind: 'lit'; value: unknown } | { kind: 'name'; name: string } | { kind: 'member'; target: Node; key: Node } | { kind: 'call'; name: string; args: Node[] }
@@ -47,7 +48,7 @@ function evaluate(node: Node, scope: Record<string, unknown>): unknown { switch 
   case 'lit': return node.value;
   case 'name': if (!Object.hasOwn(scope, node.name)) throw new Error(`unknown variable "${node.name}"`); return scope[node.name];
   case 'member': return member(evaluate(node.target, scope), evaluate(node.key, scope));
-  case 'call': { const fn=functions[node.name]; if (!fn) throw new Error(`unknown function "${node.name}" (available: ${Object.keys(functions).join(', ')})`); return fn(...node.args.map(a => evaluate(a, scope))); }
+  case 'call': { const own=Object.hasOwn(scope, node.name) && typeof scope[node.name] === 'function' ? scope[node.name] as (...args: unknown[]) => unknown : undefined, fn=functions[node.name] ?? own; if (!fn) throw new Error(`unknown function "${node.name}" (available: ${[...Object.keys(functions), ...Object.keys(scope).filter(k => typeof scope[k] === 'function')].join(', ')})`); return fn(...node.args.map(a => evaluate(a, scope))); }
   case 'unary': { const v=evaluate(node.arg, scope); return node.op === '!' ? !v : -num(v, 'minus'); }
   case 'cond': return evaluate(node.test, scope) ? evaluate(node.then, scope) : evaluate(node.else, scope);
   case 'binary': { if (node.op === '&&') return evaluate(node.left, scope) && evaluate(node.right, scope); if (node.op === '||') return evaluate(node.left, scope) || evaluate(node.right, scope);

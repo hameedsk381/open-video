@@ -1,0 +1,292 @@
+{
+  "version": "1.0",
+  "id": "agentic-ai",
+  "name": "Agentic AI explained",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": "auto",
+  "background": { "type": "linear", "from": [0, 0], "to": [1920, 1080], "stops": [{ "offset": 0, "color": "#070915" }, { "offset": 1, "color": "#0e1230" }] },
+  "variables": {
+    "title": { "type": "string", "default": "Agentic AI" },
+    "subtitle": { "type": "string", "default": "Software that plans, acts and checks its own work" },
+    "accent": { "type": "color", "default": "#8b5cf6" },
+    "accent2": { "type": "color", "default": "#22d3ee" },
+    "ink": { "type": "color", "default": "#f5f7fb", "description": "Headings and strong text" },
+    "muted": { "type": "color", "default": "#97a0b6", "description": "Body text and labels" },
+    "captions": { "type": "boolean", "default": true, "description": "Show captions of the narration" },
+    "steps": {
+      "type": "list",
+      "items": { "name": { "type": "string" }, "detail": { "type": "string" }, "x": { "type": "number" }, "y": { "type": "number" } },
+      "default": [
+        { "name": "Perceive", "detail": "Read the goal and the situation", "x": 0, "y": -270 },
+        { "name": "Plan", "detail": "Break the goal into steps", "x": 270, "y": 0 },
+        { "name": "Act", "detail": "Use a tool to do the next step", "x": 0, "y": 270 },
+        { "name": "Reflect", "detail": "Check the result and adjust", "x": -270, "y": 0 }
+      ]
+    },
+    "tools": {
+      "type": "list",
+      "items": { "name": { "type": "string" }, "icon": { "type": "string", "description": "SVG path, drawn in a 64×64 box centred on 0,0" }, "desc": { "type": "string" }, "color": { "type": "color" } },
+      "default": [
+        { "name": "Search", "icon": "M-6 -6 m-14 0 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0 M5 5 L17 17", "desc": "Look up facts and fresh information", "color": "#22d3ee" },
+        { "name": "Code", "icon": "M-8 -14 L-20 0 L-8 14 M8 -14 L20 0 L8 14", "desc": "Write and run programs to do the work", "color": "#a78bfa" },
+        { "name": "APIs", "icon": "M-4 -18 L-14 2 L0 2 L-4 18 L14 -4 L0 -4 Z", "desc": "Send email, book, update other apps", "color": "#34d399" },
+        { "name": "Memory", "icon": "M-16 -11 a16 6 0 1 0 32 0 a16 6 0 1 0 -32 0 M-16 -11 V11 a16 6 0 0 0 32 0 V-11 M-16 0 a16 6 0 0 0 32 0", "desc": "Remember what worked last time", "color": "#fbbf24" }
+      ]
+    },
+    "guardrails": {
+      "type": "list",
+      "default": [{ "text": "Clear goals and limits" }, { "text": "Permission before risky actions" }, { "text": "People review the results" }]
+    }
+  },
+  "assets": [
+    { "id": "pad", "type": "audio", "src": "./assets/pad.m4a" },
+    { "id": "vo-intro", "type": "audio", "src": "./assets/vo-1-intro.m4a" },
+    { "id": "vo-versus", "type": "audio", "src": "./assets/vo-2-versus.m4a" },
+    { "id": "vo-loop", "type": "audio", "src": "./assets/vo-3-loop.m4a" },
+    { "id": "vo-tools", "type": "audio", "src": "./assets/vo-4-tools.m4a" },
+    { "id": "vo-guardrails", "type": "audio", "src": "./assets/vo-5-guardrails.m4a" },
+    { "id": "vo-outro", "type": "audio", "src": "./assets/vo-6-outro.m4a" },
+    { "id": "cc-intro", "type": "captions", "src": "./assets/vo-1-intro.words.json" },
+    { "id": "cc-versus", "type": "captions", "src": "./assets/vo-2-versus.words.json" },
+    { "id": "cc-loop", "type": "captions", "src": "./assets/vo-3-loop.words.json" },
+    { "id": "cc-tools", "type": "captions", "src": "./assets/vo-4-tools.words.json" },
+    { "id": "cc-guardrails", "type": "captions", "src": "./assets/vo-5-guardrails.words.json" },
+    { "id": "cc-outro", "type": "captions", "src": "./assets/vo-6-outro.words.json" }
+  ],
+  "export": { "audio": "pad", "audioVolume": 1.5, "loudness": -14, "duck": { "amount": 0.4, "attackFrames": 6, "releaseFrames": 18 } },
+  "components": {
+    "backdrop": {
+      "description": "A faint 96 px grid, two slow glows and a vignette that darkens the edges.",
+      "layers": [
+        { "id": "grid", "type": "path", "stroke": "rgba(255,255,255,0.035)", "strokeWidth": 1,
+          "d": "M0 0V1080M96 0V1080M192 0V1080M288 0V1080M384 0V1080M480 0V1080M576 0V1080M672 0V1080M768 0V1080M864 0V1080M960 0V1080M1056 0V1080M1152 0V1080M1248 0V1080M1344 0V1080M1440 0V1080M1536 0V1080M1632 0V1080M1728 0V1080M1824 0V1080M1920 0V1080M0 0H1920M0 96H1920M0 192H1920M0 288H1920M0 384H1920M0 480H1920M0 576H1920M0 672H1920M0 768H1920M0 864H1920M0 960H1920M0 1056H1920" },
+        { "id": "glow-a", "type": "circle", "x": 1600, "y": 120, "width": 1200,
+          "fill": { "type": "radial", "center": [0, 0], "radius": 600, "stops": [{ "offset": 0, "color": "rgba(139,92,246,0.26)" }, { "offset": 1, "color": "rgba(139,92,246,0)" }] },
+          "animations": [{ "property": "x", "keyframes": [{ "frame": 0, "value": 1600 }, { "frame": 400, "value": 1460, "easing": "easeInOut" }] }] },
+        { "id": "glow-b", "type": "circle", "x": 200, "y": 1000, "width": 1000,
+          "fill": { "type": "radial", "center": [0, 0], "radius": 500, "stops": [{ "offset": 0, "color": "rgba(34,211,238,0.14)" }, { "offset": 1, "color": "rgba(34,211,238,0)" }] },
+          "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": 1000 }, { "frame": 400, "value": 900, "easing": "easeInOut" }] }] },
+        { "id": "vignette", "type": "rect", "width": 1920, "height": 1080,
+          "fill": { "type": "radial", "center": [960, 540], "radius": 1150, "stops": [{ "offset": 0.45, "color": "rgba(4,5,14,0)" }, { "offset": 1, "color": "rgba(4,5,14,0.75)" }] } }
+      ]
+    },
+    "cc": {
+      "description": "Captions of one narration clip, word by word, in the band at the bottom of the frame (keep other content above y 880).",
+      "params": { "src": { "type": "string" } },
+      "layers": [
+        { "if": "{{captions}}", "id": "line", "type": "captions", "src": "{{src}}", "x": 960, "y": 950, "zIndex": 50, "maxWidth": 1400, "maxWords": 8, "fontSize": 38, "fontWeight": 600, "letterSpacing": -0.3,
+          "color": "#ffffff", "highlightColor": "{{accent2}}", "upcomingColor": "rgba(255,255,255,0.42)", "background": "rgba(6,8,22,0.66)", "padding": 16, "radius": 16 }
+      ]
+    },
+    "chapter": {
+      "description": "The numbered label and heading at the top left of a content scene.",
+      "params": { "number": { "type": "string" }, "label": { "type": "string" }, "heading": { "type": "string" }, "sub": { "type": "string", "default": "" } },
+      "layers": [
+        { "id": "label", "type": "group", "x": 120, "y": 104,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 4, "value": 0 }, { "frame": 18, "value": 1 }] }],
+          "children": [{ "id": "label-text", "type": "text", "textAlign": "left", "fontSize": 22, "fontWeight": 600, "letterSpacing": 4, "maxWidth": 1200,
+            "spans": [{ "text": "{{number}}", "color": "{{accent2}}" }, { "text": "   {{label}}", "color": "{{muted}}" }] }] },
+        { "id": "heading", "type": "group", "x": 120, "y": 150, "startFrame": 6,
+          "children": [{ "id": "heading-text", "type": "text", "textAlign": "left", "fontSize": 84, "fontWeight": 700, "letterSpacing": -2.5, "lineHeight": 1.1, "color": "{{ink}}", "maxWidth": 1500, "maxLines": 1, "content": "{{heading}}", "split": { "by": "words", "stagger": 4, "preset": "rise", "duration": 20 } }] },
+        { "if": "{{sub != ''}}", "id": "sub", "type": "group", "x": 120, "y": 262,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 12, "value": 0 }, { "frame": 26, "value": 1 }] }],
+          "children": [{ "id": "sub-text", "type": "text", "textAlign": "left", "fontSize": 34, "color": "{{muted}}", "maxWidth": 1400, "maxLines": 1, "content": "{{sub}}" }] }
+      ]
+    },
+    "toolCard": {
+      "params": { "name": { "type": "string" }, "icon": { "type": "string" }, "desc": { "type": "string" }, "color": { "type": "color" } },
+      "layers": [
+        { "id": "card", "type": "rect", "width": 396, "height": 360, "radius": 28, "fill": "rgba(255,255,255,0.04)", "stroke": "rgba(255,255,255,0.1)", "strokeWidth": 1.5,
+          "shadow": { "color": "rgba(0,0,0,0.35)", "blur": 40, "offsetY": 18 } },
+        { "id": "tile", "type": "rect", "x": 40, "y": 40, "width": 80, "height": 80, "radius": 22, "fill": "{{color}}1f", "stroke": "{{color}}55", "strokeWidth": 1.5 },
+        { "id": "icon", "type": "path", "x": 80, "y": 80, "d": "{{icon}}", "stroke": "{{color}}", "strokeWidth": 4.5, "lineCap": "round", "lineJoin": "round" },
+        { "id": "name", "type": "text", "x": 40, "y": 168, "textAlign": "left", "fontSize": 44, "fontWeight": 700, "letterSpacing": -1, "color": "{{ink}}", "content": "{{name}}" },
+        { "id": "desc", "type": "text", "x": 40, "y": 232, "textAlign": "left", "fontSize": 28, "lineHeight": 1.45, "color": "{{muted}}", "maxWidth": 316, "maxLines": 3, "content": "{{desc}}" }
+      ]
+    },
+    "compareCard": {
+      "params": { "label": { "type": "string" }, "title": { "type": "string" }, "body": { "type": "string" }, "icon": { "type": "string" }, "highlight": { "type": "boolean", "default": false } },
+      "layers": [
+        { "id": "card", "type": "rect", "width": 790, "height": 470, "radius": 32,
+          "fill": "{{highlight ? 'rgba(139,92,246,0.10)' : 'rgba(255,255,255,0.035)'}}",
+          "stroke": "{{highlight ? accent : 'rgba(255,255,255,0.1)'}}", "strokeWidth": "{{highlight ? 2.5 : 1.5}}",
+          "shadow": { "color": "{{highlight ? 'rgba(139,92,246,0.35)' : 'rgba(0,0,0,0.35)'}}", "blur": 60, "offsetY": 20 } },
+        { "id": "tile", "type": "rect", "x": 56, "y": 56, "width": 84, "height": 84, "radius": 24, "fill": "{{highlight ? accent : 'rgba(255,255,255,0.08)'}}" },
+        { "id": "icon", "type": "path", "x": 98, "y": 98, "d": "{{icon}}", "stroke": "#ffffff", "strokeWidth": 4.5, "lineCap": "round", "lineJoin": "round" },
+        { "id": "label", "type": "text", "x": 56, "y": 186, "textAlign": "left", "fontSize": 22, "fontWeight": 600, "letterSpacing": 4, "color": "{{highlight ? accent2 : muted}}", "content": "{{label}}" },
+        { "id": "title", "type": "text", "x": 56, "y": 226, "textAlign": "left", "fontSize": 60, "fontWeight": 700, "letterSpacing": -1.8, "color": "{{ink}}", "content": "{{title}}" },
+        { "id": "body", "type": "text", "x": 56, "y": 318, "textAlign": "left", "fontSize": 34, "lineHeight": 1.45, "color": "{{highlight ? '#c9cfdd' : muted}}", "maxWidth": 680, "maxLines": 3, "content": "{{body}}" }
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "id": "intro", "name": "Title",
+      "durationFrames": "{{15 + media['vo-intro'].soundEndFrames + 20 + 15}}",
+      "transitionIn": { "type": "fade", "durationFrames": 20 },
+      "transitionOut": { "type": "fade", "durationFrames": 15 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-intro", "startFrame": 15 },
+        { "use": "cc", "id": "cc", "startFrame": 15, "with": { "src": "cc-intro" } },
+        { "id": "eyebrow", "type": "group", "x": 960, "y": 300,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 18, "value": 1 }] }],
+          "children": [
+            { "id": "eyebrow-pill", "type": "rect", "x": -128, "width": 256, "height": 50, "radius": 25, "fill": "rgba(34,211,238,0.08)", "stroke": "rgba(34,211,238,0.35)", "strokeWidth": 1.5 },
+            { "id": "eyebrow-text", "type": "text", "y": 11, "textAlign": "center", "fontSize": 22, "fontWeight": 600, "letterSpacing": 4, "color": "{{accent2}}", "content": "AN EXPLAINER" }
+          ] },
+        { "id": "title", "type": "group", "x": 960, "y": 380,
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 5, "value": 0 }, { "frame": 22, "value": 1 }] },
+            { "property": "y", "keyframes": [{ "frame": 5, "value": 410 }, { "frame": 32, "value": 380, "easing": "land" }] }
+          ],
+          "children": [{ "id": "title-text", "type": "text", "textAlign": "center", "fontSize": 210, "fontWeight": 800, "letterSpacing": -8, "lineHeight": 1, "maxWidth": 1600, "maxLines": 1, "minFontSize": 110, "content": "{{title}}", "split": { "by": "letters", "stagger": 1.5, "order": "center", "preset": "blur", "duration": 22 },
+            "color": { "type": "linear", "from": [0, 0], "to": [0, 210], "stops": [{ "offset": 0, "color": "#ffffff" }, { "offset": 1, "color": "#c3c9db" }] } }] },
+        { "id": "subtitle", "type": "group", "x": 960, "y": 640, "startFrame": "{{15 + media['vo-intro'].segments[1].startFrame - 5}}",
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 18, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 0, "value": 656 }, { "frame": 24, "value": 640, "easing": "land" }] }],
+          "children": [{ "id": "subtitle-text", "type": "text", "textAlign": "center", "fontSize": 44, "letterSpacing": -0.5, "color": "{{muted}}", "maxWidth": 1500, "content": "{{subtitle}}" }] },
+        { "id": "rule", "type": "path", "x": 900, "y": 740, "d": "M0 0 L120 0", "strokeWidth": 4, "lineCap": "round",
+          "stroke": { "type": "linear", "from": [0, 0], "to": [120, 0], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] },
+          "animations": [{ "property": "trimEnd", "keyframes": [{ "frame": 24, "value": 0 }, { "frame": 50, "value": 1, "easing": "easeInOutCubic" }] }] }
+      ]
+    },
+    {
+      "id": "versus", "name": "Assistant vs agent",
+      "durationFrames": "{{18 + media['vo-versus'].soundEndFrames + 20 + 18}}",
+      "transitionIn": { "type": "fade", "durationFrames": 15 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-versus", "startFrame": 18 },
+        { "use": "cc", "id": "cc", "startFrame": 18, "with": { "src": "cc-versus" } },
+        { "use": "chapter", "id": "chapter", "with": { "number": "01", "label": "THE DIFFERENCE", "heading": "Assistant vs. agent" } },
+        { "use": "compareCard", "id": "assistant", "x": 120, "y": 330, "startFrame": 18,
+          "with": { "label": "AI ASSISTANT", "title": "Answers questions", "body": "You ask, it answers. You do the next step.",
+            "icon": "M-18 -15 h36 a6 6 0 0 1 6 6 v17 a6 6 0 0 1 -6 6 h-18 l-11 9 v-9 h-7 a6 6 0 0 1 -6 -6 v-17 a6 6 0 0 1 6 -6 z" },
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 16, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 0, "value": 360 }, { "frame": 26, "value": 330, "easing": "land" }] }] },
+        { "use": "compareCard", "id": "agent", "x": 1010, "y": 330, "startFrame": "{{18 + media['vo-versus'].segments[2].startFrame - 8}}",
+          "with": { "label": "AI AGENT", "title": "Gets things done", "body": "You set a goal. It plans, uses tools and checks its own work.",
+            "icon": "M3 -20 L-13 3 L-1 3 L-3 20 L13 -3 L1 -3 Z", "highlight": true },
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 16, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 0, "value": 360 }, { "frame": 26, "value": 330, "easing": "land" }] }] },
+        { "id": "vs", "type": "group", "x": 960, "y": 565, "startFrame": "{{18 + media['vo-versus'].segments[2].startFrame - 16}}",
+          "animations": [{ "property": "scale", "keyframes": [{ "frame": 0, "value": 0.6 }, { "frame": 20, "value": 1, "easing": "easeOutBack" }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 10, "value": 1 }] }],
+          "children": [
+            { "id": "vs-dot", "type": "circle", "width": 76, "fill": "#0d1028", "stroke": "rgba(255,255,255,0.18)", "strokeWidth": 1.5 },
+            { "id": "vs-text", "type": "text", "y": -15, "textAlign": "center", "fontSize": 22, "fontWeight": 700, "letterSpacing": 1, "color": "{{muted}}", "content": "vs" }
+          ] }
+      ]
+    },
+    {
+      "id": "loop", "name": "The agent loop",
+      "durationFrames": "{{18 + media['vo-loop'].soundEndFrames + 20 + 18}}",
+      "camera": { "animations": [{ "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 420, "value": 1.05, "easing": "drift" }] }] },
+      "transitionIn": { "type": "fade", "durationFrames": 15 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-loop", "startFrame": 18 },
+        { "use": "cc", "id": "cc", "fixed": true, "startFrame": 18, "with": { "src": "cc-loop" } },
+        { "use": "chapter", "id": "chapter", "with": { "number": "02", "label": "HOW IT WORKS", "heading": "The agent loop" } },
+        { "id": "ring", "type": "path", "x": 1380, "y": 520, "d": "M0 -270 A270 270 0 1 1 -0.1 -270", "strokeWidth": 3, "lineCap": "round",
+          "stroke": { "type": "linear", "from": [-270, -270], "to": [270, 270], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] },
+          "animations": [{ "property": "trimEnd", "keyframes": [{ "frame": 15, "value": 0 }, { "frame": 100, "value": 1, "easing": "easeInOutCubic" }] }] },
+        { "id": "orbit", "type": "group", "x": 1380, "y": 520, "startFrame": 100,
+          "animations": [{ "property": "rotation", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 900, "value": 1080 }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 20, "value": 1 }] }],
+          "children": [{ "id": "orbit-dot", "type": "circle", "y": -270, "width": 16, "fill": "#ffffff", "shadow": { "color": "{{accent2}}", "blur": 24 } }] },
+        { "repeat": "{{steps}}", "as": "step", "each": [
+          { "id": "node-{{index}}", "type": "group", "x": "{{1380 + step.x}}", "y": "{{520 + step.y}}", "startFrame": "{{18 + media['vo-loop'].segments[index + 1].startFrame}}",
+            "animations": [{ "property": "scale", "keyframes": [{ "frame": 0, "value": 0.7 }, { "frame": 20, "value": 1, "easing": "easeOutBack" }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 10, "value": 1 }] }],
+            "children": [
+              { "id": "node-dot-{{index}}", "type": "circle", "width": 168, "fill": "#0f1331", "stroke": "{{index % 2 == 0 ? accent : accent2}}", "strokeWidth": 2.5,
+                "shadow": { "color": "{{index % 2 == 0 ? 'rgba(139,92,246,0.45)' : 'rgba(34,211,238,0.35)'}}", "blur": 40 } },
+              { "id": "node-name-{{index}}", "type": "text", "y": -22, "textAlign": "center", "fontSize": 34, "fontWeight": 700, "letterSpacing": -0.5, "color": "{{ink}}", "content": "{{step.name}}" }
+            ] },
+          { "id": "detail-{{index}}", "type": "group", "x": 120, "y": "{{372 + index * 118}}", "startFrame": "{{18 + media['vo-loop'].segments[index + 1].startFrame + 4}}",
+            "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 14, "value": 1 }] }, { "property": "x", "keyframes": [{ "frame": 0, "value": 100 }, { "frame": 20, "value": 120, "easing": "land" }] }],
+            "children": [
+              { "id": "detail-bar-{{index}}", "type": "rect", "y": 4, "width": 4, "height": 88, "radius": 2, "fill": "{{index % 2 == 0 ? accent : accent2}}" },
+              { "id": "detail-name-{{index}}", "type": "text", "x": 32, "textAlign": "left", "fontSize": 34, "fontWeight": 700, "letterSpacing": -0.8, "color": "{{ink}}", "content": "{{step.name}}" },
+              { "id": "detail-text-{{index}}", "type": "text", "x": 32, "y": 50, "textAlign": "left", "fontSize": 28, "color": "{{muted}}", "maxWidth": 640, "maxLines": 1, "minFontSize": 22, "content": "{{step.detail}}" }
+            ] }
+        ] }
+      ]
+    },
+    {
+      "id": "tools", "name": "Tools",
+      "durationFrames": "{{18 + media['vo-tools'].soundEndFrames + 20 + 18}}",
+      "transitionIn": { "type": "fade", "durationFrames": 15 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-tools", "startFrame": 18 },
+        { "use": "cc", "id": "cc", "startFrame": 18, "with": { "src": "cc-tools" } },
+        { "use": "chapter", "id": "chapter", "with": { "number": "03", "label": "TOOLS", "heading": "Agents use tools" } },
+        { "repeat": "{{tools}}", "as": "tool", "each": [
+          { "id": "tool-tick-{{index}}", "type": "audio", "src": "sfx:tick", "volume": 0.5, "startFrame": "{{18 + media['vo-tools'].segments[index + 1].startFrame + 4}}" },
+          { "use": "toolCard", "id": "tool-{{index}}", "x": "{{120 + index * 428}}", "y": 400, "startFrame": "{{18 + media['vo-tools'].segments[index + 1].startFrame}}",
+            "with": { "name": "{{tool.name}}", "icon": "{{tool.icon}}", "desc": "{{tool.desc}}", "color": "{{tool.color}}" },
+            "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 14, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 0, "value": 430 }, { "frame": 24, "value": 400, "easing": "land" }] }] }
+        ] }
+      ]
+    },
+    {
+      "id": "guardrails", "name": "Guardrails",
+      "durationFrames": "{{18 + media['vo-guardrails'].soundEndFrames + 20 + 15}}",
+      "camera": { "animations": [{ "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 360, "value": 1.05, "easing": "drift" }] }] },
+      "transitionIn": { "type": "fade", "durationFrames": 15 },
+      "transitionOut": { "type": "fade", "durationFrames": 15 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-guardrails", "startFrame": 18 },
+        { "use": "cc", "id": "cc", "fixed": true, "startFrame": 18, "with": { "src": "cc-guardrails" } },
+        { "use": "chapter", "id": "chapter", "with": { "number": "04", "label": "SAFETY", "heading": "Agents need guardrails", "sub": "Autonomy is only useful when it is safe" } },
+        { "repeat": "{{guardrails}}", "as": "rule", "each": [
+          { "id": "rule-click-{{index}}", "type": "audio", "src": "sfx:click", "volume": 0.45, "startFrame": "{{18 + media['vo-guardrails'].segments[index + 1].startFrame + 12}}" },
+          { "id": "rule-{{index}}", "type": "group", "x": 120, "y": "{{390 + index * 148}}", "startFrame": "{{18 + media['vo-guardrails'].segments[index + 1].startFrame}}",
+            "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 14, "value": 1 }] }, { "property": "x", "keyframes": [{ "frame": 0, "value": 150 }, { "frame": 22, "value": 120, "easing": "land" }] }],
+            "children": [
+              { "id": "rule-card-{{index}}", "type": "rect", "width": 1100, "height": 124, "radius": 26, "fill": "rgba(255,255,255,0.04)", "stroke": "rgba(255,255,255,0.1)", "strokeWidth": 1.5 },
+              { "id": "rule-num-{{index}}", "type": "text", "x": 44, "y": 46, "textAlign": "left", "fontSize": 22, "fontWeight": 600, "letterSpacing": 2, "color": "{{muted}}", "content": "0{{index + 1}}" },
+              { "id": "rule-dot-{{index}}", "type": "circle", "x": 1036, "y": 62, "width": 60, "fill": "{{accent2}}1f", "stroke": "{{accent2}}", "strokeWidth": 2 },
+              { "id": "rule-check-{{index}}", "type": "path", "x": 1036, "y": 62, "d": "M-12 1 L-4 9 L12 -9", "stroke": "{{accent2}}", "strokeWidth": 4.5, "lineCap": "round", "lineJoin": "round",
+                "animations": [{ "property": "trimEnd", "keyframes": [{ "frame": 10, "value": 0 }, { "frame": 24, "value": 1, "easing": "land" }] }] },
+              { "id": "rule-text-{{index}}", "type": "text", "x": 110, "y": 36, "textAlign": "left", "fontSize": 44, "fontWeight": 600, "letterSpacing": -0.8, "color": "{{ink}}", "maxWidth": 860, "maxLines": 1, "minFontSize": 28, "content": "{{rule.text}}" }
+            ] }
+        ] },
+        { "id": "shield", "type": "group", "x": 1560, "y": 600, "startFrame": 24,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 30, "value": 1 }] }, { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.9 }, { "frame": 40, "value": 1, "easing": "land" }] }],
+          "children": [
+            { "id": "shield-glow", "type": "circle", "width": 520, "fill": { "type": "radial", "center": [0, 0], "radius": 260, "stops": [{ "offset": 0, "color": "rgba(34,211,238,0.16)" }, { "offset": 1, "color": "rgba(34,211,238,0)" }] } },
+            { "id": "shield-shape", "type": "path", "d": "M0 -150 L120 -105 V-10 C120 75 65 130 0 155 C-65 130 -120 75 -120 -10 V-105 Z", "strokeWidth": 3, "lineJoin": "round",
+              "fill": { "type": "linear", "from": [0, -150], "to": [0, 155], "stops": [{ "offset": 0, "color": "rgba(34,211,238,0.14)" }, { "offset": 1, "color": "rgba(139,92,246,0.08)" }] },
+              "stroke": { "type": "linear", "from": [0, -150], "to": [0, 155], "stops": [{ "offset": 0, "color": "{{accent2}}" }, { "offset": 1, "color": "{{accent}}" }] } },
+            { "id": "shield-check", "type": "path", "d": "M-42 2 L-12 32 L46 -30", "stroke": "#ffffff", "strokeWidth": 9, "lineCap": "round", "lineJoin": "round",
+              "animations": [{ "property": "trimEnd", "keyframes": [{ "frame": 20, "value": 0 }, { "frame": 45, "value": 1, "easing": "easeInOutCubic" }] }] }
+          ] }
+      ]
+    },
+    {
+      "id": "outro", "name": "Outro", "overlap": 0,
+      "durationFrames": "{{18 + media['vo-outro'].soundEndFrames + 64}}",
+      "transitionIn": { "type": "fade", "durationFrames": 18 },
+      "transitionOut": { "type": "fade", "durationFrames": 20 },
+      "layers": [
+        { "use": "backdrop", "id": "bg" },
+        { "id": "voice", "type": "audio", "src": "vo-outro", "startFrame": 18 },
+        { "id": "line-1", "type": "group", "x": 960, "y": 330,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 4, "value": 0 }, { "frame": 20, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 4, "value": 356 }, { "frame": 30, "value": 330, "easing": "land" }] }],
+          "children": [{ "id": "line-1-text", "type": "text", "textAlign": "center", "fontSize": 136, "fontWeight": 800, "letterSpacing": -5, "lineHeight": 1, "color": "{{ink}}", "content": "Give it a goal.", "split": { "by": "words", "stagger": 4, "preset": "rise" } }] },
+        { "id": "line-2", "type": "group", "x": 960, "y": 480, "startFrame": "{{18 + media['vo-outro'].segments[1].startFrame - 4}}",
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 16, "value": 1 }] }, { "property": "y", "keyframes": [{ "frame": 0, "value": 506 }, { "frame": 26, "value": 480, "easing": "land" }] }],
+          "children": [{ "id": "line-2-text", "type": "text", "textAlign": "center", "fontSize": 136, "fontWeight": 800, "letterSpacing": -5, "lineHeight": 1, "content": "Get an outcome.", "split": { "by": "words", "stagger": 4, "preset": "rise" },
+            "color": { "type": "linear", "from": [-520, 0], "to": [520, 0], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] } }] },
+        { "id": "credit", "type": "group", "x": 960, "y": 780,
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 60, "value": 0 }, { "frame": 76, "value": 1 }] }],
+          "children": [
+            { "id": "credit-mark", "type": "rect", "x": -196, "y": -2, "width": 36, "height": 36, "radius": 10, "fill": { "type": "linear", "from": [0, 0], "to": [36, 36], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] } },
+            { "id": "credit-play", "type": "path", "x": -178, "y": 16, "d": "M-5 -8 L8 0 L-5 8 Z", "fill": "#ffffff" },
+            { "id": "credit-text", "type": "text", "x": -144, "textAlign": "left", "fontSize": 28, "fontWeight": 500, "color": "{{muted}}", "content": "Made with Open Video Engine" }
+          ] }
+      ]
+    }
+  ]
+}

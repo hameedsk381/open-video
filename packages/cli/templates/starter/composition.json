@@ -7,10 +7,11 @@
   "height": 1080,
   "fps": 30,
   "durationFrames": 150,
+  "background": { "type": "linear", "from": [0, 0], "to": [1920, 1080], "stops": [{ "offset": 0, "color": "#080b18" }, { "offset": 1, "color": "#111634" }] },
   "variables": {
     "title": { "type": "string", "default": "Hello,\nOpen Video Engine", "description": "Headline; a line break in the value starts a new line" },
     "tagline": { "type": "string", "default": "Edit composition.json to begin" },
-    "accent": { "type": "color", "default": "#4f46e5", "description": "Colour of the glow" }
+    "accent": { "type": "color", "default": "#6366f1", "description": "Colour of the glow and the line beside the tagline" }
   },
   "assets": [
     { "id": "logo", "type": "image", "src": "./assets/logo.svg" }
@@ -22,19 +23,17 @@
       "startFrame": 0,
       "durationFrames": 150,
       "transitionIn": { "type": "fade", "durationFrames": 15 },
+      "transitionOut": { "type": "fade", "durationFrames": 15 },
       "layers": [
-        { "id": "background", "type": "rect", "width": 1920, "height": 1080, "fill": "#0f172a", "zIndex": 0 },
         {
           "id": "glow",
           "type": "circle",
-          "x": 1580,
-          "y": 300,
-          "width": 640,
-          "fill": "{{accent}}",
-          "opacity": 0.5,
-          "zIndex": 1,
+          "x": 1500,
+          "y": 260,
+          "width": 1300,
+          "fill": { "type": "radial", "center": [0, 0], "radius": 650, "stops": [{ "offset": 0, "color": "{{accent}}66" }, { "offset": 1, "color": "{{accent}}00" }] },
           "animations": [
-            { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.8 }, { "frame": 75, "value": 1.1, "easing": "easeInOut" }], "repeat": 1, "reverse": true }
+            { "property": "x", "keyframes": [{ "frame": 0, "value": 1560 }, { "frame": 150, "value": 1440, "easing": "easeInOut" }] }
           ]
         },
         {
@@ -42,47 +41,41 @@
           "type": "image",
           "src": "logo",
           "x": 160,
-          "y": 220,
-          "width": 160,
-          "height": 160,
+          "y": 250,
+          "width": 120,
+          "height": 120,
           "objectFit": "contain",
-          "zIndex": 2,
           "animations": [
-            { "property": "rotation", "keyframes": [{ "frame": 0, "value": -90 }, { "frame": 30, "value": 0, "easing": "easeOut" }] },
-            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 20, "value": 1 }] }
+            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 16, "value": 1 }] },
+            { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.8 }, { "frame": 24, "value": 1, "easing": "easeOutBack" }] }
           ]
         },
         {
           "id": "title",
-          "type": "text",
-          "content": "{{title}}",
+          "type": "group",
           "x": 160,
-          "y": 440,
-          "fontSize": 110,
-          "maxWidth": 1000,
-          "maxLines": 2,
-          "minFontSize": 56,
-          "lineHeight": 1.1,
-          "color": "#ffffff",
-          "zIndex": 3,
+          "y": 430,
           "animations": [
-            { "property": "opacity", "keyframes": [{ "frame": 10, "value": 0 }, { "frame": 40, "value": 1, "easing": "easeOut" }] },
-            { "property": "y", "keyframes": [{ "frame": 10, "value": 500 }, { "frame": 40, "value": 440, "easing": "easeOut" }] }
+            { "property": "opacity", "keyframes": [{ "frame": 8, "value": 0 }, { "frame": 26, "value": 1 }] },
+            { "property": "y", "keyframes": [{ "frame": 8, "value": 462 }, { "frame": 36, "value": 430, "easing": "land" }] }
+          ],
+          "children": [
+            { "id": "title-text", "type": "text", "content": "{{title}}", "textAlign": "left", "fontSize": 124, "fontWeight": 700, "letterSpacing": -4, "lineHeight": 1.05, "maxWidth": 1300, "maxLines": 2, "minFontSize": 64, "color": "#f5f7fb" }
           ]
         },
         {
           "id": "tagline",
           "type": "group",
           "x": 160,
-          "y": 740,
-          "startFrame": 45,
-          "zIndex": 3,
+          "y": 760,
+          "startFrame": 30,
           "animations": [
-            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 20, "value": 1 }] }
+            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 18, "value": 1 }] },
+            { "property": "x", "keyframes": [{ "frame": 0, "value": 184 }, { "frame": 24, "value": 160, "easing": "land" }] }
           ],
           "children": [
-            { "id": "pill", "type": "rect", "width": 620, "height": 84, "radius": 42, "fill": "#1e293b" },
-            { "id": "tagline-text", "type": "text", "content": "{{tagline}}", "x": 36, "y": 24, "fontSize": 36, "maxWidth": 548, "maxLines": 1, "minFontSize": 22, "color": "#a5b4fc" }
+            { "id": "tagline-line", "type": "rect", "y": 6, "width": 4, "height": 34, "radius": 2, "fill": "{{accent}}" },
+            { "id": "tagline-text", "type": "text", "content": "{{tagline}}", "x": 32, "textAlign": "left", "fontSize": 36, "letterSpacing": -0.4, "maxWidth": 1200, "maxLines": 1, "minFontSize": 22, "color": "#97a0b6" }
           ]
         }
       ]

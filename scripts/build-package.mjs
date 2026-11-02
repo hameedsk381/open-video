@@ -31,6 +31,14 @@ await bundlePlayer({ outfile: join(dist, 'player.js'), minify: true });
 await cp(join(root, 'packages/player/src/canvas-runtime.d.ts'), join(types, 'packages/player/src/canvas-runtime.d.ts'));
 const playerTypes=join(types, 'packages/player/src/index.d.ts'); await writeFile(playerTypes, `/// <reference path="./canvas-runtime.d.ts" />\n${await readFile(playerTypes, 'utf8')}`);
 await writeFile(join(dist, 'player.d.ts'), "export * from './types/packages/player/src/index.js';\n");
+// The built-in Inter faces with their licence: the renderer reads them from dist/fonts, and the Player loads them from there by URL.
+const { builtinFontDir } = await import('../packages/graphics/src/fonts.ts'); const { builtinFontFaces } = await import('../packages/graphics/src/index.ts'); await mkdir(join(dist, 'fonts'), { recursive: true });
+for (const face of builtinFontFaces) await cp(join(builtinFontDir(), face.file), join(dist, 'fonts', face.file)); await cp(join(builtinFontDir(), '..', 'LICENSE'), join(dist, 'fonts', 'LICENSE-Inter.txt'));
+// The drawing runtime and text layout, read as text by the bundled code from dist/runtime.
+await cp(join(root, 'packages/graphics/runtime'), join(dist, 'runtime'), { recursive: true });
+// The built-in sound effects, for the Player (renders make their own in the cache folder).
+const { sfxFile } = await import('../packages/core/src/audio.ts'); const { sfxNames } = await import('../packages/schema/src/index.ts'); await mkdir(join(dist, 'sfx'), { recursive: true });
+for (const name of sfxNames) await cp(await sfxFile(name), join(dist, 'sfx', `${name}.wav`));
 await cp(join(root, 'packages/cli/templates'), join(out, 'templates'), { recursive: true }); await cp(join(root, 'packages/cli/skills'), join(out, 'skills'), { recursive: true });
 await cp(join(root, 'LICENSE'), join(out, 'LICENSE')); // packages/ove/README.md is the package's own README, kept in the repository
 console.log(`Built ${relative(root, out)}: dist/index.js, dist/cli.js, dist/player.js, declarations, templates/, skills/`);

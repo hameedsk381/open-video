@@ -1,0 +1,79 @@
+﻿{
+    "words":  [
+                  {
+                      "text":  "Agentic",
+                      "start":  0.11,
+                      "end":  0.685
+                  },
+                  {
+                      "text":  "AI.",
+                      "start":  0.685,
+                      "end":  1.06
+                  },
+                  {
+                      "text":  "Software",
+                      "start":  1.06,
+                      "end":  1.67
+                  },
+                  {
+                      "text":  "that",
+                      "start":  1.67,
+                      "end":  1.865
+                  },
+                  {
+                      "text":  "doesn\u0027t",
+                      "start":  1.865,
+                      "end":  2.245
+                  },
+                  {
+                      "text":  "just",
+                      "start":  2.245,
+                      "end":  2.59
+                  },
+                  {
+                      "text":  "answer.",
+                      "start":  2.59,
+                      "end":  4.03
+                  },
+                  {
+                      "text":  "It",
+                      "start":  4.03,
+                      "end":  4.19
+                  },
+                  {
+                      "text":  "plans,",
+                      "start":  4.19,
+                      "end":  5.28
+                  },
+                  {
+                      "text":  "acts,",
+                      "start":  5.28,
+                      "end":  6.24
+                  },
+                  {
+                      "text":  "and",
+                      "start":  6.24,
+                      "end":  6.38
+                  },
+                  {
+                      "text":  "checks",
+                      "start":  6.38,
+                      "end":  6.715
+                  },
+                  {
+                      "text":  "its",
+                      "start":  6.715,
+                      "end":  6.89
+                  },
+                  {
+                      "text":  "own",
+                      "start":  6.89,
+                      "end":  7.075
+                  },
+                  {
+                      "text":  "work.",
+                      "start":  7.075,
+                      "end":  7.575
+                  }
+              ]
+}

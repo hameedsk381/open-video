@@ -1,8 +1,13 @@
 import type { Animation } from '@ove/schema';
-export const easingNames = ['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInBack','easeOutBack','spring','hold'] as const;
+export const easingNames = ['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInQuart','easeOutQuart','easeInOutQuart','easeInExpo','easeOutExpo','easeInOutExpo','easeInBack','easeOutBack','spring','hold','land','snap','glide','pop','move','exit','drift'] as const;
 // A named curve, or [x1, y1, x2, y2] control points of a CSS-style cubic Bézier from (0,0) to (1,1).
 export type Easing = typeof easingNames[number] | readonly [number, number, number, number];
 const back = 1.70158;
+// Curves named for the job they do, as cubic Béziers. Entries: land (most of the travel early, then a long soft settle; the default
+// choice), snap (almost all of it in the first few frames, for a hero element or a call to action), glide (a gentler ease-out for
+// supporting elements), pop (lands with a small overshoot, for badges). Within the frame: move (accelerates and decelerates, for
+// something repositioning). Leaving: exit (accelerates away). Slow continuous motion: drift (close to linear, soft at both ends).
+const roleCurves: Record<string, readonly [number, number, number, number]> = { land: [0.16, 1, 0.3, 1], snap: [0.05, 0.9, 0.1, 1], glide: [0.25, 0.8, 0.35, 1], pop: [0.34, 1.45, 0.64, 1], move: [0.76, 0, 0.24, 1], exit: [0.5, 0, 0.75, 0], drift: [0.35, 0.15, 0.65, 0.85] };
 // Damped oscillation scaled so it ends exactly at 1: overshoots by about 10% around a third of the way, then settles.
 const springCurve = (t: number) => 1 - Math.exp(-7*t)*Math.cos(3*Math.PI*t), springEnd = springCurve(1);
 // Solves x(s) = t for the curve parameter s (Newton steps, falling back to bisection), then returns y(s).
@@ -13,8 +18,10 @@ export function ease(t: number, kind: Easing = 'linear'): number { if (t <= 0) r
   switch (kind) {
     case 'easeIn': return t*t; case 'easeOut': return 1-(1-t)*(1-t); case 'easeInOut': return t < .5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
     case 'easeInCubic': return t*t*t; case 'easeOutCubic': return 1-Math.pow(1-t,3); case 'easeInOutCubic': return t < .5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+    case 'easeInQuart': return t*t*t*t; case 'easeOutQuart': return 1-Math.pow(1-t,4); case 'easeInOutQuart': return t < .5 ? 8*t*t*t*t : 1-Math.pow(-2*t+2,4)/2;
+    case 'easeInExpo': return Math.pow(2,10*t-10); case 'easeOutExpo': return 1-Math.pow(2,-10*t); case 'easeInOutExpo': return t < .5 ? Math.pow(2,20*t-10)/2 : (2-Math.pow(2,-20*t+10))/2;
     case 'easeInBack': return (back+1)*t*t*t - back*t*t; case 'easeOutBack': return 1 + (back+1)*Math.pow(t-1,3) + back*Math.pow(t-1,2);
-    case 'spring': return springCurve(t)/springEnd; case 'hold': return 0; default: return t; } }
+    case 'spring': return springCurve(t)/springEnd; case 'hold': return 0; default: { const c=roleCurves[kind]; return c ? cubicBezier(c[0], c[1], c[2], c[3], t) : t; } } }
 // Colours interpolate per channel in sRGB, including alpha. Accepts the same forms as the schema: #rgb, #rgba, #rrggbb, #rrggbbaa,
 // rgb()/rgba() and transparent.
 export function parseColor(value: string): [number, number, number, number] { const v=value.trim().toLowerCase(); if (v === 'transparent') return [0,0,0,0];
@@ -24,6 +31,11 @@ export function parseColor(value: string): [number, number, number, number] { co
 export function mixColors(from: string, to: string, t: number): string { const a=parseColor(from), b=parseColor(to), c=a.map((x, i) => x+(b[i]!-x)*t); return `rgba(${Math.round(c[0]!)},${Math.round(c[1]!)},${Math.round(c[2]!)},${Math.round(c[3]!*10000)/10000})`; }
 export function interpolate(frame: number, input: readonly number[], output: readonly number[], easing: Easing = 'linear'): number { if (input.length !== output.length || !input.length) throw new Error('interpolate requires equally sized non-empty ranges'); if (frame <= input[0]!) return output[0]!; const final = input.length - 1; if (frame >= input[final]!) return output[final]!; for(let i=1;i<input.length;i++) if(frame <= input[i]!) { const t=(frame-input[i-1]!)/(input[i]!-input[i-1]!); return output[i-1]!+(output[i]!-output[i-1]!)*ease(t,easing); } return output[final]!; }
 // Each segment uses the easing of the keyframe it arrives at. Numbers interpolate; colour strings mix per channel.
+// The keyframe pair around a frame and the eased progress between them (repeat and reverse applied). Before the first keyframe and
+// after the last, from and to are the same keyframe.
+export function animationSegment(animation: { keyframes: readonly { frame: number; value: unknown; easing?: Easing }[]; repeat?: number; reverse?: boolean }, frame: number): { from: unknown; to: unknown; t: number } { const keys=animation.keyframes; const duration=keys.at(-1)!.frame; let f=duration === 0 ? 0 : frame; if (animation.repeat !== undefined && duration > 0) { const cycle=Math.min(Math.floor(f/duration), animation.repeat); f=f-cycle*duration; if(animation.reverse && cycle%2) f=duration-f; }
+  if (f <= keys[0]!.frame) return { from: keys[0]!.value, to: keys[0]!.value, t: 0 }; if (f >= keys.at(-1)!.frame) return { from: keys.at(-1)!.value, to: keys.at(-1)!.value, t: 1 };
+  const i=keys.findIndex(k => k.frame >= f), from=keys[i-1]!, to=keys[i]!; return { from: from.value, to: to.value, t: ease((f-from.frame)/(to.frame-from.frame), to.easing ?? 'linear') }; }
 export function evaluateAnimation(animation: Animation, frame: number): number | string { const keys=animation.keyframes; const duration=keys.at(-1)!.frame; let f=duration === 0 ? 0 : frame; if (animation.repeat !== undefined && duration > 0) { const cycle=Math.min(Math.floor(f/duration), animation.repeat); f=f-cycle*duration; if(animation.reverse && cycle%2) f=duration-f; }
   if (f <= keys[0]!.frame) return keys[0]!.value; if (f >= keys.at(-1)!.frame) return keys.at(-1)!.value;
   const i=keys.findIndex(k => k.frame >= f), from=keys[i-1]!, to=keys[i]!, t=ease((f-from.frame)/(to.frame-from.frame), to.easing ?? 'linear');

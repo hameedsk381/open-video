@@ -1,4 +1,4 @@
-import { describe,it,expect } from 'vitest'; import { layoutText, fontStack, cssFont } from '@ove/graphics'; import { parseComposition } from '@ove/schema';
+import { describe,it,expect } from 'vitest'; import { fontStack, cssFont } from '@ove/graphics'; import { layoutText } from '@ove/graphics/runtime'; import { parseComposition } from '@ove/schema';
 const m=(s:string,size:number)=>Array.from(s).length*size*.5; // every character is half the font size wide
 describe('layoutText',()=>{
 it('keeps explicit line breaks and does not wrap without maxWidth',()=>expect(layoutText('a long line\nnext',{fontSize:20},m)).toEqual({lines:['a long line','next'],fontSize:20,truncated:false}));

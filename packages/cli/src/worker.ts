@@ -16,7 +16,7 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerSe
       const job=JSON.parse(await body(req)); const composition=parseComposition(job.composition), range=job.frameRange as [number, number], format=job.format as ChunkFormat;
       if (!['mp4','webm','mov'].includes(format)) return send(res, 400, 'text/plain', 'format must be mp4, webm or mov'); if (job.preset && !x264Presets.includes(job.preset)) return send(res, 400, 'text/plain', 'Unknown preset');
       jobs++; const run=queue.then(async () => { const dir=await mkdtemp(join(tmpdir(), 'ove-worker-')); const output=join(dir, `chunk.${format}`); const started=Date.now();
-        try { await renderMedia(composition, { output, format, codec: job.codec, transparent: job.transparent, preset: job.preset, frameRange: range, concurrency, audio: false }); log(`rendered frames ${range[0]}–${range[1]} (${format}) in ${((Date.now()-started)/1000).toFixed(1)}s`); return await readFile(output); }
+        try { await renderMedia(composition, { output, format, codec: job.codec, transparent: job.transparent, preset: job.preset, crf: job.crf, bitrate: job.bitrate, scale: job.scale, frameRange: range, concurrency, audio: false }); log(`rendered frames ${range[0]}–${range[1]} (${format}) in ${((Date.now()-started)/1000).toFixed(1)}s`); return await readFile(output); }
         finally { await rm(dir, { recursive: true, force: true }); } }); queue=run.then(() => {}, () => {});
       try { send(res, 200, 'application/octet-stream', await run); } finally { jobs--; }
     } catch (error) { log(`job failed: ${describeError(error).split('\n')[0]}`); if (!res.headersSent) send(res, 500, 'text/plain', describeError(error)); } });

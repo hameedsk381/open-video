@@ -10,9 +10,17 @@ export const ffmpegPath = () => process.env.OVE_FFMPEG_PATH || 'ffmpeg'; export 
 const notFound = (tool: string, env: string) => new Error(`${tool} was not found. Install FFmpeg (it includes ${tool}) and put it on PATH, or set ${env} to the executable.`);
 // One sound placed on the output timeline; all times are seconds. `trim` skips the start of the source, `rate` changes speed
 // without changing pitch, and `loop` repeats the source (each repeat restarts from the source's beginning, not from `trim`).
-export type AudioClip = { source: string; start: number; duration: number; trim?: number; rate?: number; loop?: boolean; volume?: number; fadeIn?: number; fadeOut?: number };
+// `envelope`, when present, replaces `volume`: [time, gain] points in clip time, joined linearly (volume keyframes and ducking).
+export type AudioClip = { source: string; start: number; duration: number; trim?: number; rate?: number; loop?: boolean; volume?: number; fadeIn?: number; fadeOut?: number; envelope?: [number, number][] };
+const num = (n: number) => { const text = n.toFixed(5).replace(/\.?0+$/, ''); return text === '' || text === '-0' ? '0' : text; };
+// A piecewise-linear gain over clip time t for FFmpeg's volume filter: a balanced tree of if(lt(t, …)) so long envelopes stay shallow.
+export function envelopeExpression(points: [number, number][]): string { if (points.length === 1) return num(points[0]![1]);
+  const segment = (i: number) => { const [t0, v0] = points[i]!, [t1, v1] = points[i+1]!; return t1 <= t0 ? num(v1) : `${num(v0)}+(${num(v1 - v0)})*(t-${num(t0)})/${num(t1 - t0)}`; };
+  const tree = (lo: number, hi: number): string => { if (lo === hi) return `(${segment(lo)})`; const mid = Math.floor((lo + hi + 1)/2); return `if(lt(t,${num(points[mid]![0])}),${tree(lo, mid - 1)},${tree(mid, hi)})`; };
+  const [lastT, lastV] = points[points.length - 1]!; return `if(gte(t,${num(lastT)}),${num(lastV)},${tree(0, points.length - 2)})`; }
 // `durationSeconds` is the output length; `offsetSeconds` skips the start of the mix, for rendering only part of a video.
-export type AudioMix = { clips: AudioClip[]; durationSeconds: number; offsetSeconds?: number };
+// gainDb (from loudness normalisation) is applied to the whole mix, followed by a limiter that keeps peaks under about -1.5 dBFS.
+export type AudioMix = { clips: AudioClip[]; durationSeconds: number; offsetSeconds?: number; gainDb?: number };
 const seconds = (n: number) => n.toFixed(6);
 // atempo accepts 0.5–100 per instance, so slower rates chain several.
 const tempo = (rate: number) => { const filters: string[]=[]; let remaining=rate; while (remaining < 0.5) { filters.push('atempo=0.5'); remaining/=0.5; } if (remaining !== 1) filters.push(`atempo=${remaining}`); return filters; };
@@ -20,21 +28,40 @@ const tempo = (rate: number) => { const filters: string[]=[]; let remaining=rate
 // 1/n normalisation, so a clip's volume is the same whether it plays alone or with others; the mix is padded or cut to the video length.
 export function audioMixArgs(mix: AudioMix | undefined, audioCodec: string[] = ['-c:a','aac','-b:a','192k']): string[] { if (!mix || mix.clips.length === 0) return []; const inputs: string[]=[], chains: string[]=[];
   mix.clips.forEach((clip, i) => { inputs.push(...(clip.loop ? ['-stream_loop','-1'] : []), '-i', clip.source); const fadeIn=Math.min(clip.fadeIn ?? 0, clip.duration), fadeOut=Math.min(clip.fadeOut ?? 0, clip.duration);
-    const filters=[`atrim=start=${seconds(clip.trim ?? 0)}`,'asetpts=PTS-STARTPTS',...tempo(clip.rate ?? 1),`atrim=duration=${seconds(clip.duration)}`,'asetpts=PTS-STARTPTS','aformat=sample_rates=48000:channel_layouts=stereo',`volume=${clip.volume ?? 1}`,...(fadeIn > 0 ? [`afade=t=in:d=${seconds(fadeIn)}`] : []),...(fadeOut > 0 ? [`afade=t=out:st=${seconds(clip.duration-fadeOut)}:d=${seconds(fadeOut)}`] : []),`adelay=delays=${Math.round(clip.start*48000)}S:all=1`];
+    const filters=[`atrim=start=${seconds(clip.trim ?? 0)}`,'asetpts=PTS-STARTPTS',...tempo(clip.rate ?? 1),`atrim=duration=${seconds(clip.duration)}`,'asetpts=PTS-STARTPTS','aformat=sample_rates=48000:channel_layouts=stereo',clip.envelope?.length ? `volume='${envelopeExpression(clip.envelope)}':eval=frame` : `volume=${clip.volume ?? 1}`,...(fadeIn > 0 ? [`afade=t=in:d=${seconds(fadeIn)}`] : []),...(fadeOut > 0 ? [`afade=t=out:st=${seconds(clip.duration-fadeOut)}:d=${seconds(fadeOut)}`] : []),`adelay=delays=${Math.round(clip.start*48000)}S:all=1`];
     chains.push(`[${i+1}:a]${filters.join(',')}[a${i}]`); });
-  const labels=mix.clips.map((_, i) => `[a${i}]`).join(''); const mixed=mix.clips.length === 1 ? `${labels}apad` : `${labels}amix=inputs=${mix.clips.length}:duration=longest:normalize=0,apad`;
-  return [...inputs,'-filter_complex',`${chains.join(';')};${mixed},atrim=start=${seconds(mix.offsetSeconds ?? 0)}:duration=${seconds(mix.durationSeconds)},asetpts=PTS-STARTPTS[aout]`,'-map','0:v','-map','[aout]',...audioCodec]; }
+  const labels=mix.clips.map((_, i) => `[a${i}]`).join(''); const mixed=mix.clips.length === 1 ? `${labels}apad` : `${labels}amix=inputs=${mix.clips.length}:duration=longest:normalize=0,apad`, master=mix.gainDb === undefined ? '' : `,volume=${mix.gainDb.toFixed(2)}dB,alimiter=limit=0.84:level=false:attack=5:release=50`;
+  return [...inputs,'-filter_complex',`${chains.join(';')};${mixed}${master},atrim=start=${seconds(mix.offsetSeconds ?? 0)}:duration=${seconds(mix.durationSeconds)},asetpts=PTS-STARTPTS[aout]`,'-map','0:v','-map','[aout]',...audioCodec]; }
+// Built-in sound effects: each is an FFmpeg input (a formula, or seeded noise) and filters, rendered to a 48 kHz stereo WAV. Tones decay
+// exponentially; pop and thump glide down in pitch, riser glides up and swells; whoosh is band-limited noise swelling and fading.
+const tone = (expr: string, seconds: number) => ['-f','lavfi','-i',`aevalsrc=${expr}:s=48000:d=${seconds}`];
+export const sfxRecipes: Record<string, string[]> = {
+  click: tone('0.8*sin(2*PI*2400*t)*exp(-t*150)+0.35*sin(2*PI*5200*t)*exp(-t*300)', 0.06),
+  tick: tone('0.55*sin(2*PI*3800*t)*exp(-t*260)', 0.04),
+  pop: tone('0.9*sin(2*PI*(1000*t-2200*t*t))*exp(-t*28)', 0.18),
+  thump: tone('0.9*sin(2*PI*(110*t-80*t*t))*exp(-t*9)+0.3*sin(2*PI*55*t)*exp(-t*6)', 0.6),
+  ding: tone('0.5*sin(2*PI*1318*t)*exp(-t*3)+0.25*sin(2*PI*3640*t)*exp(-t*5)+0.12*sin(2*PI*7110*t)*exp(-t*8)', 1.8),
+  riser: tone('(t/1.6)*(t/1.6)*(0.6*sin(2*PI*(180*t+380*t*t))+0.25*sin(2*PI*(360*t+760*t*t)))', 1.6),
+  whoosh: ['-f','lavfi','-i','anoisesrc=d=0.7:c=pink:a=0.9:r=48000:seed=11','-af',"highpass=f=300,lowpass=f=3500,volume='sin(PI*t/0.7)*sin(PI*t/0.7)*sin(PI*t/0.7)':eval=frame,volume=3"],
+};
+export const sfxArgs = (name: string, output: string) => { const recipe=sfxRecipes[name]; if (!recipe) throw new Error(`Unknown sound effect "${name}"`); return ['-v','error','-y',...recipe,'-ac','2','-ar','48000','-c:a','pcm_s16le',output]; };
 export type VideoFormat = 'mp4' | 'webm' | 'mov' | 'gif';
-export type VideoEncodeOptions = EncodeOptions & { format?: VideoFormat; codec?: 'h264' | 'h265'; transparent?: boolean };
+// Quality: crf is constant quality (lower = better and larger; defaults 20 for H.264, 24 for H.265, 32 for VP9); bitrate such as "8M"
+// targets a data rate instead (capped, for predictable sizes) and wins over crf; audioBitrate such as "256k". ProRes and GIF ignore them.
+export type QualityOptions = { crf?: number; bitrate?: string; audioBitrate?: string };
+export type VideoEncodeOptions = EncodeOptions & QualityOptions & { format?: VideoFormat; codec?: 'h264' | 'h265'; transparent?: boolean };
 // Per-format video and audio codec settings. x265 shares x264's preset names. VP9 uses constant quality (crf 32, the libvpx
 // default range's middle) and row multithreading; ProRes uses 4444 (with alpha) when transparent, HQ otherwise. GIF builds a palette
-// from all frames (palettegen) before writing, and loops forever.
+// from all frames (palettegen) before writing, and loops forever. Motion graphics are mostly smooth gradients on dark backgrounds,
+// where x264/x265's defaults show banding: the defaults sit a little below their usual crf (23/28), and aq-mode 3 (adaptive
+// quantisation biased towards dark areas) spends the extra bits there.
 function formatArgs(fps: number, options: VideoEncodeOptions): { video: string[]; audio: string[] | undefined } { const preset=options.preset ?? defaultPreset, rate=['-r',String(fps)];
+  const x26x=(defaultCrf: number) => options.bitrate ? ['-b:v',options.bitrate,'-maxrate',options.bitrate,'-bufsize',options.bitrate] : ['-crf',String(options.crf ?? defaultCrf)];
   switch (options.format ?? 'mp4') {
-    case 'webm': return { video: ['-c:v','libvpx-vp9','-b:v','0','-crf','32','-row-mt','1','-deadline','good','-cpu-used','4','-pix_fmt',options.transparent ? 'yuva420p' : 'yuv420p',...rate], audio: ['-c:a','libopus','-b:a','160k'] };
+    case 'webm': return { video: ['-c:v','libvpx-vp9','-b:v',options.bitrate ?? '0','-crf',String(options.crf ?? 32),'-row-mt','1','-deadline','good','-cpu-used','4','-pix_fmt',options.transparent ? 'yuva420p' : 'yuv420p',...rate], audio: ['-c:a','libopus','-b:a',options.audioBitrate ?? '160k'] };
     case 'mov': return { video: ['-c:v','prores_ks','-profile:v',options.transparent ? '4' : '3','-pix_fmt',options.transparent ? 'yuva444p10le' : 'yuv422p10le','-vendor','apl0',...rate], audio: ['-c:a','pcm_s16le'] };
     case 'gif': return { video: ['-vf','split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=sierra2_4a','-loop','0',...rate], audio: undefined };
-    default: return { video: options.codec === 'h265' ? ['-c:v','libx265','-preset',preset,'-pix_fmt','yuv420p','-tag:v','hvc1','-x265-params','log-level=error','-movflags','+faststart',...rate] : ['-c:v','libx264','-preset',preset,'-pix_fmt','yuv420p','-movflags','+faststart',...rate], audio: ['-c:a','aac','-b:a','192k'] }; } }
+    default: return { video: options.codec === 'h265' ? ['-c:v','libx265','-preset',preset,...x26x(24),'-pix_fmt','yuv420p','-tag:v','hvc1','-x265-params','log-level=error:aq-mode=3','-movflags','+faststart',...rate] : ['-c:v','libx264','-preset',preset,...x26x(20),'-x264-params','aq-mode=3','-pix_fmt','yuv420p','-movflags','+faststart',...rate], audio: ['-c:a','aac','-b:a',options.audioBitrate ?? '192k'] }; } }
 function run(args: string[], stdin: 'ignore'|'pipe') { const child=spawn(ffmpegPath(),args,{stdio:[stdin,'ignore','pipe']}); let error=''; child.stderr!.on('data',d=>error+=d); const done=new Promise<void>((resolve,reject)=>{child.on('error',e=>reject((e as NodeJS.ErrnoException).code === 'ENOENT' ? notFound('ffmpeg','OVE_FFMPEG_PATH') : e)); child.on('close',code=>code===0?resolve():reject(new Error(`FFmpeg exited ${code}: ${error.slice(-1000)}`)));}); return { child, done }; }
 const encodeArgs = (fps: number, audio: AudioMix | undefined, options: VideoEncodeOptions) => { const { video, audio: audioCodec }=formatArgs(fps, options); return [...(audioCodec ? audioMixArgs(audio, audioCodec) : []), ...video]; };
 export function encodeMp4(framesPattern: string, fps: number, output: string, audio?: AudioMix, options: VideoEncodeOptions = {}): Promise<void> { return run(['-y','-framerate',String(fps),'-i',framesPattern,...encodeArgs(fps,audio,options),output],'ignore').done; }
@@ -43,8 +70,8 @@ export function createEncoder(fps: number, output: string, audio?: AudioMix, opt
 export const createMp4Encoder = (fps: number, output: string, audio?: AudioMix, options: EncodeOptions & { codec?: 'h264' | 'h265' } = {}): Mp4Encoder => createEncoder(fps, output, audio, { ...options, format: 'mp4' });
 // Joins video segments rendered separately (same format and settings, each starting on a keyframe) without re-encoding, then mixes
 // the composition's audio over the whole result. Used to assemble chunks rendered by workers.
-export function concatSegments(segments: string[], listFile: string, output: string, audio?: AudioMix, options: Pick<VideoEncodeOptions, 'format'> = {}): Promise<void> {
-  const { audio: audioCodec }=formatArgs(30, { format: options.format ?? 'mp4' }); const list=segments.map(s => `file '${s.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n');
+export function concatSegments(segments: string[], listFile: string, output: string, audio?: AudioMix, options: Pick<VideoEncodeOptions, 'format' | 'audioBitrate'> = {}): Promise<void> {
+  const { audio: audioCodec }=formatArgs(30, { format: options.format ?? 'mp4', audioBitrate: options.audioBitrate }); const list=segments.map(s => `file '${s.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n');
   return import('node:fs/promises').then(fs => fs.writeFile(listFile, list)).then(() => run(['-y','-f','concat','-safe','0','-i',listFile,...(audioCodec ? audioMixArgs(audio, audioCodec) : []),...(audio && audioCodec ? [] : ['-map','0:v']),'-c:v','copy',...(options.format === 'mp4' || options.format === undefined ? ['-movflags','+faststart'] : []),output],'ignore').done); }
 // Decodes a video onto a fixed frame grid as numbered JPEGs (000001.jpg is the frame at time 0), scaled down to fit maxWidth × maxHeight.
 export type ExtractOptions = { fps: number; maxWidth: number; maxHeight: number; durationSeconds?: number };
