@@ -48,6 +48,12 @@ describe('rendering', () => {
       scenes:[{ id:'s', name:'S', startFrame:0, durationFrames:60, layers:[{ id:'hit', type:'audio', src:'sfx:thump', startFrame:30 }] }] }), { baseDir: dir, output, concurrency: 1 });
     const log=spawnSync(ffmpegPath(), ['-hide_banner','-nostats','-i',output,'-af','silencedetect=n=-40dB:d=0.1','-f','null','-'], { encoding: 'utf8' }).stderr;
     expect(Number(/silence_end: ([\d.]+)/.exec(log)![1])).toBeCloseTo(1, 1); });
+  it('names the frame and layer when drawing fails, without retrying', async () => { const broken=loadComposition({ version:'1.0', id:'e', name:'E', width:64, height:36, fps:30, durationFrames:10,
+      scenes:[{ id:'s', name:'S', startFrame:0, durationFrames:10, layers:[{ id:'ok', type:'rect', width:10, height:10, fill:'#fff' }, { id:'group', type:'group', children:[{ id:'bad-fill', type:'rect', width:10, height:10, fill:{ type:'linear', from:[0,0], to:[10,0], stops:[{ offset:0, color:'rgb(nonsense)' }, { offset:1, color:'#000' }] } }] }] }] });
+    const r=await createRenderer(broken, { baseDir: dir }); try { await expect(r.renderFrame(4)).rejects.toThrow(/^Frame 4: Layer "bad-fill" \(rect\): .+/); } finally { await r.close(); } });
+  it('replaces pages that stop answering and fails cleanly after one retry', async () => { const r=await createRenderer(composition, { baseDir: dir, frameTimeoutMs: 1 });
+    try { await expect(r.renderFrame(0)).rejects.toThrow(/^Frame 0: the browser page did not answer within 0 s \(failed again on a fresh browser page\)$/); } finally { await r.close(); }
+    const healthy=await createRenderer(composition, { baseDir: dir }); try { expect((await healthy.renderFrame(0)).subarray(1, 4).toString()).toBe('PNG'); } finally { await healthy.close(); } });
   it('adds the same grain in every render, different on each frame', async () => { const grainy={ ...composition, grain: 0.05 }; const frames=async () => { const r=await createRenderer(grainy, { baseDir: dir, concurrency: 2 }); const out: string[]=[]; try { for await (const png of renderFrames(r, 0, 3)) out.push(createHash('sha256').update(png).digest('hex')); } finally { await r.close(); } return out; };
     const first=await frames(); expect(await frames()).toEqual(first); expect(new Set(first).size).toBe(3);
     const plain=await renderStill(composition, { baseDir: dir, frame: 0 }), grained=await renderStill(grainy, { baseDir: dir, frame: 0 }); expect(createHash('sha256').update(plain).digest('hex')).not.toBe(first[0]); expect(grained.length).toBeGreaterThan(plain.length); });

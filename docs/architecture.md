@@ -85,6 +85,10 @@ A composition may declare typed `variables` (string, number, boolean, color) and
 
 `scripts/build-package.mjs` produces `packages/ove` (npm name `open-video-engine`): esbuild bundles `@ove/core` and the CLI into two ES modules with playwright and zod external, `tsc` emits declarations whose `@ove/*` imports are rewritten to relative paths, and the starter template and agent skill are copied beside `dist` where `ove init` expects them. The package was verified by installing the packed tarball into an empty project and using the CLI, the API and the types from there.
 
+## Page pool and failures
+
+The renderer draws on a pool of pages (`createPagePool` in `packages/renderer/src/pool.ts`), one browser context each. A page that crashes, is closed, or does not answer within the frame timeout (120 s; `frameTimeoutMs` or `OVE_FRAME_TIMEOUT_MS`) is closed and replaced in the background, and the frame is retried once on another page, so a long render survives one renderer process dying; a second failure ends the render. Errors raised while drawing are wrapped by `drawOp` in the runtime with the innermost layer's id and kind ("Layer \"title\" (text): …"); those are not retried, since they would fail the same way. Every error names its frame ("Frame 120: …"). `tests/unit/pool.test.ts` covers crashes, timeouts, concurrent frames during a replacement, and running out of pages; the integration tests check the layer naming and a forced timeout with real Chromium.
+
 ## Browser discovery and checks
 
 `launchBrowser` in `@ove/renderer` tries `OVE_CHROMIUM_EXECUTABLE`, then Playwright's bundled Chromium (the most consistent pixels between machines), then an installed Chrome or Edge through Playwright channels, and fails with instructions otherwise. `ove doctor` reports Node, FFmpeg with the encoders each output format needs (`checkFfmpeg`), ffprobe and the browser that would be used. Integration tests (`pnpm test:integration`, `tests/integration`) render every format for real and check codecs, alpha, frame ranges and determinism; `.github/workflows/ci.yml` runs them with the unit tests and a package smoke test on Linux, macOS and Windows.
