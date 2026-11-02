@@ -12,11 +12,13 @@ export type DevServer = { url: string; close(): Promise<void> };
 // the frame cache. A failed reload keeps the last good composition on screen and reports the error to the page.
 export async function startDevServer(file: string, options: DevOptions = {}): Promise<DevServer> { const path=resolve(file), baseDir=dirname(path), concurrency=options.concurrency ?? defaultConcurrency();
   let values: Record<string, unknown>={ ...options.values }, media: Record<string, MediaInfo>={}, raw: any, composition: Composition | undefined, renderer: Renderer | undefined, version=0, error: string | undefined;
-  const frames=new Map<string, Promise<Buffer>>(), clients=new Set<ServerResponse>();
+  // Rendered preview frames, most recently viewed last, kept up to a total size (a 1080p PNG is about 2 MB).
+  const frames=new Map<string, Promise<Buffer>>(), sizes=new Map<string, number>(), clients=new Set<ServerResponse>(); let cachedBytes=0; const frameCacheBytes=256*1024*1024;
+  const trimFrames=() => { for (const key of frames.keys()) { if (cachedBytes <= frameCacheBytes) break; const size=sizes.get(key); if (size === undefined) continue; frames.delete(key); sizes.delete(key); cachedBytes-=size; } };
   const notify=() => { for (const client of clients) client.write(`event: change\ndata: ${JSON.stringify({ version, error: error ?? null })}\n\n`); };
   let queue=Promise.resolve();
   const reload=() => queue=queue.then(async () => { try { raw=JSON.parse(await readFile(path, 'utf8')); media=await measureMedia(raw, baseDir); const next=await attachCaptions(loadComposition(raw, values, { media }), baseDir); const nextRenderer=await createRenderer(next, { baseDir, concurrency }); const old=renderer;
-      composition=next; renderer=nextRenderer; version++; error=undefined; frames.clear(); if (old) setTimeout(() => { old.close().catch(() => {}); }, 2000); } catch (e) { error=describeError(e); } notify(); });
+      composition=next; renderer=nextRenderer; version++; error=undefined; frames.clear(); sizes.clear(); cachedBytes=0; if (old) setTimeout(() => { old.close().catch(() => {}); }, 2000); } catch (e) { error=describeError(e); } notify(); });
   await reload();
   const state=() => { let resolved: Record<string, unknown>={}; try { resolved=resolveVariables(variablesSchema.parse(raw?.variables ?? {}), values); } catch {} return { file: path, version, error: error ?? null, variables: raw?.variables ?? {}, values: resolved, canUndo: history.length > 0, composition: composition && { name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, scenes: composition.scenes.map(s => ({ id: s.id, name: s.name, startFrame: s.startFrame, durationFrames: s.durationFrames })), layers: layerTimeline(composition, raw) } }; };
   // Studio edits: validated against the schema before anything is written, so a bad edit never breaks the file; each write keeps the
@@ -54,7 +56,7 @@ export async function startDevServer(file: string, options: DevOptions = {}): Pr
       if (req.method === 'GET' && url.pathname === '/api/events') { res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' }); res.write(': connected\n\n'); clients.add(res); req.on('close', () => clients.delete(res)); return; }
       if (req.method === 'GET' && url.pathname === '/api/frame') { const frame=Number(url.searchParams.get('f')); if (!composition || !renderer) return send(res, 409, 'text/plain', error ?? 'No composition loaded');
         if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) return send(res, 400, 'text/plain', `Frame must be 0–${composition.durationFrames-1}`);
-        const key=`${version}:${frame}`; let job=frames.get(key); if (!job) { job=renderer.renderFrame(frame); frames.set(key, job); job.catch(() => frames.delete(key)); if (frames.size > 600) frames.delete(frames.keys().next().value!); }
+        const key=`${version}:${frame}`; let job=frames.get(key); if (job) { frames.delete(key); frames.set(key, job); } else { job=renderer.renderFrame(frame); frames.set(key, job); job.then(png => { sizes.set(key, png.length); cachedBytes+=png.length; trimFrames(); }, () => frames.delete(key)); }
         return send(res, 200, 'image/png', await job); }
       if (req.method === 'POST' && url.pathname === '/api/variables') { const body=JSON.parse(await readBody(req) || '{}'); if (typeof body !== 'object' || body === null || Array.isArray(body)) return send(res, 400, 'text/plain', 'Expected a JSON object'); values=body; await reload(); return send(res, 200, 'application/json', JSON.stringify({ ok: !error, error: error ?? null })); }
       send(res, 404, 'text/plain', 'Not found');

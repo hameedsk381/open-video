@@ -1,0 +1,36 @@
+// Command-line options per command. Every option a command accepts is listed here, so a typo (--crff 18) or an option from another
+// command fails with a suggestion instead of being silently ignored, and a value option without its value fails too.
+// `--name=value` is accepted as well as `--name value`.
+type Spec = { values?: string[]; flags?: string[]; positionals?: number };
+const variables = ['--var', '--vars'];
+const renderValues = ['--output', '--format', '--codec', '--frames', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--workers', '--chunk-size', '--token', '--batch'];
+export const commandSpecs: Record<string, Spec> = {
+  init: { flags: ['--force', '--no-skill'], positionals: 1 },
+  schema: { values: ['--output'] },
+  doctor: {},
+  cache: { values: ['--older-than'], positionals: 1 },
+  browser: { positionals: 1 },
+  worker: { values: ['--port', '--host', '--token', '--concurrency'] },
+  dev: { values: ['--port', '--allow-host', ...variables], positionals: 1 },
+  validate: { values: variables, positionals: 1 },
+  inspect: { values: variables, positionals: 1 },
+  captions: { values: ['--output', ...variables], positionals: 1 },
+  still: { values: ['--frame', '--output', ...variables], flags: ['--transparent'], positionals: 1 },
+  review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json'], positionals: 1 },
+  render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur'], positionals: 1 },
+};
+// Edit distance, for "did you mean".
+const distance = (a: string, b: string) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]); for (let j = 1; j <= b.length; j++) d[0]![j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i]![j] = Math.min(d[i-1]![j]! + 1, d[i]![j-1]! + 1, d[i-1]![j-1]! + (a[i-1] === b[j-1] ? 0 : 1)); return d[a.length]![b.length]!; };
+export const wantsHelp = (argv: string[]) => argv.includes('--help') || argv.includes('-h') || argv[0] === 'help';
+// Splits --name=value, then checks the command's options. Returns the argument list the rest of the CLI reads.
+export function checkArgs(argv: string[]): string[] { const args = argv.flatMap(arg => /^--[a-z-]+=/.test(arg) ? [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)] : [arg]);
+  const [command] = args; if (command === undefined) return args; const spec = commandSpecs[command];
+  if (!spec) { const near = Object.keys(commandSpecs).sort((a, b) => distance(command, a) - distance(command, b))[0]!; throw new Error(`Unknown command "${command}"${distance(command, near) <= 3 ? `; did you mean "ove ${near}"?` : ''}`); }
+  const values = spec.values ?? [], flags = spec.flags ?? [], known = [...values, ...flags]; let positionals = 0;
+  for (let i = 1; i < args.length; i++) { const arg = args[i]!;
+    if (arg.startsWith('--')) { if (values.includes(arg)) { const value = args[i+1]; if (value === undefined || (value.startsWith('--') && !/^--?\d/.test(value))) throw new Error(`${arg} needs a value`); i++; continue; }
+      if (flags.includes(arg)) continue; const near = [...known].sort((a, b) => distance(arg, a) - distance(arg, b))[0];
+      throw new Error(`ove ${command} does not take ${arg}${near && distance(arg, near) <= 3 ? `; did you mean ${near}?` : known.length ? ` (it takes ${known.join(', ')})` : ' (it takes no options)'}`); }
+    if (++positionals > (spec.positionals ?? 0)) throw new Error(`Unexpected argument "${arg}" for ove ${command}`); }
+  return args; }

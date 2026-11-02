@@ -97,6 +97,7 @@ Run `pnpm ove init my-video`, open `my-video` in your agent, and describe the vi
 |---|---|
 | `ove init <dir> [--force] [--no-skill]` | Scaffold a starter project |
 | `ove schema [--output file]` | Print or write the composition JSON Schema |
+| `ove cache size\|clean [--older-than 30d]` | Show or free the cache of decoded video, media measurements and sound effects (`OVE_CACHE_DIR`, default the system temp folder) |
 | `ove doctor` | Check Node, FFmpeg (and the encoders each format needs), ffprobe and the browser |
 | `ove browser install` | Download Playwright's Chromium (otherwise an installed Chrome or Edge is used) |
 | `ove dev <composition.json> [--port 3000]` | Preview with live playback and the Studio editor, reloading when the file changes |
@@ -108,7 +109,7 @@ Run `pnpm ove init my-video`, open `my-video` in your agent, and describe the vi
 | `ove render <composition.json> [--output file.mp4] [--loudness -14] [--no-motion-blur] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--crf n | --bitrate 8M] [--scale 0.5] [--concurrency n] [--preset name]` | Render the video. `--crf`/`--bitrate` (and `--audio-bitrate`) set quality (default crf 20 for H.264); `--scale 0.5` makes a quick half-size draft. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
 | `ove render <composition.json> --batch rows.json --output "dir/{{var}}.mp4"` | Render one video per row of variable values |
 
-`validate`, `inspect`, `still`, `review`, `render` and `dev` all accept `--var name=value` (repeatable) and `--vars values.json`.
+Each command checks its options and stops with a suggestion on a typo; `--name=value` works as well as `--name value`. `validate`, `inspect`, `still`, `review`, `render` and `dev` all accept `--var name=value` (repeatable) and `--vars values.json`.
 
 Run them as `pnpm ove <command>` from this repository. Paths are relative to the repository root, and media paths inside a composition are relative to the composition file.
 
