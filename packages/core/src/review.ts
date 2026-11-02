@@ -1,8 +1,9 @@
 // `ove review`: renders sample frames of a composition and checks them for the mistakes that make a video look unfinished: text cut off,
 // off the frame, overlapping or too small; a busy frame; too many type sizes or text colours; long stretches where nothing moves;
-// scenes of identical length; mixed transition styles; and, when there is sound, loudness. It also makes a contact sheet.
+// scenes of identical length; mixed transition styles; text on screen too briefly to read; several headlines competing; caption lines
+// too fast to read; sounds cut off mid-phrase; and, when there is sound, loudness. It also makes a contact sheet.
 // The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
-import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness } from './audio';
+import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness, sourceOf } from './audio'; import { captionTrack, measureSource } from './media'; import { layerWindows } from '@ove/timeline';
 export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string };
 export type ReviewResult = { issues: ReviewIssue[]; sheet: Buffer; sheetFrames: number[]; sampledFrames: number; loudness?: { integrated: number; truePeak: number } };
 export type ReviewOptions = { baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; onProgress?: (done: number, total: number) => void };
@@ -54,6 +55,26 @@ export async function reviewComposition(composition: Composition, options: Revie
   if (loudness) { if (loudness.integrated < -20) issues.push({ severity: 'warning', code: 'quiet', message: `Sound is quiet (${loudness.integrated.toFixed(1)} LUFS): set export.loudness (-14 for social video, -16 for explainers) or raise volumes` });
     else if (loudness.integrated > -11) issues.push({ severity: 'warning', code: 'loud', message: `Sound is loud (${loudness.integrated.toFixed(1)} LUFS): set export.loudness (-14 for social video, -16 for explainers) or lower volumes` });
     if (loudness.truePeak > -1) issues.push({ severity: 'warning', code: 'peaks', message: `Sound peaks at ${loudness.truePeak.toFixed(1)} dBTP and may distort after upload: keep peaks under -1 dBTP (lower volume)` }); }
+  // Reading time: each text block's longest unbroken stretch on screen (fully visible) against what its words need: about a quarter of a
+  // second per word plus half a second to find it. Blocks that end with the video are left alone (they may be cut by the render range).
+  const stretches=new Map<string, { text: string; words: number; best: number; run: number; first: number; start: number; layer: string }>();
+  reports.forEach((report, i) => { const here=new Set<string>(); for (const t of report.texts) { if (!visible(t) || t.kind !== 'text' || t.words < 3) continue; const key=`${t.id}|${t.text}`; here.add(key);
+      const s=stretches.get(key) ?? { text: t.text, words: t.words, best: 0, run: 0, first: frames[i]!, start: frames[i]!, layer: t.id }; if (s.run === 0) s.start=frames[i]!; s.run++; if (s.run > s.best) { s.best=s.run; s.first=s.start; } stretches.set(key, s); }
+    for (const [key, s] of stretches) if (!here.has(key)) s.run=0; });
+  for (const s of stretches.values()) { const shown=s.best*every/fps, needs=0.5+s.words*0.25; if (shown < needs && s.first+s.best*every < durationFrames-1) issues.push({ severity: 'warning', code: 'read-time', message: `"${s.text}" is readable for about ${shown.toFixed(1)} s; its ${s.words} words need about ${needs.toFixed(1)} s: hold it longer or cut words`, frame: s.first, layer: s.layer }); }
+  // One hero per frame: headline-size text (6% of the short side or more), more than two at once for a second.
+  // Blocks stacked as one headline (touching vertically, overlapping horizontally, like a title set one word per line) count once.
+  const clusters=(texts: TextNote[]) => { const groups: TextNote[][]=[]; for (const t of [...texts].sort((a, b) => a.y0-b.y0)) { const near=groups.find(g => g.some(o => t.y0-o.y1 < 0.5*Math.min(t.size, o.size) && o.y0-t.y1 < 0.5*Math.min(t.size, o.size) && Math.min(t.x1, o.x1) > Math.max(t.x0, o.x0))); if (near) near.push(t); else groups.push([t]); } return groups; };
+  const headlines=reports.map(r => clusters(r.texts.filter(t => visible(t) && t.kind === 'text' && t.size >= minSide*0.06)).map(g => ({ text: g.map(t => t.text).join(' ') }))), crowdedHeads=headlines.findIndex((_, i) => i+hold <= headlines.length && headlines.slice(i, i+hold).every(h => h.length > 2));
+  if (crowdedHeads >= 0) issues.push({ severity: 'warning', code: 'headlines', message: `${headlines[crowdedHeads]!.length} headline-size texts at once at ${seconds(frames[crowdedHeads]!, fps)} (${headlines[crowdedHeads]!.map(t => `"${t.text}"`).join(', ')}): give the frame one hero and make the rest smaller`, frame: frames[crowdedHeads] });
+  // Captions: lines that flash by, or that run faster than people read subtitles (about 20 characters a second).
+  let flashes=0, fastest=0, fastestAt=-1; for (const cue of captionTrack(composition)) { const length=cue.end-cue.start, cps=cue.text.length/Math.max(0.01, length); if (length < 0.7) flashes++; if (cps > fastest) { fastest=cps; fastestAt=Math.round(cue.start*fps); } }
+  if (flashes) issues.push({ severity: 'warning', code: 'caption-flash', message: `${flashes} caption line${flashes === 1 ? ' is' : 's are'} on screen for under 0.7 s: raise maxWords so short phrases join their neighbours` });
+  if (fastest > 20) issues.push({ severity: 'warning', code: 'caption-speed', message: `Captions reach ${fastest.toFixed(0)} characters a second at ${seconds(fastestAt, fps)} (comfortable reading is up to about 20): lower maxWords or slow the voice`, frame: fastestAt });
+  // Sounds cut off: an audio layer whose clip ends while its source is still mid-phrase (a scene or endFrame ending too soon).
+  for (const { layer, endFrame, startFrame } of layerWindows(composition, l => l.type === 'audio' && !(l as any).loop)) { const l: any=layer; const measured=await measureSource(await sourceOf(composition, l.src, baseDir)).catch(() => undefined); if (!measured) continue;
+    const from=l.trimStart/fps, until=from+(endFrame-startFrame)/fps*l.playbackRate, cut=measured.sounds.find(([a, b]) => a < until-0.05 && b > until+0.15);
+    if (cut && endFrame < durationFrames) issues.push({ severity: 'warning', code: 'sound-cut', message: `"${l.id}" (${l.src}) is cut off mid-sound at ${seconds(endFrame, fps)}, ${(cut[1]-until).toFixed(1)} s before its phrase ends: lengthen its scene or end it at a pause`, frame: endFrame, layer: l.id }); }
   const order={ error: 0, warning: 1, info: 2 }; issues.sort((a, b) => order[a.severity]-order[b.severity] || (a.frame ?? -1)-(b.frame ?? -1));
   return { issues, sheet: sheet!, sheetFrames, sampledFrames: frames.length, loudness }; }
 

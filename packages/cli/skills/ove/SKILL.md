@@ -9,13 +9,13 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
 
 ## Loop
 
-1. Edit `composition.json`.
+1. For a new video of more than a few seconds, agree beats, look and storyboard first (see Planning a video). Then edit `composition.json`.
 2. `ove validate composition.json` and fix every error it reports.
 3. `ove still composition.json --frame <n> --output still.png` and look at the image. Check the first frame, the end of each animation, and the last frame.
 4. `ove review composition.json --output review.png`: fix every error and warning it lists, then look at the contact sheet it writes (20 frames across the video, labelled with frame numbers) as a whole. Does each scene have one clear focus? Does the video keep moving? Do scenes look like one system?
 5. `ove render composition.json --output out.mp4` once the review is clean and the sheet looks right.
 
-`ove review` samples a frame every half second and reports, with frame numbers and layer ids: text cut short with "…", running off the frame, under 2% of the frame's short side, overlapping other text or sitting under the captions (when that lasts a second or more); more than 40 words on screen; nearly equal font sizes or more than 8 steps of size; more than 5 text colours; 4 seconds or more where nothing moves; scenes all the same length; three or more transition styles; and sound quieter than -20 LUFS, louder than -11 LUFS or peaking above -1 dBTP. It exits with an error when it finds errors, `--json` prints the findings as JSON, `--every n` samples every n frames, `--frames n` sets how many frames the sheet shows. It is a check, not a verdict on taste: a clean review still needs your eye on the sheet.
+`ove review` samples a frame every half second and reports, with frame numbers and layer ids: text cut short with "…", running off the frame, under 2% of the frame's short side, overlapping other text or sitting under the captions (when that lasts a second or more); more than 40 words on screen; text on screen too briefly to read its words (about a quarter of a second a word, plus half a second); more than two headline-size texts competing (a headline set one word per line counts once); caption lines on screen under 0.7 s or faster than about 20 characters a second; sounds cut off mid-phrase by the end of their scene or `endFrame`; nearly equal font sizes or more than 8 steps of size; more than 5 text colours; 4 seconds or more where nothing moves; scenes all the same length; three or more transition styles; and sound quieter than -20 LUFS, louder than -11 LUFS or peaking above -1 dBTP. It exits with an error when it finds errors, `--json` prints the findings as JSON, `--every n` samples every n frames, `--frames n` sets how many frames the sheet shows. It is a check, not a verdict on taste: a clean review still needs your eye on the sheet.
 
 `ove inspect composition.json` prints duration, scene count, variables and assets. A person working alongside you can run `ove dev composition.json` for a live preview that reloads on every save. Its Studio can also edit `composition.json` (layer timing and properties), so re-read the file before changing it rather than relying on an earlier copy. `ove doctor` checks FFmpeg, its encoders and the browser when a render fails for setup reasons. `ove schema` prints the JSON Schema. Inside the OVE repository itself, run the CLI as `npm run ove -- <command>`; paths are then relative to the repository root.
 
@@ -218,6 +218,34 @@ These work in `layers`, group `children`, `scenes` and repeat bodies:
 - One video per row: `ove render composition.json --batch rows.json --output "out/{{customer}}.mp4"`, where `rows.json` is an array of `{ "customer": "Priya", ... }` objects. Every row is checked before anything renders, and two rows may not write the same file.
 - Mistakes are reported all at once, each with its location: unknown names and fields, values of the wrong type, bad expressions, unknown components and missing params.
 - Editors validating against `composition.schema.json` will flag `"{{left}}"` in a number field and `repeat`/`use` entries in layer lists; that is expected. `ove validate` is the real check.
+
+## Planning a video
+
+For anything longer than a few seconds, agree the plan before building, in three cheap steps. Show each to the person and wait for their answer; changing a table costs nothing, changing a rendered video costs minutes.
+
+1. **Beats.** A numbered table: for each beat, what the viewer should take away (one idea per beat), the words on screen, the narration if any, and roughly how long. Name the one idea of the whole video in a sentence above the table. Check facts you state.
+2. **Look.** Two or three stills of key beats rendered with `ove still`: type, colours, layout, background. Agree the look on stills, not on a render.
+3. **Storyboard.** `ove review`'s contact sheet of a first rough build (or one still per beat), with how each beat enters and leaves. Then build the motion and render.
+
+When the person has already given exact content and a look, skip what is settled; for a quick change to an existing video, just do it and review.
+
+## Story and pacing
+
+- **Shapes that work for short videos:** a problem, then the thing that solves it, then proof, then what to do (product); a process shown step by step around one hero that stays put while the world changes (explainers); a question, then answers that build to the main one (teasers); a list of three to five items, each its own beat, then a payoff (features). Pick one before writing beats.
+- **Open with the subject in the first second:** a short still or quiet moment is fine, a slow logo is not. The first frame someone sees in a feed should already say what this is.
+- **One idea per beat, and beats of different lengths.** A beat that builds can hold three to six seconds; a turn (the moment the idea changes) should land in a few frames after a short pause. Equal-length beats read as a slideshow; `ove review` flags them.
+- **Stillness before the payoff.** Let the frame and the sound settle for half a second to a second before the most important reveal, then hit it: the loudest sound and the boldest motion belong to the turn, not to the busiest moment.
+- **Every cut needs a reason** you could say out loud: the process moves on (push in the same direction), we go inside the hero (iris on it, or a camera push), time passes (a dip), the same thing changes (the hero holds its place and the world around it changes, or a shape morphs into the next one). A cut with no reason is a plain fade.
+- **Carry something across cuts.** An element that stays in the same place, a colour, a shape that morphs, or motion that continues in the same direction ties beats together; scenes that only replace each other read as slides.
+- **Exits are quicker than entrances**, and scenes can leave while still moving rather than settling first.
+- **Music and narration set the rhythm.** Time beats to narration phrases (`media[...]`) or the music's beat (`tempo`), not to round numbers of seconds.
+
+## Endings
+
+- End on the idea, not on a credit: the last statement, then the name or logo if there is one, then stop.
+- A logo or wordmark: about a quarter to a third of the frame wide, centred (or very slightly off-centre), one short line under it at most, lots of empty space around it. Build it with a small, quick motion (snap in, or assemble from the shape that came before), hold it two to three seconds, end.
+- Prefer ending on a cut or on a clean hold over a long fade of the whole frame; if it fades, fade the last words, then hold black for a moment before the logo, and do not fade the logo itself.
+- A call to action is one short line, said and shown once.
 
 ## Design
 

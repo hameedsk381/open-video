@@ -280,7 +280,7 @@
           "children": [{ "id": "line-2-text", "type": "text", "textAlign": "center", "fontSize": 136, "fontWeight": 800, "letterSpacing": -5, "lineHeight": 1, "content": "Get an outcome.", "split": { "by": "words", "stagger": 4, "preset": "rise" },
             "color": { "type": "linear", "from": [-520, 0], "to": [520, 0], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] } }] },
         { "id": "credit", "type": "group", "x": 960, "y": 780,
-          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 100, "value": 0 }, { "frame": 120, "value": 1 }] }],
+          "animations": [{ "property": "opacity", "keyframes": [{ "frame": 60, "value": 0 }, { "frame": 76, "value": 1 }] }],
           "children": [
             { "id": "credit-mark", "type": "rect", "x": -196, "y": -2, "width": 36, "height": 36, "radius": 10, "fill": { "type": "linear", "from": [0, 0], "to": [36, 36], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] } },
             { "id": "credit-play", "type": "path", "x": -178, "y": 16, "d": "M-5 -8 L8 0 L-5 8 Z", "fill": "#ffffff" },

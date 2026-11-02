@@ -4,7 +4,7 @@ const runFfmpeg=(args: string[]) => new Promise<string>((resolve, reject) => { c
 const sfxDir = () => join(process.env.OVE_CACHE_DIR ?? join(tmpdir(), 'ove-video-cache'), 'sfx'); const making=new Map<string, Promise<string>>();
 export function sfxFile(name: string): Promise<string> { const file=join(sfxDir(), `${name}-${createHash('sha256').update(JSON.stringify(sfxArgs(name, ''))).digest('hex').slice(0, 12)}.wav`); if (existsSync(file)) return Promise.resolve(file);
   let job=making.get(file); if (!job) { job=(async () => { await mkdir(sfxDir(), { recursive: true }); const temp=`${file}.${process.pid}.tmp.wav`; await runFfmpeg(sfxArgs(name, temp)); await rename(temp, file); return file; })(); making.set(file, job); job.catch(() => making.delete(file)); } return job; }
-const sourceOf = (composition: Composition, src: string, baseDir: string) => src.startsWith('sfx:') ? sfxFile(src.slice(4)) : Promise.resolve(resolveAssetSource(composition, src, baseDir));
+export const sourceOf = (composition: Composition, src: string, baseDir: string) => src.startsWith('sfx:') ? sfxFile(src.slice(4)) : Promise.resolve(resolveAssetSource(composition, src, baseDir));
 const ensureExists = async (source: string) => { if (!isUrl(source)) await stat(source).catch(() => { throw new Error(`Audio source not found: ${source}`); }); };
 // Turns the composition's sounds into clips on the output timeline: `export.audio` as a looping soundtrack under everything, then each
 // audio layer and each video layer with an audio track, placed where it is on screen. Clips whose volume changes (volume keyframes, or
