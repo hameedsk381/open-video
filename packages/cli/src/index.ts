@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
+import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
 const usage = `Usage:
   ove init <dir> [--force] [--no-skill]
   ove schema [--output composition.schema.json]
   ove doctor                      check Node, FFmpeg encoders and the browser
+  ove cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
   ove browser install             download Playwright's Chromium for rendering
   ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   ove dev <composition.json> [--port 3000] [--allow-host name] [variables]
@@ -11,7 +12,7 @@ const usage = `Usage:
   ove inspect <composition.json> [variables]          scenes, timing and measured media
   ove captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
   ove still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
-  ove review <composition.json> [--output review.png] [--every 15] [--frames 20] [--json] [variables]   contact sheet and design checks
+  ove review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
   ove render <composition.json> [--output output.mp4] [render options] [variables]
   ove render <composition.json> --batch rows.json --output "out/{{name}}.mp4" [render options]
 
@@ -26,8 +27,12 @@ Render options:
   --no-motion-blur                skip the composition's motion blur, for a quicker draft
   --concurrency n --preset veryfast
   --workers URL,URL [--chunk-size 60] [--token T]   split the render across "ove worker" processes (mp4, webm, mov)
-Variables: --var name=value (repeatable) and/or --vars values.json; --var wins.`;
-const argv=process.argv.slice(2); const [command,file]=argv; const option=(name:string)=>{ const index=argv.indexOf(name); return index < 0 ? undefined : argv[index+1]; }; const flag=(name:string)=>argv.includes(name);
+Variables: --var name=value (repeatable) and/or --vars values.json; --var wins.
+Options also take the form --name=value. ove --help shows this list.`;
+// Options are checked against each command's list first (args.ts), so typos fail instead of being ignored.
+if (wantsHelp(process.argv.slice(2))) { console.log(usage); process.exit(0); }
+let argv: string[]; try { argv=checkArgs(process.argv.slice(2)); } catch (error) { console.error(`${(error as Error).message}\nRun "ove --help" for the options.`); process.exit(1); }
+const [command,file]=argv; const option=(name:string)=>{ const index=argv.indexOf(name); return index < 0 ? undefined : argv[index+1]; }; const flag=(name:string)=>argv.includes(name);
 const readJson=async (path:string) => JSON.parse(await readFile(resolve(path),'utf8'));
 async function suppliedValues(): Promise<Record<string, unknown>> { const fromFile=option('--vars') ? await readJson(option('--vars')!) : {}; if (typeof fromFile !== 'object' || fromFile === null || Array.isArray(fromFile)) throw new Error('--vars must be a JSON object of name: value'); const fromFlags=Object.fromEntries(argv.flatMap((arg, i) => { if (arg !== '--var') return []; const pair=argv[i+1] ?? '', at=pair.indexOf('='); if (at < 1) throw new Error(`--var expects name=value, got "${pair}"`); return [[pair.slice(0, at), pair.slice(at+1).replace(/\\n/g, '\n')]]; })); return { ...fromFile, ...fromFlags }; } // a typed \n in --var is a line break
 function renderSettings() { const concurrency=Number(option('--concurrency') ?? defaultConcurrency()); if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error('--concurrency must be a positive integer'); const preset=(option('--preset') ?? defaultPreset) as X264Preset; if (!x264Presets.includes(preset)) throw new Error(`--preset must be one of: ${x264Presets.join(', ')}`);
@@ -64,6 +69,11 @@ async function doctor() { let ok=true; const line=(good: boolean, label: string,
   if (!ok) process.exitCode=1; }
 try {
   if (command === 'doctor') await doctor();
+  else if (command === 'cache') { const mb=(bytes: number) => `${(bytes/1048576).toFixed(1)} MB`;
+    if (file === 'size') { const usage=await cacheUsage(); console.log(`${usage.root}\n${usage.kinds.map(k => `  ${k.kind.padEnd(6)} ${String(k.entries).padStart(5)} entries  ${mb(k.bytes)}`).join('\n')}\n  total  ${mb(usage.bytes)}`); }
+    else if (file === 'clean') { const age=option('--older-than'), parsed=age === undefined ? undefined : /^(\d+)(d|h)$/.exec(age); if (age !== undefined && !parsed) throw new Error('--older-than takes days or hours, e.g. 30d or 12h');
+      const freed=await cleanCache({ olderThanMs: parsed ? Number(parsed[1])*(parsed[2] === 'd' ? 86_400_000 : 3_600_000) : undefined }); console.log(`Removed ${freed.entries} cache entries, ${mb(freed.bytes)}${age ? ` not used in ${age}` : ''}`); }
+    else throw new Error('Usage: ove cache size, or ove cache clean [--older-than 30d]'); }
   else if (command === 'worker') { const port=option('--port') === undefined ? undefined : Number(option('--port')); const concurrency=option('--concurrency') === undefined ? undefined : Number(option('--concurrency'));
     const worker=await startWorker({ port, host: option('--host'), token: option('--token') ?? process.env.OVE_WORKER_TOKEN, concurrency, log: line => console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`) });
     console.log(`Worker listening on ${worker.url}
@@ -84,8 +94,8 @@ Press Ctrl+C to stop.`);
       else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
       else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
       else if (command === 'still') { const frame=Number(option('--frame') ?? 0); if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`); const output=resolve(option('--output') ?? `still-${frame}.png`); await renderStill(composition, { frame, output, baseDir, transparent: flag('--transparent') ? true : undefined }); console.log(`Created ${output}`); }
-      else if (command === 'review') { const output=resolve(option('--output') ?? 'review.png'), every=option('--every') === undefined ? undefined : Number(option('--every')), sheetFrames=option('--frames') === undefined ? undefined : Number(option('--frames'));
-        if (every !== undefined && !(Number.isInteger(every) && every > 0)) throw new Error('--every must be a whole number of frames'); if (sheetFrames !== undefined && !(Number.isInteger(sheetFrames) && sheetFrames > 0 && sheetFrames <= 60)) throw new Error('--frames must be from 1 to 60');
+      else if (command === 'review') { const output=resolve(option('--output') ?? 'review.png'), every=option('--every') === undefined ? undefined : Number(option('--every')), sheetOption=option('--sheet-frames') ?? option('--frames'), sheetFrames=sheetOption === undefined ? undefined : Number(sheetOption);
+        if (every !== undefined && !(Number.isInteger(every) && every > 0)) throw new Error('--every must be a whole number of frames'); if (sheetFrames !== undefined && !(Number.isInteger(sheetFrames) && sheetFrames > 0 && sheetFrames <= 60)) throw new Error('--sheet-frames must be from 1 to 60');
         const result=await reviewComposition(composition, { baseDir, every, sheetFrames, onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
         if (flag('--json')) console.log(JSON.stringify({ sheet: output, sheetFrames: result.sheetFrames, sampledFrames: result.sampledFrames, loudness: result.loudness, issues: result.issues }, null, 2));
         else { process.stderr.write('\n'); const mark={ error: 'ERROR', warning: 'warn ', info: 'info ' }; for (const issue of result.issues) console.log(`${mark[issue.severity]}  ${issue.frame === undefined ? '' : `frame ${issue.frame} (${(issue.frame/composition.fps).toFixed(1)} s)  `}${issue.message}${issue.layer ? `  [${issue.layer}]` : ''}`);

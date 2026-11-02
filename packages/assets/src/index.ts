@@ -7,3 +7,4 @@ export const isUrl = (src: string) => /^(https?|data|blob):/i.test(src);
 export function resolveAssetSource(composition: Composition, src: string, baseDir: string): string { validateAssetPath(src); const target=composition.assets.find(a=>a.id===src)?.src ?? src; validateAssetPath(target); return isUrl(target) || isAbsolute(target) ? target : resolve(baseDir, target); }
 export async function toDataUrl(source: string): Promise<string> { if (isUrl(source)) return source; const mime=mimeTypes[extname(source).toLowerCase()]; if (!mime) throw new Error(`Unsupported file type for an image or font: ${source}`); return `data:${mime};base64,${(await readFile(source)).toString('base64')}`; }
 export function resolveAudio(composition: Composition, baseDir: string): string | undefined { const audio=composition.export.audio; return audio === undefined ? undefined : resolveAssetSource(composition, audio, baseDir); }
+export * from './cache';

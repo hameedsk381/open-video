@@ -1,0 +1,20 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'; import { mkdtemp, mkdir, rm, writeFile, utimes, stat } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path';
+import { cacheDir, cacheUsage, cleanCache, touchCacheEntry } from '@ove/assets';
+let root: string, saved: string | undefined;
+const day = 86_400_000, age = (path: string, days: number) => { const t = new Date(Date.now() - days*day); return utimes(path, t, t); };
+beforeEach(async () => { saved = process.env.OVE_CACHE_DIR; root = await mkdtemp(join(tmpdir(), 'ove-cache-test-')); process.env.OVE_CACHE_DIR = root;
+  await mkdir(join(cacheDir('video'), 'old-clip'), { recursive: true }); await writeFile(join(cacheDir('video'), 'old-clip', '000001.jpg'), Buffer.alloc(1000)); await age(join(cacheDir('video'), 'old-clip'), 40);
+  await mkdir(join(cacheDir('video'), 'new-clip'), { recursive: true }); await writeFile(join(cacheDir('video'), 'new-clip', '000001.jpg'), Buffer.alloc(500));
+  const legacy = join(root, '0123456789abcdef0123456789abcdef'); await mkdir(legacy, { recursive: true }); await writeFile(join(legacy, '000001.jpg'), Buffer.alloc(200)); await age(legacy, 40);
+  await writeFile(join(root, 'notes.txt'), 'not ours'); await age(join(root, 'notes.txt'), 400); await mkdir(join(root, 'my-project'), { recursive: true }); await age(join(root, 'my-project'), 400);
+  await mkdir(cacheDir('media'), { recursive: true }); await writeFile(join(cacheDir('media'), 'a.json'), '{}'); await age(join(cacheDir('media'), 'a.json'), 40); });
+afterEach(async () => { if (saved === undefined) delete process.env.OVE_CACHE_DIR; else process.env.OVE_CACHE_DIR = saved; await rm(root, { recursive: true, force: true }); });
+describe('cache', () => {
+  it('lives under OVE_CACHE_DIR, one folder per kind, and reports its size', async () => { expect(cacheDir('sfx')).toBe(join(root, 'sfx')); const usage = await cacheUsage();
+    expect(usage.root).toBe(root); expect(usage.kinds.find(k => k.kind === 'video')).toEqual({ kind: 'video', entries: 2, bytes: 1500 }); expect(usage.kinds.find(k => k.kind === 'sfx')).toEqual({ kind: 'sfx', entries: 0, bytes: 0 }); expect(usage.kinds.find(k => k.kind === 'other')).toEqual({ kind: 'other', entries: 1, bytes: 200 }); expect(usage.bytes).toBe(1702); });
+  it('cleans only entries not used within the given age', async () => { const freed = await cleanCache({ olderThanMs: 30*day }); expect(freed).toEqual({ entries: 3, bytes: 1202 });
+    expect((await cacheUsage()).kinds.find(k => k.kind === 'video')!.entries).toBe(1); });
+  it('keeps entries touched by use, and cleans everything when no age is given', async () => { await touchCacheEntry(join(cacheDir('video'), 'old-clip')); expect((await stat(join(cacheDir('video'), 'old-clip'))).mtimeMs).toBeGreaterThan(Date.now() - day);
+    expect((await cleanCache({ olderThanMs: 30*day })).entries).toBe(2); expect((await cleanCache()).entries).toBe(2); expect((await cacheUsage()).bytes).toBe(0);
+    expect((await stat(join(root, 'notes.txt'))).isFile()).toBe(true); expect((await stat(join(root, 'my-project'))).isDirectory()).toBe(true); });
+});

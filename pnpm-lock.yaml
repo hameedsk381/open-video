@@ -12,6 +12,30 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@ove/animation':
+        specifier: workspace:*
+        version: link:packages/animation
+      '@ove/assets':
+        specifier: workspace:*
+        version: link:packages/assets
+      '@ove/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@ove/ffmpeg':
+        specifier: workspace:*
+        version: link:packages/ffmpeg
+      '@ove/graphics':
+        specifier: workspace:*
+        version: link:packages/graphics
+      '@ove/renderer':
+        specifier: workspace:*
+        version: link:packages/renderer
+      '@ove/schema':
+        specifier: workspace:*
+        version: link:packages/schema
+      '@ove/timeline':
+        specifier: workspace:*
+        version: link:packages/timeline
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2

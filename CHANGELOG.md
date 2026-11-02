@@ -11,6 +11,7 @@ All notable changes to Open Video Engine. The published package is `open-video-e
 - Design: Inter built in as the default font, gradient backgrounds, film grain, role-named easings (`land`, `snap`, `glide`, `pop`, `move`, `exit`, `drift`).
 - Motion: rich text spans, kinetic text (`split` by words, letters or lines), a scene camera (pan, zoom, rotate, shake) with `fixed` layers, motion blur, shape morphing, iris/push/dip/blur transitions, and a tempo beat grid (`beat()`, `bar()`, `beats()`).
 - `ove review`: a contact sheet and design checks (text cut, off-frame, too small, overlapping or too brief to read; competing headlines; type scale and colours; frozen stretches; scene rhythm; transitions; caption pace; sounds cut off; loudness).
+- `ove cache size` and `ove cache clean [--older-than 30d]`.
 - Output quality settings: `--crf`, `--bitrate`, `--audio-bitrate`, `--scale`, `--no-motion-blur`.
 - Agent skill: design guide, planning (beats, look, storyboard), story and pacing, endings.
 
@@ -18,6 +19,9 @@ All notable changes to Open Video Engine. The published package is `open-video-e
 - Encoder defaults: H.264 crf 20 and H.265 crf 24, with `aq-mode=3`, to avoid banding in dark gradients.
 - The drawing runtime and text layout are plain JavaScript files (`packages/graphics/runtime/`) read as text, instead of escaped template strings.
 - The renderer replaces a crashed or unresponsive page and retries the frame once; errors name the frame and the layer.
+- Every command checks its options: typos and options from another command stop it with a suggestion; `--name=value` is accepted. `ove review --frames` is now `--sheet-frames` (the old name still works).
+- The cache folder has one subfolder per kind (`media/`, `video/`, `sfx/`); entries are marked when used. The dev server's frame cache is capped at 256 MB.
+- Video layers decode only the source frames they can show, instead of from the start of the source for the whole video's length.
 
 ### Fixed
 - `ove dev` refuses requests from other sites and other host names (cross-site writes to the composition, DNS rebinding).

@@ -1,21 +1,21 @@
 // Measures audio and video assets for media-driven timing, and loads caption files into captions layers.
 import { spawn } from 'node:child_process'; import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path'; import { createHash } from 'node:crypto';
-import { loadComposition, parseCaptions, captionLines, dropFillerWords, type Composition, type MediaInfo, type CaptionCue } from '@ove/schema'; import { layerWindows } from '@ove/timeline'; import { resolveAssetSource, isUrl } from '@ove/assets'; import { ffmpegPath, ffprobePath } from '@ove/ffmpeg';
+import { loadComposition, parseCaptions, captionLines, dropFillerWords, type Composition, type MediaInfo, type CaptionCue } from '@ove/schema'; import { layerWindows } from '@ove/timeline'; import { resolveAssetSource, isUrl, cacheDir, touchCacheEntry } from '@ove/assets'; import { ffmpegPath, ffprobePath } from '@ove/ffmpeg';
 type Measured = { duration: number; sounds: [number, number][] };
 const run = (cmd: string, args: string[]) => new Promise<string>((ok, fail) => { const child = spawn(cmd, args); let out = ''; child.stdout.on('data', d => out += d); child.stderr.on('data', d => out += d); child.on('error', fail); child.on('close', code => code === 0 ? ok(out) : fail(new Error(`${cmd} failed on ${args[args.indexOf('-i') + 1] ?? args.at(-1)}`))); });
-const cacheDir = () => join(process.env.OVE_CACHE_DIR ?? join(tmpdir(), 'ove-video-cache'), 'media');
+const mediaCache = () => cacheDir('media');
 // Length from ffprobe; sound segments from FFmpeg's silencedetect (quieter than -45 dB for 0.25 s counts as a pause, which separates
 // phrases in speech). Cached per file version, since decoding a long clip takes a moment.
 export async function measureSource(source: string): Promise<Measured> { const version = isUrl(source) ? '' : await stat(source).then(s => `${s.size}:${s.mtimeMs}`, () => { throw new Error(`Media not found: ${source}`); });
-  const key = createHash('sha256').update(`${source}|${version}|v1`).digest('hex').slice(0, 32), file = join(cacheDir(), `${key}.json`);
-  const cached = await readFile(file, 'utf8').then(JSON.parse, () => undefined); if (cached) return cached;
+  const key = createHash('sha256').update(`${source}|${version}|v1`).digest('hex').slice(0, 32), file = join(mediaCache(), `${key}.json`);
+  const cached = await readFile(file, 'utf8').then(JSON.parse, () => undefined); if (cached) { void touchCacheEntry(file); return cached; }
   const duration = Number((await run(ffprobePath(), ['-v','error','-show_entries','format=duration','-of','csv=p=0', source])).trim()) || 0;
   const hasAudio = (await run(ffprobePath(), ['-v','error','-select_streams','a','-show_entries','stream=index','-of','csv=p=0', source])).trim().length > 0; let sounds: [number, number][] = [];
   // Sound runs from the end of one silence to the start of the next; a file that does not end in silence closes its last sound at the end.
   if (hasAudio) { const log = await run(ffmpegPath(), ['-hide_banner','-nostats','-i', source, '-vn','-af','silencedetect=noise=-45dB:d=0.25','-f','null','-']); let soundStart = 0, silent = false;
     for (const m of log.matchAll(/silence_(start|end): ([\d.]+)/g)) { const t = Number(m[2]); if (m[1] === 'start') { sounds.push([soundStart, t]); silent = true; } else { soundStart = t; silent = false; } }
     if (!silent) sounds.push([soundStart, duration]); sounds = sounds.filter(([a, b]) => b - a > 0.05); }
-  const measured = { duration, sounds }; await mkdir(cacheDir(), { recursive: true }); await writeFile(file, JSON.stringify(measured)); return measured; }
+  const measured = { duration, sounds }; await mkdir(mediaCache(), { recursive: true }); await writeFile(file, JSON.stringify(measured)); return measured; }
 // Measures every audio and video asset written with a literal path, by asset id, for {{media[id]...}} expressions. Nothing is measured
 // unless the composition mentions `media`.
 export async function measureMedia(raw: any, baseDir: string, fps = typeof raw?.fps === 'number' ? raw.fps : 30): Promise<Record<string, MediaInfo>> {
