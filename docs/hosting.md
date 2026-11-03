@@ -20,12 +20,11 @@ Each account is its own tenant. Every route, file read and job runs as that acco
 ### Dokploy (recommended)
 
 1. Install [Dokploy](https://dokploy.com) on your VPS.
-2. Create a **Compose** project and connect this GitHub repository.
-3. Set the **Compose Path** to `infrastructure/dokploy/compose.yml`.
-4. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `GROQ_API_KEY`.
-5. In the **Domains** tab, add a domain for the `api` service on port `3100`. Dokploy provisions the TLS certificate.
-6. Set `PUBLIC_ORIGIN` to the `https://` address Dokploy assigned (e.g. `https://studio.yourdomain.com`).
-7. Deploy.
+2. Create a **Compose** project and connect this GitHub repository. The `docker-compose.yml` at the repo root is the Dokploy compose file.
+3. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `GROQ_API_KEY`.
+4. In the **Domains** tab, add a domain for the `api` service on port `3100`. Dokploy provisions the TLS certificate.
+5. Set `PUBLIC_ORIGIN` to the `https://` address Dokploy assigned (e.g. `https://studio.yourdomain.com`).
+6. Deploy.
 
 The compose file joins the API and AI worker to Dokploy's Traefik network for internet access, and keeps Postgres, Redis and the render worker on an internal network with no route out.
 
