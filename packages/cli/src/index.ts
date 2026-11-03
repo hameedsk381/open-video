@@ -111,6 +111,7 @@ Press Ctrl+C to stop.`);
   else if (command === 'blocks') await (await import('./blocks-cli')).runBlocks(argv);
   else if (command === 'add') await (await import('./blocks-cli')).runAdd(argv);
   else if (command === 'theme') await (await import('./blocks-cli')).runTheme(argv);
+  else if (command === 'agent') await (await import('./agent-cli')).runAgentCli(argv);
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);

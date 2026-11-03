@@ -10,7 +10,7 @@ import { compositionJsonSchema, describeError, loadComposition } from '@ove/core
 import { resolveBuildable, type Buildable } from '@ove/builder';
 
 /** Bundles a React video: the component for the browser (the render function the `react` layer calls) and, separately, its exports for Node. */
-async function buildReact(source: string, output: string): Promise<void> {
+export async function buildReact(source: string, output: string): Promise<void> {
   let esbuild: typeof import('esbuild');
   try { esbuild = await import('esbuild'); } catch { throw new Error('Building a React video needs esbuild, react and react-dom in your project: npm install --save-dev esbuild react react-dom'); }
   // Fonts, pictures and styles that components import are bundled in (as data), so CSS files and web fonts work like any other library.

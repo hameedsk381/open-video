@@ -12,6 +12,7 @@ export const commandSpecs: Record<string, Spec> = {
   browser: { positionals: 1 },
   blocks: { flags: ['--json'] },
   build: { values: ['--output'], positionals: 1 },
+  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format'], flags: ['--reel', '--landscape', '--render', '--no-render'], positionals: 2 },
   track: { values: ['--fps', '--output'], positionals: 1 },
   thumbnail: { values: ['--frame', '--title', '--width', '--output', ...variables], flags: ['--allow-code'], positionals: 1 },
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
