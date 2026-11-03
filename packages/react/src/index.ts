@@ -2,7 +2,7 @@
 // size and length, and what it renders is drawn for that frame. `ove build video.tsx` bundles the component into a `react` layer, which
 // the renderer mounts it live in a page every frame (real effects, canvas and WebGL work) and draws the result like an html layer, so the output
 // stays frame-exact and goes through the same encoder, audio and review as any other composition. Derive everything from the frame.
-import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ImgHTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { interpolate, spring } from '@ove/builder';
 
 export { interpolate, spring };
@@ -32,6 +32,20 @@ export function delayRender(label?: string): number {
 }
 /** Releases a delayRender handle; the frame is drawn once every handle is released. */
 export function continueRender(handle: number): void { ((globalThis as any).__oveDelays as Map<number, string> | undefined)?.delete(handle); }
+
+// Audio and Video are found when you run ove build, which renders the component once per frame and turns each run of frames where one is
+// shown into an audio or video layer (so the mixer and the decoder do their usual frame-exact work). They draw nothing themselves.
+type MediaProps = { src: string; /** Frames of the source to skip. */ startFrom?: number; volume?: number; playbackRate?: number; loop?: boolean; /** Tells apart two clips with the same src shown together. */ name?: string };
+const mediaMarker = (kind: 'audio' | 'video', props: MediaProps & Record<string, unknown>, extra: Record<string, unknown> = {}): ReactElement => createElement('i', {
+  hidden: true, 'data-ove-media': kind, 'data-src': props.src, 'data-trim': props.startFrom ?? 0, 'data-volume': props.volume ?? 1, 'data-rate': props.playbackRate ?? 1, 'data-loop': props.loop ? 1 : 0, 'data-name': props.name ?? '', ...extra });
+/** Plays a sound (an audio asset id, a file, or sfx:name) for as long as it is shown, counted from when it appears. */
+export function Audio(props: MediaProps): ReactElement { return mediaMarker('audio', props); }
+/** Plays a video clip behind the component (it is a layer under the React layer, so it is a backdrop; put captions and graphics on top). left, top, width, height place it; the default fills the video. */
+export function Video(props: MediaProps & { muted?: boolean; left?: number; top?: number; width?: number; height?: number; objectFit?: 'cover' | 'contain' | 'fill' }): ReactElement {
+  return mediaMarker('video', props, { 'data-left': props.left ?? 0, 'data-top': props.top ?? 0, 'data-width': props.width ?? 0, 'data-height': props.height ?? 0, 'data-fit': props.objectFit ?? 'cover', 'data-muted': props.muted ? 1 : 0 });
+}
+/** A picture: an asset id declared in config.assets, or a file path. Same as <img>. */
+export function Img(props: ImgHTMLAttributes<HTMLImageElement>): ReactElement { return createElement('img', props); }
 
 /** A box that fills the video (position: absolute, all four sides 0), for stacking layers. */
 export function AbsoluteFill({ style, children, ...rest }: HTMLAttributes<HTMLDivElement> & { style?: CSSProperties }): ReactElement {

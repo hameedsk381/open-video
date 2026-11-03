@@ -13,14 +13,25 @@ import { resolveBuildable, type Buildable } from '@ove/builder';
 async function buildReact(source: string, output: string): Promise<void> {
   let esbuild: typeof import('esbuild');
   try { esbuild = await import('esbuild'); } catch { throw new Error('Building a React video needs esbuild, react and react-dom in your project: npm install --save-dev esbuild react react-dom'); }
-  const common = { bundle: true, jsx: 'automatic' as const, write: false, logLevel: 'silent' as const, legalComments: 'none' as const, define: { 'process.env.NODE_ENV': '"production"' } };
+  // Fonts, pictures and styles that components import are bundled in (as data), so CSS files and web fonts work like any other library.
+  const common = { bundle: true, jsx: 'automatic' as const, write: false, logLevel: 'silent' as const, legalComments: 'none' as const, define: { 'process.env.NODE_ENV': '"production"' },
+    loader: { '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl', '.otf': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.jpeg': 'dataurl', '.gif': 'dataurl', '.webp': 'dataurl', '.svg': 'dataurl' } as Record<string, 'dataurl'> };
   const failed = (error: unknown) => { const errors = (error as any)?.errors as { text: string; location?: { file: string; line: number } }[] | undefined; return new Error(errors?.length ? errors.map(e => `${e.location ? `${e.location.file}:${e.location.line}: ` : ''}${e.text}`).join('\n') : (error as Error).message); };
   const abs = source.replace(/\\/g, '/');
   // Node side: the module's exports (config, layers), with everything bundled in so nothing else has to resolve.
   let exported: Record<string, any>;
   try {
-    const node = await esbuild.build({ ...common, stdin: { contents: `export * from ${JSON.stringify(abs)};\nexport { default } from ${JSON.stringify(abs)};`, resolveDir: dirname(source), loader: 'ts', sourcefile: 'ove-config.ts' }, platform: 'node', format: 'esm', target: 'node22' });
-    exported = await import(`data:text/javascript;base64,${Buffer.from(node.outputFiles?.[0]?.text ?? "").toString('base64')}`);
+    const entry = (withHelper: boolean) => `export * from ${JSON.stringify(abs)};
+export { default } from ${JSON.stringify(abs)};` + (withHelper
+      ? `
+import * as __User from ${JSON.stringify(abs)};
+import { createElement as __ce } from 'react';
+import { renderToStaticMarkup as __rs } from 'react-dom/server';
+export const __render = (frame, props, cfg) => { let tree = __ce(__User.default, props); const s = globalThis.__oveReact; if (s) tree = __ce(s.config.Provider, { value: cfg }, __ce(s.frame.Provider, { value: frame }, tree)); return __rs(tree); };` : '');
+    const nodeBuild = (withHelper: boolean) => esbuild.build({ ...common, stdin: { contents: entry(withHelper), resolveDir: dirname(source), loader: 'ts', sourcefile: 'ove-config.ts' }, platform: 'node', format: 'esm', target: 'node22', outdir: 'out', banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(process.cwd() + '/');" } });
+    // Looking for Audio and Video needs react and react-dom/server next to the file; without them the video is still built, just without that scan.
+    const node = await nodeBuild(true).catch(() => nodeBuild(false));
+    exported = await import(`data:text/javascript;base64,${Buffer.from(node.outputFiles?.find(file => file.path.endsWith('.js'))?.text ?? "").toString('base64')}`);
   } catch (error) { throw new Error(`Could not load ${source}: ${failed(error).message}`); }
   const config = exported.config as Record<string, any> | undefined;
   if (!config || typeof config !== 'object') throw new Error('The file must export const config = { id, width, height, fps, durationInFrames }');
@@ -36,12 +47,42 @@ async function buildReact(source: string, output: string): Promise<void> {
     ...(config.live === false ? [] : ['const roots = new WeakMap();', 'window.__oveReactMount = async o => {', '  let root = roots.get(o.container); if (!root) { root = createRoot(o.container); roots.set(o.container, root); }',
       '  flushSync(() => root.render(make(o)));', '  const began = Date.now();', '  while (globalThis.__oveDelays && globalThis.__oveDelays.size > 0) {', "    if (Date.now() - began > 28000) throw new Error('delayRender() was not released within 28 seconds: ' + [...globalThis.__oveDelays.values()].join(', '));", '    await new Promise(r => setTimeout(r, 4));', '  }', '};'])].join('\n');
   let bundle: string;
-  try { bundle = (await esbuild.build({ ...common, stdin: { contents: shim, resolveDir: dirname(source), loader: 'js', sourcefile: 'ove-react-entry.js' }, platform: 'browser', format: 'iife', target: 'es2022', minify: true })).outputFiles?.[0]?.text ?? ""; }
+  try {
+    const built = await esbuild.build({ ...common, stdin: { contents: shim, resolveDir: dirname(source), loader: 'js', sourcefile: 'ove-react-entry.js' }, platform: 'browser', format: 'iife', target: 'es2022', minify: true, outdir: 'out' });
+    bundle = built.outputFiles?.find(file => file.path.endsWith('.js'))?.text ?? '';
+    // CSS the components import becomes a style element, so it reaches the page (and the picture drawn from it) like any stylesheet.
+    const css = built.outputFiles?.find(file => file.path.endsWith('.css'))?.text;
+    if (css) bundle = `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s)})();` + bundle;
+  }
   catch (error) { throw new Error(`Could not bundle ${source}: ${failed(error).message}`); }
+  // Audio and Video components: render the component for every frame, and make a layer of each run of frames where one is shown.
+  const mediaLayers: { audio: Record<string, unknown>[]; video: Record<string, unknown>[] } = { audio: [], video: [] };
+  const total = Number(config.durationInFrames), cfg = { id, width: Number(config.width), height: Number(config.height), fps, durationInFrames: total };
+  const seen = new Map<string, { kind: 'audio' | 'video'; attrs: Record<string, string>; start: number; last: number }[]>();
+  let scanned = false;
+  for (let frame = 0; frame < Math.min(total, 100_000); frame++) {
+    let html: string;
+    try { html = exported.__render(frame, config.props ?? {}, cfg); } catch (error) { if (scanned) throw new Error(`Rendering frame ${frame} failed while looking for Audio and Video: ${describeError(error)}`); break; }
+    scanned = true;
+    const counts = new Map<string, number>();
+    for (const tag of html.matchAll(/<i\b[^>]*data-ove-media="(audio|video)"[^>]*>/g)) {
+      const attrs: Record<string, string> = {}; for (const a of tag[0].matchAll(/data-([a-z-]+)="([^"]*)"/g)) attrs[a[1]!] = a[2]!.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const base = `${tag[1]}|${attrs.src}|${attrs.name}`, n = counts.get(base) ?? 0; counts.set(base, n + 1);
+      const runs = seen.get(`${base}|${n}`) ?? []; seen.set(`${base}|${n}`, runs);
+      const run = runs[runs.length - 1];
+      if (run && run.last === frame - 1) run.last = frame; else runs.push({ kind: tag[1] as 'audio' | 'video', attrs, start: frame, last: frame });
+    }
+  }
+  let serial = 0;
+  for (const runs of seen.values()) for (const run of runs) {
+    const a = run.attrs, base = { startFrame: run.start, endFrame: run.last + 1, src: a.src!, trimStart: Math.round(Number(a.trim) || 0), volume: Number(a.volume), playbackRate: Number(a.rate) || 1, loop: a.loop === '1' };
+    if (run.kind === 'audio') mediaLayers.audio.push({ id: `audio-${++serial}`, type: 'audio', ...base });
+    else mediaLayers.video.push({ id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, x: Number(a.left), y: Number(a.top), width: Number(a.width) || Number(config.width), height: Number(a.height) || Number(config.height) });
+  }
   const bundleName = `${basename(source).replace(/\.[jt]sx?$/, '')}.bundle.js`;
   const raw: Record<string, unknown> = { $schema: './composition.schema.json', version: '1.0', id, name: config.name ?? id, width: Number(config.width), height: Number(config.height), fps, durationFrames: Number(config.durationInFrames),
     ...(config.background !== undefined ? { background: config.background } : {}), ...(config.motionBlur ? { motionBlur: config.motionBlur === true ? { samples: 4, shutter: 180 } : config.motionBlur } : {}), ...(config.export ? { export: config.export } : {}), ...(config.assets ? { assets: config.assets } : {}),
-    scenes: [{ id: 'main', name: 'Main', startFrame: 0, durationFrames: Number(config.durationInFrames), layers: [{ id: 'react', type: 'react', src: bundleName, width: Number(config.width), height: Number(config.height), durationInFrames: Number(config.durationInFrames), props: config.props ?? {} }, ...(Array.isArray(exported.layers) ? exported.layers : [])] }] };
+    scenes: [{ id: 'main', name: 'Main', startFrame: 0, durationFrames: Number(config.durationInFrames), layers: [...mediaLayers.video, { id: 'react', type: 'react', src: bundleName, width: Number(config.width), height: Number(config.height), durationInFrames: Number(config.durationInFrames), props: config.props ?? {} }, ...mediaLayers.audio, ...(Array.isArray(exported.layers) ? exported.layers : [])] }] };
   let composition;
   try { composition = loadComposition(raw); } catch (error) { throw new Error(`The video does not pass the schema:\n${describeError(error)}`); }
   await mkdir(dirname(output), { recursive: true });

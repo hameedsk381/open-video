@@ -342,6 +342,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
       const files = await writeCompositionProject(dir, composition, { force: true });
       await saveRevision(files.composition, { kind: 'import', label: 'Pasted composition' });
       return {
+        id: relative(dir),
         dir,
         ...resultFile(files.composition),
         frames: composition.durationFrames,
