@@ -35,6 +35,21 @@ const numeric = (value: unknown): number | undefined => {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+function cleanLayer(layer: any) {
+  if (!layer || typeof layer !== 'object') return;
+  if ('fontWeight' in layer && typeof layer.fontWeight === 'string') {
+    const s = layer.fontWeight.trim().toLowerCase();
+    if (/^\d+$/.test(s)) layer.fontWeight = parseInt(s, 10);
+    else if (s === 'bold') layer.fontWeight = 700;
+    else if (s === 'normal' || s === 'regular') layer.fontWeight = 400;
+    else if (s === 'semibold' || s === 'semi-bold') layer.fontWeight = 600;
+    else if (s === 'medium') layer.fontWeight = 500;
+    else if (s === 'light') layer.fontWeight = 300;
+  }
+  if (Array.isArray(layer.children)) layer.children.forEach(cleanLayer);
+  if (Array.isArray(layer.spans)) layer.spans.forEach(cleanLayer);
+}
+
 function normalize(raw: any, options: ComposeOptions): any {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('The response must be one JSON object');
   raw.version = '1.0';
@@ -52,6 +67,19 @@ function normalize(raw: any, options: ComposeOptions): any {
     raw.export = { format: 'mp4', ...(raw.export && typeof raw.export === 'object' ? raw.export : {}), loudness: typeof raw.export?.loudness === 'number' ? raw.export.loudness : loudness };
   }
   restoreSuppliedSources(raw, options.assets);
+  if (Array.isArray(raw.scenes)) {
+    for (const scene of raw.scenes) {
+      if (!scene || typeof scene !== 'object') continue;
+      const start = Number(scene.startFrame) || 0;
+      if (start >= raw.durationFrames) {
+        scene.startFrame = Math.max(0, raw.durationFrames - 1);
+        scene.durationFrames = 1;
+      } else if (start + (Number(scene.durationFrames) || 0) > raw.durationFrames) {
+        scene.durationFrames = Math.max(1, raw.durationFrames - start);
+      }
+      for (const layer of scene?.layers ?? []) cleanLayer(layer);
+    }
+  }
   return raw;
 }
 

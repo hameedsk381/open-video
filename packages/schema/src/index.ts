@@ -2,7 +2,20 @@ import { z } from 'zod'; import { colorPattern, variablesSchema, componentsSchem
 export * from './variables'; export * from './captions';
 
 const color = z.string().regex(colorPattern);
-const fontWeight = z.union([z.number().int().min(1).max(1000), z.enum(['normal','bold'])]); const fontStyle = z.enum(['normal','italic']);
+const fontWeightMap: Record<string, number> = {
+  thin: 100, hairline: 100, extralight: 200, ultralight: 200, 'extra-light': 200, 'ultra-light': 200,
+  light: 300, regular: 400, medium: 500, semibold: 600, demibold: 600, 'semi-bold': 600, 'demi-bold': 600,
+  extrabold: 800, ultrabold: 800, 'extra-bold': 800, 'ultra-bold': 800, black: 900, heavy: 900
+};
+const fontWeight = z.preprocess(val => {
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
+    if (s in fontWeightMap) return fontWeightMap[s];
+  }
+  return val;
+}, z.union([z.number().int().min(1).max(1000), z.enum(['normal','bold'])]));
+const fontStyle = z.enum(['normal','italic']);
 // Kept in step with easingNames in @ove/animation (a unit test checks they match).
 export const easingSchema = z.union([z.enum(['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInQuart','easeOutQuart','easeInOutQuart','easeInExpo','easeOutExpo','easeInOutExpo','easeInBack','easeOutBack','spring','hold','land','snap','glide','pop','move','exit','drift']).describe('land, snap, glide and pop for entries, move within the frame, exit for leaving, drift for slow continuous motion; or a standard curve'), z.tuple([z.number().min(0).max(1), z.number(), z.number().min(0).max(1), z.number()]).describe('Cubic Bézier control points [x1, y1, x2, y2], as in CSS')]);
 export const colorProperties = ['fill','color','stroke'] as const;

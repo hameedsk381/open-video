@@ -336,7 +336,7 @@ export class NvidiaProvider implements AiProvider {
   constructor(config: ProviderConfig = {}) {
     this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.NVIDIA_API_KEY ?? '';
     if (!this.apiKey) throw new Error('The nvidia provider needs an API key: set NVIDIA_API_KEY (or OVE_AI_API_KEY)');
-    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'meta/llama-3.3-70b-instruct';
+    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'nvidia/nemotron-3.5-bolt-e4b';
     this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1');
   }
 
@@ -347,7 +347,7 @@ export class NvidiaProvider implements AiProvider {
       model: this.model,
       messages,
       temperature: options.temperature ?? 0.4,
-      max_tokens: options.maxTokens ?? completionBudget(messages),
+      max_tokens: options.maxTokens ?? 4096,
       ...(json ? { response_format: { type: 'json_object' } } : {}),
     });
 
@@ -369,8 +369,13 @@ export class NvidiaProvider implements AiProvider {
       }, 'NVIDIA chat');
     }
     const data: any = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== 'string' || !text.trim()) throw new Error('NVIDIA chat returned no text');
+    const message = data?.choices?.[0]?.message;
+    const text = (typeof message?.content === 'string' && message.content.trim())
+      ? message.content
+      : (typeof message?.reasoning_content === 'string' && message.reasoning_content.trim())
+        ? message.reasoning_content
+        : '';
+    if (!text) throw new Error('NVIDIA chat returned no text');
     return text;
   }
 }

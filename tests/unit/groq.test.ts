@@ -173,7 +173,7 @@ describe('NVIDIA provider', () => {
     expect(calls[0]!.url).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
     expect((calls[0]!.init.headers as Record<string, string>)['authorization']).toBe('Bearer nvapi-test');
     const body = JSON.parse(String(calls[0]!.init.body));
-    expect(body.model).toBe('meta/llama-3.3-70b-instruct');
+    expect(body.model).toBe('nvidia/nemotron-3.5-bolt-e4b');
     expect(body.response_format).toEqual({ type: 'json_object' });
   });
 
