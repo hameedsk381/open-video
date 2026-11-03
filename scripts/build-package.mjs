@@ -8,7 +8,7 @@
 import { bundlePlayer } from '../packages/player/src/bundle.ts';
 import { build } from 'esbuild'; import { execFileSync } from 'node:child_process'; import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'; import { dirname, join, relative, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)), '..'), out=join(root, 'packages', 'ove'), dist=join(out, 'dist');
-await rm(dist, { recursive: true, force: true }); await rm(join(out, 'templates'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
+await rm(dist, { recursive: true, force: true }); await rm(join(out, 'templates'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'studio'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
 // esbuild is external too: the CLI only reaches it to bundle the Player when running from source, never from this package, which ships player.js.
 const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', external: ['playwright', 'zod', 'esbuild'], logLevel: 'warning', legalComments: 'none' };
 await build({ ...common, entryPoints: [join(root, 'packages/core/src/index.ts')], outfile: join(dist, 'index.js') });
@@ -44,6 +44,7 @@ const { lottiePlayerPath } = await import('../packages/graphics/src/runtime.ts')
 // The built-in sound effects, for the Player (renders make their own in the cache folder).
 const { sfxFile } = await import('../packages/core/src/audio.ts'); const { sfxNames } = await import('../packages/schema/src/index.ts'); await mkdir(join(dist, 'sfx'), { recursive: true });
 for (const name of sfxNames) await cp(await sfxFile(name), join(dist, 'sfx', `${name}.wav`));
+await cp(join(root, 'packages/cli/studio'), join(out, 'studio'), { recursive: true }); // the AI Studio web app (pnpm build:studio)
 await cp(join(root, 'packages/cli/templates'), join(out, 'templates'), { recursive: true }); await cp(join(root, 'packages/cli/blocks'), join(out, 'blocks'), { recursive: true }); await cp(join(root, 'packages/cli/themes'), join(out, 'themes'), { recursive: true }); await cp(join(root, 'packages/cli/skills'), join(out, 'skills'), { recursive: true });
 await cp(join(root, 'LICENSE'), join(out, 'LICENSE')); // packages/ove/README.md is the package's own README, kept in the repository
 console.log(`Built ${relative(root, out)}: dist/index.js, dist/cli.js, dist/player.js, declarations, templates/, skills/`);

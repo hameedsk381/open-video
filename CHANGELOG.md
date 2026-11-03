@@ -5,6 +5,7 @@ All notable changes to Open Video Engine. The published package is `open-video-e
 ## Unreleased
 
 ### Added
+- The AI Studio is now a React + Vite app (`apps/studio`) with a Vercel-style UI (light and dark, system fonts, no network needed). `pnpm build:studio` builds it into `packages/cli/studio`; `pnpm dev:studio` runs Vite against a running studio; `pnpm build:package` ships it. Without a build the studio serves the previous plain page.
 - React `Video`: `layer="front"` and per-frame `left/top/width/height` (the clip moves or resizes); the build warns when it cannot scan for Audio and Video.
 - React videos: `Audio`, `Video` and `Img` components (found at build time and turned into audio and video layers), and imported CSS, fonts and pictures are bundled with the component.
 - Live React videos: the component is mounted in a real page each frame (React effects, refs, canvas, WebGL, three.js, d3, CSS-in-JS and other npm libraries work), then drawn through the html path with canvases captured as pictures. `delayRender()` / `continueRender()` hold a frame for async work; `config.live = false` keeps the old static-markup mode. See `examples/three-video`.

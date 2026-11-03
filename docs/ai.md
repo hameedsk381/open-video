@@ -69,7 +69,7 @@ ove ai studio                            # opens http://127.0.0.1:3100/ using GR
 ove ai studio --provider mock --out demo  # offline, writes into ./demo
 ```
 
-The page is built around projects, each a folder under `--out`:
+The studio is a React + Vite app (`apps/studio`; `pnpm build:studio` builds it, and without a build a plain fallback page is served). It is built around projects, each a folder under `--out`:
 
 - **Projects**: every video as a card with a thumbnail, size, length and last edit; open, duplicate, rename, delete (a deleted project moves to `.trash` inside `--out`).
 - **New video**: pick a kind, describe it, drop in pictures or footage (saved to the project's `assets` folder and offered to the template and the model), optionally add a voiceover with captions.

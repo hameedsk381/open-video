@@ -34,6 +34,8 @@ jobs:
 
       # Installs exactly what pnpm-lock.yaml records, and fails if package.json and the lockfile disagree.
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:studio
+      - run: pnpm --filter @ove/studio typecheck
       - run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm ove doctor

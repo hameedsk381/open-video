@@ -17,6 +17,7 @@ import { builtinFontFaces } from '@ove/graphics';
 import { builtinFontDir } from '@ove/graphics/fonts';
 import { resolveVariables, sfxNames, variablesSchema } from '@ove/schema';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
@@ -118,7 +119,16 @@ const mediaTypes: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif',
   '.svg': 'image/svg+xml', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
-  '.json': 'application/json', '.srt': 'text/plain; charset=utf-8', '.vtt': 'text/vtt; charset=utf-8',
+  '.json': 'application/json', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.srt': 'text/plain; charset=utf-8', '.vtt': 'text/vtt; charset=utf-8',
+};
+
+// The web app (apps/studio, built by `pnpm build:studio`) sits next to blocks/ and themes/, in the workspace and in the published package.
+// Without a build the studio falls back to the plain page in ai-studio-page.ts.
+const studioDir = fileURLToPath(new URL('../studio', import.meta.url));
+const studioFile = async (pathname: string): Promise<string | undefined> => {
+  const target = resolve(studioDir, pathname === '/' ? 'index.html' : decodeURIComponent(pathname.slice(1)));
+  if (!within(studioDir, target)) return undefined;
+  try { return (await stat(target)).isFile() ? target : undefined; } catch { return undefined; }
 };
 
 export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiStudioServer> {
@@ -536,7 +546,11 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     const refused = refusal(req);
     if (refused) return send(res, 403, 'text/plain', refused);
     try {
-      if (req.method === 'GET' && url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', aiStudioPage);
+      if (req.method === 'GET' && !url.pathname.startsWith('/api/') && !url.pathname.startsWith('/files/')) {
+        const app = await studioFile(url.pathname);
+        if (app) return send(res, 200, mediaTypes[extname(app).toLowerCase()] ?? 'application/octet-stream', await readFile(app));
+        if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', aiStudioPage);
+      }
       if (req.method === 'GET' && url.pathname === '/api/status') return sendJson(res, 200, { outDir: root, ...providerState(), jobs: recentJobs() });
       if (req.method === 'GET' && url.pathname === '/api/jobs') return sendJson(res, 200, { jobs: recentJobs() });
       if (req.method === 'GET' && url.pathname === '/api/job') {

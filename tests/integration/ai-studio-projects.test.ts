@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { existsSync } from 'node:fs';
 import { request } from 'node:http';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -90,6 +91,16 @@ describe('Studio projects', () => {
     expect((await send('POST', `/api/upload?project=${id}&name=a.png`, { origin: 'https://evil.example', 'content-type': 'application/octet-stream' }, png)).status).toBe(403);
     expect((await send('POST', `/api/upload?project=../..&name=a.png`, octet, png)).status).toBe(400);
     expect((await send('POST', '/api/project/delete', octet, JSON.stringify({ id }))).status).toBe(403);
+  });
+
+  it.skipIf(!existsSync(join(process.cwd(), 'packages/cli/studio/index.html')))('serves the built web app, its assets, and keeps the API apart', async () => {
+    const page = await send('GET', '/');
+    expect(page.status).toBe(200); expect(page.body.toString('utf8')).toContain('<div id="root">');
+    const asset = /\/assets\/[^"']+\.js/.exec(page.body.toString('utf8'))![0];
+    const script = await send('GET', asset);
+    expect(script.status).toBe(200); expect(String(script.headers['content-type'])).toMatch(/javascript/);
+    expect((await send('GET', '/assets/../../package.json')).status).not.toBe(200);
+    expect((await send('GET', '/api/nothing')).status).toBe(404);
   });
 
   it('serves what the Player needs next to itself', async () => {

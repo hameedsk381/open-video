@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "validate:example": "tsx packages/cli/src/index.ts validate examples/typography/composition.json",
     "render:example": "tsx packages/cli/src/index.ts render examples/typography/composition.json --output artifacts/typography.mp4",
-    "build:package": "tsx scripts/build-package.mjs",
+    "build:studio": "pnpm --filter @ove/studio build",
+    "dev:studio": "pnpm --filter @ove/studio dev",
+    "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "devDependencies": {
