@@ -3,7 +3,37 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { assetProblems } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
-import { AbsoluteFill, AmbientGlow, Badge, DeviceFrame, Easing, GlassCard, KineticText, NumberTicker, ProgressBar, Sequence, Series, interpolate, random, spring, springValue, stagger, useCurrentFrame, useVideoConfig } from '@ove/react';
+import {
+  AbsoluteFill,
+  AmbientGlow,
+  Badge,
+  BentoCard,
+  BentoGrid,
+  CodeEditor,
+  Composition,
+  DeviceFrame,
+  Easing,
+  Freeze,
+  Folder,
+  GlassCard,
+  KineticText,
+  Loop,
+  NumberTicker,
+  ProgressBar,
+  Sequence,
+  Series,
+  Still,
+  Typewriter,
+  Waveform,
+  interpolate,
+  random,
+  spring,
+  springValue,
+  stagger,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from '@ove/react';
 
 // The components are pure functions of the frame: render them as the bundle's render function does, at a chosen frame.
 const shared = (globalThis as any).__oveReact as { frame: any; config: any };
@@ -40,7 +70,34 @@ describe('@ove/react', () => {
     expect(interpolate(15, [0, 30], [0, 1], { easing: Easing.out(Easing.quad) })).toBe(0.75);
     expect(Easing.bezier(0.25, 0.1, 0.25, 1)(0.5)).toBeGreaterThan(0.5);
     expect(spring({ frame: 0 })).toBe(0); expect(spring({ frame: 120 })).toBeCloseTo(1, 2);
+    // Remotion nested config support
+    expect(spring({ frame: 120, fps: 30, config: { damping: 10, stiffness: 100 } })).toBeCloseTo(1, 2);
     expect(random('a')).toBe(random('a')); expect(random('a')).not.toBe(random('b')); expect(random(1)).toBeGreaterThanOrEqual(0); expect(random(1)).toBeLessThan(1);
+  });
+
+  it('supports Remotion-compatible primitives (staticFile, Loop, Freeze, Composition, Folder, Still)', () => {
+    expect(staticFile('/assets/img.png')).toBe('assets/img.png');
+    expect(staticFile('assets/img.png')).toBe('assets/img.png');
+
+    const loopNode = createElement(Loop, { durationInFrames: 10 }, createElement(Probe));
+    expect(at(0, loopNode)).toContain('frame 0 of');
+    expect(at(9, loopNode)).toContain('frame 9 of');
+    expect(at(10, loopNode)).toContain('frame 0 of');
+    expect(at(15, loopNode)).toContain('frame 5 of');
+
+    const freezeNode = createElement(Freeze, { frame: 4 }, createElement(Probe));
+    expect(at(0, freezeNode)).toContain('frame 4 of');
+    expect(at(50, freezeNode)).toContain('frame 4 of');
+
+    const dummyComp = () => createElement('div', null, 'Hi');
+    const compNode = createElement(Composition, { id: 'TestComp', component: dummyComp, durationInFrames: 60, fps: 30, width: 1920, height: 1080 });
+    expect(at(0, compNode)).toBe('');
+
+    const folderNode = createElement(Folder, { name: 'Main' }, createElement('span', null, 'Inside Folder'));
+    expect(at(0, folderNode)).toContain('Inside Folder');
+
+    const stillNode = createElement(Still, { id: 'StillComp', component: dummyComp, fps: 30, width: 1920, height: 1080 });
+    expect(at(0, stillNode)).toBe('');
   });
 
   it('calculates spring values and stagger delays cleanly', () => {
@@ -78,6 +135,25 @@ describe('@ove/react', () => {
 
     const glow = at(10, createElement(AmbientGlow));
     expect(glow).toContain('radial-gradient');
+
+    const bento = at(15, createElement(BentoGrid, { columns: 3 },
+      createElement(BentoCard, { title: 'Card 1', subtitle: 'Sub 1', colSpan: 2 }, 'Inner 1'),
+      createElement(BentoCard, { title: 'Card 2' }, 'Inner 2'),
+    ));
+    expect(bento).toContain('display:grid');
+    expect(bento).toContain('grid-column:span 2 / span 2');
+    expect(bento).toContain('Card 1');
+    expect(bento).toContain('Sub 1');
+
+    const typewriter = at(20, createElement(Typewriter, { text: 'AI Agent Video' }));
+    expect(typewriter).toContain('AI Agent');
+
+    const wave = at(15, createElement(Waveform, { bars: 12 }));
+    expect(wave).toContain('linear-gradient');
+
+    const code = at(20, createElement(CodeEditor, { filename: 'index.ts', code: 'const x = 42;\nconsole.log(x);', highlightLines: [1] }));
+    expect(code).toContain('index.ts');
+    expect(code).toContain('const x = 42;');
   });
 
   it('is refused in compositions the AI layer writes or accepts', () => {

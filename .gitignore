@@ -16,3 +16,5 @@ packages/ove/skills/
 packages/ove/LICENSE
 ai-videos/
 packages/cli/studio/
+tmp/
+

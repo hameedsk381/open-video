@@ -3,9 +3,38 @@
 // the renderer mounts it live in a page every frame (real effects, canvas and WebGL work) and draws the result like an html layer, so the output
 // stays frame-exact and goes through the same encoder, audio and review as any other composition. Derive everything from the frame.
 import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ImgHTMLAttributes, type ReactElement, type ReactNode } from 'react';
-import { interpolate, spring } from '@ove/builder';
+import { interpolate, spring as builderSpring } from '@ove/builder';
 
-export { interpolate, spring };
+export { interpolate };
+
+/**
+ * Calculates spring physics animation value. Fully compatible with both Remotion and Open Video Engine options.
+ */
+export function spring(options: {
+  frame: number;
+  fps?: number;
+  damping?: number;
+  stiffness?: number;
+  mass?: number;
+  from?: number;
+  to?: number;
+  durationInFrames?: number;
+  config?: { damping?: number; stiffness?: number; mass?: number; overshootClamping?: boolean };
+}): number {
+  const damping = options.config?.damping ?? options.damping;
+  const stiffness = options.config?.stiffness ?? options.stiffness;
+  const mass = options.config?.mass ?? options.mass;
+  return builderSpring({
+    frame: options.frame,
+    fps: options.fps,
+    damping,
+    stiffness,
+    mass,
+    from: options.from,
+    to: options.to,
+  });
+}
+
 export * from './springs';
 export * from './components';
 export type VideoConfig = { id?: string; width: number; height: number; fps: number; durationInFrames: number };
@@ -95,4 +124,49 @@ export function random(seed: string | number): number {
   for (const ch of String(seed)) { h = Math.imul(h ^ ch.charCodeAt(0), 3432918353); h = (h << 13) | (h >>> 19); }
   h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
+}
+
+/** Resolves asset paths like staticFile('logo.png') in Remotion-compatible projects. */
+export const staticFile = (src: string): string => src.replace(/^\/+/, '');
+
+/** Loops its children every `durationInFrames` frames. */
+export function Loop({ durationInFrames, times = Infinity, children }: { durationInFrames: number; times?: number; children?: ReactNode }): ReactElement | null {
+  const frame = useCurrentFrame();
+  if (frame >= durationInFrames * times) return null;
+  const looped = frame % durationInFrames;
+  return createElement(shared.frame.Provider, { value: looped }, children);
+}
+
+/** Freezes the frame value for its children at a specific frame number. */
+export function Freeze({ frame = 0, children }: { frame?: number; children?: ReactNode }): ReactElement {
+  return createElement(shared.frame.Provider, { value: frame }, children);
+}
+
+export type CompositionProps<T = Record<string, unknown>> = {
+  id: string;
+  component: React.ComponentType<T>;
+  durationInFrames: number;
+  fps?: number;
+  width?: number;
+  height?: number;
+  defaultProps?: T;
+};
+
+/** Remotion-compatible Composition declaration component. */
+export function Composition<T = Record<string, unknown>>(props: CompositionProps<T>): ReactElement | null {
+  if (typeof globalThis !== 'undefined') {
+    const list = (((globalThis as any).__oveCompositions ??= []) as CompositionProps<any>[]);
+    list.push(props);
+  }
+  return null;
+}
+
+/** Remotion-compatible Folder component for organizing compositions. */
+export function Folder({ children }: { name: string; children?: ReactNode }): ReactElement {
+  return createElement('div', { style: { display: 'contents' } }, children);
+}
+
+/** Remotion-compatible Still component for static image frames. */
+export function Still<T = Record<string, unknown>>(props: Omit<CompositionProps<T>, 'durationInFrames'>): ReactElement | null {
+  return Composition({ ...props, durationInFrames: 1 });
 }

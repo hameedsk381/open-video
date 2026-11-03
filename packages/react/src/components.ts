@@ -397,3 +397,386 @@ export function ProgressBar({
     },
   }));
 }
+
+export type BentoGridProps = {
+  columns?: number | string;
+  gap?: number | string;
+  style?: CSSProperties;
+  children?: ReactNode;
+};
+
+/**
+ * Responsive Bento Grid container for modular layout design.
+ */
+export function BentoGrid({
+  columns = 3,
+  gap = 20,
+  style,
+  children,
+}: BentoGridProps): ReactElement {
+  const gridTemplateColumns = typeof columns === 'number' ? `repeat(${columns}, minmax(0, 1fr))` : columns;
+  const gapValue = typeof gap === 'number' ? `${gap}px` : gap;
+
+  return createElement('div', {
+    style: {
+      display: 'grid',
+      gridTemplateColumns,
+      gap: gapValue,
+      width: '100%',
+      ...style,
+    },
+  }, children);
+}
+
+export type BentoCardProps = {
+  colSpan?: number | string;
+  rowSpan?: number | string;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  icon?: ReactNode;
+  delay?: number;
+  preset?: SpringPreset;
+  glowColor?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+};
+
+/**
+ * Modern glassmorphic Bento card with spring reveal and optional title/badge/icon.
+ */
+export function BentoCard({
+  colSpan = 1,
+  rowSpan = 1,
+  title,
+  subtitle,
+  badge,
+  icon,
+  delay = 0,
+  preset = 'snappy',
+  glowColor = 'rgba(99, 102, 241, 0.15)',
+  style,
+  children,
+}: BentoCardProps): ReactElement {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const progress = springValue({ frame, fps, delay, preset, from: 0, to: 1 });
+  const y = (1 - progress) * 24;
+  const scale = 0.95 + progress * 0.05;
+  const opacity = Math.min(1, Math.max(0, progress * 1.4));
+
+  const gridColumn = typeof colSpan === 'number' ? `span ${colSpan} / span ${colSpan}` : colSpan;
+  const gridRow = typeof rowSpan === 'number' ? `span ${rowSpan} / span ${rowSpan}` : rowSpan;
+
+  return createElement('div', {
+    style: {
+      gridColumn,
+      gridRow,
+      position: 'relative',
+      background: 'rgba(18, 20, 29, 0.75)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      boxShadow: `0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 40px ${glowColor}`,
+      borderRadius: 20,
+      padding: 24,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      opacity,
+      transform: `translateY(${y.toFixed(2)}px) scale(${scale.toFixed(3)})`,
+      willChange: 'transform, opacity',
+      ...style,
+    },
+  },
+    (title || badge || icon) ? createElement('div', {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: subtitle || children ? 16 : 0,
+        gap: 12,
+      },
+    },
+      createElement('div', {
+        style: { display: 'flex', alignItems: 'center', gap: 10 },
+      },
+        icon ? createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          },
+        }, icon) : null,
+        title ? createElement('div', {
+          style: {
+            fontSize: 18,
+            fontWeight: 600,
+            color: '#f8fafc',
+            letterSpacing: '-0.01em',
+          },
+        }, title) : null,
+      ),
+      badge ? (typeof badge === 'string' ? createElement(Badge, null, badge) : badge) : null,
+    ) : null,
+    subtitle ? createElement('div', {
+      style: {
+        fontSize: 14,
+        color: '#94a3b8',
+        lineHeight: 1.5,
+        marginBottom: children ? 16 : 0,
+      },
+    }, subtitle) : null,
+    children,
+  );
+}
+
+export type TypewriterProps = {
+  text: string;
+  delay?: number;
+  speed?: number; // characters per frame
+  cursor?: boolean;
+  cursorChar?: string;
+  cursorBlinkSpeed?: number;
+  style?: CSSProperties;
+  cursorStyle?: CSSProperties;
+};
+
+/**
+ * Typewriter text effect with animated typing cursor and blinking cursor.
+ */
+export function Typewriter({
+  text,
+  delay = 0,
+  speed = 0.75,
+  cursor = true,
+  cursorChar = '▍',
+  cursorBlinkSpeed = 16,
+  style,
+  cursorStyle,
+}: TypewriterProps): ReactElement {
+  const frame = useCurrentFrame();
+  const elapsed = Math.max(0, frame - delay);
+  const charCount = Math.min(text.length, Math.floor(elapsed * speed));
+  const visibleText = text.slice(0, charCount);
+  const isDone = charCount >= text.length;
+
+  const blink = cursor && Math.floor((frame / (cursorBlinkSpeed / 2))) % 2 === 0;
+
+  return createElement('span', {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'baseline',
+      fontFamily: 'monospace',
+      ...style,
+    },
+  },
+    visibleText,
+    cursor ? createElement('span', {
+      style: {
+        display: 'inline-block',
+        marginLeft: 2,
+        opacity: blink ? 1 : (isDone ? 0.3 : 0),
+        color: '#38bdf8',
+        willChange: 'opacity',
+        ...cursorStyle,
+      },
+    }, cursorChar) : null,
+  );
+}
+
+export type WaveformProps = {
+  bars?: number;
+  height?: number;
+  color?: string;
+  activeColor?: string;
+  speed?: number;
+  delay?: number;
+  preset?: SpringPreset;
+  style?: CSSProperties;
+};
+
+/**
+ * Animated dynamic waveform audio visualizer bars.
+ */
+export function Waveform({
+  bars = 24,
+  height = 50,
+  color = '#6366f1',
+  activeColor = '#ec4899',
+  speed = 0.12,
+  delay = 0,
+  preset = 'snappy',
+  style,
+}: WaveformProps): ReactElement {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const progress = springValue({ frame, fps, delay, preset, from: 0, to: 1 });
+  const opacity = Math.min(1, Math.max(0, progress * 1.5));
+
+  const barElements = [];
+  for (let i = 0; i < bars; i++) {
+    const wave1 = Math.sin(frame * speed + i * 0.45);
+    const wave2 = Math.cos(frame * speed * 0.7 + i * 0.3);
+    const wave3 = Math.sin(frame * speed * 1.3 + i * 0.8);
+    const combined = (wave1 + wave2 + wave3) / 3;
+    const normalized = (combined + 1) / 2;
+    const barHeight = Math.max(8, normalized * height * progress);
+
+    barElements.push(createElement('div', {
+      key: i,
+      style: {
+        width: 4,
+        height: `${barHeight.toFixed(1)}px`,
+        borderRadius: 9999,
+        background: `linear-gradient(to top, ${color}, ${activeColor})`,
+        opacity: 0.6 + normalized * 0.4,
+        boxShadow: normalized > 0.65 ? `0 0 10px ${activeColor}` : undefined,
+        transformOrigin: 'bottom',
+        willChange: 'height',
+      },
+    }));
+  }
+
+  return createElement('div', {
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      height,
+      opacity,
+      willChange: 'opacity',
+      ...style,
+    },
+  }, barElements);
+}
+
+export type CodeEditorProps = {
+  filename?: string;
+  code: string;
+  language?: string;
+  delay?: number;
+  highlightLines?: number[];
+  showLineNumbers?: boolean;
+  preset?: SpringPreset;
+  style?: CSSProperties;
+};
+
+/**
+ * Developer code terminal / editor card with line numbers and active glow.
+ */
+export function CodeEditor({
+  filename = 'main.ts',
+  code,
+  language = 'typescript',
+  delay = 0,
+  highlightLines = [],
+  showLineNumbers = true,
+  preset = 'snappy',
+  style,
+}: CodeEditorProps): ReactElement {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const progress = springValue({ frame, fps, delay, preset, from: 0, to: 1 });
+  const y = (1 - progress) * 35;
+  const scale = 0.94 + progress * 0.06;
+  const opacity = Math.min(1, Math.max(0, progress * 1.4));
+
+  const lines = code.trim().split('\n');
+
+  return createElement('div', {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      background: '#0d1117',
+      borderRadius: 14,
+      border: '1px solid rgba(255, 255, 255, 0.12)',
+      boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65)',
+      fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+      fontSize: 14,
+      overflow: 'hidden',
+      opacity,
+      transform: `translateY(${y.toFixed(2)}px) scale(${scale.toFixed(3)})`,
+      willChange: 'transform, opacity',
+      ...style,
+    },
+  },
+    createElement('div', {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '10px 16px',
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        gap: 12,
+      },
+    },
+      createElement('div', { style: { display: 'flex', gap: 6 } },
+        createElement('span', { style: { width: 10, height: 10, borderRadius: '50%', background: '#ef4444' } }),
+        createElement('span', { style: { width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' } }),
+        createElement('span', { style: { width: 10, height: 10, borderRadius: '50%', background: '#10b981' } }),
+      ),
+      createElement('div', {
+        style: {
+          color: '#94a3b8',
+          fontSize: 12,
+          fontWeight: 500,
+          margin: '0 auto',
+        },
+      }, filename),
+      createElement('div', {
+        style: {
+          color: '#64748b',
+          fontSize: 11,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        },
+      }, language),
+    ),
+    createElement('div', {
+      style: {
+        padding: '16px 0',
+        overflowX: 'auto',
+        lineHeight: 1.6,
+      },
+    }, lines.map((line, idx) => {
+      const lineNum = idx + 1;
+      const isHighlighted = highlightLines.includes(lineNum);
+
+      return createElement('div', {
+        key: idx,
+        style: {
+          display: 'flex',
+          padding: '0 20px',
+          background: isHighlighted ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
+          borderLeft: isHighlighted ? '3px solid #38bdf8' : '3px solid transparent',
+        },
+      },
+        showLineNumbers ? createElement('span', {
+          style: {
+            width: 32,
+            flexShrink: 0,
+            color: isHighlighted ? '#38bdf8' : '#475569',
+            userSelect: 'none',
+            textAlign: 'right',
+            marginRight: 16,
+          },
+        }, lineNum) : null,
+        createElement('span', {
+          style: {
+            color: isHighlighted ? '#f8fafc' : '#cbd5e1',
+            whiteSpace: 'pre',
+          },
+        }, line || ' '),
+      );
+    })),
+  );
+}
