@@ -39,9 +39,9 @@ Other environment variables: `OVE_AI_PROVIDER`, `GROQ_API_KEY`, `OVE_AI_API_KEY`
 `OVE_AI_SPEECH_MODEL`, `OVE_AI_TRANSCRIPTION_MODEL`, and `OVE_AI_VOICE`. `ove ai doctor` prints what is configured and what it can do.
 `OVE_AI_SPEECH_MODEL`, `OVE_AI_TRANSCRIPTION_MODEL`, and `OVE_AI_VOICE`. `ove ai doctor` prints what is configured and what it can do.
 
-## Motion graphics by default, templates when you want them
+## Templates first, full composition when needed
 
-`ove ai compose` writes a motion-graphics composition the way a coding agent would: it plans beats and look first, then writes every layer (kinetic type, camera, grain, motion blur, scene craft). Pass `--from-template` (or tick *Fill a ready-made template* in Studio) to fill a matching template's variables instead — faster and more consistent, but the layout is fixed. Template mode also runs when you supply `--fields`. `--duration` always writes a full composition, because templates have a fixed length.
+`ove ai compose` first asks the model to pick one of the ready-made templates whose shape matches the video (the same aspect ratio) and to return only the values for its variables: a few hundred tokens instead of a whole composition. The layout, motion and timing come from the template, so the result is faster, cheaper and more consistent. It falls back to writing a full composition when no template has the right shape, the model says none suits the brief, template mode fails, you supplied `--asset` or `--fields`, or you pass `--full` or `--duration` (templates have a fixed length). In Studio, tick *Write every layer from scratch*.
 
 With `--narration`, a template video is cut to the voiceover: the model writes one spoken line per scene from what that scene shows, each line is spoken, and every scene is as long as its line, so what is said and what is on screen change together. Word-timed captions come from transcribing the result, and the export gets a -16 LUFS loudness target. Other videos get one script over the whole video. Pictures you pass with `--asset` (images only) are offered to templates with picture slots: the phone screen, the hero image, the story panel.
 

@@ -45,6 +45,12 @@ function normalize(raw: any, options: ComposeOptions): any {
   raw.durationFrames = Math.max(1, Math.round(options.durationSeconds * options.fps));
   if (typeof raw.id !== 'string' || !raw.id.trim()) raw.id = 'ai-video';
   if (typeof raw.name !== 'string' || !raw.name.trim()) raw.name = 'AI video';
+  if (options.plan) {
+    if (typeof raw.grain !== 'number') raw.grain = 0.03;
+    if (!raw.motionBlur || typeof raw.motionBlur !== 'object') raw.motionBlur = { samples: 8, shutter: 180 };
+    const loudness = options.narration ? -16 : -14;
+    raw.export = { format: 'mp4', ...(raw.export && typeof raw.export === 'object' ? raw.export : {}), loudness: typeof raw.export?.loudness === 'number' ? raw.export.loudness : loudness };
+  }
   restoreSuppliedSources(raw, options.assets);
   return raw;
 }
@@ -79,6 +85,31 @@ function inspect(composition: Composition, raw: any, options: ComposeOptions): s
   };
   for (const scene of composition.scenes) walk(scene.layers as any[]);
   problems.push(...assetProblems(composition, { assets: allowed }));
+  problems.push(...craftProblems(composition, options));
+  return problems;
+}
+
+function craftProblems(composition: Composition, options: ComposeOptions): string[] {
+  if (!options.plan || options.fields?.length || options.durationSeconds < 8) return [];
+  const problems: string[] = [];
+  const scenes = composition.scenes;
+  if (scenes.length < 3) problems.push(`A motion-graphics video of ${options.durationSeconds}s needs at least 3 scenes of unequal length (one idea each), not ${scenes.length}.`);
+  if (scenes.length >= 3 && new Set(scenes.map(scene => scene.durationFrames)).size === 1) {
+    problems.push('Scene lengths are identical; give each beat a different duration so it does not read as a slideshow.');
+  }
+  let split = false, camera = scenes.some(scene => !!scene.camera), motion = scenes.some(scene => (scene.camera?.animations?.length ?? 0) > 0);
+  const walk = (layers: any[]) => {
+    for (const layer of layers ?? []) {
+      if (!layer || typeof layer !== 'object') continue;
+      if (layer.type === 'text' && layer.split) split = true;
+      if (Array.isArray(layer.animations) && layer.animations.length) motion = true;
+      if (layer.type === 'group') walk(layer.children ?? []);
+    }
+  };
+  for (const scene of scenes) walk(scene.layers as any[]);
+  if (!split) problems.push('Add kinetic type: at least one headline text layer with "split": { "by": "words", "stagger": 4, "preset": "rise" }.');
+  if (!camera) problems.push('Give at least one content scene a camera with a slow zoom or pan.');
+  if (!motion) problems.push('Animate layers: land-in keyframes, drifting glows, or group motion — a static layout is not motion graphics.');
   return problems;
 }
 

@@ -25,7 +25,7 @@ export type AiProvider = {
   transcribe?(audio: Uint8Array, filename: string, options?: { language?: string; signal?: AbortSignal }): Promise<Transcript>;
 };
 
-export type ProviderId = 'groq' | 'mock';
+export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'mock';
 
 export type ProviderConfig = {
   provider?: string;
@@ -46,6 +46,7 @@ export const providerCapabilities = (provider: AiProvider) => ({
 });
 
 const trimSlash = (url: string) => url.replace(/\/+$/, '');
+const numberFromPrompt = (prompt: string, name: string, fallback: number) => { const found = new RegExp(`${name}=(\\d+)`).exec(prompt); return found ? Number(found[1]) : fallback; };
 export const requestTimeoutMs = 180_000;
 /** Aborts when the caller's signal does or when the timeout passes, whichever comes first (a caller's signal does not remove the timeout). */
 export const timeoutSignal = (signal?: AbortSignal | null, ms = requestTimeoutMs): AbortSignal => signal ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms);
@@ -290,6 +291,52 @@ export class GroqProvider implements AiProvider {
   }
 }
 
+export class AnthropicProvider implements AiProvider {
+  id = 'anthropic';
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+
+  constructor(config: ProviderConfig = {}) {
+    this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? '';
+    if (!this.apiKey) throw new Error('The anthropic provider needs an API key: set ANTHROPIC_API_KEY (or OVE_AI_API_KEY)');
+    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'claude-sonnet-4-5';
+    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com');
+  }
+
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const system = messages.filter(message => message.role === 'system').map(message => message.content).join('\n\n');
+    const turns = messages.filter(message => message.role !== 'system');
+    const body = JSON.stringify({
+      model: this.model,
+      max_tokens: options.maxTokens ?? 16_384,
+      temperature: options.temperature ?? 0.4,
+      ...(system ? { system } : {}),
+      messages: turns.length ? turns : [{ role: 'user', content: 'Reply with the JSON now.' }],
+    });
+    const response = await request(`${this.baseUrl}/v1/messages`, {
+      method: 'POST',
+      signal: timeoutSignal(options.signal),
+      headers: jsonHeaders({ 'x-api-key': this.apiKey, 'anthropic-version': '2023-06-01' }),
+      body,
+    }, 'Anthropic chat');
+    const data: any = await response.json();
+    const text = Array.isArray(data?.content) ? data.content.filter((block: any) => block?.type === 'text').map((block: any) => block.text).join('\n') : data?.content?.[0]?.text;
+    if (typeof text !== 'string' || !text.trim()) throw new Error('Anthropic chat returned no text');
+    return text;
+  }
+}
+
+const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvider => {
+  if (provider.speak || provider.transcribe || !process.env.GROQ_API_KEY) return provider;
+  try {
+    const groq = new GroqProvider({ apiKey: process.env.GROQ_API_KEY, speechModel: config.speechModel, transcriptionModel: config.transcriptionModel, baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1' });
+    provider.speak = groq.speak.bind(groq);
+    provider.transcribe = groq.transcribe.bind(groq);
+  } catch { /* Groq audio is optional when composing with Claude */ }
+  return provider;
+};
+
 const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 // An offline stand-in so the whole pipeline (compose, validate, write, render) can be exercised with no key and
@@ -314,6 +361,20 @@ export class MockProvider implements AiProvider {
         } catch { /* fallback to standard mock */ }
       }
     }
+    if (/You plan motion-graphics videos/.test(prompt) || /Return the motion plan JSON now/.test(prompt)) {
+      const duration = numberFromPrompt(prompt, 'DURATION_SECONDS', 20);
+      const a = Math.max(2, Math.round(duration * 0.22)), b = Math.max(3, Math.round(duration * 0.46)), c = Math.max(2, duration - a - b);
+      return JSON.stringify({
+        idea: 'A designed motion-graphics piece, not a slide deck',
+        look: { background: 'dark navy to indigo', ink: '#f5f7fb', muted: '#97a0b6', accent: '#22d3ee' },
+        transition: 'push',
+        beats: [
+          { name: 'hook', takeaway: 'the subject', onScreen: 'Mock video', seconds: a, motion: 'kinetic title rise; glow drifts' },
+          { name: 'point', takeaway: 'the idea', onScreen: 'Designed motion', seconds: b, motion: 'cards stagger; camera eases in' },
+          { name: 'payoff', takeaway: 'remember this', onScreen: 'Hold the idea', seconds: c, motion: 'logo hold; slow zoom' },
+        ],
+      });
+    }
     if (prompt.includes('You fill in ready-made video templates')) {
       // Picks the first template listed and writes sample text for each of its text variables, as a real model would.
       const first = /^- ([a-z0-9][a-z0-9-]*): [^\n]*\n((?:    - [^\n]*\n?)*)/m.exec(prompt);
@@ -321,7 +382,7 @@ export class MockProvider implements AiProvider {
       const values = Object.fromEntries([...first[2]!.matchAll(/^    - (\w+) \(string\)/gm)].filter(match => !/^(image|photo|picture)\d*$/i.test(match[1]!)).map(match => [match[1], 'Mock text']));
       return JSON.stringify({ template: first[1], values });
     }
-    const number = (name: string, fallback: number) => { const found = new RegExp(`${name}=(\\d+)`).exec(prompt); return found ? Number(found[1]) : fallback; };
+    const number = (name: string, fallback: number) => numberFromPrompt(prompt, name, fallback);
     const width = number('WIDTH', 1080), height = number('HEIGHT', 1920), fps = number('FPS', 30), duration = number('DURATION_FRAMES', fps * 5);
     const fields = [...prompt.matchAll(/^- ([A-Za-z_]\w*): (string|number|boolean|color)(?:, e\.g\. (.+))?$/gm)]
       .map(match => ({ name: match[1]!, type: match[2]!, example: match[3] }));
@@ -334,20 +395,29 @@ export class MockProvider implements AiProvider {
         animations: [{ property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 18, value: 1, easing: 'land' }] }] },
       { id: 'sub', type: 'text', content: 'Set GROQ_API_KEY for real output.', x: width / 2, y: height * 0.55, fontFamily: 'Inter', fontSize: Math.round(width * 0.03), color: '#97a0b6', textAlign: 'center', maxWidth: width * 0.8 },
     ];
+    const camera = (frames: number) => ({ x: width / 2, y: height / 2, zoom: 1, animations: [{ property: 'zoom', keyframes: [{ frame: 0, value: 1 }, { frame: frames, value: 1.06, easing: 'drift' }] }] });
+    const glow = layers[0], title = { ...layers[1], split: { by: 'words', stagger: 4, preset: 'rise' } }, sub = layers[2];
+    const long = duration >= fps * 8;
+    const scene = (id: string, name: string, start: number, frames: number, extra: any[] = []) => ({ id, name, startFrame: start, durationFrames: frames, camera: camera(frames), layers: [glow, { ...title, y: height * 0.38 }, { ...sub, y: height * 0.52 }, ...extra] });
+    const scenes = long
+      ? (() => { const a = Math.round(duration * 0.22), b = Math.round(duration * 0.46), c = duration - a - b; return [scene('hook', 'Hook', 0, a), scene('point', 'Point', a, b), scene('payoff', 'Payoff', a + b, c)]; })()
+      : [scene('main', 'Main', 0, duration)];
     return JSON.stringify({ version: '1.0', id: 'mock-video', name: 'Mock video', width, height, fps, durationFrames: duration, grain: 0.03, motionBlur: { samples: 8, shutter: 180 }, variables,
       background: { type: 'linear', from: [0, 0], to: [width, height], stops: [{ offset: 0, color: '#0b1020' }, { offset: 1, color: '#1e1b4b' }] },
-      scenes: [{ id: 'main', name: 'Main', startFrame: 0, durationFrames: duration, camera: { x: width / 2, y: height / 2, zoom: 1, animations: [{ property: 'zoom', keyframes: [{ frame: 0, value: 1 }, { frame: duration, value: 1.06, easing: 'drift' }] }] }, layers }] });
+      scenes });
   }
   async image(): Promise<ImageResult> { return { data: onePixelPng, extension: 'png' }; }
 }
 
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  const id = (config.provider || process.env.OVE_AI_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : '')).toLowerCase();
+  const id = (config.provider || process.env.OVE_AI_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')).toLowerCase();
   switch (id) {
+    case 'anthropic':
+    case 'claude': return attachGroqAudio(new AnthropicProvider(config), config);
     case 'groq': return new GroqProvider(config);
     case 'mock': return new MockProvider();
-    case '': throw new Error('No AI provider chosen: pass --provider groq|mock, or set GROQ_API_KEY (or OVE_AI_PROVIDER)');
-    default: throw new Error(`Unknown AI provider "${id}"; use groq or mock`);
+    case '': throw new Error('No AI provider chosen: pass --provider anthropic|groq|mock, or set ANTHROPIC_API_KEY or GROQ_API_KEY');
+    default: throw new Error(`Unknown AI provider "${id}"; use anthropic, groq or mock`);
   }
 }
 

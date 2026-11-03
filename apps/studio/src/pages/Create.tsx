@@ -8,7 +8,7 @@ const examples = ['Launch video for a budgeting app called Pocket, with three fe
 
 export function Create() {
   const [kind, setKind] = useState<string>('reel'), [brief, setBrief] = useState(''), [name, setName] = useState(''), [files, setFiles] = useState<File[]>([]);
-  const [duration, setDuration] = useState(''), [aspect, setAspect] = useState(''), [voice, setVoice] = useState(false), [review, setReview] = useState(false), [fromTemplate, setFromTemplate] = useState(false);
+  const [duration, setDuration] = useState(''), [aspect, setAspect] = useState(''), [voice, setVoice] = useState(false), [review, setReview] = useState(false), [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [over, setOver] = useState(false), picker = useRef<HTMLInputElement>(null);
   const addFiles = (list: FileList | null) => { if (list) setFiles(current => [...current, ...Array.from(list)]); };
   const submit = async () => {
@@ -17,13 +17,13 @@ export function Create() {
     try {
       const made = await api<{ id: string }>('/api/project/new', { name: name.trim() || brief.trim().split(/\s+/).slice(0, 6).join(' '), kind });
       for (const file of files) await upload(made.id, file);
-      const body: Record<string, unknown> = { brief: brief.trim(), kind, folder: made.id, narration: voice, review, full: !fromTemplate, fromTemplate };
+      const body: Record<string, unknown> = { brief: brief.trim(), kind, folder: made.id, narration: voice, review, full };
       if (duration) body.duration = duration; if (aspect) body.aspect = aspect;
       const { job } = await api<{ job: Job }>('/api/compose', body);
       go(`#/making/${encodeURIComponent(made.id)}/${job.id}`);
     } catch (e) { setError((e as Error).message); setBusy(false); }
   };
-  return <Page title="New video" subtitle="Describe it and the studio plans the beats, then writes a motion-graphics composition — type, camera, scenes and motion." narrow>
+  return <Page title="New video" subtitle="Describe it and the studio picks a design, writes the copy and builds the scenes." narrow>
     <Field label="What kind of video?"><div className="tiles">{kinds.map(([id, title, hint]) => <button key={id} type="button" className={`tile ${kind === id ? 'on' : ''}`} onClick={() => setKind(id)}><b>{title}</b><span>{hint}</span></button>)}</div></Field>
     <Field label="Describe your video"><textarea className="input" style={{ minHeight: 130 }} placeholder="What is the video about? Who is it for? What should people do after watching?" value={brief} onChange={e => setBrief(e.target.value)} /></Field>
     <div className="chips" style={{ marginTop: -8 }}>{examples.map(example => <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>{example.length > 56 ? example.slice(0, 54) + '…' : example}</button>)}</div>
@@ -40,7 +40,7 @@ export function Create() {
         <Field label="Shape"><select className="input" value={aspect} onChange={e => setAspect(e.target.value)}><option value="">Default for this kind</option><option value="9:16">Vertical 9:16</option><option value="1:1">Square 1:1</option><option value="16:9">Wide 16:9</option><option value="4:5">Portrait 4:5</option></select></Field></div>
       <label className="check"><input type="checkbox" checked={voice} onChange={e => setVoice(e.target.checked)} />Add a voiceover with captions (uses your AI provider)</label>
       <label className="check"><input type="checkbox" checked={review} onChange={e => setReview(e.target.checked)} />Check the result for problems and fix them (slower)</label>
-      <label className="check"><input type="checkbox" checked={fromTemplate} onChange={e => setFromTemplate(e.target.checked)} />Fill a ready-made template instead of writing every layer</label>
+      <label className="check"><input type="checkbox" checked={full} onChange={e => setFull(e.target.checked)} />Write every layer from scratch (experimental, without templates)</label>
     </details>
     {error ? <Notice tone="error">{error}</Notice> : null}
     <Button variant="primary" size="lg" loading={busy} onClick={submit}>{busy ? 'Starting…' : 'Create video'}</Button>
@@ -57,7 +57,7 @@ export function Making({ id, job }: { id: string; job: string }) {
   return <div className="center">
     {error ? <><h2>That did not work</h2><Notice tone="error">{error}</Notice>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}><Button variant="primary" onClick={() => go('#/new')}>Try again</Button><Button onClick={() => api('/api/project/delete', { id }).then(() => go('#/'))}>Delete the empty project</Button></div></>
-      : <><Spinner /><h2>Making your video</h2><p className="sub">Planning the beats, then writing the layers. This usually takes under a minute.</p>
+      : <><Spinner /><h2>Making your video</h2><p className="sub">Choosing a design, writing the text and building the scenes. This usually takes under a minute.</p>
         {messages.length ? <div className="log">{messages.join('\n')}</div> : null}</>}
   </div>;
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { concatWav, createProvider, GroqProvider, splitSpeech, type AiProvider } from '@ove/ai';
+import { AnthropicProvider, concatWav, createProvider, GroqProvider, splitSpeech, type AiProvider } from '@ove/ai';
 
 // A minimal 16-bit mono PCM WAV, the shape Groq's speech endpoint returns.
 function wav(samples: number[], sampleRate = 24000): Uint8Array<ArrayBuffer> {
@@ -117,9 +117,46 @@ describe('Groq provider', () => {
   });
 
   it('is selected automatically when GROQ_API_KEY is the only key', () => {
-    for (const name of ['OVE_AI_PROVIDER']) vi.stubEnv(name, '');
+    for (const name of ['OVE_AI_PROVIDER', 'ANTHROPIC_API_KEY']) vi.stubEnv(name, '');
     vi.stubEnv('GROQ_API_KEY', 'test-key');
     expect(createProvider().id).toBe('groq');
+  });
+});
+
+describe('Anthropic provider', () => {
+  it('posts to /v1/messages with the system prompt split out', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return json({ content: [{ type: 'text', text: '{"ok":true}' }] });
+    }));
+    const provider = new AnthropicProvider({ apiKey: 'sk-ant-test' });
+    const text = await provider.chat([{ role: 'system', content: 'Write JSON' }, { role: 'user', content: 'hello' }], { json: true });
+    expect(text).toBe('{"ok":true}');
+    expect(calls[0]!.url).toBe('https://api.anthropic.com/v1/messages');
+    expect((calls[0]!.init.headers as Record<string, string>)['x-api-key']).toBe('sk-ant-test');
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body.model).toBe('claude-sonnet-4-5');
+    expect(body.system).toBe('Write JSON');
+    expect(body.messages).toEqual([{ role: 'user', content: 'hello' }]);
+    expect(body.max_tokens).toBe(16384);
+  });
+
+  it('is selected automatically when ANTHROPIC_API_KEY is set and GROQ_API_KEY is not', () => {
+    for (const name of ['OVE_AI_PROVIDER', 'GROQ_API_KEY']) vi.stubEnv(name, '');
+    vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-test');
+    const provider = createProvider();
+    expect(provider.id).toBe('anthropic');
+  });
+
+  it('attaches Groq speech when provider is anthropic and GROQ_API_KEY exists', () => {
+    vi.stubEnv('OVE_AI_PROVIDER', 'anthropic');
+    vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-test');
+    vi.stubEnv('GROQ_API_KEY', 'gsk-test');
+    const provider = createProvider();
+    expect(provider.id).toBe('anthropic');
+    expect(provider.speak).toBeTypeOf('function');
+    expect(provider.transcribe).toBeTypeOf('function');
   });
 });
 

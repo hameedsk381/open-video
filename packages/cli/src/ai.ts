@@ -12,7 +12,7 @@ const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
-  ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--from-template]
+  ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
       [--narration] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
@@ -23,8 +23,8 @@ const usage = `Usage:
       [--duration 18] [--fps 30] [render options]
   ove ai studio [--port 3100] [--out ai-videos]   open a local page for the AI commands in a browser
 
-Provider options (all commands): --provider groq|mock, --model name, --base-url URL
-Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, and GROQ_API_KEY.
+Provider options (all commands): --provider anthropic|groq|mock, --model name, --base-url URL
+Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, ANTHROPIC_API_KEY, and GROQ_API_KEY.
 Render options: --crf, --bitrate, --audio-bitrate, --scale, --loudness, --concurrency, --preset, --codec, --format`;
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -136,13 +136,13 @@ async function composeCommand(argv: string[]): Promise<number> {
   const provider = providerFrom(argv);
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
-  const fromTemplate = flag(argv, '--from-template') && !flag(argv, '--full') && !argv.includes('--duration');
+  const full = flag(argv, '--full') || argv.includes('--duration');
   const options: ComposeOptions = { ...canvasOptions, brief, maxAttempts: numberOption(argv, '--max-attempts', 3),
-    review: flag(argv, '--review'), plan: !fromTemplate, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
+    review: flag(argv, '--review'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full: !fromTemplate });
+    result = await composeSmart(provider, options, { full });
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }
@@ -331,9 +331,9 @@ function doctorCommand(argv: string[]): number {
   console.log(`Endpoint     ${provider.baseUrl}`);
   console.log(`Capabilities ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`);
   console.log(`\n${describeProvider(provider)}`);
-  if (!capabilities.speech) console.log('  Narration needs a provider with speech; use --provider groq.');
-  if (!capabilities.image) console.log('  Images need a provider with image; use --provider mock (Groq has no image model).');
-  console.log('\nSet GROQ_API_KEY (or OVE_AI_PROVIDER and OVE_AI_API_KEY), or pass --provider.');
+  if (!capabilities.speech) console.log('  Narration needs speech: set GROQ_API_KEY as well (Claude writes the composition; Groq speaks).');
+  if (!capabilities.image) console.log('  Images need a provider with image; use --provider mock (Claude and Groq have no image model).');
+  console.log('\nSet ANTHROPIC_API_KEY for Claude motion graphics, GROQ_API_KEY for Groq (or speech), or pass --provider.');
   return 0;
 }
 

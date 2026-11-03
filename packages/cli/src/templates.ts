@@ -107,8 +107,8 @@ export async function templateChoices(root = templatesDir): Promise<TemplateChoi
 
 /**
  * Compose by filling a ready-made template (a few hundred tokens), and write the whole composition only when that cannot
- * work: a ready-made template was asked for (`--from-template`), no template has the wanted shape,
- * or the model finds none that suits the brief. Motion-graphics compose writes every layer by default.
+ * work: `full` was asked for, assets or batch fields were supplied (templates use neither), no template has the wanted shape,
+ * or the model finds none that suits the brief.
  */
 export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
   // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.

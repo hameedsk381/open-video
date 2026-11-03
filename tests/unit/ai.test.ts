@@ -80,6 +80,19 @@ describe('composeVideo', () => {
     expect(result.attempts).toBe(1);
     expect(result.composition.scenes).toHaveLength(1);
   });
+
+  it('applies grain, motion blur and loudness on a planned composition', async () => {
+    const result = await composeVideo(provider([JSON.stringify(base())]), { ...brief, plan: true });
+    expect(result.composition.grain).toBe(0.03);
+    expect(result.composition.motionBlur).toEqual({ samples: 8, shutter: 180 });
+    expect(result.composition.export.loudness).toBe(-14);
+  });
+
+  it('rejects a slideshow when planning a longer motion-graphics video', async () => {
+    await expect(composeVideo(provider([JSON.stringify(base('Hello', 300))]), {
+      width: 1080, height: 1920, fps: 30, durationSeconds: 10, brief: 'test', plan: true, maxAttempts: 1,
+    })).rejects.toThrow(/at least 3 scenes/);
+  });
 });
 
 describe('refineVideo', () => {
