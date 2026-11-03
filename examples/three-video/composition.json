@@ -1,0 +1,30 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "three-video",
+  "name": "Three.js video",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "durationFrames": 120,
+  "background": "#070b14",
+  "scenes": [
+    {
+      "id": "main",
+      "name": "Main",
+      "startFrame": 0,
+      "durationFrames": 120,
+      "layers": [
+        {
+          "id": "react",
+          "type": "react",
+          "src": "video.bundle.js",
+          "width": 1280,
+          "height": 720,
+          "durationInFrames": 120,
+          "props": {}
+        }
+      ]
+    }
+  ]
+}

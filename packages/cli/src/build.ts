@@ -28,10 +28,13 @@ async function buildReact(source: string, output: string): Promise<void> {
   for (const key of ['width', 'height', 'durationInFrames']) if (!(Number(config[key]) > 0)) throw new Error(`config.${key} must be a positive number`);
   const id = String(config.id ?? basename(source).replace(/\.[jt]sx?$/, '')), fps = Number(config.fps ?? 30);
   // Browser side: a script that registers the render function. React and your code are bundled together, so there is one copy of React.
-  const shim = [`import * as User from ${JSON.stringify(abs)};`, "import { createElement } from 'react';", "import { renderToStaticMarkup } from 'react-dom/server';",
-    'window.__oveReactRender = ({ frame, fps, width, height, durationInFrames, props }) => {', '  let tree = createElement(User.default, props);', '  const shared = globalThis.__oveReact;',
+  const shim = [`import * as User from ${JSON.stringify(abs)};`, "import { createElement } from 'react';", "import { renderToStaticMarkup } from 'react-dom/server';", "import { flushSync } from 'react-dom';", "import { createRoot } from 'react-dom/client';",
+    'const make = ({ frame, fps, width, height, durationInFrames, props }) => {', '  let tree = createElement(User.default, props);', '  const shared = globalThis.__oveReact;',
     `  if (shared) tree = createElement(shared.config.Provider, { value: { id: ${JSON.stringify(id)}, width, height, fps, durationInFrames } }, createElement(shared.frame.Provider, { value: frame }, tree));`,
-    '  return renderToStaticMarkup(tree);', '};'].join('\n');
+    '  return tree;', '};', 'window.__oveReactRender = o => renderToStaticMarkup(make(o));',
+    // Live mount: the real component in a real page, so effects, canvas, WebGL and any library work. Frames wait for delayRender handles.
+    ...(config.live === false ? [] : ['const roots = new WeakMap();', 'window.__oveReactMount = async o => {', '  let root = roots.get(o.container); if (!root) { root = createRoot(o.container); roots.set(o.container, root); }',
+      '  flushSync(() => root.render(make(o)));', '  const began = Date.now();', '  while (globalThis.__oveDelays && globalThis.__oveDelays.size > 0) {', "    if (Date.now() - began > 28000) throw new Error('delayRender() was not released within 28 seconds: ' + [...globalThis.__oveDelays.values()].join(', '));", '    await new Promise(r => setTimeout(r, 4));', '  }', '};'])].join('\n');
   let bundle: string;
   try { bundle = (await esbuild.build({ ...common, stdin: { contents: shim, resolveDir: dirname(source), loader: 'js', sourcefile: 'ove-react-entry.js' }, platform: 'browser', format: 'iife', target: 'es2022', minify: true })).outputFiles?.[0]?.text ?? ""; }
   catch (error) { throw new Error(`Could not bundle ${source}: ${failed(error).message}`); }

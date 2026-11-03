@@ -105,7 +105,7 @@ async function htmlSvg(op){const l=op.layer,w=l.width,h=l.height,k=l.resolution|
   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w*k+'" height="'+h*k+'" viewBox="0 0 '+w+' '+h+'"><foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+new XMLSerializer().serializeToString(root)+'</foreignObject></svg>'}
 async function prepareHtml(ops){for(const op of ops){if(op.kind==='group'){await prepareHtml(op.children||[]);continue}if(op.kind!=='html')continue;const l=op.layer,usesTime=/var\(\s*--(t|frame)\b/.test(l.html+'\n'+l.css),keyVars=usesTime?op.vars:Object.fromEntries(Object.entries(op.vars||{}).filter(([name])=>name!=='--t'&&name!=='--frame'));
     // --t and --frame change every frame, so they only count towards the cache key when the markup or CSS actually reads them; a static card is drawn once.
-    op.htmlKey=JSON.stringify([l.html,l.css,keyVars,l.width,l.height,l.resolution]);
+    op.htmlKey=l.cacheKey||JSON.stringify([l.html,l.css,keyVars,l.width,l.height,l.resolution]);
     const cached=htmlImages.get(op.htmlKey);if(cached){htmlImages.delete(op.htmlKey);htmlImages.set(op.htmlKey,cached);continue}
     try{const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(await htmlSvg(op));await img.decode();htmlImages.set(op.htmlKey,img)}
     catch(e){const err=new Error('Layer "'+l.id+'" (html): could not be drawn ('+(e&&e.message||'the markup or CSS may be malformed')+')');err.oveLayer=true;throw err}
@@ -139,16 +139,32 @@ function compileCode(text){const body=text.replace(/^\s*export\s+default\s+(asyn
 async function prepareCode(ops){for(const op of ops){if(op.kind==='group'){await prepareCode(op.children||[]);continue}if(op.kind!=='code')continue;const l=op.layer,key=l.src?'src:'+l.src:'code:'+l.code;op.codeKey=key;if(codeFns.has(key))continue;
     try{let text=l.code;if(text===undefined){const given=codeSources[l.src];if(!given)throw new Error('the file '+l.src+' was not loaded');text=typeof given.text==='string'?given.text:await fetch(given.url).then(r=>{if(!r.ok)throw new Error('could not load '+given.url);return r.text()})}
       codeFns.set(key,compileCode(text))}catch(e){const err=new Error('Layer "'+l.id+'" (code): '+(e&&e.message||e));err.oveLayer=true;throw err}}}
-// React layers: the bundle ove build wrote registers a render function (frame, size, props) -> markup. The markup is drawn through the html
-// path below, so fonts, pictures (assets the composition declares) and CSS behave exactly as in an html layer.
-const reactFns=new Map();
+// React layers: the bundle ove build wrote registers a render function (frame, size, props) -> markup and, unless the video opts out, a
+// mount function. Mounted (live) videos run the real component in a hidden page element, with real effects, canvas and WebGL: each frame
+// is mounted, awaited (delayRender), then snapshotted (canvases become pictures) and drawn through the html path below, so fonts, pictures
+// and CSS behave exactly as in an html layer. Styles that libraries add to the page (css-in-js, imported CSS) are carried along.
+const reactEntries=new Map(),liveHosts=new Map();let liveBaseline;
+function liveCss(){const out=[];for(const sheet of document.styleSheets){if(liveBaseline&&liveBaseline.has(sheet))continue;try{out.push([...sheet.cssRules].map(r=>r.cssText).join(''))}catch(e){}}return out.join('')}
+async function liveSnapshot(entry,op){const l=op.layer,v=op.vars||{};let host=liveHosts.get(l.id);
+  if(!host){host=document.createElement('div');host.style.cssText='position:fixed;left:-30000px;top:0;overflow:hidden;pointer-events:none';const box=document.createElement('div');box.style.cssText='position:relative;width:100%;height:100%';host.appendChild(box);document.body.appendChild(host);liveHosts.set(l.id,host)}
+  host.style.width=l.width+'px';host.style.height=l.height+'px';const box=host.firstChild;
+  await entry.mount({container:box,frame:Number(v['--frame'])||0,fps:Number(v['--fps'])||30,width:l.width,height:l.height,durationInFrames:l.durationInFrames,props:l.props||{}});
+  const clone=box.cloneNode(true),from=box.querySelectorAll('canvas'),to=clone.querySelectorAll('canvas');
+  from.forEach((canvas,i)=>{const rect=canvas.getBoundingClientRect(),img=document.createElement('img');img.setAttribute('src',canvas.toDataURL('image/png'));
+    const style=canvas.getAttribute('style')||'';img.setAttribute('style',style+(/(^|;)\s*width\s*:/.test(style)?'':';width:'+rect.width+'px')+(/(^|;)\s*height\s*:/.test(style)?'':';height:'+rect.height+'px'));
+    if(canvas.className)img.className=canvas.className;to[i].replaceWith(img)});
+  return{html:clone.innerHTML,css:liveCss()}}
 async function prepareReact(ops){for(const op of ops){if(op.kind==='group'){await prepareReact(op.children||[]);continue}if(op.kind!=='react')continue;const l=op.layer;
-    try{let fn=reactFns.get(l.src);if(!fn){const given=codeSources[l.src];if(!given)throw new Error('the bundle '+l.src+' was not loaded');
+    try{let entry=reactEntries.get(l.src);if(!entry){const given=codeSources[l.src];if(!given)throw new Error('the bundle '+l.src+' was not loaded');
         const text=typeof given.text==='string'?given.text:await fetch(given.url).then(r=>{if(!r.ok)throw new Error('could not load '+given.url);return r.text()});
-        window.__oveReactRender=undefined;new Function(text)();fn=window.__oveReactRender;delete window.__oveReactRender;if(typeof fn!=='function')throw new Error('the bundle did not register a component; rebuild it with ove build');reactFns.set(l.src,fn)}
-      const v=op.vars||{},html=fn({frame:Number(v['--frame'])||0,fps:Number(v['--fps'])||30,width:l.width,height:l.height,durationInFrames:l.durationInFrames,props:l.props||{}});
-      if(typeof html!=='string')throw new Error('the component did not render to markup');
-      op.kind='html';op.layer=Object.assign({},l,{type:'html',html,css:'',vars:{},resolution:l.resolution||1});op.vars={}}
+        if(!liveBaseline)liveBaseline=new Set(document.styleSheets);
+        window.__oveReactRender=undefined;window.__oveReactMount=undefined;new Function(text)();entry={render:window.__oveReactRender,mount:window.__oveReactMount};delete window.__oveReactRender;delete window.__oveReactMount;
+        if(typeof entry.render!=='function'&&typeof entry.mount!=='function')throw new Error('the bundle did not register a component; rebuild it with ove build');reactEntries.set(l.src,entry)}
+      const v=op.vars||{};let html,css='',cacheKey;
+      if(entry.mount){cacheKey=JSON.stringify(['live',l.src,l.id,Number(v['--frame'])||0,l.props||{},l.width,l.height,l.resolution]);
+        if(htmlImages.has(cacheKey))html='';else{const made=await liveSnapshot(entry,op);html=made.html;css=made.css}}
+      else{html=entry.render({frame:Number(v['--frame'])||0,fps:Number(v['--fps'])||30,width:l.width,height:l.height,durationInFrames:l.durationInFrames,props:l.props||{}});if(typeof html!=='string')throw new Error('the component did not render to markup')}
+      op.kind='html';op.layer=Object.assign({},l,{type:'html',html,css,vars:{},resolution:l.resolution||1,cacheKey});op.vars={}}
     catch(e){const err=new Error('Layer "'+l.id+'" (react): '+(e&&e.message||e));err.oveLayer=true;throw err}}}
 function drawCode(op){const fn=codeFns.get(op.codeKey);if(!fn)return;const l=op.layer,k=l.resolution||1,w=Math.max(1,Math.round(l.width*k)),h=Math.max(1,Math.round(l.height*k)),v=op.vars||{},fps=Number(v['--fps'])||30,frame=Number(v['--frame'])||0;
   let canvas=codeCanvases.get(l.id);if(!canvas){canvas=document.createElement('canvas');codeCanvases.set(l.id,canvas)}if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;
@@ -222,7 +238,7 @@ function drawMasked(op){const l=op.layer,kids=op.children||[],matteOp=kids[kids.
   a.setTransform(1,0,0,1,0,0);a.globalCompositeOperation=l.masked.invert?'destination-out':'destination-in';a.drawImage(mask,0,0);a.globalCompositeOperation='source-over';
   main.save();main.setTransform(1,0,0,1,0,0);main.drawImage(A,0,0);main.restore()}
 function drawChildren(op){if(!op.layer.layout){for(const child of op.children)drawOp(child);return}const {places}=layoutPlan(op);op.children.forEach((child,i)=>{ctx.save();ctx.translate(places[i].x,places[i].y);drawOp(child);ctx.restore()})}
-return{canvas:c,images,load:async(sources,fonts,lotties,codes)=>{fontList=fonts||[];lottieSources=lotties||{};codeSources=codes||{};codeFns.clear();codeCanvases.clear();reactFns.clear();lottieData.clear();lottieAnims.clear();htmlFontCss=undefined;imageUrls=new Map(Object.entries(sources||{}));await Promise.all((fonts||[]).map(async f=>{const face=new FontFace(f.family,'url('+f.url+')',f.unicodeRange?{weight:String(f.weight),style:f.style,unicodeRange:f.unicodeRange}:{weight:String(f.weight),style:f.style});try{await face.load()}catch{throw new Error('Failed to load font '+f.family+' from '+f.src)}document.fonts.add(face)}));await Promise.all(Object.entries(sources||{}).map(([src,url])=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>{images.set(src,i);res()};i.onerror=()=>rej(new Error('Failed to load image '+src));i.src=url})))},
+return{canvas:c,images,load:async(sources,fonts,lotties,codes)=>{fontList=fonts||[];lottieSources=lotties||{};codeSources=codes||{};codeFns.clear();codeCanvases.clear();reactEntries.clear();lottieData.clear();lottieAnims.clear();htmlFontCss=undefined;imageUrls=new Map(Object.entries(sources||{}));await Promise.all((fonts||[]).map(async f=>{const face=new FontFace(f.family,'url('+f.url+')',f.unicodeRange?{weight:String(f.weight),style:f.style,unicodeRange:f.unicodeRange}:{weight:String(f.weight),style:f.style});try{await face.load()}catch{throw new Error('Failed to load font '+f.family+' from '+f.src)}document.fonts.add(face)}));await Promise.all(Object.entries(sources||{}).map(([src,url])=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>{images.set(src,i);res()};i.onerror=()=>rej(new Error('Failed to load image '+src));i.src=url})))},
 draw:async(p,drawables)=>{frames=new Map(await Promise.all(Object.entries(p.videoFrames||{}).map(async([key,url])=>{const i=new Image();i.src=url;await i.decode();return [key,i]})));if(drawables)for(const [k,v] of drawables)frames.set(k,v);for(const ops of [p.operations,...(p.subframes||[]).map(s=>s.operations)]){await prepareReact(ops);await prepareHtml(ops);await prepareLottie(ops);await prepareCode(ops)}if(c.width!==p.width)c.width=p.width;if(c.height!==p.height)c.height=p.height;notes=p.report?{texts:[],thumb:null}:null;unscale=p.scaleX?1/p.scaleX:1;
   if(p.subframes&&p.subframes.length>1)blurred(p);else paintFrame(p,p.operations);if(p.grain>0&&!p.transparent)grain(p.grain,p.frame||0);if(notes)notes.thumb=thumbnail()},
 report:()=>notes}

@@ -1,7 +1,7 @@
 // Write a video as React components. A component is a pure function of the frame: useCurrentFrame() gives the frame, useVideoConfig() the
 // size and length, and what it renders is drawn for that frame. `ove build video.tsx` bundles the component into a `react` layer, which
-// the renderer draws every frame (react-dom/server markup, drawn like an html layer), so the output stays frame-exact and goes through the
-// same encoder, audio and review as any other composition. Effects, state and timers do not run: derive everything from the frame.
+// the renderer mounts it live in a page every frame (real effects, canvas and WebGL work) and draws the result like an html layer, so the output
+// stays frame-exact and goes through the same encoder, audio and review as any other composition. Derive everything from the frame.
 import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { interpolate, spring } from '@ove/builder';
 
@@ -23,6 +23,15 @@ export function useVideoConfig(): VideoConfig {
   if (!config) throw new Error('useVideoConfig() only works inside a component rendered by OVE (ove build)');
   return config;
 }
+
+/** Holds the frame until continueRender(handle) is called, for work that is not finished when the component first renders (loading a model, decoding an image). Gives a handle. */
+export function delayRender(label?: string): number {
+  const pending = ((globalThis as any).__oveDelays ??= new Map<number, string>()) as Map<number, string>;
+  const handle = ((globalThis as any).__oveDelayId = ((globalThis as any).__oveDelayId ?? 0) + 1) as number;
+  pending.set(handle, label ?? ''); return handle;
+}
+/** Releases a delayRender handle; the frame is drawn once every handle is released. */
+export function continueRender(handle: number): void { ((globalThis as any).__oveDelays as Map<number, string> | undefined)?.delete(handle); }
 
 /** A box that fills the video (position: absolute, all four sides 0), for stacking layers. */
 export function AbsoluteFill({ style, children, ...rest }: HTMLAttributes<HTMLDivElement> & { style?: CSSProperties }): ReactElement {
