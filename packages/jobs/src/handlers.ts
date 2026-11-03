@@ -26,12 +26,14 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'compose', run: async progress => {
       const ai = env.provider();
       const pictures = (await env.assets(paths.idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
+      const customLength = input.duration !== undefined && input.duration !== null && input.duration !== '';
+      const fromTemplate = boolOf(input.fromTemplate) && !boolOf(input.full) && !customLength;
       const options: ComposeOptions = {
         ...canvas, brief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
-        includeSchema: boolOf(input.schema), maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
+        includeSchema: boolOf(input.schema), plan: !fromTemplate, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(message),
       };
-      const result = await capabilities.composeSmart(ai, options, { full: boolOf(input.full) });
+      const result = await capabilities.composeSmart(ai, options, { full: !fromTemplate });
       let composition = result.composition;
       let narration: Record<string, unknown> | undefined;
       if (options.narration) {

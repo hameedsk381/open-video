@@ -9,7 +9,18 @@ export type PromptOptions = {
   assets?: { id: string; type: string; src: string }[];
   includeSchema?: boolean;
   narration?: boolean;
+  /** Beats and look from the planning pass; the composition must follow them. */
+  motionPlan?: MotionPlan;
 };
+
+export type MotionBeat = { name: string; takeaway?: string; onScreen?: string; seconds?: number; motion?: string };
+export type MotionPlan = { idea?: string; look?: Record<string, string>; beats: MotionBeat[]; transition?: string };
+
+export function isMotionPlan(raw: unknown): raw is MotionPlan {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const value = raw as { beats?: unknown; scenes?: unknown };
+  return Array.isArray(value.beats) && value.beats.length > 0 && !Array.isArray(value.scenes);
+}
 
 const CHEATSHEET = `# OVE composition format (version 1.0)
 
@@ -105,6 +116,17 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Use 2-3 text colours: near-white headings, muted body, one accent.
 - The background should be a dark gradient with one or two soft radial glows, not flat unless asked.
 
+# Motion-graphics craft (this is a designed piece, not slides)
+- Structure: pick one short-video shape (problem → solution → proof → CTA; step-by-step around a held hero; question then answers; or a list of 3–5 beats then a payoff). One idea per scene. Scene lengths must differ; equal-length scenes read as a slideshow.
+- Open with the subject in the first second. End on the idea (or a small logo hold), not a fade of the whole frame to black.
+- Carry something across cuts: a colour, a held element, a shape that morphs, or motion that continues. One transition style for the video; overlap scenes by that length. Prefer push or fade.
+- Type scale at 1920 wide (scale down for smaller canvases): display 160–220, headings 72–96, card titles 44–60, body 28–36, labels 20–24. Headings weight 700–800 with letterSpacing about -3% of size; body 400. Two or three text colours: ink #f5f7fb, muted #97a0b6, one accent. Declare them once and reuse.
+- Kinetic type: headlines use "split" { "by": "words", "stagger": 4, "preset": "rise" or "blur" }. One split style per video. Keep body and captions whole.
+- Depth: dark gradient background, one or two large soft radial glow circles (fill fading to transparent), optional grain 0.03, and motionBlur { "samples": 8, "shutter": 180 }. Cards: faint fill, 1–2px stroke, radius 24–32, soft shadow.
+- Camera: a slow zoom or pan on content scenes (zoom 1 → 1.06 over the scene). Captions and logos stay put with "fixed": true.
+- Sound: put sfx:whoosh / pop / thump / tick on hits, not on every layer. export.loudness -14 (or -16 if a voiceover will be added).
+- Draw icons as path layers, not letters in circles. Animate groups, stagger siblings 4–8 frames, land in / exit out.
+
 # Design defaults that look good
 - Canvas: fill it; keep left-aligned content at a consistent x (about 6-8% of the width).
 - Type: fontWeight 700-800 for headings with letterSpacing about -2% of fontSize; body 400.
@@ -112,9 +134,30 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Finish on a clean hold; do not fade the whole frame to black at the end unless asked.`;
 
 export function systemPrompt(options: Partial<PromptOptions> = {}): string {
-  const parts = ['You write Open Video Engine (OVE) compositions as strict JSON. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET];
+  const parts = ['You write Open Video Engine (OVE) motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET];
   if (options.includeSchema) parts.push('# Exact JSON Schema (authoritative)\n' + JSON.stringify(compositionJsonSchema));
   return parts.join('\n\n');
+}
+
+export function planSystemPrompt(): string {
+  return `You plan motion-graphics videos for Open Video Engine. Do not write a composition, scenes or layers yet.
+Reply with JSON only:
+{"idea":"<one sentence the viewer should remember>","look":{"background":"dark gradient description","ink":"#f5f7fb","muted":"#97a0b6","accent":"#hex"},"transition":"push|fade|dip","beats":[{"name":"kebab-id","takeaway":"one idea","onScreen":"exact words on screen","seconds":4,"motion":"how it enters; what is carried into the next beat"}]}
+Rules: one idea per beat; lengths must differ; open with the subject in the first second; end on the idea, not a credit fade; onScreen is real copy, not a description of the shot; do not invent facts, prices or claims that are not in the brief.`;
+}
+
+export function planUserPrompt(brief: string, options: PromptOptions): string {
+  const durationFrames = Math.max(1, Math.round(options.durationSeconds * options.fps));
+  return [
+    `Plan a ${options.kind ?? 'short'} motion-graphics video.`,
+    `Canvas: WIDTH=${options.width} HEIGHT=${options.height} FPS=${options.fps} DURATION_SECONDS=${options.durationSeconds} DURATION_FRAMES=${durationFrames}.`,
+    `Aspect ratio: ${ratioName(options.width, options.height)}.`,
+    '',
+    'Brief:',
+    brief.trim(),
+    '',
+    'Return the motion plan JSON now. Do not write scenes or layers yet.',
+  ].join('\n');
 }
 
 // The markers (WIDTH=, HEIGHT=, FPS=, DURATION_FRAMES=) are also read by the offline mock provider, so a dry run
@@ -123,7 +166,7 @@ export function userPrompt(brief: string, options: PromptOptions): string {
   const { width, height, fps } = options;
   const durationFrames = Math.max(1, Math.round(options.durationSeconds * fps));
   const lines = [
-    `Make a ${options.kind ?? 'short'} video.`,
+    `Make a ${options.kind ?? 'short'} motion-graphics video (designed frames and motion, not slides).`,
     `Canvas: WIDTH=${width} HEIGHT=${height} FPS=${fps} DURATION_SECONDS=${options.durationSeconds} DURATION_FRAMES=${durationFrames}.`,
     `Aspect ratio: ${ratioName(width, height)}.`,
     '',
@@ -131,6 +174,11 @@ export function userPrompt(brief: string, options: PromptOptions): string {
     brief.trim(),
     '',
   ];
+  if (options.motionPlan) {
+    lines.push('Follow this motion plan (one scene per beat, copy from onScreen, timings from seconds):');
+    lines.push(JSON.stringify(options.motionPlan));
+    lines.push('');
+  }
   if (options.fields?.length) {
     lines.push('Template variables (declare each one in "variables" and use it in the content):');
     for (const field of options.fields) lines.push(`- ${field.name}: ${field.type}${field.example === undefined ? '' : `, e.g. ${JSON.stringify(field.example)}`}${field.description ? ` — ${field.description}` : ''}`);
@@ -144,7 +192,7 @@ export function userPrompt(brief: string, options: PromptOptions): string {
     lines.push('No assets are available: use only text, rect, circle, path, group and built-in sfx sounds.\n');
   }
   if (options.narration) lines.push('A voiceover will be added afterwards; leave the bottom of the frame clear for captions.\n');
-  lines.push('Return the complete composition JSON now.');
+  lines.push('Return the complete composition JSON now: several scenes of unequal length, kinetic headlines, a camera or drifting glows, grain, and motionBlur.');
   return lines.join('\n');
 }
 

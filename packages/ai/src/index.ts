@@ -12,4 +12,4 @@ export * from './image';
 export * from './batch';
 export * from './project';
 export { extractJson, sanitizeCompositionJson } from './json';
-export { systemPrompt, userPrompt, refineUserPrompt, refineOutlinePrompt, compositionOutline, refineOutlineChars, ratioName, type PromptOptions } from './prompt';
+export { systemPrompt, userPrompt, planSystemPrompt, planUserPrompt, isMotionPlan, refineUserPrompt, refineOutlinePrompt, compositionOutline, refineOutlineChars, ratioName, type PromptOptions, type MotionPlan, type MotionBeat } from './prompt';

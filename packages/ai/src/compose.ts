@@ -5,7 +5,7 @@ import { describeError, loadComposition, reviewComposition, type Composition, ty
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
-import { refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type PromptOptions } from './prompt';
+import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type MotionPlan, type PromptOptions } from './prompt';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
 
 export type ComposeOptions = PromptOptions & {
@@ -13,6 +13,8 @@ export type ComposeOptions = PromptOptions & {
   maxAttempts?: number;
   /** Run `ove review`-style checks between attempts and feed design errors back. Slow; off by default. */
   review?: boolean;
+  /** Plan beats and look first (Claude-style motion graphics), then write the composition. */
+  plan?: boolean;
   baseDir?: string;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
@@ -91,51 +93,80 @@ function retryMessages(messages: ChatMessage[], text: string, current: any, intr
   else messages.push({ role: 'assistant', content: text }, { role: 'user', content: `${intro}\n\nFix every problem and return the complete composition JSON again. Keep everything that was already correct.` });
 }
 
+async function acceptComposition(rawInput: unknown, options: ComposeOptions): Promise<{ composition: Composition; raw: any; current: any }> {
+  const current = rawInput;
+  const raw = normalize(structuredClone(current), options);
+  const composition = loadComposition(raw);
+  const problems = inspect(composition, raw, options);
+  if (problems.length) throw new Error(problems.join('\n'));
+  return { composition, raw, current };
+}
+
+async function maybeReview(composition: Composition, options: ComposeOptions, attempt: number, maxAttempts: number, retry: (intro: string) => void): Promise<ComposeResult | undefined> {
+  if (!options.review) return { composition, attempts: attempt, issues: [], warnings: [] };
+  options.onProgress?.('Reviewing the generated composition with the renderer…');
+  let review;
+  try {
+    review = await reviewComposition(composition, { baseDir: options.baseDir ?? process.cwd(), audio: false });
+  } catch (error) {
+    throw new Error(`Could not review the generated composition: ${describeError(error)}`);
+  }
+  const errors = review.issues.filter(issue => issue.severity === 'error');
+  if (errors.length && attempt < maxAttempts) {
+    retry(`The renderer's design review found errors:\n${errors.map(issue => `- ${issue.frame === undefined ? '' : `frame ${issue.frame}: `}${issue.message}${issue.layer ? ` [${issue.layer}]` : ''}`).join('\n')}`);
+    return undefined;
+  }
+  return { composition, attempts: attempt, issues: review.issues, warnings: review.issues.filter(issue => issue.severity === 'warning').map(issue => issue.message) };
+}
+
 export async function composeVideo(provider: AiProvider, options: ComposeOptions): Promise<ComposeResult> {
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
+  let motionPlan: MotionPlan | undefined = options.motionPlan;
+  if (options.plan && !motionPlan) {
+    options.onProgress?.(`Planning motion-graphics beats with ${provider.id}…`);
+    try {
+      const planText = await provider.chat([
+        { role: 'system', content: planSystemPrompt() },
+        { role: 'user', content: planUserPrompt(options.brief, options) },
+      ], { json: true, temperature: 0.55, signal: options.signal });
+      const planned = extractJson(planText);
+      if (isMotionPlan(planned)) motionPlan = planned;
+      else {
+        try {
+          const accepted = await acceptComposition(planned, options);
+          const reviewed = await maybeReview(accepted.composition, options, 1, maxAttempts, () => {});
+          if (reviewed) return reviewed;
+        } catch { /* not a usable composition; write one from scratch */ }
+      }
+    } catch { /* planning failed; write the composition without a plan */ }
+  }
+  const composeOptions = motionPlan ? { ...options, motionPlan } : options;
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt(options) },
-    { role: 'user', content: userPrompt(options.brief, options) },
+    { role: 'system', content: systemPrompt(composeOptions) },
+    { role: 'user', content: userPrompt(options.brief, composeOptions) },
   ];
   let lastError = 'no attempt was made';
   let previous: any;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     options.onProgress?.(`Asking ${provider.id} for a composition (attempt ${attempt}/${maxAttempts})…`);
     const text = await provider.chat(messages, { json: true, temperature: attempt === 1 ? 0.5 : 0.2, signal: options.signal });
-    let composition: Composition;
-    let raw: any;
     let current: any;
     try {
       current = resolveReply(extractJson(text), previous);
-      raw = normalize(structuredClone(current), options);
-      composition = loadComposition(raw);
-      const problems = inspect(composition, raw, options);
-      if (problems.length) throw new Error(problems.join('\n'));
+      const accepted = await acceptComposition(current, options);
+      const reviewed = await maybeReview(accepted.composition, options, attempt, maxAttempts, intro => {
+        retryMessages(messages, text, current, intro);
+        previous = current;
+        lastError = intro;
+      });
+      if (!reviewed) continue;
+      return reviewed;
     } catch (error) {
       lastError = describeError(error);
       retryMessages(messages, text, current, `That composition cannot be used yet:\n${lastError}`);
       previous = current;
       continue;
     }
-    if (options.review) {
-      options.onProgress?.('Reviewing the generated composition with the renderer…');
-      let review;
-      try {
-        review = await reviewComposition(composition, { baseDir: options.baseDir ?? process.cwd(), audio: false });
-      } catch (error) {
-        throw new Error(`Could not review the generated composition: ${describeError(error)}`);
-      }
-      const errors = review.issues.filter(issue => issue.severity === 'error');
-      if (errors.length && attempt < maxAttempts) {
-        retryMessages(messages, text, current, `The renderer's design review found errors:\n${errors.map(issue => `- ${issue.frame === undefined ? '' : `frame ${issue.frame}: `}${issue.message}${issue.layer ? ` [${issue.layer}]` : ''}`).join('\n')}`);
-        previous = current;
-        lastError = errors.map(issue => issue.message).join('; ');
-        continue;
-      }
-      const warnings = review.issues.filter(issue => issue.severity === 'warning').map(issue => issue.message);
-      return { composition, attempts: attempt, issues: review.issues, warnings };
-    }
-    return { composition, attempts: attempt, issues: [], warnings: [] };
   }
   throw new Error(`Could not get a valid composition after ${maxAttempts} attempt${maxAttempts === 1 ? '' : 's'}.\nLast problem:\n${lastError}`);
 }

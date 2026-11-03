@@ -12,7 +12,7 @@ const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
-  ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
+  ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--from-template]
       [--narration] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
@@ -136,12 +136,13 @@ async function composeCommand(argv: string[]): Promise<number> {
   const provider = providerFrom(argv);
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
+  const fromTemplate = flag(argv, '--from-template') && !flag(argv, '--full') && !argv.includes('--duration');
   const options: ComposeOptions = { ...canvasOptions, brief, maxAttempts: numberOption(argv, '--max-attempts', 3),
-    review: flag(argv, '--review'), baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
+    review: flag(argv, '--review'), plan: !fromTemplate, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full: flag(argv, '--full') || argv.includes('--duration') });
+    result = await composeSmart(provider, options, { full: !fromTemplate });
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }

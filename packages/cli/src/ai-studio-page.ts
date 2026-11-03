@@ -343,7 +343,7 @@ function create() {
 
   var duration = h('input', { type: 'number', min: '3', placeholder: 'Default for kind' });
   var aspect = h('select', null, [['', 'Default for format'], ['9:16', 'Vertical 9:16 (Shorts/Reels)'], ['1:1', 'Square 1:1 (Feed)'], ['16:9', 'Wide 16:9 (Landscape)'], ['4:5', 'Portrait 4:5']].map(function (a) { return h('option', { value: a[0], text: a[1] }); }));
-  var voice = h('input', { type: 'checkbox' }), review = h('input', { type: 'checkbox' }), go = h('button', { class: 'btn', text: '✨ Generate Video' });
+  var voice = h('input', { type: 'checkbox' }), review = h('input', { type: 'checkbox' }), fromTemplate = h('input', { type: 'checkbox' }), go = h('button', { class: 'btn', text: '✨ Generate Video' });
   var chips = h('div', { class: 'chips' }, examples.map(function (t) {
     return h('button', { class: 'chip', text: t.length > 56 ? t.slice(0, 54) + '…' : t, title: t, onclick: function () { brief.value = t; } });
   }));
@@ -359,7 +359,8 @@ function create() {
         h('label', { class: 'f' }, [h('span', { text: 'Project Name' }), name]),
         h('div', { class: 'two' }, [h('label', { class: 'f' }, [h('span', { text: 'Duration in seconds' }), duration]), h('label', { class: 'f' }, [h('span', { text: 'Aspect Ratio Override' }), aspect])]),
         h('label', { class: 'f' }, [voice, ' Add voiceover narration and captions']),
-        h('label', { class: 'f' }, [review, ' Automatic review and self-correction pass'])
+        h('label', { class: 'f' }, [review, ' Automatic review and self-correction pass']),
+        h('label', { class: 'f' }, [fromTemplate, ' Fill a ready-made template instead of writing every layer'])
       ])
     ]),
     errBox,
@@ -376,7 +377,7 @@ function create() {
           return fetch('/api/upload?project=' + encodeURIComponent(made.id) + '&name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: f }).then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'Upload failed'); }); });
         });
       }, Promise.resolve()).then(function () {
-        var body = { brief: text, kind: kind, folder: made.id, narration: voice.checked, review: review.checked };
+        var body = { brief: text, kind: kind, folder: made.id, narration: voice.checked, review: review.checked, full: !fromTemplate.checked, fromTemplate: fromTemplate.checked };
         if (duration.value) body.duration = duration.value;
         if (aspect.value) body.aspect = aspect.value;
         return api('/api/compose', body);

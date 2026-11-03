@@ -62,6 +62,24 @@ describe('composeVideo', () => {
     await expect(composeVideo(provider([JSON.stringify(base())]), { ...brief, maxAttempts: 1, fields: [{ name: 'title', type: 'string' }] }))
       .rejects.toThrow(/never used/);
   });
+
+  it('plans beats then writes the composition from the plan', async () => {
+    const seen: unknown[][] = [];
+    const plan = { idea: 'Warm coffee', look: { accent: '#f4d58d' }, beats: [{ name: 'hook', takeaway: 'calm', onScreen: 'Morning brew', seconds: 1 }] };
+    const fake = provider([JSON.stringify(plan), JSON.stringify(base())]);
+    const chat = fake.chat.bind(fake);
+    fake.chat = async (messages, options) => { seen.push(messages); return chat(messages, options); };
+    const result = await composeVideo(fake, { ...brief, plan: true });
+    expect(result.attempts).toBe(1);
+    expect(result.composition.scenes).toHaveLength(1);
+    expect(JSON.stringify(seen[1])).toContain('Morning brew');
+  });
+
+  it('accepts a composition when the planning pass already wrote one', async () => {
+    const result = await composeVideo(provider([JSON.stringify(base())]), { ...brief, plan: true });
+    expect(result.attempts).toBe(1);
+    expect(result.composition.scenes).toHaveLength(1);
+  });
 });
 
 describe('refineVideo', () => {

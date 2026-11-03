@@ -73,10 +73,10 @@ describe('AI studio server', () => {
     expect(json(escape).error).toMatch(/inside/);
   });
 
-  it('fills a matching template unless every layer is asked for', async () => {
-    const filled = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'from-template' }));
+  it('writes every layer unless a template is asked for', async () => {
+    const filled = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'from-template', fromTemplate: true }));
     expect(filled.frames).toBe(600); expect(filled.scenes).toBe(3);
-    const written = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', duration: 0.5, fps: 10, full: true, folder: 'full-layers' }));
+    const written = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', duration: 0.5, fps: 10, folder: 'full-layers' }));
     expect(written.frames).toBe(5);
   });
 
