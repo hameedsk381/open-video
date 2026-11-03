@@ -1,0 +1,51 @@
+{
+  "id": "progress-bar",
+  "name": "Progress bar",
+  "category": "overlay",
+  "kind": "overlay",
+  "durationFrames": 300,
+  "description": "A thin bar along the bottom that fills over the length you give it.",
+  "params": {
+    "frames": {
+      "type": "number",
+      "default": 300,
+      "description": "How many frames the bar takes to fill"
+    }
+  },
+  "layers": [
+    {
+      "id": "track",
+      "type": "rect",
+      "x": 0,
+      "y": "{{canvas.height - round(canvas.height * 0.008)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.008)}}",
+      "fill": "{{surface}}"
+    },
+    {
+      "id": "fill",
+      "type": "rect",
+      "x": 0,
+      "y": "{{canvas.height - round(canvas.height * 0.008)}}",
+      "width": 1,
+      "height": "{{round(canvas.height * 0.008)}}",
+      "fill": "{{accent}}",
+      "animations": [
+        {
+          "property": "width",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": "{{frames}}",
+              "value": "{{canvas.width}}",
+              "easing": "linear"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

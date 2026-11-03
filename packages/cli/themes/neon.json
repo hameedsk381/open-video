@@ -1,0 +1,15 @@
+{
+  "id": "neon",
+  "name": "Neon",
+  "description": "Near-black with hot magenta and lime. Loud and social.",
+  "variables": {
+    "bg": "#0a0710",
+    "surface": "#1b1030",
+    "text": "#ffffff",
+    "muted": "#b3a6d6",
+    "accent": "#ff3cac",
+    "accent2": "#c6ff3c",
+    "radius": 28,
+    "headWeight": 900
+  }
+}

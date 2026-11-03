@@ -1,0 +1,164 @@
+{
+  "id": "fx-typewriter-quote",
+  "name": "Typewriter quote",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 150,
+  "description": "A quotation in a floating glass card, typed out character by character.",
+  "params": {
+    "quote": {
+      "type": "string",
+      "default": "One composition. Endless possibilities."
+    },
+    "who": {
+      "type": "string",
+      "default": "— Open Video Engine"
+    }
+  },
+  "layers": [
+    {
+      "id": "quote-card",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.56)}}",
+      "width": "{{round(canvas.width * 0.88)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.36)}}",
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.92,
+              "easing": "pop"
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.6)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 20,
+              "value": "{{round(canvas.height * 0.56)}}"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "quote-card-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.88)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.36)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "quote-card-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.88) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "quote",
+          "type": "text",
+          "content": "{{quote}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.052)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "fontWeight": 700,
+          "lineHeight": 1.15,
+          "maxWidth": "{{round(canvas.width * 0.78)}}",
+          "maxLines": 4,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "startFrame": 14,
+          "split": {
+            "by": "letters",
+            "preset": "typewriter",
+            "stagger": 1.5,
+            "duration": 1
+          }
+        },
+        {
+          "id": "who",
+          "type": "text",
+          "content": "{{who}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "{{accent2}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.29)}}",
+          "fontWeight": 600,
+          "startFrame": 104,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 2,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 14,
+      "volume": 0.25
+    }
+  ]
+}

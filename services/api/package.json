@@ -1,0 +1,1 @@
+{"name":"@ove/api","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/ai":"workspace:*","@ove/contracts":"workspace:*","@ove/core":"workspace:*","@ove/jobs":"workspace:*","@ove/schema":"workspace:*","@ove/storage":"workspace:*","pg":"8"},"devDependencies":{"@types/pg":"^8.23.1"}}

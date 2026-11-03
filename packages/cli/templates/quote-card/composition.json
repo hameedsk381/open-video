@@ -1,0 +1,123 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "quote-card",
+  "name": "Quote card",
+  "width": 1080,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 270,
+  "background": {
+    "type": "linear",
+    "from": [0, 0],
+    "to": [1080, 1080],
+    "stops": [
+      { "offset": 0, "color": "#0c1a17" },
+      { "offset": 1, "color": "#132821" }
+    ]
+  },
+  "variables": {
+    "quote": { "type": "string", "default": "The best videos are not written in a single take. They are built one honest frame at a time." },
+    "author": { "type": "string", "default": "Mira Chen" },
+    "role": { "type": "string", "default": "Creative director, Northlight" },
+    "accent": { "type": "color", "default": "#f4d58d", "description": "Quotation mark, rule and role colour" }
+  },
+  "scenes": [
+    {
+      "id": "quote",
+      "name": "Quote",
+      "startFrame": 0,
+      "durationFrames": 270,
+      "transitionIn": { "type": "fade", "durationFrames": 12 },
+      "transitionOut": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "glow",
+          "type": "circle",
+          "x": 660,
+          "y": -260,
+          "width": 820,
+          "fill": "{{accent}}",
+          "opacity": 0.1,
+          "blur": 90,
+          "animations": [
+            { "property": "x", "keyframes": [{ "frame": 0, "value": 700 }, { "frame": 270, "value": 540, "easing": "drift" }] }
+          ]
+        },
+        {
+          "id": "mark",
+          "type": "text",
+          "content": "“",
+          "x": 92,
+          "y": 52,
+          "fontSize": 300,
+          "fontWeight": 800,
+          "lineHeight": 1,
+          "color": "{{accent}}",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 20, "value": 0.95 }] },
+            { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.8 }, { "frame": 26, "value": 1, "easing": "easeOutBack" }] }
+          ]
+        },
+        {
+          "id": "quote",
+          "type": "text",
+          "content": "{{quote}}",
+          "x": 96,
+          "y": 330,
+          "fontSize": 66,
+          "fontWeight": 600,
+          "lineHeight": 1.32,
+          "letterSpacing": -1,
+          "maxWidth": 888,
+          "maxLines": 6,
+          "minFontSize": 44,
+          "color": "#f4f7f2",
+          "split": { "by": "lines", "preset": "rise", "stagger": 7, "duration": 26 }
+        },
+        {
+          "id": "rule",
+          "type": "rect",
+          "x": 96,
+          "y": 840,
+          "width": 120,
+          "height": 6,
+          "radius": 3,
+          "fill": "{{accent}}",
+          "animations": [
+            { "property": "width", "keyframes": [{ "frame": 26, "value": 0 }, { "frame": 52, "value": 120, "easing": "land" }] }
+          ]
+        },
+        {
+          "id": "author",
+          "type": "text",
+          "content": "{{author}}",
+          "x": 96,
+          "y": 892,
+          "fontSize": 38,
+          "fontWeight": 700,
+          "maxWidth": 760,
+          "maxLines": 1,
+          "color": "#f4f7f2",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 34, "value": 0 }, { "frame": 54, "value": 1 }] }
+          ]
+        },
+        {
+          "id": "role",
+          "type": "text",
+          "content": "{{role}}",
+          "x": 96,
+          "y": 948,
+          "fontSize": 28,
+          "maxWidth": 820,
+          "maxLines": 1,
+          "color": "{{accent}}",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 42, "value": 0 }, { "frame": 60, "value": 1 }] }
+          ]
+        }
+      ]
+    }
+  ]
+}

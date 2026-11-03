@@ -1,0 +1,505 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "code-video",
+  "name": "A video written as code",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": "auto",
+  "background": "#0b1020",
+  "motionBlur": {
+    "samples": 4,
+    "shutter": 180
+  },
+  "export": {
+    "loudness": -16
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "name": "intro",
+      "durationFrames": 120,
+      "layers": [
+        {
+          "type": "code",
+          "code": "const draw = function draw(ctx, { frame, width, height, api }) {\n    const rand = api.random(11);\n    for (let i = 0; i < 90; i++) {\n      const x0 = rand() * width, y0 = rand() * height, size = 2 + rand() * 5, phase = rand() * 10;\n      const drift = api.noise(x0 / 300, y0 / 300, frame / 90) * 60;\n      ctx.globalAlpha = 0.15 + 0.35 * api.noise(i, frame / 40, phase) ** 2 * 2;\n      ctx.fillStyle = i % 3 ? '#22d3ee' : '#a78bfa';\n      ctx.beginPath(); ctx.arc((x0 + drift + frame * 0.4) % width, y0 + drift * 0.5, size, 0, Math.PI * 2); ctx.fill();\n    }\n  };",
+          "id": "field",
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "type": "text",
+          "content": "Write the video.",
+          "x": 160,
+          "y": 330,
+          "fontSize": 150,
+          "fontWeight": 800,
+          "color": "#f5f7fb",
+          "maxWidth": 1600,
+          "split": {
+            "by": "words",
+            "stagger": 5,
+            "preset": "rise",
+            "duration": 20
+          },
+          "id": "text-1"
+        },
+        {
+          "type": "text",
+          "content": "Exact, repeatable video, from code.",
+          "x": 160,
+          "y": 560,
+          "fontSize": 48,
+          "color": "#9aa6c4",
+          "maxWidth": 1400,
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 590
+                },
+                {
+                  "frame": 24,
+                  "value": 590,
+                  "easing": "land"
+                },
+                {
+                  "frame": 44,
+                  "value": 560
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 24,
+                  "value": 0
+                },
+                {
+                  "frame": 39,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "id": "text-2"
+        },
+        {
+          "type": "rect",
+          "x": 160,
+          "y": 700,
+          "width": 1,
+          "height": 10,
+          "radius": 5,
+          "fill": "#22d3ee",
+          "animations": [
+            {
+              "property": "width",
+              "keyframes": [
+                {
+                  "frame": 20,
+                  "value": 1
+                },
+                {
+                  "frame": 22,
+                  "value": 104.389
+                },
+                {
+                  "frame": 24,
+                  "value": 296.829
+                },
+                {
+                  "frame": 26,
+                  "value": 461.687
+                },
+                {
+                  "frame": 28,
+                  "value": 556.245
+                },
+                {
+                  "frame": 30,
+                  "value": 586.002
+                },
+                {
+                  "frame": 32,
+                  "value": 576.189
+                },
+                {
+                  "frame": 34,
+                  "value": 552.043
+                },
+                {
+                  "frame": 36,
+                  "value": 529.939
+                },
+                {
+                  "frame": 38,
+                  "value": 516.515
+                },
+                {
+                  "frame": 40,
+                  "value": 511.708
+                },
+                {
+                  "frame": 42,
+                  "value": 512.46
+                },
+                {
+                  "frame": 44,
+                  "value": 515.447
+                },
+                {
+                  "frame": 46,
+                  "value": 518.388
+                },
+                {
+                  "frame": 48,
+                  "value": 520.276
+                },
+                {
+                  "frame": 50,
+                  "value": 521.027
+                },
+                {
+                  "frame": 52,
+                  "value": 521.004
+                },
+                {
+                  "frame": 54,
+                  "value": 520.641
+                },
+                {
+                  "frame": 56,
+                  "value": 520.253
+                },
+                {
+                  "frame": 58,
+                  "value": 519.989
+                },
+                {
+                  "frame": 60,
+                  "value": 519.875
+                },
+                {
+                  "frame": 62,
+                  "value": 519.867
+                },
+                {
+                  "frame": 64,
+                  "value": 519.911
+                },
+                {
+                  "frame": 66,
+                  "value": 519.961
+                },
+                {
+                  "frame": 68,
+                  "value": 519.998
+                },
+                {
+                  "frame": 70,
+                  "value": 520.015
+                }
+              ]
+            }
+          ],
+          "id": "rect-1"
+        },
+        {
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 4,
+          "volume": 0.45,
+          "id": "audio-1"
+        }
+      ]
+    },
+    {
+      "id": "features",
+      "name": "features",
+      "transitionIn": {
+        "type": "push",
+        "durationFrames": 16,
+        "direction": "left"
+      },
+      "durationFrames": 120,
+      "layers": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "fill": "#0b1020",
+          "id": "rect-2"
+        },
+        {
+          "type": "group",
+          "x": 260,
+          "y": 300,
+          "children": [
+            {
+              "type": "group",
+              "y": 0,
+              "children": [
+                {
+                  "type": "circle",
+                  "x": 28,
+                  "y": 28,
+                  "width": 56,
+                  "fill": "#22d3ee",
+                  "animations": [
+                    {
+                      "property": "scale",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 8,
+                          "value": 0,
+                          "easing": "pop"
+                        },
+                        {
+                          "frame": 22,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "circle-1"
+                },
+                {
+                  "type": "text",
+                  "content": "Code is the source",
+                  "x": 90,
+                  "y": 0,
+                  "fontSize": 64,
+                  "color": "#f5f7fb",
+                  "animations": [
+                    {
+                      "property": "opacity",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 8,
+                          "value": 0
+                        },
+                        {
+                          "frame": 20,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "text-3"
+                }
+              ],
+              "id": "group-2"
+            },
+            {
+              "type": "group",
+              "y": 150,
+              "children": [
+                {
+                  "type": "circle",
+                  "x": 28,
+                  "y": 28,
+                  "width": 56,
+                  "fill": "#22d3ee",
+                  "animations": [
+                    {
+                      "property": "scale",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 18,
+                          "value": 0,
+                          "easing": "pop"
+                        },
+                        {
+                          "frame": 32,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "circle-2"
+                },
+                {
+                  "type": "text",
+                  "content": "Frames are exact",
+                  "x": 90,
+                  "y": 0,
+                  "fontSize": 64,
+                  "color": "#f5f7fb",
+                  "animations": [
+                    {
+                      "property": "opacity",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 18,
+                          "value": 0
+                        },
+                        {
+                          "frame": 30,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "text-4"
+                }
+              ],
+              "id": "group-3"
+            },
+            {
+              "type": "group",
+              "y": 300,
+              "children": [
+                {
+                  "type": "circle",
+                  "x": 28,
+                  "y": 28,
+                  "width": 56,
+                  "fill": "#22d3ee",
+                  "animations": [
+                    {
+                      "property": "scale",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 28,
+                          "value": 0,
+                          "easing": "pop"
+                        },
+                        {
+                          "frame": 42,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "circle-3"
+                },
+                {
+                  "type": "text",
+                  "content": "JSON out, always",
+                  "x": 90,
+                  "y": 0,
+                  "fontSize": 64,
+                  "color": "#f5f7fb",
+                  "animations": [
+                    {
+                      "property": "opacity",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 28,
+                          "value": 0
+                        },
+                        {
+                          "frame": 40,
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "id": "text-5"
+                }
+              ],
+              "id": "group-4"
+            }
+          ],
+          "id": "group-1"
+        },
+        {
+          "type": "text",
+          "content": "3",
+          "x": 1500,
+          "y": 420,
+          "fontSize": 420,
+          "fontWeight": 900,
+          "color": "#22d3ee",
+          "opacity": 0.9,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.7,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 24,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "id": "text-6"
+        },
+        {
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": 8,
+          "volume": 0.35,
+          "id": "audio-2"
+        },
+        {
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": 18,
+          "volume": 0.35,
+          "id": "audio-3"
+        },
+        {
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": 28,
+          "volume": 0.35,
+          "id": "audio-4"
+        }
+      ]
+    }
+  ]
+}

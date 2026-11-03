@@ -1,0 +1,2694 @@
+{
+  "id": "fx-icon-orbit",
+  "name": "Icon orbit",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 180,
+  "description": "Six icons (video, motion, image, audio, animation, AI) travel round an ellipse behind and in front of the middle of the frame, larger when near and smaller when far. A 2D stand-in for a 3D orbit.",
+  "params": {},
+  "layers": [
+    {
+      "id": "orb-video",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 0,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M3 6 H15 V18 H3 Z M15 10 L21 7 V17 L15 14",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.925
+            },
+            {
+              "frame": 6,
+              "value": 0.982
+            },
+            {
+              "frame": 12,
+              "value": 1.037
+            },
+            {
+              "frame": 18,
+              "value": 1.087
+            },
+            {
+              "frame": 24,
+              "value": 1.129
+            },
+            {
+              "frame": 30,
+              "value": 1.163
+            },
+            {
+              "frame": 36,
+              "value": 1.187
+            },
+            {
+              "frame": 42,
+              "value": 1.198
+            },
+            {
+              "frame": 48,
+              "value": 1.198
+            },
+            {
+              "frame": 54,
+              "value": 1.187
+            },
+            {
+              "frame": 60,
+              "value": 1.163
+            },
+            {
+              "frame": 66,
+              "value": 1.129
+            },
+            {
+              "frame": 72,
+              "value": 1.087
+            },
+            {
+              "frame": 78,
+              "value": 1.037
+            },
+            {
+              "frame": 84,
+              "value": 0.982
+            },
+            {
+              "frame": 90,
+              "value": 0.925
+            },
+            {
+              "frame": 96,
+              "value": 0.868
+            },
+            {
+              "frame": 102,
+              "value": 0.813
+            },
+            {
+              "frame": 108,
+              "value": 0.763
+            },
+            {
+              "frame": 114,
+              "value": 0.721
+            },
+            {
+              "frame": 120,
+              "value": 0.687
+            },
+            {
+              "frame": 126,
+              "value": 0.663
+            },
+            {
+              "frame": 132,
+              "value": 0.652
+            },
+            {
+              "frame": 138,
+              "value": 0.652
+            },
+            {
+              "frame": 144,
+              "value": 0.663
+            },
+            {
+              "frame": 150,
+              "value": 0.687
+            },
+            {
+              "frame": 156,
+              "value": 0.721
+            },
+            {
+              "frame": 162,
+              "value": 0.763
+            },
+            {
+              "frame": 168,
+              "value": 0.813
+            },
+            {
+              "frame": 174,
+              "value": 0.868
+            },
+            {
+              "frame": 180,
+              "value": 0.925
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orb-motion",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 3,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M3 12 H9 M6 7 H14 M6 17 H14 M16 8 L21 12 L16 16",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.163
+            },
+            {
+              "frame": 6,
+              "value": 1.187
+            },
+            {
+              "frame": 12,
+              "value": 1.198
+            },
+            {
+              "frame": 18,
+              "value": 1.198
+            },
+            {
+              "frame": 24,
+              "value": 1.187
+            },
+            {
+              "frame": 30,
+              "value": 1.163
+            },
+            {
+              "frame": 36,
+              "value": 1.129
+            },
+            {
+              "frame": 42,
+              "value": 1.087
+            },
+            {
+              "frame": 48,
+              "value": 1.037
+            },
+            {
+              "frame": 54,
+              "value": 0.982
+            },
+            {
+              "frame": 60,
+              "value": 0.925
+            },
+            {
+              "frame": 66,
+              "value": 0.868
+            },
+            {
+              "frame": 72,
+              "value": 0.813
+            },
+            {
+              "frame": 78,
+              "value": 0.763
+            },
+            {
+              "frame": 84,
+              "value": 0.721
+            },
+            {
+              "frame": 90,
+              "value": 0.687
+            },
+            {
+              "frame": 96,
+              "value": 0.663
+            },
+            {
+              "frame": 102,
+              "value": 0.652
+            },
+            {
+              "frame": 108,
+              "value": 0.652
+            },
+            {
+              "frame": 114,
+              "value": 0.663
+            },
+            {
+              "frame": 120,
+              "value": 0.687
+            },
+            {
+              "frame": 126,
+              "value": 0.721
+            },
+            {
+              "frame": 132,
+              "value": 0.763
+            },
+            {
+              "frame": 138,
+              "value": 0.813
+            },
+            {
+              "frame": 144,
+              "value": 0.868
+            },
+            {
+              "frame": 150,
+              "value": 0.925
+            },
+            {
+              "frame": 156,
+              "value": 0.982
+            },
+            {
+              "frame": 162,
+              "value": 1.037
+            },
+            {
+              "frame": 168,
+              "value": 1.087
+            },
+            {
+              "frame": 174,
+              "value": 1.129
+            },
+            {
+              "frame": 180,
+              "value": 1.163
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orb-image",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 6,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M3 5 H21 V19 H3 Z M3 16 L9 10 L14 15 L17 12 L21 16",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.163
+            },
+            {
+              "frame": 6,
+              "value": 1.129
+            },
+            {
+              "frame": 12,
+              "value": 1.087
+            },
+            {
+              "frame": 18,
+              "value": 1.037
+            },
+            {
+              "frame": 24,
+              "value": 0.982
+            },
+            {
+              "frame": 30,
+              "value": 0.925
+            },
+            {
+              "frame": 36,
+              "value": 0.868
+            },
+            {
+              "frame": 42,
+              "value": 0.813
+            },
+            {
+              "frame": 48,
+              "value": 0.763
+            },
+            {
+              "frame": 54,
+              "value": 0.721
+            },
+            {
+              "frame": 60,
+              "value": 0.687
+            },
+            {
+              "frame": 66,
+              "value": 0.663
+            },
+            {
+              "frame": 72,
+              "value": 0.652
+            },
+            {
+              "frame": 78,
+              "value": 0.652
+            },
+            {
+              "frame": 84,
+              "value": 0.663
+            },
+            {
+              "frame": 90,
+              "value": 0.687
+            },
+            {
+              "frame": 96,
+              "value": 0.721
+            },
+            {
+              "frame": 102,
+              "value": 0.763
+            },
+            {
+              "frame": 108,
+              "value": 0.813
+            },
+            {
+              "frame": 114,
+              "value": 0.868
+            },
+            {
+              "frame": 120,
+              "value": 0.925
+            },
+            {
+              "frame": 126,
+              "value": 0.982
+            },
+            {
+              "frame": 132,
+              "value": 1.037
+            },
+            {
+              "frame": 138,
+              "value": 1.087
+            },
+            {
+              "frame": 144,
+              "value": 1.129
+            },
+            {
+              "frame": 150,
+              "value": 1.163
+            },
+            {
+              "frame": 156,
+              "value": 1.187
+            },
+            {
+              "frame": 162,
+              "value": 1.198
+            },
+            {
+              "frame": 168,
+              "value": 1.198
+            },
+            {
+              "frame": 174,
+              "value": 1.187
+            },
+            {
+              "frame": 180,
+              "value": 1.163
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orb-audio",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 9,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M3 10 V14 H7 L12 18 V6 L7 10 Z M15 9 C17 11 17 13 15 15 M18 6 C22 10 22 14 18 18",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.925
+            },
+            {
+              "frame": 6,
+              "value": 0.868
+            },
+            {
+              "frame": 12,
+              "value": 0.813
+            },
+            {
+              "frame": 18,
+              "value": 0.763
+            },
+            {
+              "frame": 24,
+              "value": 0.721
+            },
+            {
+              "frame": 30,
+              "value": 0.687
+            },
+            {
+              "frame": 36,
+              "value": 0.663
+            },
+            {
+              "frame": 42,
+              "value": 0.652
+            },
+            {
+              "frame": 48,
+              "value": 0.652
+            },
+            {
+              "frame": 54,
+              "value": 0.663
+            },
+            {
+              "frame": 60,
+              "value": 0.687
+            },
+            {
+              "frame": 66,
+              "value": 0.721
+            },
+            {
+              "frame": 72,
+              "value": 0.763
+            },
+            {
+              "frame": 78,
+              "value": 0.813
+            },
+            {
+              "frame": 84,
+              "value": 0.868
+            },
+            {
+              "frame": 90,
+              "value": 0.925
+            },
+            {
+              "frame": 96,
+              "value": 0.982
+            },
+            {
+              "frame": 102,
+              "value": 1.037
+            },
+            {
+              "frame": 108,
+              "value": 1.087
+            },
+            {
+              "frame": 114,
+              "value": 1.129
+            },
+            {
+              "frame": 120,
+              "value": 1.163
+            },
+            {
+              "frame": 126,
+              "value": 1.187
+            },
+            {
+              "frame": 132,
+              "value": 1.198
+            },
+            {
+              "frame": 138,
+              "value": 1.198
+            },
+            {
+              "frame": 144,
+              "value": 1.187
+            },
+            {
+              "frame": 150,
+              "value": 1.163
+            },
+            {
+              "frame": 156,
+              "value": 1.129
+            },
+            {
+              "frame": 162,
+              "value": 1.087
+            },
+            {
+              "frame": 168,
+              "value": 1.037
+            },
+            {
+              "frame": 174,
+              "value": 0.982
+            },
+            {
+              "frame": 180,
+              "value": 0.925
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orb-animation",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 12,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M12 3 L14.5 9.5 L21 12 L14.5 14.5 L12 21 L9.5 14.5 L3 12 L9.5 9.5 Z",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.687
+            },
+            {
+              "frame": 6,
+              "value": 0.663
+            },
+            {
+              "frame": 12,
+              "value": 0.652
+            },
+            {
+              "frame": 18,
+              "value": 0.652
+            },
+            {
+              "frame": 24,
+              "value": 0.663
+            },
+            {
+              "frame": 30,
+              "value": 0.687
+            },
+            {
+              "frame": 36,
+              "value": 0.721
+            },
+            {
+              "frame": 42,
+              "value": 0.763
+            },
+            {
+              "frame": 48,
+              "value": 0.813
+            },
+            {
+              "frame": 54,
+              "value": 0.868
+            },
+            {
+              "frame": 60,
+              "value": 0.925
+            },
+            {
+              "frame": 66,
+              "value": 0.982
+            },
+            {
+              "frame": 72,
+              "value": 1.037
+            },
+            {
+              "frame": 78,
+              "value": 1.087
+            },
+            {
+              "frame": 84,
+              "value": 1.129
+            },
+            {
+              "frame": 90,
+              "value": 1.163
+            },
+            {
+              "frame": 96,
+              "value": 1.187
+            },
+            {
+              "frame": 102,
+              "value": 1.198
+            },
+            {
+              "frame": 108,
+              "value": 1.198
+            },
+            {
+              "frame": 114,
+              "value": 1.187
+            },
+            {
+              "frame": 120,
+              "value": 1.163
+            },
+            {
+              "frame": 126,
+              "value": 1.129
+            },
+            {
+              "frame": 132,
+              "value": 1.087
+            },
+            {
+              "frame": 138,
+              "value": 1.037
+            },
+            {
+              "frame": 144,
+              "value": 0.982
+            },
+            {
+              "frame": 150,
+              "value": 0.925
+            },
+            {
+              "frame": 156,
+              "value": 0.868
+            },
+            {
+              "frame": 162,
+              "value": 0.813
+            },
+            {
+              "frame": 168,
+              "value": 0.763
+            },
+            {
+              "frame": 174,
+              "value": 0.721
+            },
+            {
+              "frame": 180,
+              "value": 0.687
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orb-ai",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "originX": "center",
+      "originY": "center",
+      "startFrame": 15,
+      "zIndex": 0,
+      "children": [
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "rgba(255,255,255,0.16)",
+          "stroke": "rgba(255,255,255,0.45)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 22,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "glyph",
+          "type": "path",
+          "d": "M12 2 L13.8 8.2 L20 10 L13.8 11.8 L12 18 L10.2 11.8 L4 10 L10.2 8.2 Z M19 16 L19.8 18.2 L22 19 L19.8 19.8 L19 22 L18.2 19.8 L16 19 L18.2 18.2 Z",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.05 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 2,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05 - min(canvas.width, canvas.height) * 0.025)}}"
+        }
+      ],
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.width * 0.5 + 1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.width * 0.5 + 0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.width * 0.5 + 0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 0.5 + 0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.width * 0.5 + 0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.width * 0.5 + -1.0000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.width * 0.5 + -0.9781 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.width * 0.5 + -0.9135 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.width * 0.5 + -0.8090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.width * 0.5 + -0.6691 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.5 + -0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.width * 0.5 + -0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.width * 0.5 + -0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.width * 0.5 + 0.1045 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.width * 0.5 + 0.3090 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5 + 0.5000 * canvas.width * 0.38 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 12,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.4 + -0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 42,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 54,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 66,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 72,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 78,
+              "value": "{{round(canvas.height * 0.4 + 0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 84,
+              "value": "{{round(canvas.height * 0.4 + 0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.4 + 0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 96,
+              "value": "{{round(canvas.height * 0.4 + 0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 102,
+              "value": "{{round(canvas.height * 0.4 + 0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 108,
+              "value": "{{round(canvas.height * 0.4 + 0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 114,
+              "value": "{{round(canvas.height * 0.4 + 0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.4 + 0.0000 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 126,
+              "value": "{{round(canvas.height * 0.4 + -0.1040 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 132,
+              "value": "{{round(canvas.height * 0.4 + -0.2034 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 138,
+              "value": "{{round(canvas.height * 0.4 + -0.2939 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 144,
+              "value": "{{round(canvas.height * 0.4 + -0.3716 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 156,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 162,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 168,
+              "value": "{{round(canvas.height * 0.4 + -0.4973 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 174,
+              "value": "{{round(canvas.height * 0.4 + -0.4755 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4 + -0.4330 * min(canvas.width, canvas.height) * 0.4 - min(canvas.width, canvas.height) * 0.05)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.687
+            },
+            {
+              "frame": 6,
+              "value": 0.721
+            },
+            {
+              "frame": 12,
+              "value": 0.763
+            },
+            {
+              "frame": 18,
+              "value": 0.813
+            },
+            {
+              "frame": 24,
+              "value": 0.868
+            },
+            {
+              "frame": 30,
+              "value": 0.925
+            },
+            {
+              "frame": 36,
+              "value": 0.982
+            },
+            {
+              "frame": 42,
+              "value": 1.037
+            },
+            {
+              "frame": 48,
+              "value": 1.087
+            },
+            {
+              "frame": 54,
+              "value": 1.129
+            },
+            {
+              "frame": 60,
+              "value": 1.163
+            },
+            {
+              "frame": 66,
+              "value": 1.187
+            },
+            {
+              "frame": 72,
+              "value": 1.198
+            },
+            {
+              "frame": 78,
+              "value": 1.198
+            },
+            {
+              "frame": 84,
+              "value": 1.187
+            },
+            {
+              "frame": 90,
+              "value": 1.163
+            },
+            {
+              "frame": 96,
+              "value": 1.129
+            },
+            {
+              "frame": 102,
+              "value": 1.087
+            },
+            {
+              "frame": 108,
+              "value": 1.037
+            },
+            {
+              "frame": 114,
+              "value": 0.982
+            },
+            {
+              "frame": 120,
+              "value": 0.925
+            },
+            {
+              "frame": 126,
+              "value": 0.868
+            },
+            {
+              "frame": 132,
+              "value": 0.813
+            },
+            {
+              "frame": 138,
+              "value": 0.763
+            },
+            {
+              "frame": 144,
+              "value": 0.721
+            },
+            {
+              "frame": 150,
+              "value": 0.687
+            },
+            {
+              "frame": 156,
+              "value": 0.663
+            },
+            {
+              "frame": 162,
+              "value": 0.652
+            },
+            {
+              "frame": 168,
+              "value": 0.652
+            },
+            {
+              "frame": 174,
+              "value": 0.663
+            },
+            {
+              "frame": 180,
+              "value": 0.687
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 2,
+      "volume": 0.35
+    }
+  ]
+}

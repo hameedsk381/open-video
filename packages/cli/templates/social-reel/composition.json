@@ -1,0 +1,252 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "social-reel",
+  "name": "Social reel",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationFrames": 600,
+  "background": {
+    "type": "linear",
+    "from": [0, 0],
+    "to": [1080, 1920],
+    "stops": [
+      { "offset": 0, "color": "#071018" },
+      { "offset": 0.55, "color": "#0a1a20" },
+      { "offset": 1, "color": "#06121a" }
+    ]
+  },
+  "variables": {
+    "stepsTitle": { "type": "string", "default": "HOW IT WORKS", "description": "Label above the three steps" },
+    "steps": { "type": "string", "default": "01  BRIEF\n02  VALIDATE\n03  RENDER", "description": "Three short steps, one per line, numbered like the example" },
+    "footer": { "type": "string", "default": "Generated from a brief. Rendered deterministically.", "description": "Small line at the bottom" },
+    "kicker": { "type": "string", "default": "MAKE IT MOVE", "description": "Small label above the headline" },
+    "title": { "type": "string", "default": "One brief.\nOne video.", "description": "Headline; a line break starts a new line" },
+    "detail": { "type": "string", "default": "Describe the video. OVE writes a composition, checks it against the same schema as a hand-written one, and renders every frame the same way, every time." },
+    "cta": { "type": "string", "default": "Try OVE" },
+    "accent": { "type": "color", "default": "#2dd4bf", "description": "Glow, rule and button colour" }
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "name": "Hook",
+      "startFrame": 0,
+      "durationFrames": 180,
+      "transitionIn": { "type": "fade", "durationFrames": 12 },
+      "transitionOut": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "glow",
+          "type": "circle",
+          "x": 600,
+          "y": -240,
+          "width": 980,
+          "fill": "{{accent}}",
+          "opacity": 0.16,
+          "blur": 70,
+          "animations": [
+            { "property": "x", "keyframes": [{ "frame": 0, "value": 640 }, { "frame": 180, "value": 500, "easing": "drift" }] }
+          ]
+        },
+        {
+          "id": "kicker",
+          "type": "text",
+          "content": "{{kicker}}",
+          "x": 90,
+          "y": 150,
+          "fontSize": 30,
+          "fontWeight": 700,
+          "letterSpacing": 8,
+          "color": "{{accent}}",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 18, "value": 1 }] }
+          ]
+        },
+        {
+          "id": "title",
+          "type": "text",
+          "content": "{{title}}",
+          "x": 88,
+          "y": 560,
+          "fontSize": 148,
+          "fontWeight": 800,
+          "lineHeight": 0.98,
+          "letterSpacing": -5,
+          "maxWidth": 900,
+          "maxLines": 3,
+          "minFontSize": 88,
+          "color": "#f8fafc",
+          "split": { "by": "words", "preset": "rise", "stagger": 5, "duration": 24 }
+        },
+        {
+          "id": "rule",
+          "type": "rect",
+          "x": 90,
+          "y": 1180,
+          "width": 220,
+          "height": 8,
+          "radius": 4,
+          "fill": "{{accent}}",
+          "animations": [
+            { "property": "width", "keyframes": [{ "frame": 18, "value": 0 }, { "frame": 48, "value": 220, "easing": "land" }] }
+          ]
+        },
+        {
+          "id": "detail",
+          "type": "text",
+          "content": "{{detail}}",
+          "x": 90,
+          "y": 1260,
+          "fontSize": 40,
+          "lineHeight": 1.45,
+          "maxWidth": 790,
+          "maxLines": 6,
+          "color": "#9fb0c6",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 30, "value": 0 }, { "frame": 55, "value": 1 }] }
+          ]
+        },
+        {
+          "id": "dot",
+          "type": "circle",
+          "x": 880,
+          "y": 1650,
+          "width": 120,
+          "fill": "{{accent}}",
+          "originX": "center",
+          "originY": "center",
+          "animations": [
+            { "property": "scale", "keyframes": [{ "frame": 36, "value": 0 }, { "frame": 62, "value": 1, "easing": "easeOutBack" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steps",
+      "name": "Three steps",
+      "startFrame": 180,
+      "durationFrames": 240,
+      "transitionIn": { "type": "slide", "direction": "left", "durationFrames": 18 },
+      "transitionOut": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "steps-glow",
+          "type": "circle",
+          "x": -260,
+          "y": 1180,
+          "width": 860,
+          "fill": "{{accent}}",
+          "opacity": 0.12,
+          "blur": 60
+        },
+        {
+          "id": "steps-kicker",
+          "type": "text",
+          "content": "{{stepsTitle}}",
+          "x": 90,
+          "y": 190,
+          "fontSize": 28,
+          "fontWeight": 700,
+          "letterSpacing": 7,
+          "color": "{{accent}}"
+        },
+        {
+          "id": "steps-list",
+          "type": "text",
+          "content": "{{steps}}",
+          "x": 90,
+          "y": 400,
+          "fontSize": 104,
+          "fontWeight": 800,
+          "lineHeight": 1.4,
+          "letterSpacing": -2,
+          "maxWidth": 900,
+          "maxLines": 3,
+          "color": "#f8fafc"
+        },
+        {
+          "id": "steps-detail",
+          "type": "text",
+          "content": "{{detail}}",
+          "x": 90,
+          "y": 1080,
+          "fontSize": 36,
+          "lineHeight": 1.5,
+          "maxWidth": 820,
+          "maxLines": 6,
+          "color": "#9fb0c6"
+        },
+        {
+          "id": "steps-rule",
+          "type": "rect",
+          "x": 90,
+          "y": 1000,
+          "width": 120,
+          "height": 6,
+          "radius": 3,
+          "fill": "{{accent}}"
+        }
+      ]
+    },
+    {
+      "id": "cta",
+      "name": "Call to action",
+      "startFrame": 420,
+      "durationFrames": 180,
+      "transitionIn": { "type": "fade", "durationFrames": 14 },
+      "transitionOut": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "cta-glow",
+          "type": "circle",
+          "x": 190,
+          "y": 1200,
+          "width": 700,
+          "fill": "{{accent}}",
+          "opacity": 0.2,
+          "blur": 80
+        },
+        {
+          "id": "cta-title",
+          "type": "text",
+          "content": "{{cta}}",
+          "x": 540,
+          "y": 720,
+          "fontSize": 132,
+          "fontWeight": 800,
+          "letterSpacing": -4,
+          "textAlign": "center",
+          "maxWidth": 880,
+          "maxLines": 2,
+          "minFontSize": 72,
+          "color": "#f8fafc"
+        },
+        {
+          "id": "cta-rule",
+          "type": "rect",
+          "x": 430,
+          "y": 900,
+          "width": 220,
+          "height": 8,
+          "radius": 4,
+          "fill": "{{accent}}",
+          "animations": [
+            { "property": "width", "keyframes": [{ "frame": 16, "value": 0 }, { "frame": 44, "value": 220, "easing": "land" }] }
+          ]
+        },
+        {
+          "id": "cta-note",
+          "type": "text",
+          "content": "{{footer}}",
+          "x": 540,
+          "y": 1040,
+          "fontSize": 32,
+          "textAlign": "center",
+          "maxWidth": 760,
+          "color": "#9fb0c6"
+        }
+      ]
+    }
+  ]
+}

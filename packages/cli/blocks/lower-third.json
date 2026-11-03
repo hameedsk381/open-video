@@ -1,0 +1,106 @@
+{
+  "id": "lower-third",
+  "name": "Lower third",
+  "category": "overlay",
+  "kind": "overlay",
+  "durationFrames": 120,
+  "description": "A name and role plate that slides in at the bottom left and out again.",
+  "params": {
+    "name": {
+      "type": "string",
+      "default": "Mira Chen"
+    },
+    "role": {
+      "type": "string",
+      "default": "Creative director"
+    }
+  },
+  "layers": [
+    {
+      "id": "plate",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.78)}}",
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(-canvas.width * 0.5)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 18,
+              "value": 0
+            },
+            {
+              "frame": 100,
+              "value": 0
+            },
+            {
+              "frame": 118,
+              "value": "{{round(-canvas.width * 0.5)}}",
+              "easing": "exit"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "panel",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.42)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.15)}}",
+          "radius": "{{radius}}",
+          "fill": "{{surface}}",
+          "opacity": 0.92
+        },
+        {
+          "id": "bar",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(min(canvas.width, canvas.height) * 0.012)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.15)}}",
+          "radius": "{{radius}}",
+          "fill": "{{accent}}"
+        },
+        {
+          "id": "name",
+          "type": "text",
+          "content": "{{name}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "color": "{{text}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.026)}}",
+          "fontWeight": 800,
+          "maxWidth": "{{round(canvas.width * 0.42 - min(canvas.width, canvas.height) * 0.06)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}"
+        },
+        {
+          "id": "role",
+          "type": "text",
+          "content": "{{role}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "color": "{{muted}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.088)}}",
+          "maxWidth": "{{round(canvas.width * 0.42 - min(canvas.width, canvas.height) * 0.06)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}"
+        }
+      ]
+    },
+    {
+      "id": "sfx-in",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.3
+    }
+  ]
+}

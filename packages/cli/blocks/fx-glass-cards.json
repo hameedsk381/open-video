@@ -1,0 +1,921 @@
+{
+  "id": "fx-glass-cards",
+  "name": "Glass cards",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 180,
+  "description": "Four floating frosted-glass cards in the top of the frame: a counting number, a progress bar, an animated bar chart and a badge. Leaves the speaker's face free.",
+  "params": {
+    "value": {
+      "type": "number",
+      "default": 36
+    },
+    "label": {
+      "type": "string",
+      "default": "EFFECTS"
+    },
+    "status": {
+      "type": "string",
+      "default": "RENDER READY"
+    },
+    "badge": {
+      "type": "string",
+      "default": "POWERED BY OVE"
+    }
+  },
+  "layers": [
+    {
+      "id": "card-count",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.06)}}",
+      "width": "{{round(canvas.width * 0.42)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+      "startFrame": 0,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.85,
+              "easing": "pop"
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.06) + 0}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.06) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.06) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.06) + 9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.06) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.06) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.06) + 0}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "card-count-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.42)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "card-count-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.42) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "count",
+          "type": "html",
+          "width": "{{round(canvas.width * 0.36)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+          "startFrame": 14,
+          "html": "<div class='n'></div>",
+          "css": ".n{font:800 {{round(min(canvas.width, canvas.height) * 0.1)}}px Inter;color:#ffffff;line-height:1}.n::before{counter-reset:n round(var(--n));content:counter(n) ''}",
+          "vars": {
+            "--n": 0
+          },
+          "animations": [
+            {
+              "property": "--n",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 60,
+                  "value": "{{value}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ],
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.025)}}"
+        },
+        {
+          "id": "count-label",
+          "type": "text",
+          "content": "{{label}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "{{accent2}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.145)}}",
+          "fontWeight": 700,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}"
+        }
+      ]
+    },
+    {
+      "id": "card-progress",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.52)}}",
+      "y": "{{round(canvas.height * 0.075)}}",
+      "width": "{{round(canvas.width * 0.42)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.14)}}",
+      "startFrame": 8,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.85,
+              "easing": "pop"
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.075) + 0}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.075) + 9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.075) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.075) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.075) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.075) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.075) + -9}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "card-progress-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.42)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.14)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "card-progress-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.42) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "status",
+          "type": "text",
+          "content": "{{status}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
+          "fontWeight": 700,
+          "maxWidth": "{{round(canvas.width * 0.36)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        },
+        {
+          "id": "track",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.085)}}",
+          "width": "{{round(canvas.width * 0.36)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.009)}}",
+          "fill": "rgba(255,255,255,0.2)"
+        },
+        {
+          "id": "fill",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.085)}}",
+          "width": 1,
+          "height": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.009)}}",
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "width",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 24,
+                  "value": 1
+                },
+                {
+                  "frame": 90,
+                  "value": "{{round(canvas.width * 0.36)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "card-chart",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23)}}",
+      "width": "{{round(canvas.width * 0.5)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+      "startFrame": 16,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.85,
+              "easing": "pop"
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + 0}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.06) + round(min(canvas.width, canvas.height) * 0.23) + 9}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "card-chart-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.5)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "card-chart-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.5) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "bar-0",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 0 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 0.725,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 20,
+                  "value": 1
+                },
+                {
+                  "frame": 50,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.45)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 20,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 50,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.45)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bar-1",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 1 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 0.85,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 24,
+                  "value": 1
+                },
+                {
+                  "frame": 54,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.7)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 24,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 54,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.7)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bar-2",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 2 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 0.775,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 28,
+                  "value": 1
+                },
+                {
+                  "frame": 58,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.55)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 28,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 58,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.55)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bar-3",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 3 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 0.95,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 32,
+                  "value": 1
+                },
+                {
+                  "frame": 62,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.9)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 32,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 62,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.9)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bar-4",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 4 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 0.875,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 36,
+                  "value": 1
+                },
+                {
+                  "frame": 66,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.75)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 36,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 66,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 0.75)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bar-5",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 5 * (round(canvas.width * 0.075))}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round((round(canvas.width * 0.075)) * 0.62)}}",
+          "height": 1,
+          "radius": 6,
+          "fill": "{{accent}}",
+          "opacity": 1,
+          "animations": [
+            {
+              "property": "height",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 40,
+                  "value": 1
+                },
+                {
+                  "frame": 70,
+                  "value": "{{round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 1)}}",
+                  "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 40,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03)}}"
+                },
+                {
+                  "frame": 70,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.03) - round((round(min(canvas.width, canvas.height) * 0.2) - round(min(canvas.width, canvas.height) * 0.08)) * 1)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "card-badge",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.6)}}",
+      "y": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17)}}",
+      "width": "{{round(canvas.width * 0.34)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "startFrame": 24,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.85,
+              "easing": "pop"
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + 0}}"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 60,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + -9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 90,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 120,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + 9}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + 0}}",
+              "easing": "drift"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.075) + round(min(canvas.width, canvas.height) * 0.17) + -9}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "card-badge-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.34)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "card-badge-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.34) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "dot",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4
+                },
+                {
+                  "frame": 20,
+                  "value": 1
+                },
+                {
+                  "frame": 40,
+                  "value": 0.4
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "badge",
+          "type": "text",
+          "content": "{{badge}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.026)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.065)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.036)}}",
+          "fontWeight": 700,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
+          "maxWidth": "{{round(canvas.width * 0.26)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 4,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 12,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-3",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 20,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-4",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 28,
+      "volume": 0.35
+    }
+  ]
+}

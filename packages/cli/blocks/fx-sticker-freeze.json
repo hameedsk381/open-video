@@ -1,0 +1,584 @@
+{
+  "id": "fx-sticker-freeze",
+  "name": "Sticker freeze",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "The footage plays, then freezes on a chosen frame: the picture dims to grey and the speaker is lifted out as a sticker with a thick white outline and a shadow that pops into place. Needs a matte of the speaker.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "Your video (asset id or relative path)"
+    },
+    "matte": {
+      "type": "string",
+      "default": "",
+      "description": "A matte video or picture of the speaker: white where the speaker is. Make it with rembg, Robust Video Matting or an editor."
+    },
+    "at": {
+      "type": "number",
+      "default": 45,
+      "description": "The frame to freeze on"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "play",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "endFrame": "{{at}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "hold",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "startFrame": "{{at}}",
+      "trimStart": "{{at}}",
+      "playbackRate": 0.001,
+      "filter": "grayscale(1) brightness(0.55)",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "sticker",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "startFrame": "{{at}}",
+      "originX": "center",
+      "originY": "center",
+      "shadow": {
+        "color": "#000000cc",
+        "blur": 40,
+        "offsetX": 0,
+        "offsetY": 24
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": -3,
+              "easing": "land"
+            },
+            {
+              "frame": 18,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 4,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "outline",
+          "type": "group",
+          "x": 0,
+          "y": 0,
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "blur": 1,
+          "children": [
+            {
+              "id": "outline-0",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.01600)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-0",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-1",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.01478)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.00612)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-1",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-2",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.01131)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.01131)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-2",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-3",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.00612)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.01478)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-3",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-4",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.01600)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-4",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-5",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.00612)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.01478)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-5",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-6",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.01131)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.01131)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-6",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-7",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.01478)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.00612)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-7",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-8",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.01600)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-8",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-9",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.01478)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.00612)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-9",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-10",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.01131)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.01131)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-10",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-11",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.00612)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.01478)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-11",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-12",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * -0.00000)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.01600)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-12",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-13",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.00612)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.01478)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-13",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-14",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.01131)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.01131)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-14",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            },
+            {
+              "id": "outline-15",
+              "type": "group",
+              "x": "{{round(min(canvas.width, canvas.height) * 0.01478)}}",
+              "y": "{{round(min(canvas.width, canvas.height) * -0.00612)}}",
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "children": [
+                {
+                  "id": "outline-fill-15",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{canvas.width}}",
+                  "height": "{{canvas.height}}",
+                  "fill": "#ffffff",
+                  "matte": {
+                    "src": "{{matte}}",
+                    "mode": "luma",
+                    "trimStart": "{{at}}",
+                    "playbackRate": 0.001
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cutout",
+          "type": "video",
+          "src": "{{footage}}",
+          "objectFit": "cover",
+          "x": 0,
+          "y": 0,
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "trimStart": "{{at}}",
+          "playbackRate": 0.001,
+          "matte": {
+            "src": "{{matte}}",
+            "mode": "luma"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:click",
+      "startFrame": "{{at}}",
+      "volume": 0.4
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": "{{at + 4}}",
+      "volume": 0.35
+    }
+  ]
+}

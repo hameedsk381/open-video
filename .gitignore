@@ -3,9 +3,16 @@ node_modules/
 artifacts/
 .ove-frames/
 *.tgz
+.env
+.env.*
 
 # Build output of `pnpm build:package` (the template, skill and licence are copied in from their sources)
 packages/ove/dist/
 packages/ove/templates/
+packages/ove/blocks/
+packages/ove/themes/
+packages/ove/studio/
 packages/ove/skills/
 packages/ove/LICENSE
+ai-videos/
+packages/cli/studio/

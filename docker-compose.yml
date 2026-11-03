@@ -1,0 +1,118 @@
+# Dokploy deployment for the hosted OVE studio.
+#
+# In Dokploy: create a Compose project, point it at this repo, and fill in the
+# environment variables in the Environment tab. Set a domain for the `api` service
+# on port 3100 in the Domains tab — Dokploy's Traefik handles TLS and routing.
+#
+# The render worker has no network route out — it can reach Redis and the shared
+# data volume and nothing else.
+
+x-hardening: &hardening
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+x-worker: &worker
+  <<: *hardening
+  build: { context: . , dockerfile: Dockerfile, target: worker }
+  init: true
+  read_only: true
+  tmpfs: ["/tmp", "/home/node:mode=1777"]
+  shm_size: 1gb
+  pids_limit: 512
+  volumes: ["data:/data"]
+  depends_on: { redis: { condition: service_healthy } }
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ove
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    networks: [internal]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ove"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    <<: *hardening
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}", "--appendonly", "yes"]
+    volumes: ["redisdata:/data"]
+    networks: [internal]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    <<: *hardening
+    build: { context: . , dockerfile: Dockerfile, target: api }
+    init: true
+    read_only: true
+    tmpfs: ["/tmp", "/home/node:mode=1777"]
+    pids_limit: 256
+    mem_limit: 1g
+    expose: ["3100"]
+    environment:
+      DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/ove"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN}"
+      DATA_DIR: /data
+      TRUST_PROXY: "1"
+      SIGNUPS: "${SIGNUPS:-1}"
+      REQUIRE_VERIFIED: "${REQUIRE_VERIFIED:-0}"
+    volumes: ["data:/data"]
+    networks: [dokploy-network, internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  worker-render:
+    <<: *worker
+    environment:
+      JOB_LANE: render
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      DATA_DIR: /data
+      JOB_TIMEOUT_SECONDS: "${RENDER_TIMEOUT_SECONDS:-900}"
+    networks: [internal]
+    mem_limit: 3g
+    cpus: 2
+
+  worker-ai:
+    <<: *worker
+    environment:
+      JOB_LANE: ai
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      DATA_DIR: /data
+      JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}"
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+    networks: [dokploy-network, internal]
+    mem_limit: 2g
+    cpus: 1
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
+    internal: true
+
+volumes:
+  data:
+  pgdata:
+  redisdata:

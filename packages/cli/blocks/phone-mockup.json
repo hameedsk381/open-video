@@ -1,0 +1,459 @@
+{
+  "id": "phone-mockup",
+  "name": "Phone mockup",
+  "category": "visual",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "A phone showing your screenshot (or a stand-in app) beside a headline. Side by side on wide video, stacked on tall.",
+  "params": {
+    "headline": {
+      "type": "string",
+      "default": "Everything in one place"
+    },
+    "subtitle": {
+      "type": "string",
+      "default": "See your whole day at a glance."
+    },
+    "image": {
+      "type": "string",
+      "default": "",
+      "description": "A screenshot (asset id or relative path); leave empty for a stand-in app"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.15)}}",
+      "y": "{{round(canvas.height * 0.2)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.14,
+      "blur": 120,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 150,
+              "value": 1.1,
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.15)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.04999999999999999)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glow2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.85)}}",
+      "y": "{{round(canvas.height * 0.8)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.084,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.8)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.7)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "row",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "layout": {
+        "direction": "{{canvas.width > canvas.height ? 'row' : 'column'}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+        "align": "center",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "copy",
+          "type": "group",
+          "width": "{{canvas.width > canvas.height ? round(canvas.width * 0.38) : round(canvas.width * 0.84)}}",
+          "layout": {
+            "direction": "column",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+            "align": "{{canvas.width > canvas.height ? 'start' : 'center'}}"
+          },
+          "children": [
+            {
+              "id": "headline",
+              "type": "text",
+              "content": "{{headline}}",
+              "fontSize": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+              "color": "{{text}}",
+              "fontWeight": "{{headWeight}}",
+              "textAlign": "{{canvas.width > canvas.height ? 'left' : 'center'}}",
+              "maxWidth": "{{canvas.width > canvas.height ? round(canvas.width * 0.38) : round(canvas.width * 0.84)}}",
+              "maxLines": 4,
+              "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+              "lineHeight": 1.08,
+              "startFrame": 0,
+              "animations": [
+                {
+                  "property": "opacity",
+                  "keyframes": [
+                    {
+                      "frame": 0,
+                      "value": 0
+                    },
+                    {
+                      "frame": 14,
+                      "value": 1,
+                      "easing": "glide"
+                    }
+                  ]
+                },
+                {
+                  "property": "y",
+                  "keyframes": [
+                    {
+                      "frame": 0,
+                      "value": 30,
+                      "easing": "land"
+                    },
+                    {
+                      "frame": 18,
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rule",
+              "type": "rect",
+              "width": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+              "height": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
+              "radius": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
+              "fill": "{{accent}}",
+              "startFrame": 18,
+              "animations": [
+                {
+                  "property": "width",
+                  "keyframes": [
+                    {
+                      "frame": 0,
+                      "value": 1
+                    },
+                    {
+                      "frame": 20,
+                      "value": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+                      "easing": "land"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "subtitle",
+              "type": "text",
+              "content": "{{subtitle}}",
+              "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+              "color": "{{muted}}",
+              "textAlign": "{{canvas.width > canvas.height ? 'left' : 'center'}}",
+              "maxWidth": "{{canvas.width > canvas.height ? round(canvas.width * 0.36) : round(canvas.width * 0.8)}}",
+              "maxLines": 3,
+              "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+              "startFrame": 24,
+              "animations": [
+                {
+                  "property": "opacity",
+                  "keyframes": [
+                    {
+                      "frame": 0,
+                      "value": 0
+                    },
+                    {
+                      "frame": 14,
+                      "value": 1,
+                      "easing": "glide"
+                    }
+                  ]
+                },
+                {
+                  "property": "y",
+                  "keyframes": [
+                    {
+                      "frame": 0,
+                      "value": 20,
+                      "easing": "land"
+                    },
+                    {
+                      "frame": 18,
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "phone",
+          "type": "group",
+          "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49)}}",
+          "height": "{{round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4)}}",
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.1)}}",
+                  "easing": "land"
+                },
+                {
+                  "frame": 26,
+                  "value": 0
+                },
+                {
+                  "frame": 100,
+                  "value": "{{round(-canvas.height * 0.012)}}",
+                  "easing": "drift"
+                },
+                {
+                  "frame": 150,
+                  "value": 0,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 12,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "children": [
+            {
+              "id": "shadow",
+              "type": "rect",
+              "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.04)}}",
+              "y": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.06)}}",
+              "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49)}}",
+              "height": "{{round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4)}}",
+              "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.14)}}",
+              "fill": "#000000",
+              "opacity": 0.35,
+              "blur": 30
+            },
+            {
+              "id": "body",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49)}}",
+              "height": "{{round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4)}}",
+              "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.14)}}",
+              "fill": "{{surface}}",
+              "stroke": "{{muted}}",
+              "strokeWidth": 2
+            },
+            {
+              "id": "screen",
+              "type": "rect",
+              "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "y": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) - 2 * round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "height": "{{round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) - 2 * round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.1)}}",
+              "fill": "{{bg}}"
+            },
+            {
+              "if": "{{image}}",
+              "id": "shot",
+              "type": "image",
+              "src": "{{image}}",
+              "objectFit": "cover",
+              "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "y": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) - 2 * round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "height": "{{round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) - 2 * round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.1)}}"
+            },
+            {
+              "if": "{{!image}}",
+              "id": "app",
+              "type": "group",
+              "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "y": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+              "children": [
+                {
+                  "id": "head",
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "width": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) - 2 * round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.045)}}",
+                  "height": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.16)}}",
+                  "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.1)}}",
+                  "fill": "{{accent}}"
+                },
+                {
+                  "id": "row1",
+                  "type": "rect",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.06)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.22)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.62)}}",
+                  "height": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.022)}}",
+                  "radius": 8,
+                  "fill": "{{muted}}",
+                  "opacity": 0.8
+                },
+                {
+                  "id": "row2",
+                  "type": "rect",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.06)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.27)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.45)}}",
+                  "height": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.018)}}",
+                  "radius": 8,
+                  "fill": "{{muted}}",
+                  "opacity": 0.5
+                },
+                {
+                  "id": "card1",
+                  "type": "rect",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.06)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.34)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.82)}}",
+                  "height": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.2)}}",
+                  "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.05)}}",
+                  "fill": "{{surface}}"
+                },
+                {
+                  "id": "card2",
+                  "type": "rect",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.06)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.58)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.82)}}",
+                  "height": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.2)}}",
+                  "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.05)}}",
+                  "fill": "{{surface}}"
+                },
+                {
+                  "id": "dot",
+                  "type": "circle",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.2)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.44)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.1)}}",
+                  "fill": "{{accent2}}"
+                },
+                {
+                  "id": "dot2",
+                  "type": "circle",
+                  "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.2)}}",
+                  "y": "{{round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.68)}}",
+                  "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.1)}}",
+                  "fill": "{{accent}}"
+                }
+              ]
+            },
+            {
+              "id": "notch",
+              "type": "rect",
+              "x": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.36)}}",
+              "y": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.065)}}",
+              "width": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.28)}}",
+              "height": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.055)}}",
+              "radius": "{{round(round(round(canvas.width > canvas.height ? canvas.height * 0.74 : canvas.height * 0.4) * 0.49) * 0.03)}}",
+              "fill": "{{surface}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-in",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 2,
+      "volume": 0.4
+    },
+    {
+      "id": "sfx-land",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 24,
+      "volume": 0.3
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 150,
+              "value": 1.04,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "id": "big-stat",
+  "name": "Big stat",
+  "category": "data",
+  "kind": "scene",
+  "durationFrames": 90,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "One huge number with a line of context.",
+  "params": {
+    "value": {
+      "type": "string",
+      "default": "87%"
+    },
+    "label": {
+      "type": "string",
+      "default": "of viewers keep watching until the end"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.1)}}",
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.12,
+      "blur": 120,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 150,
+              "value": 1.1,
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.1)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glow2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.9)}}",
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.072,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.5)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.4)}}",
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.1
+            },
+            {
+              "frame": 150,
+              "value": 0.9,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+        "align": "center",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "value",
+          "type": "text",
+          "content": "{{value}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.3)}}",
+          "color": "{{accent}}",
+          "fontWeight": 900,
+          "textAlign": "center",
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "lineHeight": 1,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.8,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 22,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "type": "text",
+          "content": "{{label}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "color": "{{text}}",
+          "textAlign": "center",
+          "maxWidth": "{{round(canvas.width * 0.72)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "startFrame": 14,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 24,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-hit",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 4,
+      "volume": 0.5
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.1
+            },
+            {
+              "frame": 90,
+              "value": 1,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

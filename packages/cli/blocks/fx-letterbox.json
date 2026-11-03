@@ -1,0 +1,105 @@
+{
+  "id": "fx-letterbox",
+  "name": "Cinematic letterbox",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 90,
+  "description": "Two black bars slide in from the top and bottom to give the picture a widescreen cinema frame, with an optional line of title text in the lower bar.",
+  "params": {
+    "caption": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "layers": [
+    {
+      "id": "bar-top",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.12)}}",
+      "fill": "#000000",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{-round(canvas.height * 0.12)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 24,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bar-bottom",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.88)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.12)}}",
+      "fill": "#000000",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 1)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.88)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{caption}}",
+      "id": "caption",
+      "type": "text",
+      "content": "{{caption}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.026)}}",
+      "color": "#ffffff",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.88) + round((round(canvas.height * 0.12) - round(min(canvas.width, canvas.height) * 0.026)) / 2)}}",
+      "textAlign": "center",
+      "fontWeight": 600,
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
+      "maxWidth": "{{round(canvas.width * 0.9)}}",
+      "maxLines": 1,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "startFrame": 26,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.3
+    }
+  ]
+}

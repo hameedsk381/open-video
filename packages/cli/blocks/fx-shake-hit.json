@@ -1,0 +1,120 @@
+{
+  "id": "fx-shake-hit",
+  "name": "Shake hit",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 60,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage with an impact: the camera shakes and pushes in for half a second with a white flash and a thump, then settles.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "flash",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#ffffff",
+      "opacity": 0,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 4,
+              "value": 0.7
+            },
+            {
+              "frame": 16,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 6,
+      "volume": 0.55
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "shake",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 8,
+              "value": 14
+            },
+            {
+              "frame": 30,
+              "value": 0,
+              "easing": "land"
+            }
+          ]
+        },
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 8,
+              "value": 1.06
+            },
+            {
+              "frame": 30,
+              "value": 1,
+              "easing": "land"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

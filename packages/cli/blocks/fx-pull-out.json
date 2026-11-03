@@ -1,0 +1,68 @@
+{
+  "id": "fx-pull-out",
+  "name": "Pull-out reveal",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Starts on a close crop (1.35 times) of your footage and pulls out to the full frame in about 1.2 seconds.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.35
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.35
+            },
+            {
+              "frame": 36,
+              "value": 1,
+              "easing": "land"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

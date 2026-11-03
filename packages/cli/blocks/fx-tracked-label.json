@@ -1,0 +1,167 @@
+{
+  "id": "fx-tracked-label",
+  "name": "Tracked label",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 300,
+  "description": "A small glass label that stays beside the speaker as they move. Its path comes from tracking the matte: run ove track on the matte video, then ove add fx-tracked-label with --track track.json.",
+  "params": {
+    "text": {
+      "type": "string",
+      "default": "Open Video Engine"
+    },
+    "caption": {
+      "type": "string",
+      "default": "Founder"
+    },
+    "xKeys": {
+      "type": "list",
+      "items": {
+        "frame": {
+          "type": "number",
+          "default": 0
+        },
+        "value": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "default": [
+        {
+          "frame": 0,
+          "value": 700
+        },
+        {
+          "frame": 299,
+          "value": 700
+        }
+      ]
+    },
+    "yKeys": {
+      "type": "list",
+      "items": {
+        "frame": {
+          "type": "number",
+          "default": 0
+        },
+        "value": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "default": [
+        {
+          "frame": 0,
+          "value": 700
+        },
+        {
+          "frame": 299,
+          "value": 700
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "label",
+      "type": "group",
+      "x": "{{0}}",
+      "y": "{{0}}",
+      "width": "{{round(canvas.width * 0.3)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": "{{xKeys}}"
+        },
+        {
+          "property": "y",
+          "keyframes": "{{yKeys}}"
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 12,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "label-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.3)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "label-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.3) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "pin",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent2}}"
+        },
+        {
+          "id": "t",
+          "type": "text",
+          "content": "{{text}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontWeight": 800,
+          "maxWidth": "{{round(canvas.width * 0.24)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+        },
+        {
+          "id": "c",
+          "type": "text",
+          "content": "{{caption}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}",
+          "color": "{{muted}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+          "maxWidth": "{{round(canvas.width * 0.24)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.014)}}"
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 8,
+      "volume": 0.3
+    }
+  ]
+}

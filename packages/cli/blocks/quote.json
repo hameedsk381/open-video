@@ -1,0 +1,347 @@
+{
+  "id": "quote",
+  "name": "Quote",
+  "category": "quote",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "A pull quote with author and role.",
+  "params": {
+    "quote": {
+      "type": "string",
+      "default": "The best videos are built one honest frame at a time."
+    },
+    "author": {
+      "type": "string",
+      "default": "Mira Chen"
+    },
+    "role": {
+      "type": "string",
+      "default": "Creative director"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.6)}}",
+      "y": "{{round(canvas.height * -0.2)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.1,
+      "blur": 120,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 150,
+              "value": 1.1,
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.6)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.5)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glow2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.4)}}",
+      "y": "{{round(canvas.height * 1.2)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.06,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 1.2)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 1.1)}}",
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1.1
+            },
+            {
+              "frame": 150,
+              "value": 0.9,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.08)}}",
+      "y": 0,
+      "width": "{{round(canvas.width * 0.84)}}",
+      "height": "{{canvas.height}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+        "align": "start",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "mark",
+          "type": "text",
+          "content": "“",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.26)}}",
+          "color": "{{accent}}",
+          "fontWeight": 900,
+          "lineHeight": 0.7,
+          "startFrame": 0,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 20,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "quote",
+          "type": "text",
+          "content": "{{quote}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "color": "{{text}}",
+          "fontWeight": 700,
+          "lineHeight": 1.15,
+          "maxWidth": "{{round(canvas.width * 0.84)}}",
+          "maxLines": 6,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "startFrame": 8,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 28,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rule",
+          "type": "rect",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
+          "fill": "{{accent}}",
+          "startFrame": 30,
+          "animations": [
+            {
+              "property": "width",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 20,
+                  "value": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "author",
+          "type": "text",
+          "content": "{{author}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "color": "{{text}}",
+          "fontWeight": 700,
+          "startFrame": 38,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 18,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "role",
+          "type": "text",
+          "content": "{{role}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "color": "{{muted}}",
+          "startFrame": 42,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 18,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-in",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 6,
+      "volume": 0.35
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 150,
+              "value": 1.05,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

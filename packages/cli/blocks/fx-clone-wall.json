@@ -1,0 +1,181 @@
+{
+  "id": "fx-clone-wall",
+  "name": "Clone wall",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Three copies of your footage side by side, the middle one large and the outer two smaller and fainter, each running a little later than the one before. The copies are the whole picture, not cut-outs of the subject.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    },
+    "offset": {
+      "type": "number",
+      "default": 18,
+      "description": "Frames each copy runs behind the one before"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "copy-0",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+      "trimStart": "{{2 * offset}}",
+      "x": "{{round(canvas.width * -0.04)}}",
+      "y": "{{round(canvas.height * 0.5) - round(round(canvas.height * 0.55) / 2)}}",
+      "width": "{{round(canvas.width * 0.5)}}",
+      "height": "{{round(canvas.height * 0.55)}}",
+      "opacity": 0.45,
+      "startFrame": 16,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 0.45
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage}}",
+      "id": "copy-1",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+      "trimStart": 0,
+      "x": "{{round(canvas.width * 0.27)}}",
+      "y": "{{round(canvas.height * 0.5) - round(round(canvas.height * 0.8) / 2)}}",
+      "width": "{{round(canvas.width * 0.46)}}",
+      "height": "{{round(canvas.height * 0.8)}}",
+      "opacity": 1,
+      "startFrame": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage}}",
+      "id": "copy-2",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+      "trimStart": "{{1 * offset}}",
+      "x": "{{round(canvas.width * 0.58)}}",
+      "y": "{{round(canvas.height * 0.5) - round(round(canvas.height * 0.55) / 2)}}",
+      "width": "{{round(canvas.width * 0.5)}}",
+      "height": "{{round(canvas.height * 0.55)}}",
+      "opacity": 0.45,
+      "startFrame": 10,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 0.45
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 8,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 14,
+      "volume": 0.3
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "midnight",
+  "name": "Midnight",
+  "description": "Deep navy with a cyan accent. Clean and technical.",
+  "variables": {
+    "bg": "#0b1020",
+    "surface": "#151c33",
+    "text": "#f5f7fb",
+    "muted": "#9aa6c4",
+    "accent": "#22d3ee",
+    "accent2": "#a78bfa",
+    "radius": 20,
+    "headWeight": 800
+  }
+}

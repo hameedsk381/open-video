@@ -1,0 +1,309 @@
+{
+  "id": "fx-extruded-title",
+  "name": "Extruded title",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 150,
+  "description": "A big title with a solid 3D-looking depth made of stacked copies, that turns into place. In front of the picture, not behind the subject.",
+  "params": {
+    "title": {
+      "type": "string",
+      "default": "BUILD. COMPOSE. RENDER."
+    }
+  },
+  "layers": [
+    {
+      "id": "extrusion",
+      "type": "group",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.58)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.4)}}",
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "rotation",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": -6,
+              "easing": "land"
+            },
+            {
+              "frame": 26,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.6,
+              "easing": "pop"
+            },
+            {
+              "frame": 22,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 8,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "depth-14",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 14 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{14 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-13",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 13 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{13 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-12",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 12 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{12 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-11",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 11 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{11 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-10",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 10 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{10 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-9",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 9 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{9 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-8",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#0f2a8a",
+          "x": "{{round(canvas.width * 0.5) + 8 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{8 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-7",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 7 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{7 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-6",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 6 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{6 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-5",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 5 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{5 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-4",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 4 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{4 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-3",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 3 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{3 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-2",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 2 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{2 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "depth-1",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#1740d6",
+          "x": "{{round(canvas.width * 0.5) + 1 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "y": "{{1 * round(min(canvas.width, canvas.height) * 0.0035)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1
+        },
+        {
+          "id": "front",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "color": "#ffffff",
+          "x": "{{round(canvas.width * 0.5)}}",
+          "y": 0,
+          "textAlign": "center",
+          "fontWeight": 900,
+          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "lineHeight": 1,
+          "shadow": {
+            "color": "#00000099",
+            "blur": 24,
+            "offsetX": 0,
+            "offsetY": 18
+          }
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 6,
+      "volume": 0.45
+    }
+  ]
+}

@@ -5,6 +5,8 @@ description: Create and edit videos with Open Video Engine (OVE) by writing a JS
 
 # Making videos with Open Video Engine
 
+Short task guides sit beside this one: `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Use the one that matches the request, and come back here for field details.
+
 An OVE video is one JSON file, `composition.json`. You never write rendering code: you edit data, check it, look at frames, and render. `composition.schema.json` next to it is the authoritative JSON Schema; read it when unsure about a field.
 
 ## Loop
@@ -89,6 +91,57 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
   - Use it for headlines and short statements: words for most headlines, letters for one or two short words, lines for paragraphs. Keep body text and captions whole.
 - `repeat: n` plays the keyframes n more times after the first; add `reverse: true` to play every other cycle backwards (ping-pong).
 
+## HTML layers
+
+When a layout is easier to say in HTML and CSS than with positioned layers (a card with an icon beside wrapping text, a table, a chart drawn as inline SVG, a UI mock-up, mixed typography), use an `html` layer:
+
+```json
+{ "id": "card", "type": "html", "x": 190, "y": 160, "width": 900, "height": 400,
+  "html": "<div class='card'><img src='logo'><div><h2>Real <em>HTML</em></h2><p>Flexbox, grid and rich text.</p></div><div class='bar'><i></i></div></div>",
+  "css": ".card { display: grid; grid-template-columns: 120px 1fr; gap: 28px; font-family: Inter; color: #f5f7fb } .bar i { display: block; height: 14px; width: calc(var(--progress) * 100%); background: var(--accent) }",
+  "vars": { "--accent": "#22d3ee" },
+  "animations": [{ "property": "--progress", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 45, "value": 0.72, "easing": "land" }] }] }
+```
+
+- The markup is laid out in a `width` × `height` box (overflow hidden) at the layer's `x`, `y`; the layer moves, fades, scales and rotates like any other, and works under the camera, in groups and with transitions.
+- No scripts run: `<script>`, `on…` handlers and `iframe`/`object`/`link` are removed. Nothing loads from the web: refer to pictures by asset id or path (`src="logo"`, `url(./bg.png)`); web URLs are an error. Fonts are Inter and the composition's font assets (`font-family: Inter`, or the asset's family).
+- Motion inside the markup comes from CSS variables. `vars` sets them; animate one with keyframes on `"--name"` (numbers or colours) and use it in the CSS (`width: calc(var(--progress) * 100%)`, `opacity: var(--fade)`). Every frame also gets `--t` (seconds since the layer started) and `--frame`.
+- CSS `@keyframes` work when placed in time with `--t`: `animation: rise 0.6s ease-out both; animation-delay: calc(var(--t) * -1s + 0.3s)` plays `rise` starting 0.3 s into the layer. Animations otherwise stay paused, and transitions are off, so every frame is exact.
+- Each frame where the markup, CSS or variables differ is rasterised again (about 40 ms), so animate the layer itself (x, y, opacity, scale) where you can and keep CSS-variable animation for what changes inside it. `resolution: 2` keeps it sharp when scaled up or under a camera zoom.
+- Prefer ordinary layers for headlines and captions: `ove review` reads their text, but cannot see text inside an html layer.
+
+## Lottie, shaders and layout
+
+**Lottie animations** (exported from After Effects with Bodymovin, or from LottieFiles) play frame-exactly:
+
+```json
+{ "id": "check", "type": "lottie", "src": "check-anim", "x": 860, "y": 400, "width": 200, "height": 200, "startFrame": 30 }
+```
+
+- `src` is a `"type": "lottie"` asset or a `.json` path. `fit` is `contain` (default), `cover` or `fill`; `trimStart`, `playbackRate` and `loop` work as on video layers, and without `loop` it holds its last frame.
+- After Effects expressions are not supported (they are JavaScript), and pictures must be embedded in the JSON. Use Lottie for icons, illustrations and character moments rather than redrawing them as paths.
+
+**Shaders** fill a box with a GLSL fragment shader, for animated gradients, noise, light and textures:
+
+```json
+{ "id": "sky", "type": "shader", "width": 1920, "height": 1080, "resolution": 0.5, "vars": { "--tint": "#8b5cf6" },
+  "fragment": "void main(){ vec2 uv = gl_FragCoord.xy / resolution; gl_FragColor = vec4(tint.rgb * (0.5 + 0.5 * sin(uv.x * 8.0 + time)), 1.0); }" }
+```
+
+- Provided uniforms: `time` (seconds into the layer), `resolution` (pixels), `frame`, and Shadertoy's `iTime`, `iResolution`, `iFrame`; Shadertoy code written as `mainImage(out vec4 fragColor, in vec2 fragCoord)` works as is. Each var becomes a uniform without its dashes (`--tint` → `tint`): numbers as `float`, colours as `vec4`; animate them with keyframes on `"--tint"`.
+- `resolution: 0.5` renders at half size and scales up, four times faster; fine for soft backgrounds. Renders use a software GPU so pixels match on every machine; a shader that is slow there (many loop iterations per pixel) makes renders slow.
+- A shader that does not compile stops the render with the compiler's message and the layer's id.
+
+**Layout**: give a group `layout` and its children are placed one after another, measured as they draw (text included), so cards, lists and rows reflow when text changes:
+
+```json
+{ "id": "row", "type": "group", "x": 120, "y": 120, "width": 1680, "layout": { "direction": "row", "gap": 24, "align": "center", "justify": "space-between" },
+  "children": [ { "id": "title", "type": "text", "content": "{{title}}", "fontSize": 64 }, { "id": "badge", "type": "html", "width": 220, "height": 64, "html": "…" } ] }
+```
+
+- `direction` `row` or `column`; `gap` between children; `padding` inside the group; `align` across the direction (`start`, `center`, `end`); `justify` along it (`start`, `center`, `end`, `space-between`) within the group's `width` (row) or `height` (column).
+- Children are measured by their width and height (circles by diameter, text by its lines, groups with a layout by their content); give paths and captions a width and height. A child's own `x` and `y` offset it from its place, so entrance animations still work.
+
 ## Camera and motion blur
 
 A scene's `camera` moves the view of the whole scene, like a camera over a set, instead of every layer moving on its own:
@@ -108,6 +161,18 @@ A scene's `camera` moves the view of the whole scene, like a camera over a set, 
 - Things outside the frame become visible when the camera zooms out or pans: build the scene larger than the frame where it needs to be.
 
 `"motionBlur": { "samples": 8, "shutter": 180 }` at the top level blurs fast motion (camera moves, things flying in) the way a film camera does: each frame averages that many moments across the shutter (180° = half a frame). Things that do not move stay exactly as sharp. It makes renders slower (about 2.5× with 8–10 samples), so render drafts with `--no-motion-blur`; the live preview and `ove review` show frames without it. Worth it for videos with fast moves; pointless for slow, calm ones.
+
+## Matte and colour grade
+
+Two properties on any layer (and `grade` on a scene):
+
+```json
+{ "id": "speaker", "type": "video", "src": "clip.mp4", "matte": { "src": "speaker-matte.mp4", "mode": "luma" } }
+{ "id": "look", "type": "video", "src": "clip.mp4", "grade": { "look": "cinematic", "contrast": 0.1, "temperature": -0.1 } }
+```
+
+- `matte` shows the layer only where the matte says so. The matte is a video or picture you make with any tool (rembg, Robust Video Matting, an editor): `luma` keeps the layer where the matte is white, `alpha` where it is opaque, `invert` keeps the opposite. A video layer's matte follows its own `trimStart` and `playbackRate`. It becomes a group named `<id>-masked` when the file loads, so give layers unique ids; put blur, scale or a blend mode on a group around the masked layer, not on the layer, to affect the cut-out. `ove track matte.mp4` writes where the speaker is in each frame (for labels that follow).
+- `grade` is exposure (stops), contrast, saturation, temperature, tint, shadows, highlights and fade, each -1 to 1 (exposure -3 to 3), or a `look`: warm, cool, cinematic, teal-orange, noir, vivid, faded. Numbers add to the look. It is static; cross-fade two graded layers to change a grade over time. On a scene, it grades every layer in it except `fixed` ones.
 
 ## Transitions
 
@@ -218,6 +283,24 @@ These work in `layers`, group `children`, `scenes` and repeat bodies:
 - One video per row: `ove render composition.json --batch rows.json --output "out/{{customer}}.mp4"`, where `rows.json` is an array of `{ "customer": "Priya", ... }` objects. Every row is checked before anything renders, and two rows may not write the same file.
 - Mistakes are reported all at once, each with its location: unknown names and fields, values of the wrong type, bad expressions, unknown components and missing params.
 - Editors validating against `composition.schema.json` will flag `"{{left}}"` in a number field and `repeat`/`use` entries in layer lists; that is expected. `ove validate` is the real check.
+
+## Blocks and themes
+
+Ready-made pieces you copy into a video, like a component library. A **block** is a scene (title, big number, quote, bullet list, numbered steps, stat grid, section divider, call to action, phone mockup, image with caption, icon row, split screen) or an overlay (lower third, badge, progress bar, handle). Scenes come with a slow camera push, drifting background shapes, a push transition and soft built-in sound effects, and new compositions get light motion blur; the picture blocks take a screenshot or photo (`--set image=shot.png`, or an asset id). Blocks are sized from the canvas, so each one fits 16:9, 9:16, 1:1 and 4:5, and they read their colours from a **theme** (`midnight`, `paper`, `neon`, `espresso`).
+
+```sh
+ove blocks                                   # list blocks and themes
+ove add title-hero reel/composition.json --aspect 9:16 --theme neon --set headline="Fresh roasted, daily"
+ove add stat-grid reel/composition.json      # appends a scene
+ove add lower-third reel/composition.json --scene title-hero --at 20 --set name="Sam Lee"
+ove theme espresso reel/composition.json     # switch every block's colours at once
+```
+
+`ove add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
+
+`ove init --template launch-wide` (also `story-tall`, `explainer-square`, `keynote-wide`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
+
+Before building scenes by hand, check `ove blocks`: a block plus `--set` is faster and consistent. Validate and review as usual afterwards.
 
 ## Planning a video
 

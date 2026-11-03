@@ -1,0 +1,1 @@
+{"name":"@ove/worker","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/contracts":"workspace:*","@ove/jobs":"workspace:*","bullmq":"5"}}

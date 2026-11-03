@@ -1,0 +1,166 @@
+{
+  "id": "fx-rgb-flash",
+  "name": "RGB flash transition",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 24,
+  "description": "A quick chromatic flash for cutting between scenes: red, green and blue copies of a white flash split apart and fade.",
+  "params": {},
+  "layers": [
+    {
+      "id": "red",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#ff2a2a",
+      "blendMode": "screen",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": 0.85
+            },
+            {
+              "frame": 20,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * -0.014814814814814815)}}"
+            },
+            {
+              "frame": 20,
+              "value": "{{round(canvas.width * -0.044444444444444446)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "green",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#2aff5a",
+      "blendMode": "screen",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": 0.85
+            },
+            {
+              "frame": 20,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0)}}"
+            },
+            {
+              "frame": 20,
+              "value": "{{round(canvas.width * 0)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blue",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#2a5aff",
+      "blendMode": "screen",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": 0.85
+            },
+            {
+              "frame": 20,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 6,
+              "value": "{{round(canvas.width * 0.014814814814814815)}}"
+            },
+            {
+              "frame": 20,
+              "value": "{{round(canvas.width * 0.044444444444444446)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:click",
+      "startFrame": 0,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 2,
+      "volume": 0.3
+    }
+  ]
+}

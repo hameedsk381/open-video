@@ -2,7 +2,7 @@
 // renderer's own canvas runtime, so pictures match renders; timing comes from the wall clock, and frames that cannot be drawn in
 // time are skipped rather than slowing playback. Video layers use <video> elements kept in sync with the playhead (close, not
 // frame-exact like a render), and audio is scheduled with Web Audio, where playbackRate also changes pitch (renders keep pitch).
-import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, builtinFontFaces, type DrawOperation } from '@ove/graphics';
+import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, collectLottieSources, collectCodeSources, hasCodeLayers, hasReactLayers, builtinFontFaces, type DrawOperation } from '@ove/graphics';
 import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 export type PlayerOptions = {
@@ -11,6 +11,7 @@ export type PlayerOptions = {
   /** Where relative media paths in the composition are resolved from, usually the composition file's URL. Defaults to the page URL. */ assetBase?: string | URL;
   /** Where the built-in Inter font files are served from. Defaults to the `fonts` folder next to the Player script (the package ships it in `dist/fonts`). */ fontBase?: string | URL;
   /** Where the built-in sound effects (sfx:…) are served from. Defaults to the `sfx` folder next to the Player script. */ sfxBase?: string | URL;
+  /** Lets the composition's code layers run in this page. They execute the composition's JavaScript with the page's full powers, so pass true only for compositions you wrote or trust. */ allowCode?: boolean;
   controls?: boolean; loop?: boolean; autoplay?: boolean; /** 0–1, multiplies every sound. */ volume?: number };
 export type Player = { readonly element: HTMLElement; readonly composition: Composition; readonly frame: number; readonly playing: boolean;
   play(): Promise<void>; pause(): void; seek(frame: number): Promise<void>; setValues(values: Record<string, unknown>): Promise<void>; on(event: PlayerEvent, listener: (detail: any) => void): () => void; destroy(): void };
@@ -35,10 +36,15 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
     canvas.width = composition.width; canvas.height = composition.height; canvas.style.aspectRatio = `${composition.width} / ${composition.height}`;
     runtime = createCanvasRuntime(canvas, measure);
     const images = Object.fromEntries(collectImageSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, resolveSrc(src)]));
+    // A React component's markup may name any picture the composition declares.
+    if (hasReactLayers(composition.scenes.flatMap(s => s.layers))) for (const asset of composition.assets.filter(a => a.type === 'image')) { images[asset.id] = resolveSrc(asset.id); images[asset.src] = resolveSrc(asset.src); }
     // The built-in Inter faces load from fontBase (default: the fonts folder beside this script, as the package and `ove dev` serve it).
     const fontBase = new URL(options.fontBase ?? './fonts/', import.meta.url);
     const fonts = [...builtinFontFaces.map(face => ({ ...face, src: `builtin:${face.file}`, url: new URL(face.file, fontBase).href })), ...composition.assets.filter(a => a.type === 'font').map(a => ({ family: a.family ?? a.id, src: a.src, url: resolveSrc(a.src), weight: a.weight ?? 400, style: a.style ?? 'normal' }))];
-    await runtime.load(images, fonts);
+    const lotties = Object.fromEntries(collectLottieSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, resolveSrc(src)]));
+    if (hasCodeLayers(composition.scenes.flatMap(s => s.layers)) && !options.allowCode) throw new Error('This composition has code layers, which run JavaScript in this page. Pass allowCode: true only if you trust it.');
+    const codes = Object.fromEntries(collectCodeSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, { url: resolveSrc(src) }]));
+    await runtime.load(images, fonts, lotties, codes);
     for (const video of videos.values()) { video.pause(); video.removeAttribute('src'); video.load(); } videos = new Map();
     const videoLayers = composition.scenes.flatMap(s => flattenAll(s.layers)).filter((l: any) => l.type === 'video');
     await Promise.all(videoLayers.map((layer: any) => new Promise<void>(ok => { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.src = resolveSrc(layer.src); v.addEventListener('loadeddata', () => ok(), { once: true }); v.addEventListener('error', () => { emit('error', new Error(`Could not load video ${layer.src}`)); ok(); }, { once: true }); videos.set(layer.id, v); })));

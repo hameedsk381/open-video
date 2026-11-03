@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "id": "expressive",
+  "name": "Lottie, shaders and layout",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "durationFrames": 60,
+  "background": "#0b0f1e",
+  "assets": [
+    {
+      "id": "dot",
+      "type": "lottie",
+      "src": "./assets/dot.json"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s",
+      "name": "S",
+      "startFrame": 0,
+      "durationFrames": 60,
+      "layers": [
+        {
+          "id": "sky",
+          "type": "shader",
+          "width": 1280,
+          "height": 720,
+          "resolution": 0.5,
+          "vars": {
+            "--tint": "#8b5cf6"
+          },
+          "animations": [
+            {
+              "property": "--tint",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "#8b5cf6"
+                },
+                {
+                  "frame": 59,
+                  "value": "#22d3ee"
+                }
+              ]
+            }
+          ],
+          "fragment": "void main(){ vec2 uv = gl_FragCoord.xy / resolution; float w = 0.5 + 0.5 * sin(uv.x * 8.0 + time * 3.0); gl_FragColor = vec4(mix(vec3(0.03,0.04,0.09), tint.rgb, w * uv.y * 0.6), 1.0); }"
+        },
+        {
+          "id": "row",
+          "type": "group",
+          "x": 80,
+          "y": 80,
+          "width": 1120,
+          "layout": {
+            "direction": "row",
+            "gap": 24,
+            "align": "center",
+            "justify": "space-between"
+          },
+          "children": [
+            {
+              "id": "title",
+              "type": "text",
+              "fontSize": 56,
+              "fontWeight": 800,
+              "content": "Layout row"
+            },
+            {
+              "id": "ball",
+              "type": "circle",
+              "width": 70,
+              "fill": "#f97316"
+            },
+            {
+              "id": "badge",
+              "type": "html",
+              "width": 220,
+              "height": 64,
+              "css": "div{height:64px;display:flex;align-items:center;justify-content:center;border-radius:32px;background:#22d3ee;color:#0b0f1e;font:700 26px Inter}",
+              "html": "<div>html badge</div>"
+            }
+          ]
+        },
+        {
+          "id": "col",
+          "type": "group",
+          "x": 80,
+          "y": 220,
+          "layout": {
+            "direction": "column",
+            "gap": 16,
+            "align": "center"
+          },
+          "children": [
+            {
+              "id": "c1",
+              "type": "text",
+              "fontSize": 36,
+              "fontWeight": 700,
+              "content": "Column, centred"
+            },
+            {
+              "id": "toy",
+              "type": "shader",
+              "width": 360,
+              "height": 200,
+              "fragment": "void mainImage(out vec4 o, in vec2 p){ vec2 uv = p / iResolution.xy; o = vec4(0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0,2,4)), 1.0); }"
+            },
+            {
+              "id": "lot",
+              "type": "group",
+              "width": 200,
+              "height": 200,
+              "children": [
+                {
+                  "id": "dotanim",
+                  "type": "lottie",
+                  "src": "dot",
+                  "width": 200,
+                  "height": 200,
+                  "startFrame": 20
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

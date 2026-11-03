@@ -1,0 +1,34 @@
+{
+  "id": "fx-captions",
+  "name": "Word-synced captions",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 300,
+  "description": "Captions that follow the speech word by word, the word being said in the accent colour and the rest in white, in a dark rounded box. Needs word timings: run ove ai transcribe on the audio and give the captions asset id.",
+  "params": {
+    "src": {
+      "type": "string",
+      "default": "",
+      "description": "A captions asset id or a .json/.srt/.vtt file with word timings"
+    }
+  },
+  "layers": [
+    {
+      "if": "{{src}}",
+      "id": "cap",
+      "type": "captions",
+      "src": "{{src}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.74)}}",
+      "textAlign": "center",
+      "maxWidth": "{{round(canvas.width * 0.84)}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+      "fontWeight": 800,
+      "color": "#ffffff",
+      "highlightColor": "{{accent2}}",
+      "background": "rgba(5,8,20,0.6)",
+      "padding": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+      "radius": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+    }
+  ]
+}

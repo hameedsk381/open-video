@@ -1,0 +1,1383 @@
+{
+  "id": "fx-spotlight",
+  "name": "Cinematic spotlight",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 180,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage darkened to a near-black set with an electric-blue diagonal light beam, soft haze, drifting particles and a slow push-in, with glowing title type. The title is in front of the subject.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    },
+    "title": {
+      "type": "string",
+      "default": "OPEN VIDEO ENGINE"
+    },
+    "subtitle": {
+      "type": "string",
+      "default": "CREATE WITHOUT LIMITS"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "dim",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#04060f",
+      "opacity": 0.62
+    },
+    {
+      "id": "haze-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.2)}}",
+      "y": "{{round(canvas.height * 0.3)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.2)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.2,
+      "blur": 150,
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.2)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.45)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "haze-2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.85)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.12,
+      "blur": 150,
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.85)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.55)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "beam",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.45)}}",
+      "y": "{{-round(canvas.height * 0.2)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.26)}}",
+      "height": "{{round(canvas.height * 1.5)}}",
+      "rotation": 24,
+      "originX": "center",
+      "originY": 0,
+      "fill": {
+        "type": "linear",
+        "from": [
+          0,
+          0
+        ],
+        "to": [
+          0,
+          "{{round(canvas.height * 1.5)}}"
+        ],
+        "stops": [
+          {
+            "offset": 0,
+            "color": "rgba(120,160,255,0.55)"
+          },
+          {
+            "offset": 1,
+            "color": "rgba(120,160,255,0)"
+          }
+        ]
+      },
+      "blendMode": "screen",
+      "blur": 24,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 30,
+              "value": 0.85
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.35)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.6)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-0",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.650)}}",
+      "y": "{{round(canvas.height * 0.904)}}",
+      "width": 4.785545267489712,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.904)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.904) - 97}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 40,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.228)}}",
+      "y": "{{round(canvas.height * 0.759)}}",
+      "width": 4.168981481481481,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.759)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.759) - 132}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 41,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.802)}}",
+      "y": "{{round(canvas.height * 0.339)}}",
+      "width": 6.712911522633744,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.339)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.339) - 215}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 42,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-3",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.953)}}",
+      "y": "{{round(canvas.height * 0.519)}}",
+      "width": 4.7877057613168725,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.519)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.519) - 153}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 43,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-4",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.445)}}",
+      "y": "{{round(canvas.height * 0.584)}}",
+      "width": 4.541512345679012,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.584)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.584) - 210}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 44,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-5",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.118)}}",
+      "y": "{{round(canvas.height * 0.781)}}",
+      "width": 3.233590534979424,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.781)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.781) - 130}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 45,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-6",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.441)}}",
+      "y": "{{round(canvas.height * 0.541)}}",
+      "width": 6.567644032921811,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.541)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.541) - 185}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 46,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-7",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.735)}}",
+      "y": "{{round(canvas.height * 0.371)}}",
+      "width": 8.025154320987653,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.371)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.371) - 86}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 47,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-8",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.062)}}",
+      "y": "{{round(canvas.height * 0.407)}}",
+      "width": 8.198713991769548,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.407)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.407) - 94}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 48,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-9",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.781)}}",
+      "y": "{{round(canvas.height * 0.637)}}",
+      "width": 8.125360082304526,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.637)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.637) - 140}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 49,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-10",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.766)}}",
+      "y": "{{round(canvas.height * 0.788)}}",
+      "width": 6.619907407407407,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.788)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.788) - 187}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 50,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-11",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.303)}}",
+      "y": "{{round(canvas.height * 0.886)}}",
+      "width": 7.608281893004115,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.886)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.886) - 211}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 51,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-12",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.639)}}",
+      "y": "{{round(canvas.height * 0.474)}}",
+      "width": 7.460853909465021,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.474)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.474) - 125}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 52,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-13",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.205)}}",
+      "y": "{{round(canvas.height * 0.502)}}",
+      "width": 4.3257716049382715,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.502)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.502) - 141}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 53,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-14",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.508)}}",
+      "y": "{{round(canvas.height * 0.883)}}",
+      "width": 5.4622942386831275,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.883)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.883) - 108}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 54,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-15",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.683)}}",
+      "y": "{{round(canvas.height * 0.718)}}",
+      "width": 8.574125514403292,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.718)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.718) - 86}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 55,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-16",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.718)}}",
+      "y": "{{round(canvas.height * 0.178)}}",
+      "width": 5.142746913580247,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.178)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.178) - 212}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 56,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-17",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.341)}}",
+      "y": "{{round(canvas.height * 0.066)}}",
+      "width": 5.760751028806585,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.066)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.066) - 214}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 57,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-18",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.578)}}",
+      "y": "{{round(canvas.height * 0.036)}}",
+      "width": 3.4651748971193417,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.036)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.036) - 130}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 58,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-19",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.971)}}",
+      "y": "{{round(canvas.height * 0.484)}}",
+      "width": 7.070833333333334,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.484)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.484) - 189}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 59,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-20",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.471)}}",
+      "y": "{{round(canvas.height * 0.100)}}",
+      "width": 6.5036522633744855,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.100)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.100) - 153}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 60,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-21",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.992)}}",
+      "y": "{{round(canvas.height * 0.095)}}",
+      "width": 8.134002057613168,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.095)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.095) - 203}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 61,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-22",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.632)}}",
+      "y": "{{round(canvas.height * 0.086)}}",
+      "width": 8.110030864197531,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.086)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.086) - 178}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 62,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-23",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.564)}}",
+      "y": "{{round(canvas.height * 0.653)}}",
+      "width": 5.690997942386831,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.653)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.653) - 193}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 63,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-24",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.591)}}",
+      "y": "{{round(canvas.height * 0.562)}}",
+      "width": 8.580606995884773,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.562)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.562) - 93}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 64,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dust-25",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.367)}}",
+      "y": "{{round(canvas.height * 0.651)}}",
+      "width": 6.26033950617284,
+      "fill": "#cfe0ff",
+      "opacity": 0.35,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.651)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.651) - 125}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 65,
+              "value": 0.5
+            },
+            {
+              "frame": 180,
+              "value": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "content": "{{title}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.085)}}",
+      "color": "#ffffff",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.12)}}",
+      "textAlign": "center",
+      "fontWeight": 900,
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
+      "maxWidth": "{{round(canvas.width * 0.9)}}",
+      "maxLines": 2,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+      "lineHeight": 1.02,
+      "shadow": {
+        "color": "{{accent}}",
+        "blur": 40,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "startFrame": 10,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 24,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.15)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 30,
+              "value": "{{round(canvas.height * 0.12)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "content": "{{subtitle}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+      "color": "{{accent2}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.82)}}",
+      "textAlign": "center",
+      "fontWeight": 700,
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
+      "maxWidth": "{{round(canvas.width * 0.9)}}",
+      "maxLines": 1,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+      "startFrame": 40,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 24,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 0,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 28,
+      "volume": 0.4
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 180,
+              "value": 1.08,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

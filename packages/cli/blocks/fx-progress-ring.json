@@ -1,0 +1,143 @@
+{
+  "id": "fx-progress-ring",
+  "name": "Progress ring",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 120,
+  "description": "A glowing ring that draws itself round to a percentage, with the number counting up in the middle and a label under it.",
+  "params": {
+    "value": {
+      "type": "number",
+      "default": 87
+    },
+    "label": {
+      "type": "string",
+      "default": "RENDER COMPLETE"
+    }
+  },
+  "layers": [
+    {
+      "id": "ring-track",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.15)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.34)}}",
+      "fill": "transparent",
+      "stroke": "rgba(255,255,255,0.18)",
+      "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.014)}}"
+    },
+    {
+      "id": "ring",
+      "type": "path",
+      "d": "{{'M 0 ' + string(round(min(canvas.width, canvas.height) * 0.17)) + ' a ' + string(round(min(canvas.width, canvas.height) * 0.17)) + ' ' + string(round(min(canvas.width, canvas.height) * 0.17)) + ' 0 1 1 ' + string(round(min(canvas.width, canvas.height) * 0.34)) + ' 0 a ' + string(round(min(canvas.width, canvas.height) * 0.17)) + ' ' + string(round(min(canvas.width, canvas.height) * 0.17)) + ' 0 1 1 -' + string(round(min(canvas.width, canvas.height) * 0.34)) + ' 0'}}",
+      "x": "{{round(canvas.width * 0.5) - round(min(canvas.width, canvas.height) * 0.17)}}",
+      "y": "{{round(canvas.height * 0.15) - round(min(canvas.width, canvas.height) * 0.17)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.34)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.34)}}",
+      "fill": "transparent",
+      "stroke": "{{accent}}",
+      "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+      "lineCap": "round",
+      "rotation": -90,
+      "originX": "center",
+      "originY": "center",
+      "shadow": {
+        "color": "#2457FF",
+        "blur": 22,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "animations": [
+        {
+          "property": "trimEnd",
+          "keyframes": [
+            {
+              "frame": 8,
+              "value": 0
+            },
+            {
+              "frame": 78,
+              "value": "{{value / 100}}",
+              "easing": "land"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pct",
+      "type": "html",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.34)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "startFrame": 8,
+      "html": "<div class='n'></div>",
+      "css": ".n{font:800 {{round(min(canvas.width, canvas.height) * 0.09)}}px Inter;color:#fff;line-height:1;text-align:center}.n::before{counter-reset:n round(var(--n));content:counter(n) '%'}",
+      "vars": {
+        "--n": 0
+      },
+      "animations": [
+        {
+          "property": "--n",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 70,
+              "value": "{{value}}",
+              "easing": "land"
+            }
+          ]
+        }
+      ],
+      "x": "{{round(canvas.width * 0.5) - round(min(canvas.width, canvas.height) * 0.17)}}",
+      "y": "{{round(canvas.height * 0.15) - round(min(canvas.width, canvas.height) * 0.05)}}"
+    },
+    {
+      "id": "label",
+      "type": "text",
+      "content": "{{label}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
+      "color": "{{accent2}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.15) + round(min(canvas.width, canvas.height) * 0.2)}}",
+      "textAlign": "center",
+      "fontWeight": 800,
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.005)}}",
+      "maxWidth": "{{round(canvas.width * 0.8)}}",
+      "maxLines": 1,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+      "startFrame": 20,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 4,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:ding",
+      "startFrame": 80,
+      "volume": 0.3
+    }
+  ]
+}

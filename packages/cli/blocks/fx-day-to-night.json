@@ -1,0 +1,174 @@
+{
+  "id": "fx-day-to-night",
+  "name": "Day to night",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage turning from warm daylight to a cool blue night over about two seconds, with a darkening vignette.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "warm",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#ff9a3c",
+      "blendMode": "soft-light",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.55
+            },
+            {
+              "frame": 60,
+              "value": 0.55
+            },
+            {
+              "frame": 90,
+              "value": 0,
+              "easing": "glide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cool",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#1d3fd8",
+      "blendMode": "multiply",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 30,
+              "value": 0
+            },
+            {
+              "frame": 90,
+              "value": 0.75,
+              "easing": "glide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "night",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#050a22",
+      "blendMode": "normal",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 30,
+              "value": 0
+            },
+            {
+              "frame": 90,
+              "value": 0.35,
+              "easing": "glide"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vignette",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": {
+        "type": "radial",
+        "center": [
+          "{{round(canvas.width * 0.5)}}",
+          "{{round(canvas.height * 0.45)}}"
+        ],
+        "radius": "{{round(canvas.height * 0.7)}}",
+        "stops": [
+          {
+            "offset": 0.5,
+            "color": "transparent"
+          },
+          {
+            "offset": 1,
+            "color": "#000000b3"
+          }
+        ]
+      },
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 30,
+              "value": 0
+            },
+            {
+              "frame": 90,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 20,
+      "volume": 0.25
+    }
+  ]
+}

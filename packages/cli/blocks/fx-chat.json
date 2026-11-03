@@ -1,0 +1,368 @@
+{
+  "id": "fx-chat",
+  "name": "Chat bubbles",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 200,
+  "description": "A short chat: typing dots, then a question in a grey bubble, then dots again and an answer in an accent bubble.",
+  "params": {
+    "message1": {
+      "type": "string",
+      "default": "How do I make a 30 second video?"
+    },
+    "message2": {
+      "type": "string",
+      "default": "Describe it. OVE renders it."
+    }
+  },
+  "layers": [
+    {
+      "id": "typing-a-0",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.1) + 0 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.6)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 14,
+      "endFrame": 56,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 6,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "typing-a-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.1) + 1 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.6)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 14,
+      "endFrame": 56,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 9,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "typing-a-2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.1) + 2 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.6)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 14,
+      "endFrame": 56,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 12,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bubble-1",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.58)}}",
+      "width": "{{round(canvas.width * 0.64)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
+      "startFrame": 56,
+      "originX": 0,
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 8,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.7,
+              "easing": "pop"
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "bubble-1-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.64)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "rgba(255,255,255,0.13)",
+          "stroke": "rgba(255,255,255,0.38)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#00000066",
+            "blur": 28,
+            "offsetX": 0,
+            "offsetY": 10
+          }
+        },
+        {
+          "id": "bubble-1-shine",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "y": 3,
+          "width": "{{round(canvas.width * 0.64) - round(min(canvas.width, canvas.height) * 0.028)}}",
+          "height": 3,
+          "radius": 2,
+          "fill": "rgba(255,255,255,0.45)"
+        },
+        {
+          "id": "m1",
+          "type": "text",
+          "content": "{{message1}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.56)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        }
+      ]
+    },
+    {
+      "id": "typing-b-0",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.76) + 0 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 92,
+      "endFrame": 128,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 6,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "typing-b-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.76) + 1 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 92,
+      "endFrame": 128,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 9,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "typing-b-2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.76) + 2 * round(min(canvas.width, canvas.height) * 0.03)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+      "fill": "#ffffff",
+      "startFrame": 92,
+      "endFrame": 128,
+      "animations": [
+        {
+          "property": "opacity",
+          "repeat": 8,
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.3
+            },
+            {
+              "frame": 12,
+              "value": 1
+            },
+            {
+              "frame": 18,
+              "value": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bubble-2",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.3)}}",
+      "y": "{{round(canvas.height * 0.69)}}",
+      "width": "{{round(canvas.width * 0.64)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
+      "startFrame": 128,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 8,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.7,
+              "easing": "pop"
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "b2-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.64)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "{{accent}}",
+          "shadow": {
+            "color": "#00000066",
+            "blur": 24,
+            "offsetX": 0,
+            "offsetY": 8
+          }
+        },
+        {
+          "id": "m2",
+          "type": "text",
+          "content": "{{message2}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "fontWeight": 700,
+          "maxWidth": "{{round(canvas.width * 0.56)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 56,
+      "volume": 0.35
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 128,
+      "volume": 0.35
+    }
+  ]
+}

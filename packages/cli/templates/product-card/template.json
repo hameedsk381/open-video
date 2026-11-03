@@ -1,0 +1,8 @@
+{
+  "name": "Product card",
+  "description": "A square product card with a drawn mug, badge, name and price. Its variables make it a ready batch template.",
+  "tags": ["product", "ecommerce", "1:1", "batch"],
+  "order": 2,
+  "previewFrame": 120,
+  "brief": "An 8-second square product card for a stoneware mug: warm dark background, a simple drawn mug, a NEW badge, the product name, a short caption and the price."
+}

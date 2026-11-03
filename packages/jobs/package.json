@@ -1,0 +1,1 @@
+{"name":"@ove/jobs","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/ai":"workspace:*","@ove/contracts":"workspace:*","@ove/core":"workspace:*","@ove/storage":"workspace:*","bullmq":"5"}}
