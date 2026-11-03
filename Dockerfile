@@ -25,8 +25,8 @@ RUN pnpm install --frozen-lockfile \
 FROM node:22-bookworm-slim AS base
 ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=build /out/open-video-engine-*.tgz /tmp/ove.tgz
-RUN npm install -g --omit=dev /tmp/ove.tgz && rm /tmp/ove.tgz \
+COPY --from=build /out/*.tgz /tmp/app.tgz
+RUN npm install -g --omit=dev /tmp/app.tgz && rm /tmp/app.tgz \
  && mkdir -p /data && chown node:node /data
 WORKDIR /data
 VOLUME /data
@@ -41,7 +41,7 @@ CMD ["serve"]
 
 # Adds the Chromium that Playwright installs (with its system libraries); it draws the frames.
 FROM base AS chromium
-RUN node "$(npm root -g)/open-video-engine/node_modules/playwright/cli.js" install --with-deps chromium \
+RUN node "$(npm root -g)/motionrender/node_modules/playwright/cli.js" install --with-deps chromium \
  && rm -rf /var/lib/apt/lists/* && chmod -R a+rX /ms-playwright
 # Chromium's own sandbox needs privileges a container does not (and should not) have. The container is the sandbox: non-root user, no
 # capabilities, read-only filesystem (see compose.yml), and for render workers no network. So the flag is set here, for these images only.
