@@ -5,7 +5,7 @@ description: Create and edit videos with Open Video Engine (OVE) by writing a JS
 
 # Making videos with Open Video Engine
 
-Short task guides sit beside this one: `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Use the one that matches the request, and come back here for field details.
+Short task guides sit beside this one: `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Use the one that matches the request, and come back here for field details.
 
 An OVE video is one JSON file, `composition.json`. You never write rendering code: you edit data, check it, look at frames, and render. `composition.schema.json` next to it is the authoritative JSON Schema; read it when unsure about a field.
 

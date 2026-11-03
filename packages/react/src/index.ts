@@ -6,6 +6,8 @@ import { Children, createContext, createElement, isValidElement, useContext, typ
 import { interpolate, spring } from '@ove/builder';
 
 export { interpolate, spring };
+export * from './springs';
+export * from './components';
 export type VideoConfig = { id?: string; width: number; height: number; fps: number; durationInFrames: number };
 
 // The contexts live on globalThis so the bundle's render function and your components share them whichever copy of this file each imported.

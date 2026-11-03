@@ -30,22 +30,30 @@ export default v;
 - Layers without an `id` get one (`text-1`); a repeated explicit id is an error. `v.variable`, `v.component`, `v.asset`, `v.export` set the other parts. `use('component', { values }, { x, y })` places a component.
 - Layer constructors: `text rect circle path image clip audio sfx group html lottie shader captions code use`.
 
-## 2. React components (your own files only)
+## 2. React components (see the dedicated `ove-react-video` skill for the full component kit)
 
-For Remotion-style videos: components that are pure functions of the frame.
+For Remotion-style videos: components that are pure functions of the frame with spring physics, glassmorphism, and kinetic typography.
 
 ```tsx
-import { AbsoluteFill, Series, interpolate, spring, useCurrentFrame, useVideoConfig } from 'open-video-engine/react';
+import { AbsoluteFill, Sequence, KineticText, GlassCard, AmbientGlow, Audio, useCurrentFrame, useVideoConfig } from 'open-video-engine/react';
 export const config = { id: 'promo', width: 1920, height: 1080, fps: 30, durationInFrames: 270, background: '#0b1020', props: { title: 'Hello' } };
-export const layers = [{ id: 'whoosh', type: 'audio', src: 'sfx:whoosh', startFrame: 4 }];   // optional plain OVE layers beside it
-export default function Promo({ title }) { const frame = useCurrentFrame(); /* ...return JSX... */ }
+export default function Promo({ title }) {
+  const frame = useCurrentFrame();
+  return (
+    <AbsoluteFill style={{ color: '#fff' }}>
+      <AmbientGlow />
+      <Sequence from={0} durationInFrames={90}>
+        <Audio src="sfx:whoosh" />
+        <GlassCard><KineticText text={title} /></GlassCard>
+      </Sequence>
+    </AbsoluteFill>
+  );
+}
 ```
 
 - `ove build promo.tsx` (needs `react`, `react-dom`, `esbuild` installed) writes `composition.json` and `promo.bundle.js`; render with `--allow-code`. Rebuild after every edit.
-- Available: `useCurrentFrame`, `useVideoConfig` (width, height, fps, durationInFrames), `Sequence` (from, durationInFrames), `Series` with `Series.Sequence`, `AbsoluteFill`, `interpolate`, `spring`, `Easing`, `random(seed)`. Inline styles, `<style>`, SVG and pure React libraries render; `useState`, effects, timers, canvas and iframes do not.
-- Everything must come from the frame and the props. `Math.random()`, `Date.now()` and network calls make frames differ or fail.
-- Pictures: declare each in `config.assets` ({ id, type: 'image', src }) and use `<img src="id">`. Fonts: Inter is built in; add other fonts as font assets.
-- No audio from components: add sound with exported `layers` (`sfx:…`, audio files, captions).
+- Audio and video: `<Audio src="sfx:whoosh" />` and `<Video src="..." />` are automatically scanned and promoted to native audio/video layers.
+- For complete guide, component library, and spring presets, read the **`ove-react-video`** skill.
 
 ## 3. The code layer: your own drawing every frame (trusted files only)
 

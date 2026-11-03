@@ -3,7 +3,7 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { assetProblems } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
-import { AbsoluteFill, Easing, Sequence, Series, interpolate, random, spring, useCurrentFrame, useVideoConfig } from '@ove/react';
+import { AbsoluteFill, AmbientGlow, Badge, DeviceFrame, Easing, GlassCard, KineticText, NumberTicker, ProgressBar, Sequence, Series, interpolate, random, spring, springValue, stagger, useCurrentFrame, useVideoConfig } from '@ove/react';
 
 // The components are pure functions of the frame: render them as the bundle's render function does, at a chosen frame.
 const shared = (globalThis as any).__oveReact as { frame: any; config: any };
@@ -41,6 +41,43 @@ describe('@ove/react', () => {
     expect(Easing.bezier(0.25, 0.1, 0.25, 1)(0.5)).toBeGreaterThan(0.5);
     expect(spring({ frame: 0 })).toBe(0); expect(spring({ frame: 120 })).toBeCloseTo(1, 2);
     expect(random('a')).toBe(random('a')); expect(random('a')).not.toBe(random('b')); expect(random(1)).toBeGreaterThanOrEqual(0); expect(random(1)).toBeLessThan(1);
+  });
+
+  it('calculates spring values and stagger delays cleanly', () => {
+    expect(springValue({ frame: 0 })).toBe(0);
+    expect(springValue({ frame: 120 })).toBeCloseTo(1, 2);
+    expect(springValue({ frame: 0, delay: 10 })).toBe(0);
+    expect(springValue({ frame: 5, delay: 10 })).toBe(0);
+    expect(springValue({ frame: 40, delay: 10, preset: 'snappy' })).toBeGreaterThan(0.5);
+    expect(stagger(0, 4, 10)).toBe(10);
+    expect(stagger(3, 4, 10)).toBe(22);
+  });
+
+  it('renders modern motion components to markup', () => {
+    const card = at(15, createElement(GlassCard, null, 'Content'));
+    expect(card).toContain('backdrop-filter:blur(24px)');
+    expect(card).toContain('Content');
+
+    const kinetic = at(20, createElement(KineticText, { text: 'Hello World' }));
+    expect(kinetic).toContain('Hello');
+    expect(kinetic).toContain('World');
+
+    const ticker = at(30, createElement(NumberTicker, { value: 500, prefix: '$', suffix: '/mo' }));
+    expect(ticker).toContain('$');
+    expect(ticker).toContain('/mo');
+
+    const badge = at(10, createElement(Badge, null, 'Active'));
+    expect(badge).toContain('Active');
+
+    const device = at(15, createElement(DeviceFrame, { title: 'Test Window' }, createElement('div', null, 'Inside')));
+    expect(device).toContain('Test Window');
+    expect(device).toContain('Inside');
+
+    const progress = at(20, createElement(ProgressBar, { value: 0.8 }));
+    expect(progress).toContain('box-shadow');
+
+    const glow = at(10, createElement(AmbientGlow));
+    expect(glow).toContain('radial-gradient');
   });
 
   it('is refused in compositions the AI layer writes or accepts', () => {

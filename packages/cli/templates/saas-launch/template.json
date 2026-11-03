@@ -1,0 +1,15 @@
+{
+  "name": "Modern SaaS Launch (React)",
+  "description": "High-end product launch video written in React: ambient glow orbs, kinetic typography, glassmorphism bento cards, metric tickers, and device frames.",
+  "tags": [
+    "react",
+    "saas",
+    "launch",
+    "16:9",
+    "springs",
+    "kinetic"
+  ],
+  "order": 15,
+  "previewFrame": 100,
+  "brief": "A modern 16:9 tech SaaS launch reel built with React: bold kinetic headline, bento metric card, and a browser device showcase."
+}
