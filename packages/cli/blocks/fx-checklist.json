@@ -1,0 +1,609 @@
+{
+  "id": "fx-checklist",
+  "name": "Animated checklist",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 180,
+  "description": "A light software panel with four tasks that go QUEUED, PROCESSING, COMPLETED one after another, with ticks and an overall progress bar. Sits low in the frame, below a face.",
+  "params": {
+    "heading": {
+      "type": "string",
+      "default": "VIDEO PRODUCTION"
+    },
+    "sub": {
+      "type": "string",
+      "default": "OVE rendering pipeline"
+    },
+    "task1": {
+      "type": "string",
+      "default": "Composition created"
+    },
+    "task2": {
+      "type": "string",
+      "default": "Schema validated"
+    },
+    "task3": {
+      "type": "string",
+      "default": "Frames rendered"
+    },
+    "task4": {
+      "type": "string",
+      "default": "Video exported"
+    }
+  },
+  "layers": [
+    {
+      "id": "panel",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.58)}}",
+      "width": "{{round(canvas.width * 0.88)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.62)}}",
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.64)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 20,
+              "value": "{{round(canvas.height * 0.58)}}"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.94,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "panel-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.88)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.62)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "fill": "rgba(255,255,255,0.93)",
+          "shadow": {
+            "color": "#00000055",
+            "blur": 30,
+            "offsetX": 0,
+            "offsetY": 12
+          }
+        },
+        {
+          "id": "heading",
+          "type": "text",
+          "content": "{{heading}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.036)}}",
+          "color": "#0b1020",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "maxWidth": "{{round(canvas.width * 0.78)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}"
+        },
+        {
+          "id": "sub",
+          "type": "text",
+          "content": "{{sub}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.026)}}",
+          "color": "#59607a",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.08)}}",
+          "maxWidth": "{{round(canvas.width * 0.78)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+        },
+        {
+          "id": "track",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.125)}}",
+          "width": "{{round(canvas.width * 0.8)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.007)}}",
+          "fill": "#dfe4f1"
+        },
+        {
+          "id": "fill",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.125)}}",
+          "width": 1,
+          "height": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.007)}}",
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "width",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1
+                },
+                {
+                  "frame": 30,
+                  "value": 1
+                },
+                {
+                  "frame": 150,
+                  "value": "{{round(canvas.width * 0.8)}}",
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task1",
+          "type": "text",
+          "content": "{{task1}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#0b1020",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.17) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.42)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        },
+        {
+          "id": "ring1",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "transparent",
+          "stroke": "#b8c0d8",
+          "strokeWidth": 3,
+          "endFrame": 60
+        },
+        {
+          "id": "dot1",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "{{accent}}",
+          "startFrame": 60,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tick1",
+          "type": "path",
+          "d": "M5 12.5 L10 17.5 L19 7",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.024 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 3,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "startFrame": 64
+        },
+        {
+          "id": "queued1",
+          "type": "text",
+          "content": "QUEUED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#8b93ad",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 0,
+          "endFrame": 20
+        },
+        {
+          "id": "running1",
+          "type": "text",
+          "content": "PROCESSING",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#d99a00",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 20,
+          "endFrame": 60
+        },
+        {
+          "id": "finished1",
+          "type": "text",
+          "content": "COMPLETED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#1f9d63",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 60
+        },
+        {
+          "id": "task2",
+          "type": "text",
+          "content": "{{task2}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#0b1020",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.17) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.42)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        },
+        {
+          "id": "ring2",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "transparent",
+          "stroke": "#b8c0d8",
+          "strokeWidth": 3,
+          "endFrame": 92
+        },
+        {
+          "id": "dot2",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "{{accent}}",
+          "startFrame": 92,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tick2",
+          "type": "path",
+          "d": "M5 12.5 L10 17.5 L19 7",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.024 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 3,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "startFrame": 96
+        },
+        {
+          "id": "queued2",
+          "type": "text",
+          "content": "QUEUED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#8b93ad",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 0,
+          "endFrame": 52
+        },
+        {
+          "id": "running2",
+          "type": "text",
+          "content": "PROCESSING",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#d99a00",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 52,
+          "endFrame": 92
+        },
+        {
+          "id": "finished2",
+          "type": "text",
+          "content": "COMPLETED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#1f9d63",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 92
+        },
+        {
+          "id": "task3",
+          "type": "text",
+          "content": "{{task3}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#0b1020",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.17) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.42)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        },
+        {
+          "id": "ring3",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "transparent",
+          "stroke": "#b8c0d8",
+          "strokeWidth": 3,
+          "endFrame": 124
+        },
+        {
+          "id": "dot3",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "{{accent}}",
+          "startFrame": 124,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tick3",
+          "type": "path",
+          "d": "M5 12.5 L10 17.5 L19 7",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.024 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 3,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "startFrame": 128
+        },
+        {
+          "id": "queued3",
+          "type": "text",
+          "content": "QUEUED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#8b93ad",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 0,
+          "endFrame": 84
+        },
+        {
+          "id": "running3",
+          "type": "text",
+          "content": "PROCESSING",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#d99a00",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 84,
+          "endFrame": 124
+        },
+        {
+          "id": "finished3",
+          "type": "text",
+          "content": "COMPLETED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#1f9d63",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 124
+        },
+        {
+          "id": "task4",
+          "type": "text",
+          "content": "{{task4}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#0b1020",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.17) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.42)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+        },
+        {
+          "id": "ring4",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "transparent",
+          "stroke": "#b8c0d8",
+          "strokeWidth": 3,
+          "endFrame": 156
+        },
+        {
+          "id": "dot4",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.19) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "fill": "{{accent}}",
+          "startFrame": 156,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tick4",
+          "type": "path",
+          "d": "M5 12.5 L10 17.5 L19 7",
+          "width": 24,
+          "height": 24,
+          "scale": "{{min(canvas.width, canvas.height) * 0.024 / 24}}",
+          "stroke": "#ffffff",
+          "strokeWidth": 3,
+          "lineCap": "round",
+          "lineJoin": "round",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.058)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "startFrame": 160
+        },
+        {
+          "id": "queued4",
+          "type": "text",
+          "content": "QUEUED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#8b93ad",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 0,
+          "endFrame": 116
+        },
+        {
+          "id": "running4",
+          "type": "text",
+          "content": "PROCESSING",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#d99a00",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 116,
+          "endFrame": 156
+        },
+        {
+          "id": "finished4",
+          "type": "text",
+          "content": "COMPLETED",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "color": "#1f9d63",
+          "x": "{{round(canvas.width * 0.55)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fontWeight": 800,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
+          "startFrame": 156
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 60,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 92,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-3",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 124,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-4",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 156,
+      "volume": 0.3
+    }
+  ]
+}

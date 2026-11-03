@@ -10,6 +10,8 @@ export async function loadCompositionFile(path: string, values: Record<string, u
 export type RenderProgress = { frame: number; rendered: number; total: number };
 export type RenderMediaOptions = {
   output: string; baseDir?: string;
+  /** Run the composition's code layers (JavaScript). Only for compositions you trust. */
+  allowCode?: boolean;
   /** Overrides the composition's export settings. When format is left out it follows the output's extension, then export.format. */
   format?: OutputFormat; codec?: 'h264' | 'h265'; transparent?: boolean;
   /** Overrides export.crf / bitrate / audioBitrate / scale / loudness. */ crf?: number; bitrate?: string; audioBitrate?: string; scale?: number; loudness?: number;
@@ -31,14 +33,14 @@ export async function renderMedia(composition: Composition, options: RenderMedia
   const target={ ...composition, export: settings }; const [first, last]=checkRange(target, options.frameRange), total=last-first+1, fps=target.fps;
   const throwIfAborted=() => { if (options.signal?.aborted) throw options.signal.reason ?? new Error('Render cancelled'); }; throwIfAborted();
   await mkdir(format === 'png' ? output : dirname(output), { recursive: true });
-  const renderer=await createRenderer(target, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: settings.scale, motionBlur: options.motionBlur });
+  const renderer=await createRenderer(target, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: settings.scale, motionBlur: options.motionBlur, allowCode: options.allowCode });
   const audio=format === 'png' || format === 'gif' || options.audio === false ? undefined : await masterAudio(target, baseDir).then(mix => mix && { ...mix, durationSeconds: total/fps, offsetSeconds: first/fps });
   const encoder=format === 'png' ? undefined : createEncoder(fps, output, audio, { format, codec: settings.codec, preset: options.preset ?? defaultPreset, transparent: settings.transparent, crf: settings.crf, bitrate: settings.bitrate, audioBitrate: settings.audioBitrate });
   try { let frame=first; for await (const png of renderFrames(renderer, first, last+1)) { throwIfAborted(); if (encoder) await encoder.write(png); else await writeFile(join(output, `frame-${String(frame).padStart(6, '0')}.png`), png); frame++; options.onProgress?.({ frame: frame-1, rendered: frame-first, total }); }
     await encoder?.finish(); } catch (error) { encoder?.abort(); throw error; } finally { await renderer.close(); }
   return { output, format, frames: total, durationSeconds: format === 'png' ? total/fps : Number(await probe(output)) || total/fps }; }
-export type RenderStillOptions = { frame?: number; output?: string; baseDir?: string; transparent?: boolean };
+export type RenderStillOptions = { frame?: number; output?: string; baseDir?: string; transparent?: boolean; allowCode?: boolean };
 // Renders one frame as PNG; writes it when `output` is given and always returns the bytes.
 export async function renderStill(composition: Composition, options: RenderStillOptions = {}): Promise<Buffer> { const frame=options.frame ?? 0; checkRange(composition, [frame, frame]);
   const target=options.transparent === undefined ? composition : { ...composition, export: { ...composition.export, transparent: options.transparent } };
-  const renderer=await createRenderer(target, { baseDir: options.baseDir ?? process.cwd() }); try { const png=await renderer.renderFrame(frame); if (options.output) { await mkdir(dirname(resolve(options.output)), { recursive: true }); await writeFile(resolve(options.output), png); } return png; } finally { await renderer.close(); } }
+  const renderer=await createRenderer(target, { baseDir: options.baseDir ?? process.cwd(), allowCode: options.allowCode }); try { const png=await renderer.renderFrame(frame); if (options.output) { await mkdir(dirname(resolve(options.output)), { recursive: true }); await writeFile(resolve(options.output), png); } return png; } finally { await renderer.close(); } }

@@ -17,7 +17,7 @@ npx ove dev my-video/composition.json
 npx ove render my-video/composition.json --output out.mp4
 ```
 
-`npx ove` with no arguments lists every command: `init`, `schema`, `doctor` (checks FFmpeg, encoders and the browser), `browser install`, `dev` (preview with live playback and sound, plus a Studio for editing layer timing and properties), `validate`, `inspect`, `still`, `render` (formats, codecs, transparency, frame ranges, batch rendering from a data file) and `worker` (distributed rendering: `ove render --workers URL,URL --token T`).
+`npx ove` with no arguments lists every command: `init`, `schema`, `doctor` (checks FFmpeg, encoders and the browser), `browser install`, `dev` (preview with live playback and sound, plus a Studio for editing layer timing and properties), `validate`, `inspect`, `still`, `render` (formats, codecs, transparency, frame ranges, batch rendering from a data file), `worker` (distributed rendering: `ove render --workers URL,URL --token T`) and `ai` (prompt-to-composition, narration, word-timed captions for existing audio, images and prompt-to-batch; provider: Groq or an offline mock). `ove ai studio` opens the same AI commands as a local page with a brief form, live progress and a rendered preview.
 
 ## Node API
 

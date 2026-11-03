@@ -1,0 +1,743 @@
+{
+  "id": "fx-neon-outline",
+  "name": "Neon outline",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "A glowing neon outline around the speaker, with a band of light scanning down the figure. Needs a matte of the speaker.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "Your video (asset id or relative path)"
+    },
+    "matte": {
+      "type": "string",
+      "default": "",
+      "description": "A matte video or picture of the speaker: white where the speaker is. Make it with rembg, Robust Video Matting or an editor."
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "dim",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#000000",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 20,
+              "value": 0.35
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "halo",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "blur": 34,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 30,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "halo-0",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.02200)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-0",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-1",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.01905)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.01100)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-1",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-2",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.01100)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.01905)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-2",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-3",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.02200)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-3",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-4",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.01100)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.01905)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-4",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-5",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.01905)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.01100)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-5",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-6",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.02200)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-6",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-7",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.01905)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.01100)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-7",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-8",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.01100)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.01905)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-8",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-9",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00000)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.02200)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-9",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-10",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.01100)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.01905)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-10",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "halo-11",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.01905)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.01100)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "halo-fill-11",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "edge",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "blur": 4,
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 30,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "edge-0",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00700)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-0",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-1",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00566)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00411)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-1",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-2",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00216)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00666)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-2",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-3",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00216)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00666)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-3",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-4",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00566)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00411)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-4",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-5",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00700)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.00000)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-5",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-6",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00566)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.00411)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-6",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-7",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * -0.00216)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.00666)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-7",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-8",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00216)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.00666)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-8",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        },
+        {
+          "id": "edge-9",
+          "type": "group",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.00566)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * -0.00411)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "children": [
+            {
+              "id": "edge-fill-9",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{canvas.width}}",
+              "height": "{{canvas.height}}",
+              "fill": "{{accent2}}",
+              "matte": {
+                "src": "{{matte}}",
+                "mode": "luma"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "subject",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "matte": {
+        "src": "{{matte}}",
+        "mode": "luma"
+      }
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "scan",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 20,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "scan-band",
+          "type": "rect",
+          "x": 0,
+          "y": "{{-round(canvas.height * 0.12)}}",
+          "width": "{{canvas.width}}",
+          "height": "{{round(canvas.height * 0.1)}}",
+          "fill": {
+            "type": "linear",
+            "from": [
+              0,
+              0
+            ],
+            "to": [
+              0,
+              "{{round(canvas.height * 0.1)}}"
+            ],
+            "stops": [
+              {
+                "offset": 0,
+                "color": "transparent"
+              },
+              {
+                "offset": 0.5,
+                "color": "#ffffff"
+              },
+              {
+                "offset": 1,
+                "color": "transparent"
+              }
+            ]
+          },
+          "matte": {
+            "src": "{{matte}}",
+            "mode": "luma"
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 20,
+                  "value": "{{-round(canvas.height * 0.12)}}"
+                },
+                {
+                  "frame": 100,
+                  "value": "{{round(canvas.height * 1)}}",
+                  "easing": "glide"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 0,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 20,
+      "volume": 0.35
+    }
+  ]
+}

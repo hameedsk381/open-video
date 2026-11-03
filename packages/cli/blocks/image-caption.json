@@ -1,0 +1,248 @@
+{
+  "id": "image-caption",
+  "name": "Image with caption",
+  "category": "visual",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "A full-frame picture with a caption over a soft shade at the bottom. Falls back to a colour wash without a picture.",
+  "params": {
+    "image": {
+      "type": "string",
+      "default": "",
+      "description": "A picture (asset id or relative path)"
+    },
+    "kicker": {
+      "type": "string",
+      "default": "THIS WEEK"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Roasted Monday, at your door by Wednesday"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.3)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.2,
+      "blur": 120,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 150,
+              "value": 1.1,
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.5)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.4)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glow2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.12,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.7)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.6000000000000001)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{image}}",
+      "id": "photo",
+      "type": "image",
+      "src": "{{image}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "shade",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.35)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.65)}}",
+      "fill": {
+        "type": "linear",
+        "from": [
+          0,
+          "{{round(canvas.height * 0.35)}}"
+        ],
+        "to": [
+          0,
+          "{{canvas.height}}"
+        ],
+        "stops": [
+          {
+            "offset": 0,
+            "color": "transparent"
+          },
+          {
+            "offset": 1,
+            "color": "#000000d0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "caption",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.08)}}",
+      "y": "{{round(canvas.height * 0.35)}}",
+      "width": "{{round(canvas.width * 0.84)}}",
+      "height": "{{round(canvas.height * 0.57)}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+        "align": "start",
+        "justify": "end"
+      },
+      "children": [
+        {
+          "id": "kicker",
+          "type": "text",
+          "content": "{{kicker}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "color": "{{accent}}",
+          "fontWeight": 700,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
+          "startFrame": 0,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 20,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "headline",
+          "type": "text",
+          "content": "{{headline}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+          "color": "#ffffff",
+          "fontWeight": "{{headWeight}}",
+          "lineHeight": 1.08,
+          "maxWidth": "{{round(canvas.width * 0.84)}}",
+          "maxLines": 3,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "split": {
+            "by": "words",
+            "stagger": 4,
+            "preset": "rise",
+            "duration": 18
+          },
+          "startFrame": 8
+        }
+      ]
+    },
+    {
+      "id": "sfx-in",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 4,
+      "volume": 0.35
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 120,
+              "value": 1.08,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

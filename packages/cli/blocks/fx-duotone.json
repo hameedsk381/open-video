@@ -1,0 +1,95 @@
+{
+  "id": "fx-duotone",
+  "name": "Duotone poster",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage as a two-colour poster: shadows in the theme background colour, highlights in the accent, with a bold title.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    },
+    "title": {
+      "type": "string",
+      "default": "BUILD THE FUTURE"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "filter": "grayscale(1) contrast(1.25) brightness(1.05)"
+    },
+    {
+      "id": "tint",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{accent}}",
+      "blendMode": "multiply"
+    },
+    {
+      "id": "lift",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}",
+      "blendMode": "lighten"
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "content": "{{title}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+      "color": "#ffffff",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.62)}}",
+      "fontWeight": 900,
+      "lineHeight": 0.98,
+      "maxWidth": "{{round(canvas.width * 0.88)}}",
+      "maxLines": 3,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+      "letterSpacing": "{{-round(min(canvas.width, canvas.height) * 0.004)}}",
+      "split": {
+        "by": "words",
+        "stagger": 5,
+        "preset": "rise",
+        "duration": 18
+      },
+      "startFrame": 10
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 10,
+      "volume": 0.4
+    }
+  ]
+}

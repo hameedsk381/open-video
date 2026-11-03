@@ -1,0 +1,73 @@
+// Write a video as React components. A component is a pure function of the frame: useCurrentFrame() gives the frame, useVideoConfig() the
+// size and length, and what it renders is drawn for that frame. `ove build video.tsx` bundles the component into a `react` layer, which
+// the renderer draws every frame (react-dom/server markup, drawn like an html layer), so the output stays frame-exact and goes through the
+// same encoder, audio and review as any other composition. Effects, state and timers do not run: derive everything from the frame.
+import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { interpolate, spring } from '@ove/builder';
+
+export { interpolate, spring };
+export type VideoConfig = { id?: string; width: number; height: number; fps: number; durationInFrames: number };
+
+// The contexts live on globalThis so the bundle's render function and your components share them whichever copy of this file each imported.
+const shared = ((globalThis as any).__oveReact ??= { frame: createContext<number | null>(null), config: createContext<VideoConfig | null>(null) }) as { frame: Context<number | null>; config: Context<VideoConfig | null> };
+
+/** The frame being drawn, counted from 0 (inside a Sequence: from the start of the sequence). */
+export function useCurrentFrame(): number {
+  const frame = useContext(shared.frame);
+  if (frame === null) throw new Error('useCurrentFrame() only works inside a component rendered by OVE (ove build)');
+  return frame;
+}
+/** The video's width, height, fps and length in frames. */
+export function useVideoConfig(): VideoConfig {
+  const config = useContext(shared.config);
+  if (!config) throw new Error('useVideoConfig() only works inside a component rendered by OVE (ove build)');
+  return config;
+}
+
+/** A box that fills the video (position: absolute, all four sides 0), for stacking layers. */
+export function AbsoluteFill({ style, children, ...rest }: HTMLAttributes<HTMLDivElement> & { style?: CSSProperties }): ReactElement {
+  return createElement('div', { style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', ...style }, ...rest }, children);
+}
+
+/** Shows its children from frame `from` for `durationInFrames`, with the frame counted from the start of the sequence. */
+export function Sequence({ from = 0, durationInFrames = Infinity, layout = 'absolute-fill', children }: { from?: number; durationInFrames?: number; layout?: 'absolute-fill' | 'none'; name?: string; children?: ReactNode }): ReactElement | null {
+  const frame = useCurrentFrame();
+  if (frame < from || frame >= from + durationInFrames) return null;
+  const inner = createElement(shared.frame.Provider, { value: frame - from }, children);
+  return layout === 'none' ? inner : createElement(AbsoluteFill, null, inner);
+}
+
+/** Plays its Series.Sequence children one after another. */
+export function Series({ children }: { children?: ReactNode }): ReactElement {
+  let start = 0;
+  const parts = Children.toArray(children).map((child, i) => {
+    if (!isValidElement(child)) return child;
+    const { durationInFrames, offset = 0, children: inner } = child.props as { durationInFrames: number; offset?: number; children?: ReactNode };
+    if (!(durationInFrames > 0)) throw new Error('Every Series.Sequence needs a durationInFrames');
+    start += offset;
+    const element = createElement(Sequence, { key: i, from: start, durationInFrames }, inner);
+    start += durationInFrames;
+    return element;
+  });
+  return createElement('div', { style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } }, ...parts);
+}
+Series.Sequence = function SeriesSequence(_props: { durationInFrames: number; offset?: number; children?: ReactNode }): ReactElement | null { return null; };
+
+/** Easing functions for interpolate: `interpolate(frame, [0, 30], [0, 1], { easing: Easing.out(Easing.cubic) })`. */
+export const Easing = {
+  linear: (t: number) => t, quad: (t: number) => t * t, cubic: (t: number) => t * t * t, sin: (t: number) => 1 - Math.cos((t * Math.PI) / 2),
+  in: (f: (t: number) => number) => f, out: (f: (t: number) => number) => (t: number) => 1 - f(1 - t),
+  inOut: (f: (t: number) => number) => (t: number) => t < 0.5 ? f(t * 2) / 2 : 1 - f((1 - t) * 2) / 2,
+  bezier(x1: number, y1: number, x2: number, y2: number) {
+    const at = (a: number, b: number, t: number) => 3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t ** 2 + t ** 3;
+    return (x: number) => { if (x <= 0) return 0; if (x >= 1) return 1; let lo = 0, hi = 1, t = x; for (let i = 0; i < 40; i++) { const value = at(x1, x2, t); if (Math.abs(value - x) < 1e-6) break; if (value < x) lo = t; else hi = t; t = (lo + hi) / 2; } return at(y1, y2, t); };
+  },
+};
+
+/** A number from 0 up to 1 that is the same for the same seed on every render (Math.random is not). */
+export function random(seed: string | number): number {
+  let h = 1779033703 ^ String(seed).length;
+  for (const ch of String(seed)) { h = Math.imul(h ^ ch.charCodeAt(0), 3432918353); h = (h << 13) | (h >>> 19); }
+  h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}

@@ -44,7 +44,15 @@ export const blendModes = ['normal','multiply','screen','overlay','darken','ligh
 export const sfxNames = ['click','tick','pop','whoosh','thump','ding','riser'] as const;
 // A source naming a built-in sound rather than a file: never resolved against a folder or made absolute.
 export const isBuiltinSound = (src: string) => src.startsWith('sfx:'); export const builtinSoundName = (src: string) => src.slice(4);
-const baseLayer = z.object({ id: z.string().min(1), type: z.enum(['text','image','video','audio','captions','rect','circle','path','group','html','lottie','shader']),
+export const gradeLooks = ['warm', 'cool', 'cinematic', 'teal-orange', 'noir', 'vivid', 'faded'] as const;
+export const gradeSchema = z.object({ look: z.enum(gradeLooks).optional().describe('A starting look; the other numbers are added to it'),
+  exposure: z.number().min(-3).max(3).optional().describe('Brightness in stops: 1 doubles the light'), contrast: z.number().min(-1).max(1).optional(), saturation: z.number().min(-1).max(1).optional().describe('-1 is black and white'),
+  temperature: z.number().min(-1).max(1).optional().describe('Negative cooler (blue), positive warmer (orange)'), tint: z.number().min(-1).max(1).optional().describe('Negative greener, positive more magenta'),
+  shadows: z.number().min(-1).max(1).optional().describe('Lift (positive) or crush (negative) the dark tones'), highlights: z.number().min(-1).max(1).optional().describe('Boost (positive) or pull back (negative) the bright tones'), fade: z.number().min(0).max(1).optional().describe('Raise the blacks for a faded film look') })
+  .describe('Colour grading: exposure, contrast, saturation, white balance, shadows and highlights, or a look. Not animatable; cross-fade two graded layers to change it over time.');
+const baseLayer = z.object({ id: z.string().min(1), type: z.enum(['text','image','video','audio','captions','rect','circle','path','group','html','lottie','shader','code','react']),
+  grade: gradeSchema.optional().describe('Colour grading for this layer and everything inside it.'),
+  matte: z.object({ src: z.string().min(1).describe('A video or picture, as an asset id or path: made with any tool (rembg, Robust Video Matting, a video editor)'), mode: z.enum(['luma', 'alpha']).default('luma').describe('luma: white keeps the layer, black hides it; alpha: the matte\'s own transparency'), invert: z.boolean().default(false).describe('Keep what the matte hides'), type: z.enum(['video', 'image']).optional().describe('Left out, picture file extensions mean image, anything else video'), trimStart: z.number().int().nonnegative().optional().describe('Frames of a video matte to skip; a video layer\'s matte follows its own trim and speed'), playbackRate: z.number().positive().max(16).optional().describe('Speed of a video matte; a tiny value holds one frame') }).optional().describe('Show this layer only where a matte says so (a cut-out of the speaker, a shape, a gradient). Becomes a masking group when the composition loads.'),
   shadow: z.object({ color, blur: z.number().nonnegative().default(0), offsetX: z.number().default(0), offsetY: z.number().default(0) }).optional().describe('Drop shadow; offsets are in canvas pixels and ignore the layer\'s scale and rotation'),
   blur: z.number().nonnegative().default(0).describe('Gaussian blur in pixels'), filter: cssFilter.optional(), blendMode: z.enum(blendModes).default('normal').describe('How the layer mixes with what is drawn below it'), startFrame: z.number().int().nonnegative().default(0), endFrame: z.number().int().positive().optional(), x: z.number().default(0), y: z.number().default(0), width: z.number().positive().optional(), height: z.number().positive().optional(), opacity: z.number().min(0).max(1).default(1), rotation: z.number().default(0), scale: z.number().positive().default(1), originX: origin, originY: origin, zIndex: z.number().int().default(0), visible: z.boolean().default(true), fixed: z.boolean().default(false).describe('Stays in place when the scene camera moves: captions, logos, overlays (top-level scene layers only)'), animations: z.array(animation).default([]) });
 // Scene transitions. `in` effects reveal the scene over its first durationFrames; `out` effects hide it over its last. Overlap two scenes
@@ -76,6 +84,19 @@ export const layerSchema: z.ZodType<any> = z.discriminatedUnion('type', [
   baseLayer.extend({ type: z.literal('lottie'), src: z.string().min(1).describe('A lottie asset id, or a .json file relative to the composition'), width: z.number().positive(), height: z.number().positive(),
     fit: z.enum(['contain','cover','fill']).default('contain'), trimStart: z.number().nonnegative().default(0).describe('Frames of the animation to skip, at the composition fps'),
     playbackRate: z.number().positive().max(16).default(1), loop: z.boolean().default(false).describe('Start again when it ends; otherwise it holds its last frame') }),
+  // A React component drawn every frame: the bundle that `ove build video.tsx` writes renders the component for this frame to markup
+  // (react-dom/server), which is drawn like an html layer. Like code layers it runs the author's JavaScript, so it needs --allow-code.
+  baseLayer.extend({ type: z.literal('react'), src: z.string().min(1).describe('The bundle ove build wrote, relative to the composition'), width: z.number().positive(), height: z.number().positive(),
+    durationInFrames: z.number().int().positive().describe('The length useVideoConfig() reports to the component'), props: z.record(z.string(), z.unknown()).default({}).describe('Handed to the component as props'),
+    resolution: z.number().min(0.5).max(4).default(1).describe('Raster detail: 2 keeps it sharp when scaled up or under a camera zoom (slower)') }),
+  // JavaScript drawn onto a width × height canvas every frame: function draw(ctx, { frame, t, fps, width, height, props, api }). It runs
+  // in the page that renders the video, so unlike every other layer it can do anything JavaScript can: compositions with code layers only
+  // render when the caller says it trusts them (--allow-code), and never come from the AI layer or a pasted file. It must be a pure function
+  // of its arguments (use api.random(seed), not Math.random) or frames differ between renders.
+  baseLayer.extend({ type: z.literal('code'), code: z.string().min(1).optional().describe('The JavaScript, inline: defines function draw(ctx, args)'), src: z.string().min(1).optional().describe('A .js file with the same, relative to the composition'),
+    width: z.number().positive(), height: z.number().positive(), props: z.record(z.string(), z.unknown()).default({}).describe('Values handed to draw as args.props (they can use {{variables}})'),
+    resolution: z.number().min(0.5).max(4).default(1).describe('Raster detail: 2 keeps it sharp when scaled up or under a camera zoom (slower)') })
+    .superRefine((l, ctx) => { if ((l.code === undefined) === (l.src === undefined)) ctx.addIssue({ code: 'custom', path: ['code'], message: 'A code layer needs exactly one of "code" (inline) or "src" (a file)' }); }),
   // A GLSL fragment shader filling a width × height box: time, resolution and frame are provided (and Shadertoy's iTime, iResolution,
   // iFrame for code written as mainImage), plus each var as a uniform of the same name without the dashes (numbers as float,
   // colours as vec4). It runs on the GPU with no access to anything else.
@@ -96,7 +117,7 @@ export const layerSchema: z.ZodType<any> = z.discriminatedUnion('type', [
   baseLayer.extend({ type: z.literal('circle'), fill: paint.default('#000000'), ...strokeFields }),
   baseLayer.extend({ type: z.literal('path'), d: z.string().min(1).describe('SVG path data, in pixels relative to x, y, e.g. "M0 0 L200 0 L100 150 Z"'), fill: paint.optional().describe('Leave out for an outline-only path'), fillRule: z.enum(['nonzero','evenodd']).default('nonzero'), ...strokeFields,
     trimStart: z.number().min(0).max(1).default(0).describe('Fraction of the outline hidden at its start'), trimEnd: z.number().min(0).max(1).default(1).describe('Fraction of the outline drawn up to; animate 0 → 1 to draw the line on') }),
-  baseLayer.extend({ type: z.literal('group'), children: z.array(z.lazy(() => layerSchema)).default([]), clipPath: z.string().min(1).optional().describe('SVG path data in the group\'s pixels; children are only visible inside it'),
+  baseLayer.extend({ type: z.literal('group'), children: z.array(z.lazy(() => layerSchema)).default([]), masked: z.object({ mode: z.enum(['luma', 'alpha']).default('luma'), invert: z.boolean().default(false) }).optional().describe('The group\'s last child is a matte: the other children show only where it is white (luma) or opaque (alpha). Written for you by the matte property.'), clipPath: z.string().min(1).optional().describe('SVG path data in the group\'s pixels; children are only visible inside it'),
     layout: z.object({ direction: z.enum(['row','column']).default('row'), gap: z.number().nonnegative().default(0), padding: z.number().nonnegative().default(0),
       align: z.enum(['start','center','end']).default('start').describe('Across the direction: top, middle or bottom of a row; left, centre or right of a column'),
       justify: z.enum(['start','center','end','space-between']).default('start').describe('Along the direction, within the group\'s width (row) or height (column) when set') }).optional()
@@ -109,7 +130,7 @@ export const layerSchema: z.ZodType<any> = z.discriminatedUnion('type', [
 // other way) and shake, a deterministic wobble of that many pixels for impacts. All of them animate like layer properties.
 export const cameraSchema = z.object({ x: z.number().optional(), y: z.number().optional(), zoom: z.number().positive().default(1), rotation: z.number().default(0), shake: z.number().nonnegative().default(0).describe('Wobble in pixels, the same in every render'),
   animations: z.array(z.object({ property: z.enum(['x','y','zoom','rotation','shake']), keyframes: z.array(z.object({ frame: z.number().int().nonnegative(), value: z.number(), easing: easingSchema.optional() })).min(1), repeat: z.number().int().nonnegative().optional(), reverse: z.boolean().optional() })).default([]) });
-export const sceneSchema = z.object({ id: z.string().min(1), name: z.string().min(1), startFrame: z.number().int().nonnegative().default(0), overlap: z.number().int().nonnegative().optional().describe('Frames this scene overlaps the previous one when startFrame is left out'), durationFrames: z.number().int().positive(), metadata: z.record(z.string(), z.unknown()).default({}), transitionIn: transitionSchema.optional(), transitionOut: transitionSchema.optional(), camera: cameraSchema.optional().describe('Moves, zooms and turns the view of the whole scene; layers with fixed: true stay put'), layers: z.array(layerSchema).default([]), assetIds: z.array(z.string()).default([]) });
+export const sceneSchema = z.object({ grade: gradeSchema.optional().describe('Colour grading for the whole scene (fixed layers excluded).'), id: z.string().min(1), name: z.string().min(1), startFrame: z.number().int().nonnegative().default(0), overlap: z.number().int().nonnegative().optional().describe('Frames this scene overlaps the previous one when startFrame is left out'), durationFrames: z.number().int().positive(), metadata: z.record(z.string(), z.unknown()).default({}), transitionIn: transitionSchema.optional(), transitionOut: transitionSchema.optional(), camera: cameraSchema.optional().describe('Moves, zooms and turns the view of the whole scene; layers with fixed: true stay put'), layers: z.array(layerSchema).default([]), assetIds: z.array(z.string()).default([]) });
 // Font assets register a font file under `family` (default: the asset id) for that weight and style; text layers then use it by name.
 export const assetSchema = z.object({ id: z.string().min(1), type: z.enum(['image','video','audio','font','svg','captions','lottie']), src: z.string().min(1), family: z.string().min(1).optional().describe('Font assets: the family name text layers use'), weight: fontWeight.optional().describe('Font assets: the weight this file provides (default 400)'), style: fontStyle.optional().describe('Font assets: normal or italic (default normal)'), metadata: z.record(z.string(), z.unknown()).default({}) });
 // The beat grid: with a top-level tempo, expressions can place things on the music. beat(n) is the frame of beat n (0 = the first beat,
@@ -122,11 +143,38 @@ export function beatFunctions(raw: any): Record<string, (...args: unknown[]) => 
   return { beat: n => at(number(n, 'beat')), bar: (n, b=0) => at(number(n, 'bar')*beatsPerBar + number(b, 'bar')), beats: n => Math.round(number(n, 'beats')*60/bpm*fps) }; }
 export const compositionSchema = z.object({ $schema: z.string().optional(), version: z.literal('1.0'), id: z.string().min(1), name: z.string().min(1), width: z.number().int().positive(), height: z.number().int().positive(), fps: z.number().int().positive().max(240), durationFrames: z.union([z.number().int().positive(), z.literal('auto')]).describe('"auto" ends the video when its last scene ends').transform((v, ctx) => { if (v === 'auto') { ctx.addIssue({ code: 'custom', message: '"auto" is resolved by loadComposition; parseComposition needs a number' }); return z.NEVER; } return v; }), variables: variablesSchema.default({}).describe('Template inputs; use them as {{name}} in any string'), components: componentsSchema.default({}).describe('Reusable layer sets, placed with { "use": name, "with": { … } }'), assets: z.array(assetSchema).default([]), scenes: z.array(sceneSchema).min(1), background: paint.default('#101827').describe('Colour or gradient behind all layers (ignored when export.transparent is true)'), motionBlur: z.object({ samples: z.number().int().min(2).max(32).default(8).describe('Sub-frames averaged per frame: more is smoother and slower'), shutter: z.number().gt(0).max(360).default(180).describe('Shutter angle in degrees: 180 blurs over half a frame, the film look; 360 over a whole frame') }).optional().describe('Blur fast motion by averaging sub-frames (renders only; the live preview shows it sharp). Each frame takes samples times as long to draw'), tempo: tempoSchema.optional().describe('The music\'s tempo, for beat(n), bar(n) and beats(n) in expressions'), grain: z.number().min(0).max(1).default(0).describe('Film grain over the whole frame, such as 0.06: it hides banding in dark gradients. Different each frame, the same in every render; not applied to transparent output'), export: exportSchema.default({ format: 'mp4', codec: 'h264', transparent: false, scale: 1, audioVolume: 1 }) }).superRefine((value, ctx) => { for (const scene of value.scenes) if (scene.startFrame + scene.durationFrames > value.durationFrames) ctx.addIssue({ code: 'custom', path: ['scenes'], message: `Scene ${scene.id} exceeds composition duration` }); });
 export type Composition = z.infer<typeof compositionSchema>; export type Layer = z.infer<typeof layerSchema>; export type Animation = z.infer<typeof animation>;
-export function parseComposition(input: unknown): Composition { return compositionSchema.parse(input); }
+/** A scene with a `grade` puts all its layers (except fixed ones) in a graded group. */
+export function expandSceneGrades(input: unknown): unknown {
+  const raw = input as any; if (!raw || typeof raw !== 'object' || !Array.isArray(raw.scenes)) return input;
+  return { ...raw, scenes: raw.scenes.map((scene: any) => {
+    if (!scene || typeof scene !== 'object' || !scene.grade || !Array.isArray(scene.layers)) return scene;
+    const { grade, ...rest } = scene, still = scene.layers.filter((layer: any) => layer?.fixed), moving = scene.layers.filter((layer: any) => !layer?.fixed);
+    return { ...rest, layers: [{ id: `${scene.id}-graded`, type: 'group', x: 0, y: 0, grade, children: moving }, ...still] };
+  }) };
+}
+const pictureFile = /\.(png|jpe?g|webp|gif|bmp)$/i;
+/** Turns every layer with a `matte` into a masking group: the layer, then the matte as a video or picture layer, with the group masking by its last child. */
+export function expandMattes(input: unknown): unknown {
+  const raw = input as any; if (!raw || typeof raw !== 'object' || !Array.isArray(raw.scenes)) return input;
+  const wrap = (layer: any): any => {
+    if (!layer || typeof layer !== 'object') return layer;
+    const next = Array.isArray(layer.children) ? { ...layer, children: layer.children.map(wrap) } : layer;
+    const matte = next.matte; if (!matte || typeof matte !== 'object' || typeof matte.src !== 'string') return next;
+    const { matte: _matte, zIndex, fixed, ...inner } = next;
+    const image = (matte.type ?? (pictureFile.test(matte.src) ? 'image' : 'video')) === 'image', follows = inner.type === 'video';
+    const matteLayer = { id: `${inner.id}-matte`, type: image ? 'image' : 'video', src: matte.src, x: 0, y: 0, width: raw.width, height: raw.height, objectFit: 'cover', startFrame: inner.startFrame ?? 0, ...(inner.endFrame !== undefined ? { endFrame: inner.endFrame } : {}),
+      ...(image ? {} : { trimStart: matte.trimStart ?? (follows ? inner.trimStart ?? 0 : 0), playbackRate: matte.playbackRate ?? (follows ? inner.playbackRate ?? 1 : 1), loop: follows ? !!inner.loop : false, muted: true, volume: 0 }) };
+    return { id: `${inner.id}-masked`, type: 'group', x: 0, y: 0, ...(zIndex !== undefined ? { zIndex } : {}), ...(fixed ? { fixed } : {}), masked: { mode: matte.mode ?? 'luma', invert: !!matte.invert }, children: [inner, matteLayer] };
+  };
+  return { ...raw, scenes: raw.scenes.map((scene: any) => scene && Array.isArray(scene.layers) ? { ...scene, layers: scene.layers.map(wrap) } : scene) };
+}
+export function parseComposition(input: unknown): Composition { return compositionSchema.parse(expandMattes(expandSceneGrades(input))); }
 // Measured media, by asset id, for expressions such as {{media['vo-intro'].frames}}: the length, and the stretches of sound between
 // pauses (segments), in seconds and in frames at the composition's fps. Measured in Node by @ove/core (measureMedia).
 export type MediaSegment = { start: number; end: number; startFrame: number; endFrame: number };
 export type MediaInfo = { duration: number; frames: number; segments: MediaSegment[]; soundEnd: number; soundEndFrames: number };
+// Expressions can read the canvas (canvas.width, canvas.height, canvas.fps) once those are plain numbers, so reusable layers can fit any size.
+const canvasNames = (input: unknown) => { const raw = (input ?? {}) as Record<string, unknown>; const [width, height, fps] = [raw.width, raw.height, raw.fps]; return typeof width === 'number' && typeof height === 'number' ? { canvas: { width, height, fps: typeof fps === 'number' ? fps : 30 } } : {}; };
 export type LoadOptions = { media?: Record<string, MediaInfo> };
 // Places scenes that leave out startFrame after the previous one (minus their overlap) and works out durationFrames: "auto".
 export function sequenceScenes(expanded: unknown): unknown { if (!expanded || typeof expanded !== 'object' || !Array.isArray((expanded as any).scenes)) return expanded; const raw = expanded as any; let end = 0, latest = 0;
@@ -137,7 +185,7 @@ export function sequenceScenes(expanded: unknown): unknown { if (!expanded || ty
 // Resolves {{variables}} in a raw composition with the given values (strings from a command line are converted to the declared types),
 // places scenes, then parses it. `media` makes measured media available to expressions.
 export function loadComposition(input: unknown, values: Record<string, unknown> = {}, options: LoadOptions = {}): Composition { const declarations=variablesSchema.parse((input as any)?.variables ?? {});
-  return parseComposition(sequenceScenes(substituteVariables(input, resolveVariables(declarations, values), { ...beatFunctions(input), ...(options.media ? { media: options.media } : {}) }))); }
+  return parseComposition(sequenceScenes(substituteVariables(input, resolveVariables(declarations, values), { ...beatFunctions(input), ...canvasNames(input), ...(options.media ? { media: options.media } : {}) }))); }
 export const compositionJsonSchema = z.toJSONSchema(compositionSchema, { target: 'draft-2020-12', io: 'input' });
 // Readable text for any error, used by the CLI and the preview: validation problems become one "✖ message → at path" line each.
 export const describeError = (error: unknown): string => error instanceof z.ZodError ? z.prettifyError(error) : error instanceof Error ? error.message : String(error);

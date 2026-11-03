@@ -31,6 +31,8 @@ button{background:var(--line);color:var(--text);border:0;border-radius:6px;paddi
 #timeline{position:relative;height:40px;cursor:pointer;user-select:none;touch-action:none}
 .scene{position:absolute;top:0;height:18px;background:#1e293b;border:1px solid #334155;border-radius:3px;font-size:11px;line-height:16px;padding:0 5px;overflow:hidden;white-space:nowrap;color:var(--muted)}
 #track{position:absolute;top:26px;left:0;right:0;height:6px;background:var(--line);border-radius:3px}
+.scene.ed{cursor:grab}.sgrip{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(148,163,184,.25)}.sgrip.l{left:0}.sgrip.r{right:0}
+.lbar .lgrip{left:0;right:auto}.krow{height:12px;position:relative}.kf{position:absolute;top:1px;width:9px;height:9px;margin-left:-4px;background:#fbbf24;transform:rotate(45deg);cursor:ew-resize;border:1px solid #92400e}
 #playhead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent);pointer-events:none}
 label{display:block;margin:12px 0 4px;color:var(--text)}label small{color:var(--muted);display:block;font-size:12px}
 input,textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:6px 7px;font:inherit}textarea{resize:vertical;min-height:54px}
@@ -75,7 +77,7 @@ function dropPlayer() { if (player) { player.destroy(); player = null; } playerV
 function ensurePlayer() {
   if (player && playerVersion === state.version) return Promise.resolve(player); dropPlayer();
   return fetch('/api/source').then(function (r) { return r.json(); }).then(function (source) { return import('/player.js').then(function (m) {
-    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, media: source.media, assetBase: location.origin + '/media/', controls: false }); }); })
+    return m.createPlayer($('#live'), { composition: source.raw, values: source.values, media: source.media, assetBase: location.origin + '/media/', allowCode: source.allowCode === true, controls: false }); }); })
     .then(function (p) { player = p; playerVersion = state.version;
       p.on('frame', function (f) { if (playing) { frame = f; draw(); } }); p.on('ended', function () { setPlaying(false); });
       p.on('error', function (e) { $('#status').textContent = 'live playback: ' + (e && e.message ? e.message : e); }); return p; });
@@ -97,26 +99,26 @@ function renderLayers() {
   comp().layers.forEach(function (l) {
     var bar = el('div', { className: 'lbar' + (l.editable ? '' : ' ro') + (l.id === selected ? ' sel' : ''), title: l.id + ' (' + l.type + ') · frames ' + l.start + '–' + (l.end - 1) + (l.editable ? '' : ' · read-only here'), text: (l.depth ? '\\u2514 ' : '') + l.id + ' · ' + l.type });
     bar.style.left = pct(l.start); bar.style.width = 'calc(' + pct(Math.max(1, l.end - l.start)) + ' - 1px)';
-    if (l.editable) { var grip = el('div', { className: 'grip' }); bar.appendChild(grip); grip.addEventListener('pointerdown', function (e) { e.stopPropagation(); startDrag(e, l, bar, 'end'); }); bar.addEventListener('pointerdown', function (e) { startDrag(e, l, bar, 'move'); }); }
+    if (l.editable) { var lgrip = el('div', { className: 'grip lgrip' }); bar.appendChild(lgrip); lgrip.addEventListener('pointerdown', function (e) { e.stopPropagation(); startDrag(e, l, bar, 'start'); }); var grip = el('div', { className: 'grip' }); bar.appendChild(grip); grip.addEventListener('pointerdown', function (e) { e.stopPropagation(); startDrag(e, l, bar, 'end'); }); bar.addEventListener('pointerdown', function (e) { startDrag(e, l, bar, 'move'); }); }
     else bar.addEventListener('click', function () { selectLayer(l.id); });
-    box.appendChild(el('div', { className: 'lrow' }, [bar]));
+    box.appendChild(el('div', { className: 'lrow' }, [bar])); var keys = keyframeRow(l); if (keys) box.appendChild(keys);
   });
 }
 function startDrag(e, layer, bar, mode) {
   selectLayer(layer.id); var x0 = e.clientX, width = $('#layers').getBoundingClientRect().width, delta = 0, left0 = parseFloat(bar.style.left), total = comp().durationFrames; bar.setPointerCapture(e.pointerId); bar.style.cursor = 'grabbing';
-  function move(ev) { delta = Math.round((ev.clientX - x0) / width * total); if (mode === 'move') bar.style.left = 'calc(' + left0 + '% + ' + (delta / total * width) + 'px)'; else bar.style.width = 'calc(' + pct(Math.max(1, layer.end - layer.start + delta)) + ' - 1px)'; $('#status').textContent = (mode === 'move' ? 'move by ' : 'end ') + (delta >= 0 ? '+' : '') + delta + ' frames'; }
+  function move(ev) { delta = Math.round((ev.clientX - x0) / width * total); if (mode !== 'end' && Math.abs(layer.start + delta - frame) <= 2) delta = frame - layer.start; if (mode === 'move') bar.style.left = 'calc(' + left0 + '% + ' + (delta / total * width) + 'px)'; else if (mode === 'start') { bar.style.left = 'calc(' + left0 + '% + ' + (delta / total * width) + 'px)'; bar.style.width = 'calc(' + pct(Math.max(1, layer.end - layer.start - delta)) + ' - 1px)'; } else bar.style.width = 'calc(' + pct(Math.max(1, layer.end - layer.start + delta)) + ' - 1px)'; $('#status').textContent = (mode === 'move' ? 'move by ' : mode === 'start' ? 'start ' : 'end ') + (delta >= 0 ? '+' : '') + delta + ' frames'; }
   function up() { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); bar.style.cursor = ''; if (!delta) return;
     waitForRaw().then(function (raw) { var start = typeof raw.startFrame === 'number' ? raw.startFrame : 0, parentOffset = layer.start - start, set = {};
       if (typeof raw.startFrame === 'string' || typeof raw.endFrame === 'string') return showPropsError('Its timing comes from a variable, so it can only be changed in the file.');
       if (mode === 'move') { set.startFrame = Math.max(0, start + delta); if (typeof raw.endFrame === 'number') set.endFrame = Math.max(set.startFrame + 1, raw.endFrame + delta); }
-      else set.endFrame = Math.max(start + 1, layer.end - parentOffset + delta);
+      else if (mode === 'start') set.startFrame = Math.max(0, start + delta); else set.endFrame = Math.max(start + 1, layer.end - parentOffset + delta);
       editLayer(set, []); }); }
   bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up);
 }
 var rawRequest = null;
 function waitForRaw() { return rawRequest || Promise.resolve(selectedRaw); }
 function selectLayer(id) { selected = id; document.querySelectorAll('.lbar').forEach(function (b) { b.classList.toggle('sel', b.title.indexOf(id + ' (') === 0); });
-  rawRequest = fetch('/api/layer?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (info) { selectedRaw = info.layer; renderProps(info); rawRequest = null; return info.layer; }); return rawRequest; }
+  rawRequest = fetch('/api/layer?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (info) { selectedRaw = info.layer; renderProps(info); renderLayers(); rawRequest = null; return info.layer; }); return rawRequest; }
 var common = ['x', 'y', 'width', 'height', 'opacity', 'rotation', 'scale', 'startFrame', 'endFrame'];
 function renderProps(info) {
   var box = $('#props'), row = (comp().layers.filter(function (l) { return l.id === info.id; })[0]) || {}; box.innerHTML = '';
@@ -143,11 +145,43 @@ function showPropsError(message) { var e = document.querySelector('#propsError')
 function editLayer(set, unset) { showPropsError(''); $('#status').textContent = 'saving…';
   fetch('/api/layer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: selected, set: set, unset: unset }) }).then(function (r) { return r.json(); })
     .then(function (result) { if (!result.ok) { showPropsError(result.error); renderLayers(); $('#status').textContent = 'not saved'; } }); }
+// Scenes: drag a scene bar to move it, or an edge to change when it starts or how long it lasts. Edits go to the file like layer edits.
+function startSceneDrag(e, s, bar, mode) {
+  e.stopPropagation(); var width = $('#timeline').getBoundingClientRect().width, total = comp().durationFrames, x0 = e.clientX, delta = 0; bar.setPointerCapture(e.pointerId);
+  function shown() { var start = s.startFrame, dur = s.durationFrames; if (mode === 'move') start = Math.max(0, s.startFrame + delta); else if (mode === 'end') dur = Math.max(1, s.durationFrames + delta); else { start = Math.max(0, Math.min(s.startFrame + delta, s.startFrame + s.durationFrames - 1)); dur = s.durationFrames - (start - s.startFrame); } return { start: start, dur: dur }; }
+  function move(ev) { delta = Math.round((ev.clientX - x0) / width * total); var v = shown(); bar.style.left = (v.start / total * 100) + '%'; bar.style.width = (v.dur / total * 100) + '%'; $('#status').textContent = 'scene ' + s.id + ': start ' + v.start + ', ' + v.dur + ' frames'; }
+  function up() { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); if (!delta) return; var v = shown(), set = {}; if (v.start !== s.startFrame) set.startFrame = v.start; if (v.dur !== s.durationFrames) set.durationFrames = v.dur; editScene(s.id, set); }
+  bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up);
+}
+function editScene(id, set) { $('#status').textContent = 'saving…'; fetch('/api/scene', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: id, set: set }) }).then(function (r) { return r.json(); })
+  .then(function (result) { if (!result.ok) { $('#status').textContent = result.error; renderTimeline(); } }); }
+// Keyframes of the selected layer as diamonds under its bar: drag one to retime it (frames count from the layer's start).
+function keyframeRow(l) {
+  if (l.id !== selected || !selectedRaw || !Array.isArray(selectedRaw.animations) || !l.editable) return null; var row = el('div', { className: 'lrow krow' });
+  selectedRaw.animations.forEach(function (a, ai) { (a.keyframes || []).forEach(function (k, ki) { if (typeof k.frame !== 'number') return;
+    var d = el('div', { className: 'kf', title: a.property + ' at frame ' + k.frame + ' = ' + k.value + ' (drag to retime)' }); d.style.left = pct(Math.min(comp().durationFrames - 1, l.start + k.frame));
+    d.addEventListener('pointerdown', function (e) { startKeyframeDrag(e, l, ai, ki, k, d); }); row.appendChild(d); }); });
+  return row;
+}
+function startKeyframeDrag(e, l, ai, ki, k, d) {
+  e.stopPropagation(); var width = $('#layers').getBoundingClientRect().width, total = comp().durationFrames, x0 = e.clientX, delta = 0, left0 = parseFloat(d.style.left); d.setPointerCapture(e.pointerId);
+  function move(ev) { delta = Math.round((ev.clientX - x0) / width * total); if (l.start + k.frame + delta < 0) delta = -(l.start + k.frame); d.style.left = (left0 + delta / total * 100) + '%'; $('#status').textContent = 'keyframe at ' + (k.frame + delta); }
+  function up() { d.removeEventListener('pointermove', move); d.removeEventListener('pointerup', up); if (!delta) return; $('#status').textContent = 'saving…';
+    fetch('/api/keyframe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: l.id, animation: ai, keyframe: ki, frame: Math.max(0, k.frame + delta) }) }).then(function (r) { return r.json(); })
+      .then(function (result) { if (!result.ok) { $('#status').textContent = result.error; renderLayers(); } }); }
+  d.addEventListener('pointermove', move); d.addEventListener('pointerup', up);
+}
+// Alt with the arrow keys moves the selected layer by one frame (ten with Shift).
+document.addEventListener('keydown', function (e) { if (!e.altKey || !selected || !comp() || /^(INPUT|TEXTAREA)$/.test(e.target.tagName) || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return; e.preventDefault();
+  var step = (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1); waitForRaw().then(function (raw) { if (!raw || typeof raw.startFrame === 'string' || typeof raw.endFrame === 'string') return; var start = typeof raw.startFrame === 'number' ? raw.startFrame : 0, set = { startFrame: Math.max(0, start + step) };
+    if (typeof raw.endFrame === 'number') set.endFrame = Math.max(set.startFrame + 1, raw.endFrame + step); editLayer(set, []); }); });
 function undo() { fetch('/api/undo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); }).then(function (result) { if (!result.ok) $('#status').textContent = result.error; }); }
 function renderTimeline() {
   var c = comp(), box = $('#scenes'); box.innerHTML = ''; if (!c) return;
-  c.scenes.forEach(function (s) { var el = document.createElement('div'); el.className = 'scene'; el.textContent = s.name; el.title = s.name + ' · frames ' + s.startFrame + '–' + (s.startFrame + s.durationFrames - 1);
-    el.style.left = (s.startFrame / c.durationFrames * 100) + '%'; el.style.width = (s.durationFrames / c.durationFrames * 100) + '%'; box.appendChild(el); });
+  c.scenes.forEach(function (s) { var el = document.createElement('div'); el.className = 'scene ed'; el.textContent = s.name; el.title = s.name + ' · frames ' + s.startFrame + '–' + (s.startFrame + s.durationFrames - 1) + ' · drag to move, drag an edge to resize';
+    el.style.left = (s.startFrame / c.durationFrames * 100) + '%'; el.style.width = (s.durationFrames / c.durationFrames * 100) + '%';
+    [['l', 'start'], ['r', 'end']].forEach(function (g) { var grip = document.createElement('div'); grip.className = 'sgrip ' + g[0]; grip.addEventListener('pointerdown', function (e) { startSceneDrag(e, s, el, g[1]); }); el.appendChild(grip); });
+    el.addEventListener('pointerdown', function (e) { startSceneDrag(e, s, el, 'move'); }); box.appendChild(el); });
 }
 function renderVars() {
   var box = $('#vars'), names = Object.keys(state.variables || {}); box.innerHTML = '';

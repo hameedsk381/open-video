@@ -1,20 +1,29 @@
 #!/usr/bin/env node
+try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
 import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
 const usage = `Usage:
-  ove init <dir> [--force] [--no-skill]
+  ove init <dir> [--template id] [--force] [--no-skill]
   ove schema [--output composition.schema.json]
   ove doctor                      check Node, FFmpeg encoders and the browser
   ove cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
   ove browser install             download Playwright's Chromium for rendering
+  ove thumbnail <composition.json> [--frame n] [--title "text"] [--width 1280] [--output thumbnail.png] [variables]   a cover image, with an optional title over it
+  ove build <video.ts|video.js> [--output composition.json]   run a video written as code (open-video-engine/builder) and write its composition JSON
+  ove track <matte> [--fps 30] [--output track.json]   follow the speaker through a matte video (for fx-tracked-label)
+  ove blocks [--json]             list the ready-made scenes and overlays and the themes
+  ove add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
+  ove theme [id] [composition.json]   list themes, or switch a composition to one
   ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   ove dev <composition.json> [--port 3000] [--allow-host name] [variables]
   ove validate <composition.json> [variables]
+    (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
   ove inspect <composition.json> [variables]          scenes, timing and measured media
   ove captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
   ove still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
   ove review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
   ove render <composition.json> [--output output.mp4] [render options] [variables]
   ove render <composition.json> --batch rows.json --output "out/{{name}}.mp4" [render options]
+  ove ai doctor | compose | narrate | transcribe | image | batch | studio   AI-assisted authoring; run "ove ai" for details
 
 Render options:
   --format mp4|webm|mov|gif|png   default: from the --output extension, then export.format (png writes a folder of frames)
@@ -48,7 +57,7 @@ async function renderVideo(composition: Composition, baseDir: string, output: st
     const result=await renderDistributed(composition, { baseDir, output, workers: workers.split(',').map(url => httpWorker(url.trim(), token)), chunkSize, frameRange: settings.frameRange, format: settings.format as 'mp4' | 'webm' | 'mov' | undefined, codec: settings.codec, transparent: settings.transparent, preset: settings.preset, crf: settings.crf, bitrate: settings.bitrate, audioBitrate: settings.audioBitrate, scale: settings.scale, loudness: settings.loudness, motionBlur: settings.motionBlur,
       onProgress: ({ rendered, total, chunk, worker }) => console.log(`Chunk ${chunk} done by ${worker} (${rendered}/${total} frames)`), onWorkerError: (worker, error) => console.log(`${worker} failed a chunk, retrying elsewhere: ${error.message.split(/\r?\n/)[0]}`) });
     console.log(`Created ${result.output} (${result.format}, ${result.frames} frames, ${result.durationSeconds.toFixed(2)} seconds; rendered in ${((Date.now()-started)/1000).toFixed(1)}s on ${workers.split(',').length} worker${workers.includes(',') ? 's' : ''})`); return; }
-  const result=await renderMedia(composition, { ...settings, baseDir, output, onProgress: ({ rendered, total }) => { if (rendered === total || Date.now()-lastReport > 1000) { lastReport=Date.now(); console.log(`Rendered ${rendered}/${total}`); } } });
+  const result=await renderMedia(composition, { ...settings, baseDir, output, allowCode: flag('--allow-code'), onProgress: ({ rendered, total }) => { if (rendered === total || Date.now()-lastReport > 1000) { lastReport=Date.now(); console.log(`Rendered ${rendered}/${total}`); } } });
   console.log(`Created ${result.output} (${result.format}, ${result.frames} frames, ${result.durationSeconds.toFixed(2)} seconds; rendered in ${((Date.now()-started)/1000).toFixed(1)}s with ${settings.concurrency} page${settings.concurrency === 1 ? '' : 's'})`); }
 // One video per row of the batch file. Every row is resolved and every output path checked before anything renders, so a bad row
 // or two rows writing the same file fail fast instead of halfway through.
@@ -83,20 +92,27 @@ Press Ctrl+C to stop.`);
     const stop=() => { worker.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
   else if (command === 'browser') { if (file !== 'install') throw new Error('Usage: ove browser install'); const cli=createRequire(import.meta.url).resolve('playwright/cli'); console.log('Downloading Playwright Chromium…'); const result=spawnSync(process.execPath, [cli, 'install', 'chromium'], { stdio: 'inherit' }); if (result.status !== 0) throw new Error('Chromium download failed; see the output above.'); }
   else if (command === 'schema') { const json=JSON.stringify(compositionJsonSchema,null,2)+'\n'; const output=option('--output'); if (output) { await writeFile(resolve(output),json); console.log(`Wrote ${resolve(output)}`); } else process.stdout.write(json); }
-  else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill')}); console.log(`Created ${resolve(file)}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
+  else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const template=option('--template'); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill'),template}); console.log(`Created ${resolve(file)}${template ? ` from template "${template}"` : ''}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
   else if (command === 'dev') { if (!file || file.startsWith('--')) throw new Error(usage); const port=option('--port') === undefined ? undefined : Number(option('--port')); if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536)) throw new Error('--port must be a port number');
-    const allowHosts=argv.flatMap((arg, i) => arg === '--allow-host' && argv[i+1] ? [argv[i+1]!] : []); const dev=await startDevServer(file, { port, values: await suppliedValues(), allowHosts }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
+    const allowHosts=argv.flatMap((arg, i) => arg === '--allow-host' && argv[i+1] ? [argv[i+1]!] : []); const dev=await startDevServer(file, { port, values: await suppliedValues(), allowHosts, allowCode: flag('--allow-code') }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
     const stop=() => { dev.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
+  else if (command === 'thumbnail') { if (!file || file.startsWith('--')) throw new Error(usage); await (await import('./thumbnail')).runThumbnail(argv, await readJson(file), await suppliedValues(), dirname(resolve(file))); }
+  else if (command === 'track') await (await import('./track')).runTrack(argv);
+  else if (command === 'build') await (await import('./build')).runBuild(argv);
+  else if (command === 'blocks') await (await import('./blocks-cli')).runBlocks(argv);
+  else if (command === 'add') await (await import('./blocks-cli')).runAdd(argv);
+  else if (command === 'theme') await (await import('./blocks-cli')).runTheme(argv);
+  else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
     else { const values=await suppliedValues(), composition=await prepareComposition(raw, values, baseDir);
       if (command === 'validate') console.log(`Valid: ${composition.name} (${composition.durationFrames} frames)`);
       else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
       else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
-      else if (command === 'still') { const frame=Number(option('--frame') ?? 0); if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`); const output=resolve(option('--output') ?? `still-${frame}.png`); await renderStill(composition, { frame, output, baseDir, transparent: flag('--transparent') ? true : undefined }); console.log(`Created ${output}`); }
+      else if (command === 'still') { const frame=Number(option('--frame') ?? 0); if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`); const output=resolve(option('--output') ?? `still-${frame}.png`); await renderStill(composition, { frame, output, baseDir, allowCode: flag('--allow-code'), transparent: flag('--transparent') ? true : undefined }); console.log(`Created ${output}`); }
       else if (command === 'review') { const output=resolve(option('--output') ?? 'review.png'), every=option('--every') === undefined ? undefined : Number(option('--every')), sheetOption=option('--sheet-frames') ?? option('--frames'), sheetFrames=sheetOption === undefined ? undefined : Number(sheetOption);
         if (every !== undefined && !(Number.isInteger(every) && every > 0)) throw new Error('--every must be a whole number of frames'); if (sheetFrames !== undefined && !(Number.isInteger(sheetFrames) && sheetFrames > 0 && sheetFrames <= 60)) throw new Error('--sheet-frames must be from 1 to 60');
-        const result=await reviewComposition(composition, { baseDir, every, sheetFrames, onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
+        const result=await reviewComposition(composition, { baseDir, allowCode: flag('--allow-code'), every, sheetFrames, onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
         if (flag('--json')) console.log(JSON.stringify({ sheet: output, sheetFrames: result.sheetFrames, sampledFrames: result.sampledFrames, loudness: result.loudness, issues: result.issues }, null, 2));
         else { process.stderr.write('\n'); const mark={ error: 'ERROR', warning: 'warn ', info: 'info ' }; for (const issue of result.issues) console.log(`${mark[issue.severity]}  ${issue.frame === undefined ? '' : `frame ${issue.frame} (${(issue.frame/composition.fps).toFixed(1)} s)  `}${issue.message}${issue.layer ? `  [${issue.layer}]` : ''}`);
           const count=(s: string) => result.issues.filter(i => i.severity === s).length; console.log(`${result.issues.length ? '\n' : ''}${count('error')} errors, ${count('warning')} warnings, ${count('info')} notes from ${result.sampledFrames} sampled frames${result.loudness ? `; sound ${result.loudness.integrated.toFixed(1)} LUFS, peak ${result.loudness.truePeak.toFixed(1)} dBTP` : ''}\nContact sheet: ${output} (frames ${result.sheetFrames.join(', ')})`); }

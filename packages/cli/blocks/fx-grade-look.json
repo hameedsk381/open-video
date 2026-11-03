@@ -1,0 +1,91 @@
+{
+  "id": "fx-grade-look",
+  "name": "Colour grade",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage with a colour look (warm, cool, cinematic, teal-orange, noir, vivid or faded) plus an optional vignette. The grade is the scene's grade property, so you can fine-tune exposure, contrast, saturation, temperature, tint, shadows, highlights and fade.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    },
+    "look": {
+      "type": "string",
+      "default": "cinematic",
+      "description": "warm, cool, cinematic, teal-orange, noir, vivid or faded"
+    },
+    "vignette": {
+      "type": "number",
+      "default": 0.55,
+      "description": "0 for none, 1 for strong"
+    }
+  },
+  "layers": [
+    {
+      "id": "graded",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "grade": {
+        "look": "{{look}}"
+      },
+      "children": [
+        {
+          "id": "bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}",
+          "fill": "{{bg}}"
+        },
+        {
+          "if": "{{footage}}",
+          "id": "footage",
+          "type": "video",
+          "src": "{{footage}}",
+          "objectFit": "cover",
+          "x": 0,
+          "y": 0,
+          "width": "{{canvas.width}}",
+          "height": "{{canvas.height}}"
+        }
+      ]
+    },
+    {
+      "id": "vignette",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": {
+        "type": "radial",
+        "center": [
+          "{{round(canvas.width * 0.5)}}",
+          "{{round(canvas.height * 0.45)}}"
+        ],
+        "radius": "{{round(canvas.height * 0.75)}}",
+        "stops": [
+          {
+            "offset": 0.55,
+            "color": "transparent"
+          },
+          {
+            "offset": 1,
+            "color": "#000000"
+          }
+        ]
+      },
+      "opacity": "{{vignette}}"
+    }
+  ]
+}

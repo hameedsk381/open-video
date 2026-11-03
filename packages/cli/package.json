@@ -1,1 +1,1 @@
-{"name":"@ove/cli","version":"0.1.0","type":"module","bin":{"ove":"./src/index.ts"},"dependencies":{"@ove/core":"workspace:*","@ove/schema":"workspace:*","@ove/renderer":"workspace:*","@ove/player":"workspace:*","@ove/graphics":"workspace:*"}}
+{"name":"@ove/cli","version":"0.1.0","type":"module","bin":{"ove":"./src/index.ts"},"dependencies":{"@ove/core":"workspace:*","@ove/schema":"workspace:*","@ove/renderer":"workspace:*","@ove/player":"workspace:*","@ove/graphics":"workspace:*","@ove/ai":"workspace:*","@ove/builder":"workspace:*"}}

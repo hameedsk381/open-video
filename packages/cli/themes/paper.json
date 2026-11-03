@@ -1,0 +1,15 @@
+{
+  "id": "paper",
+  "name": "Paper",
+  "description": "Warm off-white with ink text and a red accent. Editorial.",
+  "variables": {
+    "bg": "#f6f1e8",
+    "surface": "#e9e1d2",
+    "text": "#1d1a16",
+    "muted": "#6e665a",
+    "accent": "#d9482b",
+    "accent2": "#1f6f5c",
+    "radius": 8,
+    "headWeight": 800
+  }
+}

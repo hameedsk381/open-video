@@ -1,0 +1,358 @@
+{
+  "id": "fx-command-bridge",
+  "name": "Command bridge",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 180,
+  "description": "A minimal AI chat window types a command, shows a preparing message and a loader, then its thumbnail opens up to fill the whole frame.",
+  "params": {
+    "command": {
+      "type": "string",
+      "default": "/effects glass-cards"
+    },
+    "message": {
+      "type": "string",
+      "default": "OVE is preparing your composition..."
+    }
+  },
+  "layers": [
+    {
+      "id": "window",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.08)}}",
+      "y": "{{round(canvas.height * 0.34)}}",
+      "width": "{{round(canvas.width * 0.84)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.5)}}",
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            },
+            {
+              "frame": 140,
+              "value": 1
+            },
+            {
+              "frame": 172,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.92,
+              "easing": "pop"
+            },
+            {
+              "frame": 18,
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "win-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.84)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.5)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "fill": "#0f1630",
+          "stroke": "rgba(255,255,255,0.18)",
+          "strokeWidth": 2,
+          "shadow": {
+            "color": "#000000aa",
+            "blur": 36,
+            "offsetX": 0,
+            "offsetY": 14
+          }
+        },
+        {
+          "id": "light-0",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 0 * round(min(canvas.width, canvas.height) * 0.028)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+          "fill": "#ff5f57"
+        },
+        {
+          "id": "light-1",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 1 * round(min(canvas.width, canvas.height) * 0.028)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+          "fill": "#febc2e"
+        },
+        {
+          "id": "light-2",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03) + 2 * round(min(canvas.width, canvas.height) * 0.028)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.016)}}",
+          "fill": "#28c840"
+        },
+        {
+          "id": "prompt",
+          "type": "rect",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "width": "{{round(canvas.width * 0.78)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.085)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "rgba(255,255,255,0.08)",
+          "stroke": "rgba(255,255,255,0.2)",
+          "strokeWidth": 1
+        },
+        {
+          "id": "command",
+          "type": "text",
+          "content": "{{command}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.092)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.74)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}",
+          "startFrame": 20,
+          "split": {
+            "by": "letters",
+            "preset": "typewriter",
+            "stagger": 2,
+            "duration": 2
+          }
+        },
+        {
+          "id": "message",
+          "type": "text",
+          "content": "{{message}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "{{accent2}}",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+          "fontWeight": 600,
+          "maxWidth": "{{round(canvas.width * 0.5)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "startFrame": 62,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 12,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "load-0",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04) + 0 * round(min(canvas.width, canvas.height) * 0.035)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.29)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent}}",
+          "startFrame": 70,
+          "animations": [
+            {
+              "property": "opacity",
+              "repeat": 6,
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.2
+                },
+                {
+                  "frame": 8,
+                  "value": 1
+                },
+                {
+                  "frame": 22,
+                  "value": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "load-1",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04) + 1 * round(min(canvas.width, canvas.height) * 0.035)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.29)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent}}",
+          "startFrame": 70,
+          "animations": [
+            {
+              "property": "opacity",
+              "repeat": 6,
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.2
+                },
+                {
+                  "frame": 11,
+                  "value": 1
+                },
+                {
+                  "frame": 22,
+                  "value": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "load-2",
+          "type": "circle",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.04) + 2 * round(min(canvas.width, canvas.height) * 0.035)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.29)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent}}",
+          "startFrame": 70,
+          "animations": [
+            {
+              "property": "opacity",
+              "repeat": 6,
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.2
+                },
+                {
+                  "frame": 14,
+                  "value": 1
+                },
+                {
+                  "frame": 22,
+                  "value": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "thumb",
+          "type": "rect",
+          "x": "{{round(canvas.width * 0.84) - round(min(canvas.width, canvas.height) * 0.28) - round(min(canvas.width, canvas.height) * 0.03)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.27)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.28)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.19)}}",
+          "radius": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fill": "{{accent}}",
+          "startFrame": 100,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "expand",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{accent}}",
+      "startFrame": 128,
+      "originX": "center",
+      "originY": "center",
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.08,
+              "easing": "land"
+            },
+            {
+              "frame": 26,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 26,
+              "value": 0.9
+            },
+            {
+              "frame": 44,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:click",
+      "startFrame": 20,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 62,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-3",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 100,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-4",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 128,
+      "volume": 0.45
+    }
+  ]
+}

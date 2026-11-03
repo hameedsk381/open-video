@@ -1,0 +1,110 @@
+{
+  "id": "fx-split-reveal",
+  "name": "Split reveal",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 44,
+  "description": "Two panels in the theme colour cover the frame and slide apart (up and down) to reveal what is under them, with an accent line down the middle.",
+  "params": {},
+  "layers": [
+    {
+      "id": "top-half",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.5)}}",
+      "fill": "{{bg}}",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 8,
+              "value": 0
+            },
+            {
+              "frame": 34,
+              "value": "{{-round(canvas.height * 0.5)}}",
+              "easing": "land"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bottom-half",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.5)}}",
+      "fill": "{{bg}}",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.5)}}"
+            },
+            {
+              "frame": 8,
+              "value": "{{round(canvas.height * 0.5)}}"
+            },
+            {
+              "frame": 34,
+              "value": "{{round(canvas.height * 1)}}",
+              "easing": "land"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seam",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.5) - 3}}",
+      "width": "{{canvas.width}}",
+      "height": 6,
+      "fill": "{{accent}}",
+      "shadow": {
+        "color": "#2457FF",
+        "blur": 20,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 8,
+              "value": 1
+            },
+            {
+              "frame": 30,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 6,
+      "volume": 0.4
+    }
+  ]
+}

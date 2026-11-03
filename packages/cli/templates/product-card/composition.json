@@ -1,0 +1,196 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "product-card",
+  "name": "Product card",
+  "width": 1080,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 240,
+  "background": {
+    "type": "linear",
+    "from": [0, 0],
+    "to": [1080, 1080],
+    "stops": [
+      { "offset": 0, "color": "#0b1020" },
+      { "offset": 1, "color": "#211308" }
+    ]
+  },
+  "variables": {
+    "product": { "type": "string", "default": "Everyday Mug" },
+    "price": { "type": "string", "default": "$18" },
+    "badge": { "type": "string", "default": "NEW", "description": "Pill in the top-left corner" },
+    "caption": { "type": "string", "default": "Stoneware · 350 ml" },
+    "accent": { "type": "color", "default": "#f97316" }
+  },
+  "scenes": [
+    {
+      "id": "card",
+      "name": "Product",
+      "startFrame": 0,
+      "durationFrames": 240,
+      "transitionIn": { "type": "fade", "durationFrames": 10 },
+      "transitionOut": { "type": "fade", "durationFrames": 10 },
+      "layers": [
+        {
+          "id": "glow",
+          "type": "circle",
+          "x": 620,
+          "y": -220,
+          "width": 820,
+          "fill": "{{accent}}",
+          "opacity": 0.18,
+          "blur": 70
+        },
+        {
+          "id": "badge-pill",
+          "type": "rect",
+          "x": 90,
+          "y": 86,
+          "width": 160,
+          "height": 52,
+          "radius": 26,
+          "fill": "{{accent}}"
+        },
+        {
+          "id": "badge-text",
+          "type": "text",
+          "content": "{{badge}}",
+          "x": 170,
+          "y": 100,
+          "fontSize": 24,
+          "fontWeight": 700,
+          "letterSpacing": 2,
+          "textAlign": "center",
+          "color": "#1a1208"
+        },
+        {
+          "id": "product",
+          "type": "group",
+          "x": 540,
+          "y": 372,
+          "animations": [
+            { "property": "y", "keyframes": [{ "frame": 0, "value": 410 }, { "frame": 26, "value": 372, "easing": "land" }] },
+            { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.88 }, { "frame": 30, "value": 1, "easing": "easeOutBack" }] },
+            { "property": "rotation", "keyframes": [{ "frame": 0, "value": -4 }, { "frame": 30, "value": 0, "easing": "land" }] }
+          ],
+          "children": [
+            {
+              "id": "product-plate",
+              "type": "circle",
+              "x": -210,
+              "y": -150,
+              "width": 420,
+              "fill": "#111827"
+            },
+            {
+              "id": "steam",
+              "type": "path",
+              "d": "M-40 -150 C-74 -190 -6 -210 -40 -250",
+              "stroke": "#94a3b8",
+              "strokeWidth": 6,
+              "lineCap": "round",
+              "opacity": 0.55,
+              "animations": [
+                { "property": "y", "keyframes": [{ "frame": 10, "value": 0 }, { "frame": 90, "value": -18, "easing": "drift" }] }
+              ]
+            },
+            {
+              "id": "mug",
+              "type": "rect",
+              "x": -92,
+              "y": -100,
+              "width": 184,
+              "height": 210,
+              "radius": 26,
+              "fill": "#f8fafc"
+            },
+            {
+              "id": "handle",
+              "type": "path",
+              "d": "M88 -58 C170 -58 170 74 88 74",
+              "stroke": "{{accent}}",
+              "strokeWidth": 22,
+              "lineCap": "round"
+            },
+            {
+              "id": "mug-band",
+              "type": "rect",
+              "x": -92,
+              "y": 34,
+              "width": 184,
+              "height": 46,
+              "fill": "{{accent}}",
+              "opacity": 0.9
+            }
+          ]
+        },
+        {
+          "id": "name",
+          "type": "text",
+          "content": "{{product}}",
+          "x": 90,
+          "y": 680,
+          "fontSize": 92,
+          "fontWeight": 800,
+          "letterSpacing": -3,
+          "maxWidth": 900,
+          "maxLines": 2,
+          "minFontSize": 58,
+          "color": "#f8fafc",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 12, "value": 0 }, { "frame": 34, "value": 1 }] },
+            { "property": "y", "keyframes": [{ "frame": 12, "value": 706 }, { "frame": 40, "value": 680, "easing": "land" }] }
+          ]
+        },
+        {
+          "id": "caption",
+          "type": "text",
+          "content": "{{caption}}",
+          "x": 90,
+          "y": 812,
+          "fontSize": 34,
+          "maxWidth": 760,
+          "color": "#94a3b8",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 24, "value": 0 }, { "frame": 44, "value": 1 }] }
+          ]
+        },
+        {
+          "id": "rule",
+          "type": "rect",
+          "x": 90,
+          "y": 892,
+          "width": 900,
+          "height": 2,
+          "fill": "#243244"
+        },
+        {
+          "id": "price",
+          "type": "text",
+          "content": "{{price}}",
+          "x": 90,
+          "y": 926,
+          "fontSize": 68,
+          "fontWeight": 700,
+          "color": "{{accent}}",
+          "animations": [
+            { "property": "opacity", "keyframes": [{ "frame": 30, "value": 0 }, { "frame": 50, "value": 1 }] }
+          ]
+        },
+        {
+          "id": "mark",
+          "type": "text",
+          "content": "OVE",
+          "x": 990,
+          "y": 954,
+          "fontSize": 26,
+          "fontWeight": 700,
+          "letterSpacing": 6,
+          "textAlign": "right",
+          "color": "#64748b"
+        }
+      ]
+    }
+  ]
+}

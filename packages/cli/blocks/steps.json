@@ -1,0 +1,266 @@
+{
+  "id": "steps",
+  "name": "Numbered steps",
+  "category": "list",
+  "kind": "scene",
+  "durationFrames": 180,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "Up to four numbered steps, each with a short title and a line of detail.",
+  "params": {
+    "title": {
+      "type": "string",
+      "default": "How it works"
+    },
+    "steps": {
+      "type": "list",
+      "items": {
+        "title": {
+          "type": "string",
+          "default": ""
+        },
+        "detail": {
+          "type": "string",
+          "default": ""
+        }
+      },
+      "default": [
+        {
+          "title": "Write the brief",
+          "detail": "Say what the video is about."
+        },
+        {
+          "title": "Check it",
+          "detail": "Errors are reported with their location."
+        },
+        {
+          "title": "Render it",
+          "detail": "The same file gives the same video, every time."
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.08)}}",
+      "y": 0,
+      "width": "{{round(canvas.width * 0.84)}}",
+      "height": "{{canvas.height}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+        "align": "start",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "title",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+          "color": "{{text}}",
+          "fontWeight": "{{headWeight}}",
+          "maxWidth": "{{round(canvas.width * 0.84)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "startFrame": 0,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 24,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rows",
+          "type": "group",
+          "width": "{{round(canvas.width * 0.84)}}",
+          "layout": {
+            "direction": "column",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+            "align": "start"
+          },
+          "children": [
+            {
+              "repeat": "{{steps}}",
+              "as": "s",
+              "each": [
+                {
+                  "id": "step-{{index}}",
+                  "type": "group",
+                  "startFrame": "{{18 + index * 20}}",
+                  "layout": {
+                    "direction": "row",
+                    "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+                    "align": "start"
+                  },
+                  "animations": [
+                    {
+                      "property": "opacity",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 12,
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "property": "y",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 30,
+                          "easing": "land"
+                        },
+                        {
+                          "frame": 18,
+                          "value": 0
+                        }
+                      ]
+                    }
+                  ],
+                  "children": [
+                    {
+                      "id": "num-{{index}}",
+                      "type": "group",
+                      "width": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+                      "height": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+                      "children": [
+                        {
+                          "id": "disc",
+                          "type": "circle",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.0375)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.0375)}}",
+                          "width": "{{round(min(canvas.width, canvas.height) * 0.075)}}",
+                          "fill": "{{accent}}"
+                        },
+                        {
+                          "id": "n",
+                          "type": "text",
+                          "content": "{{string(index + 1)}}",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.0375)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.0375 - min(canvas.width, canvas.height) * 0.0225)}}",
+                          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+                          "fontWeight": 800,
+                          "color": "{{bg}}",
+                          "textAlign": "center"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "copy-{{index}}",
+                      "type": "group",
+                      "layout": {
+                        "direction": "column",
+                        "gap": "{{round(min(canvas.width, canvas.height) * 0.008)}}"
+                      },
+                      "children": [
+                        {
+                          "id": "st-{{index}}",
+                          "type": "text",
+                          "content": "{{s.title}}",
+                          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+                          "color": "{{text}}",
+                          "fontWeight": 700,
+                          "maxWidth": "{{round(canvas.width * 0.7)}}",
+                          "maxLines": 2,
+                          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}"
+                        },
+                        {
+                          "id": "sd-{{index}}",
+                          "type": "text",
+                          "content": "{{s.detail}}",
+                          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+                          "color": "{{muted}}",
+                          "maxWidth": "{{round(canvas.width * 0.7)}}",
+                          "maxLines": 2,
+                          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.026)}}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": "{{steps}}",
+      "as": "x",
+      "each": [
+        {
+          "id": "sfx-step-{{index}}",
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": "{{18 + index * 20}}",
+          "volume": 0.4
+        }
+      ]
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 180,
+              "value": 1.04,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

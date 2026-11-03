@@ -1,0 +1,81 @@
+{
+  "id": "fx-punch-in",
+  "name": "Punch-in",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Your footage with a quick camera punch-in to 1.12 times at about one second, a short hold and a return to the original framing. Retime it by editing the camera keyframes to the word you want to stress.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "The video to put the effect on (asset id or relative path); the theme background shows without one"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 30,
+      "volume": 0.4
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 30,
+              "value": 1
+            },
+            {
+              "frame": 36,
+              "value": 1.12,
+              "easing": "land"
+            },
+            {
+              "frame": 66,
+              "value": 1.12
+            },
+            {
+              "frame": 78,
+              "value": 1,
+              "easing": "glide"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

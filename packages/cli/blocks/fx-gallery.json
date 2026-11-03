@@ -1,0 +1,239 @@
+{
+  "id": "fx-gallery",
+  "name": "Effects gallery",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 180,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "A numbered 4 by 3 grid of twelve labelled tiles that appear one after another; the tiles are placeholders for previews.",
+  "params": {
+    "title": {
+      "type": "string",
+      "default": "THE EFFECT LIBRARY"
+    },
+    "tiles": {
+      "type": "list",
+      "items": {
+        "label": {
+          "type": "string",
+          "default": ""
+        }
+      },
+      "default": [
+        {
+          "label": "Glass cards"
+        },
+        {
+          "label": "Duo title"
+        },
+        {
+          "label": "Icon orbit"
+        },
+        {
+          "label": "Stats split"
+        },
+        {
+          "label": "Spotlight"
+        },
+        {
+          "label": "Checklist"
+        },
+        {
+          "label": "Timeline"
+        },
+        {
+          "label": "Command bridge"
+        },
+        {
+          "label": "Captions"
+        },
+        {
+          "label": "Highlighter"
+        },
+        {
+          "label": "Glitch title"
+        },
+        {
+          "label": "Light leak"
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow-0",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.2)}}",
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.12,
+      "blur": 140
+    },
+    {
+      "id": "glow-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.8)}}",
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.12,
+      "blur": 140
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "content": "{{title}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+      "color": "#ffffff",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.05)}}",
+      "textAlign": "center",
+      "fontWeight": 900,
+      "maxWidth": "{{round(canvas.width * 0.9)}}",
+      "maxLines": 1,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+      "startFrame": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1,
+              "easing": "glide"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.05) + 20}}",
+              "easing": "land"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.05)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": "{{tiles}}",
+      "as": "t",
+      "each": [
+        {
+          "id": "tile-{{index}}",
+          "type": "group",
+          "x": "{{round(canvas.width * 0.06) + (index % 4) * round(canvas.width * 0.2275)}}",
+          "y": "{{round(canvas.height * 0.16) + floor(index / 4) * round(canvas.height * 0.265)}}",
+          "width": "{{round(canvas.width * 0.2)}}",
+          "height": "{{round(canvas.height * 0.235)}}",
+          "startFrame": "{{10 + index * 6}}",
+          "originX": "center",
+          "originY": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.8,
+                  "easing": "pop"
+                },
+                {
+                  "frame": 16,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "children": [
+            {
+              "id": "tile-bg",
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "width": "{{round(canvas.width * 0.2)}}",
+              "height": "{{round(canvas.height * 0.235)}}",
+              "radius": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+              "fill": "rgba(255,255,255,0.1)",
+              "stroke": "rgba(255,255,255,0.3)",
+              "strokeWidth": 2
+            },
+            {
+              "id": "num",
+              "type": "text",
+              "content": "{{string(index + 1)}}",
+              "fontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+              "color": "{{accent2}}",
+              "x": "{{round(canvas.width * 0.1)}}",
+              "y": "{{round(canvas.height * 0.235) * 0.2}}",
+              "textAlign": "center",
+              "fontWeight": 900
+            },
+            {
+              "id": "lab",
+              "type": "text",
+              "content": "{{t.label}}",
+              "fontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}",
+              "color": "#ffffff",
+              "x": "{{round(canvas.width * 0.1)}}",
+              "y": "{{round(canvas.height * 0.235) * 0.64}}",
+              "textAlign": "center",
+              "fontWeight": 700,
+              "maxWidth": "{{round(canvas.width * 0.18)}}",
+              "maxLines": 2,
+              "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.014)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": "{{tiles}}",
+      "as": "u",
+      "each": [
+        {
+          "id": "sfx-{{index}}",
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": "{{10 + index * 6}}",
+          "volume": 0.2
+        }
+      ]
+    }
+  ]
+}

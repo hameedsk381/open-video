@@ -22,5 +22,22 @@ export function applyLayerEdit(raw: unknown, edit: LayerEdit): unknown { const c
   const layer = matches[0]!; for (const [key, value] of Object.entries(edit.set ?? {})) { if (['id','type','children','animations','use','with','each'].includes(key)) throw new Error(`"${key}" cannot be edited here`);
     if (!['number','string','boolean'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value))) throw new Error(`"${key}" must be a number, text or true/false`); layer[key] = value; }
   for (const key of edit.unset ?? []) { if (['id','type'].includes(key)) throw new Error(`"${key}" cannot be removed`); delete layer[key]; } return copy; }
+export type SceneEdit = { id: string; set: { startFrame?: number; durationFrames?: number } };
+/** Moves or resizes a scene written directly in the file's scenes list (not one made by repeat or a variable). */
+export function applySceneEdit(raw: unknown, edit: SceneEdit): unknown { const copy = structuredClone(raw) as any;
+  const scenes = (plain(copy) && Array.isArray(copy.scenes) ? copy.scenes : []).filter((scene: unknown) => plain(scene) && !('repeat' in scene) && scene.id === edit.id);
+  if (scenes.length !== 1) throw new Error(scenes.length ? `${scenes.length} scenes have the id "${edit.id}"` : `No scene "${edit.id}" is written directly in the file`);
+  for (const [key, value] of Object.entries(edit.set ?? {})) { if (key !== 'startFrame' && key !== 'durationFrames') throw new Error(`"${key}" cannot be changed here`);
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < (key === 'durationFrames' ? 1 : 0)) throw new Error(`"${key}" must be a whole number of frames`);
+    if (typeof scenes[0][key] === 'string') throw new Error(`The scene's ${key} comes from a variable, so it can only be changed in the file`); scenes[0][key] = value; }
+  return copy; }
+export type KeyframeEdit = { id: string; animation: number; keyframe: number; frame: number };
+/** Retimes one keyframe of a layer's animation (its frame counts from the layer's own start), keeping the keyframes in order. */
+export function applyKeyframeEdit(raw: unknown, edit: KeyframeEdit): unknown { const copy = structuredClone(raw); const matches = findRawLayers(copy, edit.id);
+  if (matches.length !== 1) throw new Error(matches.length ? `${matches.length} layers have the id "${edit.id}"` : `No layer "${edit.id}" is written directly in the file`);
+  const animation = matches[0]!.animations?.[edit.animation], keyframe = animation?.keyframes?.[edit.keyframe];
+  if (!plain(keyframe)) throw new Error('That keyframe is not written in the file (it may come from a preset or a variable)');
+  if (typeof keyframe.frame !== 'number' || !Number.isInteger(edit.frame) || edit.frame < 0) throw new Error('The keyframe must stay on a whole frame, 0 or later');
+  keyframe.frame = edit.frame; animation.keyframes.sort((a: any, b: any) => a.frame - b.frame); return copy; }
 // Writes JSON with the file's own indentation (two spaces when it cannot be told), keeping its trailing newline.
 export function formatLike(previous: string, value: unknown): string { const indent = /\n([ \t]+)"/.exec(previous)?.[1] ?? '  '; return JSON.stringify(value, null, indent) + (previous.endsWith('\n') || !previous ? '\n' : ''); }

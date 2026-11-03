@@ -1,0 +1,43 @@
+{
+  "id": "handle",
+  "name": "Handle",
+  "category": "overlay",
+  "kind": "overlay",
+  "durationFrames": 120,
+  "description": "A social handle or website in the bottom right corner.",
+  "params": {
+    "handle": {
+      "type": "string",
+      "default": "@yourbrand"
+    }
+  },
+  "layers": [
+    {
+      "id": "handle",
+      "type": "text",
+      "content": "{{handle}}",
+      "x": "{{round(canvas.width * 0.94)}}",
+      "y": "{{round(canvas.height * 0.93)}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+      "color": "{{muted}}",
+      "textAlign": "right",
+      "fontWeight": 600,
+      "maxWidth": "{{round(canvas.width * 0.5)}}",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

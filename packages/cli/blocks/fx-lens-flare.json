@@ -1,0 +1,325 @@
+{
+  "id": "fx-lens-flare",
+  "name": "Lens flare",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 60,
+  "description": "A warm lens flare sweeping across the frame: a bright source with a streak, rings and soft discs along a line, all blended in as light.",
+  "params": {},
+  "layers": [
+    {
+      "id": "flare",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "blendMode": "screen",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            },
+            {
+              "frame": 40,
+              "value": 1
+            },
+            {
+              "frame": 60,
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "streak",
+          "type": "rect",
+          "x": "{{round(canvas.width * -0.2)}}",
+          "y": "{{round(canvas.height * 0.3) - round(min(canvas.width, canvas.height) * 0.004)}}",
+          "width": "{{round(canvas.width * 1.4)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
+          "fill": {
+            "type": "linear",
+            "from": [
+              0,
+              0
+            ],
+            "to": [
+              "{{round(canvas.width * 1.4)}}",
+              0
+            ],
+            "stops": [
+              {
+                "offset": 0,
+                "color": "transparent"
+              },
+              {
+                "offset": 0.5,
+                "color": "#ffe2a8"
+              },
+              {
+                "offset": 1,
+                "color": "transparent"
+              }
+            ]
+          },
+          "blur": 4,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * -0.5)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.1)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "source",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.18)}}",
+          "fill": "#fff1c9",
+          "blur": 22,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc-0",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+          "fill": "transparent",
+          "stroke": "#ff9a3c",
+          "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.014000000000000002)}}",
+          "opacity": 0.55,
+          "blur": 3,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05) + 0.1 * round(canvas.width * 0.8)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9) - 0.1 * round(canvas.width * 0.8)}}"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.3)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.height * 0.3) + 0.1 * round(canvas.height * 0.3)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc-1",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "fill": "transparent",
+          "stroke": "#ffd7a0",
+          "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.008400000000000001)}}",
+          "opacity": 0.55,
+          "blur": 3,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05) + 0.2 * round(canvas.width * 0.8)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9) - 0.2 * round(canvas.width * 0.8)}}"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.3)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.height * 0.3) + 0.2 * round(canvas.height * 0.3)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc-2",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+          "fill": "transparent",
+          "stroke": "#7fa3ff",
+          "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.016800000000000002)}}",
+          "opacity": 0.55,
+          "blur": 3,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05) + 0.32 * round(canvas.width * 0.8)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9) - 0.32 * round(canvas.width * 0.8)}}"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.3)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.height * 0.3) + 0.32 * round(canvas.height * 0.3)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc-3",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "fill": "transparent",
+          "stroke": "#ff6fb0",
+          "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.007000000000000001)}}",
+          "opacity": 0.55,
+          "blur": 3,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05) + 0.45 * round(canvas.width * 0.8)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9) - 0.45 * round(canvas.width * 0.8)}}"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.3)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.height * 0.3) + 0.45 * round(canvas.height * 0.3)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc-4",
+          "type": "circle",
+          "x": "{{round(canvas.width * 0.1)}}",
+          "y": "{{round(canvas.height * 0.3)}}",
+          "width": "{{round(min(canvas.width, canvas.height) * 0.09)}}",
+          "fill": "transparent",
+          "stroke": "#ffe2a8",
+          "strokeWidth": "{{round(min(canvas.width, canvas.height) * 0.0126)}}",
+          "opacity": 0.55,
+          "blur": 3,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.05) + 0.6 * round(canvas.width * 0.8)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.width * 0.9) - 0.6 * round(canvas.width * 0.8)}}"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.height * 0.3)}}"
+                },
+                {
+                  "frame": 60,
+                  "value": "{{round(canvas.height * 0.3) + 0.6 * round(canvas.height * 0.3)}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 0,
+      "volume": 0.2
+    }
+  ]
+}

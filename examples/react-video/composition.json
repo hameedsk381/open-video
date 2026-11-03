@@ -1,0 +1,50 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "react-video",
+  "name": "A video written in React",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 270,
+  "background": "#0b1020",
+  "export": {
+    "loudness": -16
+  },
+  "scenes": [
+    {
+      "id": "main",
+      "name": "Main",
+      "startFrame": 0,
+      "durationFrames": 270,
+      "layers": [
+        {
+          "id": "react",
+          "type": "react",
+          "src": "video.bundle.js",
+          "width": 1920,
+          "height": 1080,
+          "durationInFrames": 270,
+          "props": {
+            "title": "Components, frame by frame",
+            "accent": "#22d3ee"
+          }
+        },
+        {
+          "id": "whoosh",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 4,
+          "volume": 0.45
+        },
+        {
+          "id": "ding",
+          "type": "audio",
+          "src": "sfx:ding",
+          "startFrame": 150,
+          "volume": 0.4
+        }
+      ]
+    }
+  ]
+}

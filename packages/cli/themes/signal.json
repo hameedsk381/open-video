@@ -1,0 +1,15 @@
+{
+  "id": "signal",
+  "name": "Signal",
+  "description": "Deep navy with a bright blue accent and cool white text. Technical and premium.",
+  "variables": {
+    "bg": "#0B1020",
+    "surface": "#131A30",
+    "text": "#E8EDF5",
+    "muted": "#9AA6C4",
+    "accent": "#2457FF",
+    "accent2": "#7FA3FF",
+    "radius": 20,
+    "headWeight": 800
+  }
+}

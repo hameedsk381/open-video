@@ -49,6 +49,8 @@ Audio is mixed by FFmpeg in the same process that encodes the video. `audioWindo
 - The Studio in `ove dev` (layer timeline with drag and resize, property editing saved to the file, undo) — implemented.
 - Media-driven timing (measured media in expressions, automatic scene placement, "auto" length) and captions (SRT/VTT/JSON, word highlighting, subtitle export) — implemented.
 - Animated volume and ducking, rich text spans, and output quality settings (CRF, bitrate, audio bitrate, draft scale) — implemented.
+- AI-assisted authoring (`ove ai`: prompt-to-composition with schema repair, narration and word-timed captions, image generation, prompt-to-batch) — implemented; AI runs before rendering, so the render path stays deterministic.
+- Local AI studio (`ove ai studio`: a loopback-only page for the same AI commands, with live progress, a rendered preview and video playback) — implemented.
 - Next: run CI on a repository host, Studio canvas and keyframe editing, speech-to-text for captions of recorded voice.
 
 ## Text and fonts
@@ -159,7 +161,33 @@ A scene `camera` is applied in `evaluateFrame`: `cameraState` evaluates its x, y
 
 `export.loudness` is applied by `masterAudio`: the planned mix is rendered once to a WAV and measured with FFmpeg's EBU R128 meter, and the difference to the target becomes one fixed gain on the whole mix, followed by a limiter at about −1.5 dBFS. A fixed gain keeps the mix's own dynamics (FFmpeg's `loudnorm` in one pass rides the level instead), and measuring over the whole composition gives partial renders and distributed chunks the same gain. Very loud targets can fall short where the limiter holds peaks back (−11 LUFS asked, −12.1 measured on the agentic AI example).
 
-## Review
+## AI authoring
+
+`@ove/ai` is an authoring layer, not part of the render path: no model is called by `renderMedia`, the Player, the
+dev server or a worker. It turns a brief into ordinary files. `composeVideo` sends a compact format cheatsheet plus
+the brief, parses the reply tolerantly (fences and prose are stripped), validates it with the same `loadComposition`
+the CLI uses, and returns schema errors, renderability checks (unknown asset ids, empty text, off-frame first scene)
+and optionally `ove review` findings to the model for another attempt. The accepted composition is written as a
+normal project, so everything downstream is unchanged and deterministic.
+
+Code layers and React layers (`react`: a bundle written by `ove build video.tsx` whose render function returns markup for a frame, drawn through the html path) are the only places a composition can run JavaScript. The renderer refuses them unless `allowCode` is set, blocks network requests from the render page when they are present, and reads their `src` files itself; the AI layer's asset check rejects them in anything a model wrote or a user pasted, so neither the Studio nor a worker ever renders one. The builder (`packages/builder`) is pure TypeScript that produces composition JSON and never touches rendering.
+
+Providers are thin `fetch` adapters behind one interface: `chat` is required; `image`, `speak` and `transcribe` are
+optional and reported by `ove ai doctor`. Groq is the main provider, handling chat (`openai/gpt-oss-120b`),
+speech synthesis (`canopylabs/orpheus-v1-english`) and word-timed transcription (`whisper-large-v3-turbo`) under
+one API key, with no image model; `mock` is a deterministic offline stand-in.
+`narrate` speaks a script, transcribes it for timings, writes `{ words }` (or `{ cues }`) as a captions asset, and
+appends one full-length scene holding the audio and a captions layer, extending `durationFrames` to fit. Because
+that scene is last, captions draw over every other scene without editing any of them. `transcribe` reuses the same
+scene builder for audio that already exists, with `--start` moving the captions to where the sound begins. `batch` derives typed
+variables from the first row, requires the model to declare and use every one, then reuses the normal
+variable-resolution path to check all rows and outputs before rendering the first frame.
+
+`ove ai studio` (`packages/cli/src/ai-studio.ts`) is a loopback-only page over the same functions. It keeps one job
+queue, pushes job state over server-sent events, renders preview frames and videos with the normal `@ove/core` calls,
+and confines every path it reads or writes to `--out`. Like `ove dev`, it requires its own `Host` on each request and
+its own `Origin` plus a JSON body on each change, so a page from another site cannot drive it.
+
 
 `reviewComposition` in `@ove/core` (the `ove review` command) draws a frame every half second with `payload.report` set, which makes the canvas runtime record, for each text and captions block, its box in composition pixels (the four corners of its layout box through the current transform), its rendered size, opacity and whether layout cut or shrank it, plus a 64-pixel-wide greyscale thumbnail of the frame. Drawing without encoding a PNG keeps this cheap (about 30 s for a 63 s video at 1280 px). Text problems count only when they last a second of samples, so entrances and transitions, where layers pass through tiny sizes and over each other on purpose, are not flagged. Reading time tracks each text block's longest unbroken stretch at full opacity against a quarter of a second per word plus half a second; headline-size blocks (6% of the short side) are clustered when they touch vertically and overlap horizontally, so a title set one word per line counts once; caption pace comes from `captionTrack` (the lines the video shows, fillers dropped); a sound is cut off when one of its measured phrases runs past the end of its on-screen window (after trim and speed) and the window ends before the video does. Frozen stretches come from the thumbnails (mean change under half a grey level), loudness from mixing the soundtrack exactly as a render would into a WAV and running FFmpeg's EBU R128 meter. The contact sheet is drawn in a separate page from full renders of evenly spaced frames. Easing names follow the job the motion does (`land`, `snap`, `glide`, `pop`, `move`, `exit`, `drift`), each a cubic Bézier, alongside the standard quad, cubic, quart and expo curves.
 

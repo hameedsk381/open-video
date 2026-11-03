@@ -1,0 +1,404 @@
+{
+  "id": "icon-row",
+  "name": "Icon row",
+  "category": "visual",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "A title and three features, each with an icon (check, bolt, star, heart or clock), a label and a line of detail.",
+  "params": {
+    "title": {
+      "type": "string",
+      "default": "Why people switch"
+    },
+    "items": {
+      "type": "list",
+      "items": {
+        "icon": {
+          "type": "string",
+          "default": "check"
+        },
+        "label": {
+          "type": "string",
+          "default": ""
+        },
+        "detail": {
+          "type": "string",
+          "default": ""
+        }
+      },
+      "default": [
+        {
+          "icon": "bolt",
+          "label": "Fast",
+          "detail": "Ready in minutes, not days."
+        },
+        {
+          "icon": "heart",
+          "label": "Loved",
+          "detail": "Rated 4.9 by our customers."
+        },
+        {
+          "icon": "clock",
+          "label": "Always on time",
+          "detail": "Delivered when you expect it."
+        }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.7)}}",
+      "y": "{{round(canvas.height * 0.7)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.1,
+      "blur": 120,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.9
+            },
+            {
+              "frame": 150,
+              "value": 1.1,
+              "easing": "drift"
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.7)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.width * 0.6)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glow2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.30000000000000004)}}",
+      "y": "{{round(canvas.height * 0.30000000000000004)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.06,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.30000000000000004)}}"
+            },
+            {
+              "frame": 180,
+              "value": "{{round(canvas.height * 0.20000000000000007)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.08)}}",
+      "y": 0,
+      "width": "{{round(canvas.width * 0.84)}}",
+      "height": "{{canvas.height}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+        "align": "start",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "title",
+          "type": "text",
+          "content": "{{title}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
+          "color": "{{text}}",
+          "fontWeight": "{{headWeight}}",
+          "maxWidth": "{{round(canvas.width * 0.84)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+          "startFrame": 0,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 24,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cells",
+          "type": "group",
+          "width": "{{round(canvas.width * 0.84)}}",
+          "layout": {
+            "direction": "{{canvas.width > canvas.height ? 'row' : 'column'}}",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+            "align": "start",
+            "justify": "{{canvas.width > canvas.height ? 'space-between' : 'start'}}"
+          },
+          "children": [
+            {
+              "repeat": "{{items}}",
+              "as": "it",
+              "each": [
+                {
+                  "id": "cell-{{index}}",
+                  "type": "group",
+                  "startFrame": "{{14 + index * 12}}",
+                  "layout": {
+                    "direction": "{{canvas.width > canvas.height ? 'column' : 'row'}}",
+                    "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+                    "align": "start"
+                  },
+                  "animations": [
+                    {
+                      "property": "opacity",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 0
+                        },
+                        {
+                          "frame": 12,
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "property": "y",
+                      "keyframes": [
+                        {
+                          "frame": 0,
+                          "value": 30,
+                          "easing": "land"
+                        },
+                        {
+                          "frame": 18,
+                          "value": 0
+                        }
+                      ]
+                    }
+                  ],
+                  "children": [
+                    {
+                      "id": "icon-{{index}}",
+                      "type": "group",
+                      "width": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+                      "height": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+                      "children": [
+                        {
+                          "id": "disc",
+                          "type": "circle",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+                          "width": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+                          "fill": "{{accent}}"
+                        },
+                        {
+                          "if": "{{it.icon == 'check'}}",
+                          "id": "glyph-check",
+                          "type": "path",
+                          "d": "M5 12.5 L10 17.5 L19 7",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "width": 24,
+                          "height": 24,
+                          "scale": "{{min(canvas.width, canvas.height) * 0.055 / 24}}",
+                          "stroke": "{{bg}}",
+                          "strokeWidth": 2,
+                          "lineCap": "round",
+                          "lineJoin": "round"
+                        },
+                        {
+                          "if": "{{it.icon == 'bolt'}}",
+                          "id": "glyph-bolt",
+                          "type": "path",
+                          "d": "M13 2 L4 14 H11 L10 22 L20 9 H13 Z",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "width": 24,
+                          "height": 24,
+                          "scale": "{{min(canvas.width, canvas.height) * 0.055 / 24}}",
+                          "stroke": "{{bg}}",
+                          "strokeWidth": 2,
+                          "lineCap": "round",
+                          "lineJoin": "round"
+                        },
+                        {
+                          "if": "{{it.icon == 'star'}}",
+                          "id": "glyph-star",
+                          "type": "path",
+                          "d": "M12 2.5 L14.9 8.9 L22 9.7 L16.8 14.5 L18.2 21.5 L12 18 L5.8 21.5 L7.2 14.5 L2 9.7 L9.1 8.9 Z",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "width": 24,
+                          "height": 24,
+                          "scale": "{{min(canvas.width, canvas.height) * 0.055 / 24}}",
+                          "stroke": "{{bg}}",
+                          "strokeWidth": 2,
+                          "lineCap": "round",
+                          "lineJoin": "round"
+                        },
+                        {
+                          "if": "{{it.icon == 'heart'}}",
+                          "id": "glyph-heart",
+                          "type": "path",
+                          "d": "M12 21 C5 15.5 2.5 12 2.5 8.5 C2.5 5.7 4.7 3.5 7.5 3.5 C9.4 3.5 11 4.5 12 6 C13 4.5 14.6 3.5 16.5 3.5 C19.3 3.5 21.5 5.7 21.5 8.5 C21.5 12 19 15.5 12 21 Z",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "width": 24,
+                          "height": 24,
+                          "scale": "{{min(canvas.width, canvas.height) * 0.055 / 24}}",
+                          "stroke": "{{bg}}",
+                          "strokeWidth": 2,
+                          "lineCap": "round",
+                          "lineJoin": "round"
+                        },
+                        {
+                          "if": "{{it.icon == 'clock'}}",
+                          "id": "glyph-clock",
+                          "type": "path",
+                          "d": "M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 Z M12 7 V12 L15.5 14",
+                          "x": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "y": "{{round(min(canvas.width, canvas.height) * 0.055 - min(canvas.width, canvas.height) * 0.0275)}}",
+                          "width": 24,
+                          "height": 24,
+                          "scale": "{{min(canvas.width, canvas.height) * 0.055 / 24}}",
+                          "stroke": "{{bg}}",
+                          "strokeWidth": 2,
+                          "lineCap": "round",
+                          "lineJoin": "round"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "copy-{{index}}",
+                      "type": "group",
+                      "layout": {
+                        "direction": "column",
+                        "gap": "{{round(min(canvas.width, canvas.height) * 0.01)}}"
+                      },
+                      "children": [
+                        {
+                          "id": "label-{{index}}",
+                          "type": "text",
+                          "content": "{{it.label}}",
+                          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.046)}}",
+                          "color": "{{text}}",
+                          "fontWeight": 700,
+                          "maxWidth": "{{canvas.width > canvas.height ? round(canvas.width * 0.24) : round(canvas.width * 0.6)}}",
+                          "maxLines": 2,
+                          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}"
+                        },
+                        {
+                          "id": "detail-{{index}}",
+                          "type": "text",
+                          "content": "{{it.detail}}",
+                          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+                          "color": "{{muted}}",
+                          "maxWidth": "{{canvas.width > canvas.height ? round(canvas.width * 0.24) : round(canvas.width * 0.6)}}",
+                          "maxLines": 3,
+                          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.028)}}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": "{{items}}",
+      "as": "x",
+      "each": [
+        {
+          "id": "sfx-icon-{{index}}",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": "{{14 + index * 12}}",
+          "volume": 0.35
+        }
+      ]
+    }
+  ],
+  "scene": {
+    "camera": {
+      "animations": [
+        {
+          "property": "zoom",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            },
+            {
+              "frame": 150,
+              "value": 1.04,
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "id": "fx-color-pop",
+  "name": "Colour pop",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "The footage drains to black and white while the speaker stays in full colour. Needs a matte of the speaker.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "Your video (asset id or relative path)"
+    },
+    "matte": {
+      "type": "string",
+      "default": "",
+      "description": "A matte video or picture of the speaker: white where the speaker is. Make it with rembg, Robust Video Matting or an editor."
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "filter": "grayscale(1) contrast(1.05)",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage && !matte}}",
+      "id": "plain",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "opacity": 0
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "subject",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "matte": {
+        "src": "{{matte}}",
+        "mode": "luma"
+      }
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 6,
+      "volume": 0.35
+    }
+  ]
+}

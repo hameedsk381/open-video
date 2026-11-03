@@ -1,0 +1,245 @@
+{
+  "id": "fx-duo-title",
+  "name": "Duo title",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 150,
+  "description": "Three big stacked lines low in the frame, scaling and sliding in, with the last in the accent colour, over a dark shade. In front of the picture, not behind the subject.",
+  "params": {
+    "line1": {
+      "type": "string",
+      "default": "ONE VIDEO."
+    },
+    "line2": {
+      "type": "string",
+      "default": "ENDLESS POSSIBILITIES."
+    },
+    "line3": {
+      "type": "string",
+      "default": "POWERED BY OVE."
+    }
+  },
+  "layers": [
+    {
+      "id": "shade",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.5)}}",
+      "fill": {
+        "type": "linear",
+        "from": [
+          0,
+          "{{round(canvas.height * 0.5)}}"
+        ],
+        "to": [
+          0,
+          "{{canvas.height}}"
+        ],
+        "stops": [
+          {
+            "offset": 0,
+            "color": "transparent"
+          },
+          {
+            "offset": 1,
+            "color": "#000000d9"
+          }
+        ]
+      },
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 16,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.6)}}",
+      "width": "{{round(canvas.width * 0.88)}}",
+      "height": "{{round(canvas.height * 0.34)}}",
+      "layout": {
+        "direction": "column",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.012)}}",
+        "align": "start",
+        "justify": "end"
+      },
+      "children": [
+        {
+          "id": "line1",
+          "type": "text",
+          "content": "{{line1}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+          "color": "#ffffff",
+          "fontWeight": 900,
+          "letterSpacing": "{{-round(min(canvas.width, canvas.height) * 0.004)}}",
+          "lineHeight": 0.95,
+          "maxWidth": "{{round(canvas.width * 0.88)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "startFrame": 4,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 1.25,
+                  "easing": "land"
+                },
+                {
+                  "frame": 22,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * -0.2)}}",
+                  "easing": "land"
+                },
+                {
+                  "frame": 22,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "line2",
+          "type": "text",
+          "content": "{{line2}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+          "color": "#ffffff",
+          "fontWeight": 800,
+          "lineHeight": 1,
+          "maxWidth": "{{round(canvas.width * 0.88)}}",
+          "maxLines": 2,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.035)}}",
+          "startFrame": 14,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 0.2)}}",
+                  "easing": "land"
+                },
+                {
+                  "frame": 24,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "line3",
+          "type": "text",
+          "content": "{{line3}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "color": "{{accent2}}",
+          "fontWeight": 800,
+          "maxWidth": "{{round(canvas.width * 0.88)}}",
+          "maxLines": 1,
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "startFrame": 26,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 10,
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 30,
+                  "easing": "land"
+                },
+                {
+                  "frame": 18,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 4,
+      "volume": 0.45
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 14,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-3",
+      "type": "audio",
+      "src": "sfx:ding",
+      "startFrame": 28,
+      "volume": 0.3
+    }
+  ]
+}

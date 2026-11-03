@@ -5,6 +5,8 @@ description: Create and edit videos with Open Video Engine (OVE) by writing a JS
 
 # Making videos with Open Video Engine
 
+Short task guides sit beside this one: `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Use the one that matches the request, and come back here for field details.
+
 An OVE video is one JSON file, `composition.json`. You never write rendering code: you edit data, check it, look at frames, and render. `composition.schema.json` next to it is the authoritative JSON Schema; read it when unsure about a field.
 
 ## Loop
@@ -160,6 +162,18 @@ A scene's `camera` moves the view of the whole scene, like a camera over a set, 
 
 `"motionBlur": { "samples": 8, "shutter": 180 }` at the top level blurs fast motion (camera moves, things flying in) the way a film camera does: each frame averages that many moments across the shutter (180° = half a frame). Things that do not move stay exactly as sharp. It makes renders slower (about 2.5× with 8–10 samples), so render drafts with `--no-motion-blur`; the live preview and `ove review` show frames without it. Worth it for videos with fast moves; pointless for slow, calm ones.
 
+## Matte and colour grade
+
+Two properties on any layer (and `grade` on a scene):
+
+```json
+{ "id": "speaker", "type": "video", "src": "clip.mp4", "matte": { "src": "speaker-matte.mp4", "mode": "luma" } }
+{ "id": "look", "type": "video", "src": "clip.mp4", "grade": { "look": "cinematic", "contrast": 0.1, "temperature": -0.1 } }
+```
+
+- `matte` shows the layer only where the matte says so. The matte is a video or picture you make with any tool (rembg, Robust Video Matting, an editor): `luma` keeps the layer where the matte is white, `alpha` where it is opaque, `invert` keeps the opposite. A video layer's matte follows its own `trimStart` and `playbackRate`. It becomes a group named `<id>-masked` when the file loads, so give layers unique ids; put blur, scale or a blend mode on a group around the masked layer, not on the layer, to affect the cut-out. `ove track matte.mp4` writes where the speaker is in each frame (for labels that follow).
+- `grade` is exposure (stops), contrast, saturation, temperature, tint, shadows, highlights and fade, each -1 to 1 (exposure -3 to 3), or a `look`: warm, cool, cinematic, teal-orange, noir, vivid, faded. Numbers add to the look. It is static; cross-fade two graded layers to change a grade over time. On a scene, it grades every layer in it except `fixed` ones.
+
 ## Transitions
 
 ```json
@@ -269,6 +283,24 @@ These work in `layers`, group `children`, `scenes` and repeat bodies:
 - One video per row: `ove render composition.json --batch rows.json --output "out/{{customer}}.mp4"`, where `rows.json` is an array of `{ "customer": "Priya", ... }` objects. Every row is checked before anything renders, and two rows may not write the same file.
 - Mistakes are reported all at once, each with its location: unknown names and fields, values of the wrong type, bad expressions, unknown components and missing params.
 - Editors validating against `composition.schema.json` will flag `"{{left}}"` in a number field and `repeat`/`use` entries in layer lists; that is expected. `ove validate` is the real check.
+
+## Blocks and themes
+
+Ready-made pieces you copy into a video, like a component library. A **block** is a scene (title, big number, quote, bullet list, numbered steps, stat grid, section divider, call to action, phone mockup, image with caption, icon row, split screen) or an overlay (lower third, badge, progress bar, handle). Scenes come with a slow camera push, drifting background shapes, a push transition and soft built-in sound effects, and new compositions get light motion blur; the picture blocks take a screenshot or photo (`--set image=shot.png`, or an asset id). Blocks are sized from the canvas, so each one fits 16:9, 9:16, 1:1 and 4:5, and they read their colours from a **theme** (`midnight`, `paper`, `neon`, `espresso`).
+
+```sh
+ove blocks                                   # list blocks and themes
+ove add title-hero reel/composition.json --aspect 9:16 --theme neon --set headline="Fresh roasted, daily"
+ove add stat-grid reel/composition.json      # appends a scene
+ove add lower-third reel/composition.json --scene title-hero --at 20 --set name="Sam Lee"
+ove theme espresso reel/composition.json     # switch every block's colours at once
+```
+
+`ove add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
+
+`ove init --template launch-wide` (also `story-tall`, `explainer-square`, `keynote-wide`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
+
+Before building scenes by hand, check `ove blocks`: a block plus `--set` is faster and consistent. Validate and review as usual afterwards.
 
 ## Planning a video
 

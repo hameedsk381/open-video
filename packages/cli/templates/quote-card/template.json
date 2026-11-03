@@ -1,0 +1,8 @@
+{
+  "name": "Quote card",
+  "description": "A square quote card with a large quotation mark, the quote, and the speaker's name and role. Calm and typographic.",
+  "tags": ["quote", "1:1", "social", "testimonial"],
+  "order": 4,
+  "previewFrame": 135,
+  "brief": "A 9-second square quote card: a large quotation mark, a short memorable quote, and the author's name and role, in warm cream and ink on deep green."
+}

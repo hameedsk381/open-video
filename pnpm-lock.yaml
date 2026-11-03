@@ -12,12 +12,18 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@ove/ai':
+        specifier: workspace:*
+        version: link:packages/ai
       '@ove/animation':
         specifier: workspace:*
         version: link:packages/animation
       '@ove/assets':
         specifier: workspace:*
         version: link:packages/assets
+      '@ove/builder':
+        specifier: workspace:*
+        version: link:packages/builder
       '@ove/core':
         specifier: workspace:*
         version: link:packages/core
@@ -27,6 +33,9 @@ importers:
       '@ove/graphics':
         specifier: workspace:*
         version: link:packages/graphics
+      '@ove/react':
+        specifier: workspace:*
+        version: link:packages/react
       '@ove/renderer':
         specifier: workspace:*
         version: link:packages/renderer
@@ -39,12 +48,24 @@ importers:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
+      '@types/react':
+        specifier: '19'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: '19'
+        version: 19.3.0(@types/react@19.3.0)
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
       playwright:
         specifier: ^1.64.1
         version: 1.64.1
+      react:
+        specifier: '19'
+        version: 19.3.1
+      react-dom:
+        specifier: '19'
+        version: 19.3.1(react@19.3.1)
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -54,6 +75,21 @@ importers:
       vitest:
         specifier: ^4.1.12
         version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
+
+  packages/ai:
+    dependencies:
+      '@ove/core':
+        specifier: workspace:*
+        version: link:../core
+      '@ove/ffmpeg':
+        specifier: workspace:*
+        version: link:../ffmpeg
+      '@ove/graphics':
+        specifier: workspace:*
+        version: link:../graphics
+      '@ove/schema':
+        specifier: workspace:*
+        version: link:../schema
 
   packages/animation:
     dependencies:
@@ -67,8 +103,20 @@ importers:
         specifier: workspace:*
         version: link:../schema
 
+  packages/builder:
+    dependencies:
+      '@ove/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/cli:
     dependencies:
+      '@ove/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@ove/builder':
+        specifier: workspace:*
+        version: link:../builder
       '@ove/core':
         specifier: workspace:*
         version: link:../core
@@ -146,6 +194,15 @@ importers:
       '@ove/timeline':
         specifier: workspace:*
         version: link:../timeline
+
+  packages/react:
+    dependencies:
+      '@ove/builder':
+        specifier: workspace:*
+        version: link:../builder
+      react:
+        specifier: '>=18'
+        version: 19.3.1
 
   packages/renderer:
     dependencies:
@@ -458,6 +515,14 @@ packages:
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
 
+  '@types/react-dom@19.3.0':
+    resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
+    peerDependencies:
+      '@types/react': ^19.3.0
+
+  '@types/react@19.3.0':
+    resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
+
   '@vitest/expect@4.1.12':
     resolution: {integrity: sha512-vFlTt+YEu9WBpNjdGayNmlMVzrWPi1+sv853/7t2FU7hpO5gAFBKHzQmkCq5Xjpr+evegF2994LQT3hF3mRlqQ==}
 
@@ -497,6 +562,9 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -640,10 +708,22 @@ packages:
     resolution: {integrity: sha512-LJlKCCAUFKOuZxipUdYw1NzIITEsPcgyOG9LkvRJvuKj/bRzbuRY0ARXvL0pWGpsZvn8jku+LMep2eU0seHp8g==}
     engines: {node: ^10 || ^12 || >=14}
 
+  react-dom@19.3.1:
+    resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
+    peerDependencies:
+      react: ^19.3.1
+
+  react@19.3.1:
+    resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
+    engines: {node: '>=0.10.0'}
+
   rolldown@1.2.16:
     resolution: {integrity: sha512-bWvlMpFKiTfDKfnK7FC2MPgPeWCf/Kpwsq49ApdW+FQaBZb6O6dZ4MAPbPUjp7hYQrw/RobqCzn64BRrQecGHw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
+
+  scheduler@0.28.0:
+    resolution: {integrity: sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==}
 
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
@@ -926,6 +1006,14 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
+  '@types/react-dom@19.3.0(@types/react@19.3.0)':
+    dependencies:
+      '@types/react': 19.3.0
+
+  '@types/react@19.3.0':
+    dependencies:
+      csstype: 3.2.3
+
   '@vitest/expect@4.1.12':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -972,6 +1060,8 @@ snapshots:
   chai@6.3.0: {}
 
   convert-source-map@2.0.0: {}
+
+  csstype@3.2.3: {}
 
   detect-libc@2.1.2: {}
 
@@ -1096,6 +1186,13 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
+  react-dom@19.3.1(react@19.3.1):
+    dependencies:
+      react: 19.3.1
+      scheduler: 0.28.0
+
+  react@19.3.1: {}
+
   rolldown@1.2.16:
     dependencies:
       '@oxc-project/types': 0.156.0
@@ -1116,6 +1213,8 @@ snapshots:
       '@rolldown/binding-openharmony-arm64': 1.2.16
       '@rolldown/binding-win32-arm64-msvc': 1.2.16
       '@rolldown/binding-win32-x64-msvc': 1.2.16
+
+  scheduler@0.28.0: {}
 
   siginfo@2.0.0: {}
 

@@ -1,0 +1,140 @@
+{
+  "id": "fx-light-leak",
+  "name": "Light leak flash",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 48,
+  "description": "A warm light sweeping across the frame and flashing white at its peak, as a transition between two scenes.",
+  "params": {},
+  "layers": [
+    {
+      "id": "leak-a",
+      "type": "circle",
+      "x": "{{round(canvas.width * -0.2)}}",
+      "y": "{{round(canvas.height * 0.35)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.4)}}",
+      "fill": "#ff8a3c",
+      "blendMode": "screen",
+      "blur": 120,
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * -0.2)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 1.2)}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 0.9
+            },
+            {
+              "frame": 34,
+              "value": 0.9
+            },
+            {
+              "frame": 48,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "leak-b",
+      "type": "circle",
+      "x": "{{round(canvas.width * -0.4)}}",
+      "y": "{{round(canvas.height * 0.6)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 1.1)}}",
+      "fill": "#ff3c8a",
+      "blendMode": "screen",
+      "blur": 120,
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * -0.4)}}"
+            },
+            {
+              "frame": 48,
+              "value": "{{round(canvas.width * 1.1)}}"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 0.7
+            },
+            {
+              "frame": 34,
+              "value": 0.7
+            },
+            {
+              "frame": 48,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flash",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "#ffffff",
+      "blendMode": "screen",
+      "opacity": 0,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 14,
+              "value": 0
+            },
+            {
+              "frame": 24,
+              "value": 0.85
+            },
+            {
+              "frame": 38,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 6,
+      "volume": 0.4
+    }
+  ]
+}

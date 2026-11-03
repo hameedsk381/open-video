@@ -1,0 +1,179 @@
+{
+  "id": "fx-ticker",
+  "name": "News ticker",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 240,
+  "description": "A band along the bottom with a label tab and a line of text scrolling right to left, repeating.",
+  "params": {
+    "label": {
+      "type": "string",
+      "default": "LIVE"
+    },
+    "message": {
+      "type": "string",
+      "default": "OPEN VIDEO ENGINE  ·  ONE COMPOSITION, ENDLESS POSSIBILITIES  ·  BUILD  ·  COMPOSE  ·  RENDER  ·  "
+    }
+  },
+  "layers": [
+    {
+      "id": "band",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.9)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+      "fill": "rgba(5,8,20,0.88)",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 1)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 16,
+              "value": "{{round(canvas.height * 0.9)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scroll",
+      "type": "group",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.9)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+      "clip": {
+        "x": "{{round(min(canvas.width, canvas.height) * 0.16)}}",
+        "y": 0,
+        "width": "{{canvas.width - round(min(canvas.width, canvas.height) * 0.16)}}",
+        "height": "{{round(min(canvas.width, canvas.height) * 0.07)}}"
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 1)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 16,
+              "value": "{{round(canvas.height * 0.9)}}"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "line-0",
+          "type": "text",
+          "content": "{{message}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#ffffff",
+          "x": "{{round(canvas.width * 1) + 0 * round(canvas.width * 2.2)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.0185)}}",
+          "fontWeight": 600,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 1) + 0 * round(canvas.width * 2.2)}}"
+                },
+                {
+                  "frame": 240,
+                  "value": "{{round(canvas.width * -1.2) + 0 * round(canvas.width * 2.2)}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "line-1",
+          "type": "text",
+          "content": "{{message}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#ffffff",
+          "x": "{{round(canvas.width * 1) + 1 * round(canvas.width * 2.2)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.0185)}}",
+          "fontWeight": 600,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": "{{round(canvas.width * 1) + 1 * round(canvas.width * 2.2)}}"
+                },
+                {
+                  "frame": 240,
+                  "value": "{{round(canvas.width * -1.2) + 1 * round(canvas.width * 2.2)}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab",
+      "type": "group",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.9)}}",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 1)}}",
+              "easing": "land"
+            },
+            {
+              "frame": 16,
+              "value": "{{round(canvas.height * 0.9)}}"
+            }
+          ]
+        }
+      ],
+      "children": [
+        {
+          "id": "tab-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(min(canvas.width, canvas.height) * 0.16)}}",
+          "height": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+          "fill": "{{accent}}"
+        },
+        {
+          "id": "tab-text",
+          "type": "text",
+          "content": "{{label}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+          "color": "#ffffff",
+          "x": "{{round(min(canvas.width, canvas.height) * 0.08)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.0185)}}",
+          "textAlign": "center",
+          "fontWeight": 900,
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}"
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.25
+    }
+  ]
+}

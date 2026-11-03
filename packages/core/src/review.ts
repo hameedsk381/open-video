@@ -6,7 +6,7 @@
 import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness, sourceOf } from './audio'; import { captionTrack, measureSource } from './media'; import { layerWindows } from '@ove/timeline';
 export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string };
 export type ReviewResult = { issues: ReviewIssue[]; sheet: Buffer; sheetFrames: number[]; sampledFrames: number; loudness?: { integrated: number; truePeak: number } };
-export type ReviewOptions = { baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; onProgress?: (done: number, total: number) => void };
+export type ReviewOptions = { allowCode?: boolean; baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; onProgress?: (done: number, total: number) => void };
 
 const area = (a: TextNote) => Math.max(0, a.x1 - a.x0) * Math.max(0, a.y1 - a.y0);
 const overlap = (a: TextNote, b: TextNote) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
@@ -15,7 +15,7 @@ const seconds = (frame: number, fps: number) => `${(frame/fps).toFixed(1)} s`;
 export async function reviewComposition(composition: Composition, options: ReviewOptions = {}): Promise<ReviewResult> { const { fps, width, height, durationFrames }=composition, baseDir=options.baseDir ?? process.cwd();
   const every=Math.max(1, Math.round(options.every ?? fps/2)), frames: number[]=[]; for (let f=0; f < durationFrames; f+=every) frames.push(f); if (frames.at(-1) !== durationFrames-1) frames.push(durationFrames-1);
   const sheetCount=Math.max(1, Math.min(options.sheetFrames ?? 20, durationFrames)), sheetFrames=Array.from({ length: sheetCount }, (_, i) => Math.min(durationFrames-1, Math.round((i+0.5)*durationFrames/sheetCount)));
-  const renderer=await createRenderer(composition, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: Math.min(1, 1280/Math.max(width, height)) });
+  const renderer=await createRenderer(composition, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: Math.min(1, 1280/Math.max(width, height)), allowCode: options.allowCode });
   let reports: FrameReport[]=[], sheet: Buffer; try { let done=0; reports=await Promise.all(frames.map(f => renderer.inspectFrame(f).then(r => { options.onProgress?.(++done, frames.length); return r; })));
     sheet=await renderer.contactSheet(sheetFrames, { columns: options.columns ?? (width >= height ? 4 : 6) }); } finally { await renderer.close(); }
   const issues: ReviewIssue[]=[], minSide=Math.min(width, height), visible=(t: TextNote) => t.alpha >= 0.95;

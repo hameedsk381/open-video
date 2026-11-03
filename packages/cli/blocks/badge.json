@@ -1,0 +1,68 @@
+{
+  "id": "badge",
+  "name": "Badge",
+  "category": "overlay",
+  "kind": "overlay",
+  "durationFrames": 90,
+  "description": "A small highlighted label in the top left corner, such as NEW or LIVE.",
+  "params": {
+    "label": {
+      "type": "string",
+      "default": "NEW"
+    }
+  },
+  "layers": [
+    {
+      "id": "tag",
+      "type": "text",
+      "spans": [
+        {
+          "text": "  {{label}}  ",
+          "background": "{{accent}}",
+          "color": "{{bg}}",
+          "fontWeight": 800
+        }
+      ],
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.05)}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 10,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0.8,
+              "easing": "pop"
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-in",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 0,
+      "volume": 0.3
+    }
+  ]
+}

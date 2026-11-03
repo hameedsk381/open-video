@@ -1,0 +1,206 @@
+{
+  "id": "fx-counter-hero",
+  "name": "Counter hero",
+  "category": "effect",
+  "kind": "overlay",
+  "durationFrames": 120,
+  "description": "A very large number counting up from zero, with a label and a line of description.",
+  "params": {
+    "value": {
+      "type": "number",
+      "default": 36
+    },
+    "suffix": {
+      "type": "string",
+      "default": ""
+    },
+    "label": {
+      "type": "string",
+      "default": "CREATIVE EFFECTS"
+    },
+    "detail": {
+      "type": "string",
+      "default": "One engine, endless compositions."
+    }
+  },
+  "layers": [
+    {
+      "id": "shade",
+      "type": "rect",
+      "x": 0,
+      "y": "{{round(canvas.height * 0.5)}}",
+      "width": "{{canvas.width}}",
+      "height": "{{round(canvas.height * 0.5)}}",
+      "fill": {
+        "type": "linear",
+        "from": [
+          0,
+          "{{round(canvas.height * 0.5)}}"
+        ],
+        "to": [
+          0,
+          "{{canvas.height}}"
+        ],
+        "stops": [
+          {
+            "offset": 0,
+            "color": "transparent"
+          },
+          {
+            "offset": 1,
+            "color": "#000000cc"
+          }
+        ]
+      },
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "count",
+      "type": "html",
+      "width": "{{round(canvas.width * 0.92)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.28)}}",
+      "startFrame": 6,
+      "html": "<div class='n'></div>",
+      "css": ".n{font:900 {{round(min(canvas.width, canvas.height) * 0.24)}}px Inter;color:#fff;line-height:1;text-align:center;letter-spacing:-0.03em}.n::before{counter-reset:n round(var(--n));content:counter(n) '{{suffix}}'}",
+      "vars": {
+        "--n": 0
+      },
+      "animations": [
+        {
+          "property": "--n",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 70,
+              "value": "{{value}}",
+              "easing": "land"
+            }
+          ]
+        }
+      ],
+      "x": "{{round(canvas.width * 0.04)}}",
+      "y": "{{round(canvas.height * 0.58)}}"
+    },
+    {
+      "id": "label",
+      "type": "text",
+      "content": "{{label}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+      "color": "{{accent2}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.75)}}",
+      "fontWeight": 800,
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
+      "textAlign": "center",
+      "maxWidth": "{{round(canvas.width * 0.88)}}",
+      "maxLines": 1,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+      "startFrame": 24,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1,
+              "easing": "glide"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.75) + 24}}",
+              "easing": "land"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.75)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "detail",
+      "type": "text",
+      "content": "{{detail}}",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+      "color": "#ffffff",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.81)}}",
+      "textAlign": "center",
+      "maxWidth": "{{round(canvas.width * 0.8)}}",
+      "maxLines": 2,
+      "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}",
+      "startFrame": 34,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1,
+              "easing": "glide"
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.81) + 20}}",
+              "easing": "land"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.81)}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:riser",
+      "startFrame": 4,
+      "volume": 0.3
+    },
+    {
+      "id": "sfx-2",
+      "type": "audio",
+      "src": "sfx:ding",
+      "startFrame": 76,
+      "volume": 0.35
+    }
+  ]
+}

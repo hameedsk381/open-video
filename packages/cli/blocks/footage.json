@@ -1,0 +1,43 @@
+{
+  "id": "footage",
+  "name": "Footage",
+  "category": "base",
+  "kind": "scene",
+  "durationFrames": 300,
+  "description": "Your video filling the frame (cover fit), the base the fx-* effects sit on. Give it the clip with --set src=clip.mp4 and its length with --frames.",
+  "params": {
+    "src": {
+      "type": "string",
+      "default": "",
+      "description": "A video (asset id or relative path); the theme background shows without one"
+    },
+    "trim": {
+      "type": "number",
+      "default": 0,
+      "description": "Frames of the clip to skip"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "if": "{{src}}",
+      "id": "clip",
+      "type": "video",
+      "src": "{{src}}",
+      "objectFit": "cover",
+      "trimStart": "{{trim}}",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    }
+  ]
+}

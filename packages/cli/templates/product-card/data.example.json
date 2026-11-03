@@ -1,0 +1,5 @@
+[
+  { "product": "Everyday Mug", "price": "$18", "badge": "NEW", "caption": "Stoneware · 350 ml", "accent": "#f97316" },
+  { "product": "Field Cap", "price": "$24", "badge": "HOT", "caption": "Washed cotton · one size", "accent": "#22d3ee" },
+  { "product": "Desk Tray", "price": "$32", "badge": "NEW", "caption": "Powder-coated steel", "accent": "#a78bfa" }
+]

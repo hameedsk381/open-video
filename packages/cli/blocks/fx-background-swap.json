@@ -1,0 +1,170 @@
+{
+  "id": "fx-background-swap",
+  "name": "Background swap",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Replaces the background behind the speaker with a brand gradient (or a picture you give) and drifting light. Needs a matte of the speaker.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "Your video (asset id or relative path)"
+    },
+    "matte": {
+      "type": "string",
+      "default": "",
+      "description": "A matte video or picture of the speaker: white where the speaker is. Make it with rembg, Robust Video Matting or an editor."
+    },
+    "backdrop": {
+      "type": "string",
+      "default": "",
+      "description": "A picture for the new background (asset id or path); a brand gradient is used without one"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "gradient",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": {
+        "type": "linear",
+        "from": [
+          0,
+          0
+        ],
+        "to": [
+          "{{canvas.width}}",
+          "{{canvas.height}}"
+        ],
+        "stops": [
+          {
+            "offset": 0,
+            "color": "{{accent}}"
+          },
+          {
+            "offset": 1,
+            "color": "{{bg}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "light-1",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.2)}}",
+      "y": "{{round(canvas.height * 0.3)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.9)}}",
+      "fill": "{{accent2}}",
+      "opacity": 0.35,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.2)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.55)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "light-2",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.85)}}",
+      "y": "{{round(canvas.height * 0.75)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.8)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.4,
+      "blur": 140,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.75)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.5)}}",
+              "easing": "drift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{backdrop}}",
+      "id": "backdrop-picture",
+      "type": "image",
+      "src": "{{backdrop}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}"
+    },
+    {
+      "if": "{{footage && matte}}",
+      "id": "subject",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "filter": "contrast(1.05) saturate(1.08)",
+      "matte": {
+        "src": "{{matte}}",
+        "mode": "luma"
+      },
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": 0
+            },
+            {
+              "frame": 14,
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-1",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.3
+    }
+  ]
+}
