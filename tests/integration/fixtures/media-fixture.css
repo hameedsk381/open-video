@@ -1,1 +1,2 @@
-.from-css { background: #123456; }
+@font-face { font-family: "Fixture Sans"; src: url(media-font.woff2) format("woff2"); }
+.from-css { background: #123456; font-family: "Fixture Sans"; }

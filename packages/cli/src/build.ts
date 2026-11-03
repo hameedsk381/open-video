@@ -3,7 +3,7 @@
 // work on it as usual. A .ts file runs through Node's own type stripping (Node 22.18 or newer) or any loader you start Node with.
 // A .tsx or .jsx file is a React video (see open-video-engine/react): its component is bundled with esbuild into a file the renderer draws
 // every frame, and the composition holds one `react` layer pointing at it.
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { compositionJsonSchema, describeError, loadComposition } from '@ove/core';
@@ -56,33 +56,44 @@ export const __render = (frame, props, cfg) => { let tree = __ce(__User.default,
   }
   catch (error) { throw new Error(`Could not bundle ${source}: ${failed(error).message}`); }
   // Audio and Video components: render the component for every frame, and make a layer of each run of frames where one is shown.
-  const mediaLayers: { audio: Record<string, unknown>[]; video: Record<string, unknown>[] } = { audio: [], video: [] };
+  const mediaLayers: { audio: Record<string, unknown>[]; video: Record<string, unknown>[]; videoFront: Record<string, unknown>[] } = { audio: [], video: [], videoFront: [] };
   const total = Number(config.durationInFrames), cfg = { id, width: Number(config.width), height: Number(config.height), fps, durationInFrames: total };
-  const seen = new Map<string, { kind: 'audio' | 'video'; attrs: Record<string, string>; start: number; last: number }[]>();
-  let scanned = false;
-  for (let frame = 0; frame < Math.min(total, 100_000); frame++) {
+  type Run = { kind: 'audio' | 'video'; attrs: Record<string, string>; start: number; last: number; boxes: Record<string, number>[] };
+  const seen = new Map<string, Run[]>();
+  const usesMedia = /\b(Audio|Video)\b/.test(await readFile(source, 'utf8').catch(() => ''));
+  const scanStart = Date.now();
+  let scanFailed: string | undefined;
+  if (typeof exported.__render === 'function') for (let frame = 0; frame < Math.min(total, 100_000); frame++) {
     let html: string;
-    try { html = exported.__render(frame, config.props ?? {}, cfg); } catch (error) { if (scanned) throw new Error(`Rendering frame ${frame} failed while looking for Audio and Video: ${describeError(error)}`); break; }
-    scanned = true;
+    try { html = exported.__render(frame, config.props ?? {}, cfg); } catch (error) { scanFailed = `frame ${frame}: ${describeError(error)}`; break; }
     const counts = new Map<string, number>();
     for (const tag of html.matchAll(/<i\b[^>]*data-ove-media="(audio|video)"[^>]*>/g)) {
       const attrs: Record<string, string> = {}; for (const a of tag[0].matchAll(/data-([a-z-]+)="([^"]*)"/g)) attrs[a[1]!] = a[2]!.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
       const base = `${tag[1]}|${attrs.src}|${attrs.name}`, n = counts.get(base) ?? 0; counts.set(base, n + 1);
       const runs = seen.get(`${base}|${n}`) ?? []; seen.set(`${base}|${n}`, runs);
+      const box = { x: Number(attrs.left) || 0, y: Number(attrs.top) || 0, width: Number(attrs.width) || Number(config.width), height: Number(attrs.height) || Number(config.height) };
       const run = runs[runs.length - 1];
-      if (run && run.last === frame - 1) run.last = frame; else runs.push({ kind: tag[1] as 'audio' | 'video', attrs, start: frame, last: frame });
+      if (run && run.last === frame - 1) { run.last = frame; run.boxes.push(box); } else runs.push({ kind: tag[1] as 'audio' | 'video', attrs, start: frame, last: frame, boxes: [box] });
     }
   }
+  if (scanFailed) {
+    seen.clear();
+    if (usesMedia) console.warn(`Warning: the Audio and Video components were not read, because the component could not be rendered in Node (${scanFailed.slice(0, 200)}). Code that needs window or document should run in an effect, not while rendering. Add the sound and footage as layers instead.`);
+  } else if (Date.now() - scanStart > 1500) console.log(`Looked for Audio and Video in ${total} frames (${((Date.now() - scanStart) / 1000).toFixed(1)} s)`);
+  // A clip that moves or resizes gets keyframes (counted from where the clip starts); frames where the value stays put are dropped.
+  const keyframes = (values: number[]) => values.map((value, i) => ({ frame: i, value })).filter((k, i) => i === 0 || i === values.length - 1 || k.value !== values[i - 1] || k.value !== values[i + 1]);
   let serial = 0;
   for (const runs of seen.values()) for (const run of runs) {
     const a = run.attrs, base = { startFrame: run.start, endFrame: run.last + 1, src: a.src!, trimStart: Math.round(Number(a.trim) || 0), volume: Number(a.volume), playbackRate: Number(a.rate) || 1, loop: a.loop === '1' };
-    if (run.kind === 'audio') mediaLayers.audio.push({ id: `audio-${++serial}`, type: 'audio', ...base });
-    else mediaLayers.video.push({ id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, x: Number(a.left), y: Number(a.top), width: Number(a.width) || Number(config.width), height: Number(a.height) || Number(config.height) });
+    if (run.kind === 'audio') { mediaLayers.audio.push({ id: `audio-${++serial}`, type: 'audio', ...base }); continue; }
+    const first = run.boxes[0]!, moving = (['x', 'y', 'width', 'height'] as const).filter(key => run.boxes.some(box => box[key] !== first[key]));
+    const layer = { id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, ...first, ...(moving.length ? { animations: moving.map(property => ({ property, keyframes: keyframes(run.boxes.map(box => box[property])) })) } : {}) };
+    (a.layer === 'front' ? mediaLayers.videoFront : mediaLayers.video).push(layer);
   }
   const bundleName = `${basename(source).replace(/\.[jt]sx?$/, '')}.bundle.js`;
   const raw: Record<string, unknown> = { $schema: './composition.schema.json', version: '1.0', id, name: config.name ?? id, width: Number(config.width), height: Number(config.height), fps, durationFrames: Number(config.durationInFrames),
     ...(config.background !== undefined ? { background: config.background } : {}), ...(config.motionBlur ? { motionBlur: config.motionBlur === true ? { samples: 4, shutter: 180 } : config.motionBlur } : {}), ...(config.export ? { export: config.export } : {}), ...(config.assets ? { assets: config.assets } : {}),
-    scenes: [{ id: 'main', name: 'Main', startFrame: 0, durationFrames: Number(config.durationInFrames), layers: [...mediaLayers.video, { id: 'react', type: 'react', src: bundleName, width: Number(config.width), height: Number(config.height), durationInFrames: Number(config.durationInFrames), props: config.props ?? {} }, ...mediaLayers.audio, ...(Array.isArray(exported.layers) ? exported.layers : [])] }] };
+    scenes: [{ id: 'main', name: 'Main', startFrame: 0, durationFrames: Number(config.durationInFrames), layers: [...mediaLayers.video, { id: 'react', type: 'react', src: bundleName, width: Number(config.width), height: Number(config.height), durationInFrames: Number(config.durationInFrames), props: config.props ?? {} }, ...mediaLayers.videoFront, ...mediaLayers.audio, ...(Array.isArray(exported.layers) ? exported.layers : [])] }] };
   let composition;
   try { composition = loadComposition(raw); } catch (error) { throw new Error(`The video does not pass the schema:\n${describeError(error)}`); }
   await mkdir(dirname(output), { recursive: true });

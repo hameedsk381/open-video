@@ -144,7 +144,14 @@ async function prepareCode(ops){for(const op of ops){if(op.kind==='group'){await
 // is mounted, awaited (delayRender), then snapshotted (canvases become pictures) and drawn through the html path below, so fonts, pictures
 // and CSS behave exactly as in an html layer. Styles that libraries add to the page (css-in-js, imported CSS) are carried along.
 const reactEntries=new Map(),liveHosts=new Map();let liveBaseline;
-function liveCss(){const out=[];for(const sheet of document.styleSheets){if(liveBaseline&&liveBaseline.has(sheet))continue;try{out.push([...sheet.cssRules].map(r=>r.cssText).join(''))}catch(e){}}return out.join('')}
+// Web fonts and pictures a stylesheet names by address are fetched and written in as data (an image drawn from markup loads nothing itself); the
+// result is kept per stylesheet text. A stylesheet the page may not read rule by rule (another origin) is fetched as text instead.
+const liveInlined=new Map();
+function inlineUrls(text,base){let job=liveInlined.get(base+'|'+text);if(!job){job=(async()=>{let out=text;for(const m of [...text.matchAll(refPattern)]){const u=m[2].trim();if(u.startsWith('data:')||u.startsWith('#'))continue;let abs;try{abs=new URL(u,base).href}catch(e){continue}
+    try{out=out.split(m[0]).join('url("'+await asDataUrl(abs)+'")')}catch(e){}}return out})();liveInlined.set(base+'|'+text,job)}return job}
+async function liveCss(){const out=[];for(const sheet of document.styleSheets){if(liveBaseline&&liveBaseline.has(sheet))continue;let text='';
+    try{text=[...sheet.cssRules].map(r=>r.cssText).join('')}catch(e){if(sheet.href){try{text=await fetch(sheet.href).then(r=>r.ok?r.text():'')}catch(e2){}}}
+    out.push(text.indexOf('url(')>=0?await inlineUrls(text,sheet.href||document.baseURI):text)}return out.join('')}
 async function liveSnapshot(entry,op){const l=op.layer,v=op.vars||{};let host=liveHosts.get(l.id);
   if(!host){host=document.createElement('div');host.style.cssText='position:fixed;left:-30000px;top:0;overflow:hidden;pointer-events:none';const box=document.createElement('div');box.style.cssText='position:relative;width:100%;height:100%';host.appendChild(box);document.body.appendChild(host);liveHosts.set(l.id,host)}
   host.style.width=l.width+'px';host.style.height=l.height+'px';const box=host.firstChild;
@@ -153,7 +160,7 @@ async function liveSnapshot(entry,op){const l=op.layer,v=op.vars||{};let host=li
   from.forEach((canvas,i)=>{const rect=canvas.getBoundingClientRect(),img=document.createElement('img');img.setAttribute('src',canvas.toDataURL('image/png'));
     const style=canvas.getAttribute('style')||'';img.setAttribute('style',style+(/(^|;)\s*width\s*:/.test(style)?'':';width:'+rect.width+'px')+(/(^|;)\s*height\s*:/.test(style)?'':';height:'+rect.height+'px'));
     if(canvas.className)img.className=canvas.className;to[i].replaceWith(img)});
-  return{html:clone.innerHTML,css:liveCss()}}
+  return{html:clone.innerHTML,css:await liveCss()}}
 async function prepareReact(ops){for(const op of ops){if(op.kind==='group'){await prepareReact(op.children||[]);continue}if(op.kind!=='react')continue;const l=op.layer;
     try{let entry=reactEntries.get(l.src);if(!entry){const given=codeSources[l.src];if(!given)throw new Error('the bundle '+l.src+' was not loaded');
         const text=typeof given.text==='string'?given.text:await fetch(given.url).then(r=>{if(!r.ok)throw new Error('could not load '+given.url);return r.text()});
