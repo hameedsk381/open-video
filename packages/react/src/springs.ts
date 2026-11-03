@@ -44,3 +44,4 @@ export function springValue(options: SpringOptions): number {
 export function stagger(index: number, framesPerItem = 3, startDelay = 0): number {
   return startDelay + Math.max(0, index) * framesPerItem;
 }
+

@@ -209,3 +209,4 @@ Use `<Video />` to place video clips under or over your components:
    * Headline: 64-96px, fontWeight: `800` or `900`, letterSpacing: `-0.04em`.
    * Body / Caption: 18-24px, color: `#94a3b8`, lineHeight: `1.6`.
 4. **Pure Function Rule**: Every render MUST be a pure deterministic function of `frame`. Do NOT use `useState`, `setTimeout`, or `Math.random()`. Use `random('seed')` from `open-video-engine/react` for repeatable randomness.
+

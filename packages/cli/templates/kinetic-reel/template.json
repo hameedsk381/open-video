@@ -1,0 +1,16 @@
+{
+  "name": "Kinetic Reel (9:16 React)",
+  "description": "Viral vertical motion graphics reel inspired by modern Claude/Remotion videos: bold kinetic typography, ambient neon lighting, bento glass cards with metric tickers, and code mockups.",
+  "tags": [
+    "react",
+    "reel",
+    "9:16",
+    "tiktok",
+    "shorts",
+    "kinetic",
+    "springs"
+  ],
+  "order": 10,
+  "previewFrame": 95,
+  "brief": "A viral 9:16 vertical motion graphics reel with punchy kinetic text, glassmorphic bento cards, animated metrics, and sound effects."
+}
