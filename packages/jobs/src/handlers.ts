@@ -1,6 +1,6 @@
 // The studio's jobs. Each handler checks its request straight away (so a bad request is refused before it is queued) and gives back the
 // work to run. They know nothing about HTTP: the files they touch come through JobPaths, the AI through the provider, and the rest is injected.
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
@@ -116,7 +116,7 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'thumbnail', run: async () => {
       const { raw, baseDir } = await loadForRender(file);
       const made = await capabilities.makeThumbnail(raw, {}, baseDir, { frame: frame === undefined ? undefined : Math.round(frame), title: optionalText(input.title), width: width === undefined ? undefined : Math.round(width) });
-      await writeFile(output, made.png);
+      await mkdir(dirname(output), { recursive: true }); await writeFile(output, made.png);
       return { ...resultFile(output), frame: made.frame, width: made.width, height: made.height };
     } };
   };

@@ -23,7 +23,7 @@ const allLayers = (composition: Composition) => composition.scenes.flatMap(scene
 // text slightly differently, so pin one (and use font assets) when output must match between machines.
 // Shader layers draw with WebGL. SwiftShader (Chromium's software GPU) gives the same pixels on every machine, GPU or not, where a real
 // GPU's output depends on its driver; canvas 2D drawing runs on the CPU either way.
-const browserArgs = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
+const browserArgs = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...(process.env.OVE_CHROMIUM_ARGS ?? '').split(/\s+/).filter(Boolean)]; // OVE_CHROMIUM_ARGS: extra flags set by whoever runs the process (the container image sets --no-sandbox, because the container is the sandbox)
 export const browserInstallHint = 'Install one with "ove browser install" (Playwright\'s Chromium, about 150 MB), install Google Chrome, or set OVE_CHROMIUM_EXECUTABLE to a Chromium-based browser.';
 export async function launchBrowser(): Promise<Browser> { const explicit=process.env.OVE_CHROMIUM_EXECUTABLE;
   if (explicit) { if (!existsSync(explicit)) throw new Error(`OVE_CHROMIUM_EXECUTABLE points to ${explicit}, which does not exist.`); return chromium.launch({ headless: true, executablePath: explicit, args: browserArgs }); }

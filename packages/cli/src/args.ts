@@ -17,6 +17,8 @@ export const commandSpecs: Record<string, Spec> = {
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
   theme: { flags: ['--json'], positionals: 2 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
+  serve: {},
+  'job-worker': {},
   dev: { values: ['--port', '--allow-host', ...variables], flags: ['--allow-code'], positionals: 1 },
   validate: { values: variables, positionals: 1 },
   inspect: { values: variables, positionals: 1 },
@@ -24,7 +26,7 @@ export const commandSpecs: Record<string, Spec> = {
   still: { values: ['--frame', '--output', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json', '--allow-code'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
-  ai: { values: ['--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--size', '--composition', '--id', '--start', '--output', '--template', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format'],
+  ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--size', '--composition', '--id', '--start', '--output', '--template', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format'],
     flags: ['--force', '--dry-run', '--json', '--review', '--full', '--narration', '--render', '--schema', '--no-captions', '--transparent', '--no-motion-blur'], positionals: 3 },
 };
 // Edit distance, for "did you mean".

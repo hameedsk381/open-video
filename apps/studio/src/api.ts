@@ -8,6 +8,7 @@ export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   const text = await response.text();
   let json: any = {};
   try { json = JSON.parse(text); } catch { json = { error: text }; }
+  if (response.status === 401 && !path.startsWith('/api/auth/')) window.dispatchEvent(new Event('ove-signed-out'));
   if (!response.ok) throw new Error(json.error || response.statusText);
   return json;
 }

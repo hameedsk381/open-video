@@ -343,7 +343,12 @@ async function studioCommand(argv: string[]): Promise<number> {
   if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536)) throw new Error('--port must be a port number');
   // `--out` names the folder the page writes projects and videos into. Everything the page can serve or touch is under it.
   const outDir = option(argv, '--out') ?? option(argv, '--out-dir');
-  const studio = await startAiStudio({ port, outDir, provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') });
+  const host = option(argv, '--host');
+  const allowHosts = argv.flatMap((arg, i) => arg === '--allow-host' && argv[i + 1] ? [argv[i + 1]!] : []);
+  if (host && !['127.0.0.1', 'localhost', '::1'].includes(host)) console.warn(`Warning: listening on ${host}. The studio has no login, so publish this port only to a network you trust (for example 127.0.0.1:3100 on the Docker host).`);
+  const rawPublic = option(argv, '--public-port'), publicPort = rawPublic === undefined ? undefined : Number(rawPublic);
+  if (publicPort !== undefined && !(Number.isInteger(publicPort) && publicPort > 0 && publicPort < 65536)) throw new Error('--public-port must be a port number');
+  const studio = await startAiStudio({ host, allowHosts, publicPort, port, outDir, provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') });
   console.log(`OVE AI studio\n  ${studio.url}\nProjects and videos are written under ${resolve(outDir ?? 'ai-videos')}.\nPress Ctrl+C to stop.`);
   const stop = () => { studio.close().finally(() => process.exit(0)); };
   process.once('SIGINT', stop); process.once('SIGTERM', stop);

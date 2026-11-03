@@ -13,6 +13,8 @@ const usage = `Usage:
   ove blocks [--json]             list the ready-made scenes and overlays and the themes
   ove add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
   ove theme [id] [composition.json]   list themes, or switch a composition to one
+  ove serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
+  ove job-worker                  runs queued jobs for ove serve (JOB_LANE=render|ai)
   ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   ove dev <composition.json> [--port 3000] [--allow-host name] [variables]
   ove validate <composition.json> [variables]
@@ -83,6 +85,8 @@ try {
     else if (file === 'clean') { const age=option('--older-than'), parsed=age === undefined ? undefined : /^(\d+)(d|h)$/.exec(age); if (age !== undefined && !parsed) throw new Error('--older-than takes days or hours, e.g. 30d or 12h');
       const freed=await cleanCache({ olderThanMs: parsed ? Number(parsed[1])*(parsed[2] === 'd' ? 86_400_000 : 3_600_000) : undefined }); console.log(`Removed ${freed.entries} cache entries, ${mb(freed.bytes)}${age ? ` not used in ${age}` : ''}`); }
     else throw new Error('Usage: ove cache size, or ove cache clean [--older-than 30d]'); }
+  else if (command === 'serve') { const { runServe } = await import('./serve'); await runServe(); }
+  else if (command === 'job-worker') { const { runJobWorker } = await import('./serve'); await runJobWorker(); }
   else if (command === 'worker') { const port=option('--port') === undefined ? undefined : Number(option('--port')); const concurrency=option('--concurrency') === undefined ? undefined : Number(option('--concurrency'));
     const worker=await startWorker({ port, host: option('--host'), token: option('--token') ?? process.env.OVE_WORKER_TOKEN, concurrency, log: line => console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`) });
     console.log(`Worker listening on ${worker.url}

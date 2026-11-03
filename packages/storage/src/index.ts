@@ -31,6 +31,8 @@ export interface ProjectStore {
   putThumb(who: Principal, id: string, png: Buffer): Promise<void>;
   revisions(who: Principal, id: string): Promise<Revision[]>;
   restore(who: Principal, id: string, n: number): Promise<Revision>;
+  /** Bytes this principal's projects take up on disk. */
+  usedBytes(who: Principal): Promise<number>;
   /** A local folder with the project's files, for work that needs real files. Call commit() when the work wrote something. */
   workdir(who: Principal, id: string): Promise<{ dir: string; commit(): Promise<void> }>;
 }
@@ -134,6 +136,10 @@ export class FsProjectStore implements ProjectStore {
     await mkdir(dirname(cache), { recursive: true }); await writeFile(cache, png);
   }
 
+  async usedBytes(who: Principal) {
+    const walk = async (dir: string): Promise<number> => { let total = 0; for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) { const path = join(dir, entry.name); total += entry.isDirectory() ? (entry.name === '_tenants' ? 0 : await walk(path)) : (await stat(path).catch(() => ({ size: 0 }))).size; } return total; };
+    return walk(this.tenantRoot(who));
+  }
   revisions(who: Principal, id: string) { return listRevisions(this.file(who, id)); }
   restore(who: Principal, id: string, n: number) { return restoreRevision(this.file(who, id), n); }
   async workdir(who: Principal, id: string) { return { dir: this.projectDir(who, id), commit: async () => {} }; }

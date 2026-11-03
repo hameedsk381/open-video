@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadComposition } from '@ove/schema';
-import { projectMode, projectVariables, setVariableValues, textLayers } from '../../packages/cli/src/ai-studio-projects';
+import { projectMode, projectVariables, setVariableValues, textLayers } from '@ove/api';
 import { slugify } from '@ove/storage';
 import { aiStudioPage } from '../../packages/cli/src/ai-studio-page';
 

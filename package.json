@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@ove/ai": "workspace:*",
+    "@ove/api": "workspace:*",
     "@ove/animation": "workspace:*",
     "@ove/assets": "workspace:*",
     "@ove/builder": "workspace:*",
@@ -31,6 +32,7 @@
     "@ove/react": "workspace:*",
     "@ove/renderer": "workspace:*",
     "@ove/storage": "workspace:*",
+    "@ove/worker": "workspace:*",
     "@ove/schema": "workspace:*",
     "@ove/timeline": "workspace:*",
     "@types/node": "^24.19.2",

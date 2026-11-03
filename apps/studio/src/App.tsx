@@ -4,6 +4,8 @@ import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
 import { Library, Settings } from './pages/Library';
 import { Projects } from './pages/Projects';
+import { AuthPage, TokenPage, type Me } from './pages/Auth';
+import { api } from './api';
 import { useRoute } from './router';
 import { Spinner, UiProvider } from './ui';
 
@@ -19,8 +21,22 @@ function ThemeToggle() {
 
 const nav = [['projects', '#/', 'Projects'], ['library', '#/library', 'Library'], ['settings', '#/settings', 'Settings']] as const;
 
+type Session = { state: 'loading' } | { state: 'local' } | { state: 'out'; signups: boolean } | { state: 'in'; user: Me };
+
+/** Asks who is here. A local studio has no accounts (the route is not there), a hosted one answers with the person or null. */
+function useSession() {
+  const [session, setSession] = useState<Session>({ state: 'loading' });
+  useEffect(() => {
+    fetch('/api/auth/me').then(async r => { if (!r.ok) return setSession({ state: 'local' }); const j = await r.json(); setSession(j.user ? { state: 'in', user: j.user } : { state: 'out', signups: j.signups !== false }); }, () => setSession({ state: 'local' }));
+    const out = () => setSession(current => current.state === 'in' ? { state: 'out', signups: true } : current);
+    window.addEventListener('ove-signed-out', out); return () => window.removeEventListener('ove-signed-out', out);
+  }, []);
+  return [session, setSession] as const;
+}
+
 export function App() {
-  useEffect(connectJobs, []);
+  const [session, setSession] = useSession();
+  useEffect(() => { if (session.state === 'local' || session.state === 'in') return connectJobs(); }, [session.state]);
   const route = useRoute(), jobs = useJobs();
   const running = Object.values(jobs).filter(j => j.status === 'running' || j.status === 'queued')[0];
   const section = route.name === 'new' || route.name === 'making' || route.name === 'editor' ? 'projects' : route.name;
@@ -32,10 +48,14 @@ export function App() {
         <div className="grow" />
         {running ? <div className="busy"><Spinner /><span>{running.messages.at(-1) ?? `Working on ${running.kind}…`}</span></div> : null}
         <ThemeToggle />
+        {session.state === 'in' ? <button className="btn ghost sm" title={session.user.email} onClick={() => api('/api/auth/logout', {}).then(() => { setSession({ state: 'out', signups: true }); location.hash = '#/'; })}>Sign out</button> : null}
         <a className="btn primary sm" href="#/new">New video</a>
       </header>
       <main className={`main ${route.name === 'editor' ? 'fixed' : ''}`}>
-        {route.name === 'new' ? <Create /> : route.name === 'making' ? <Making id={route.id} job={route.job} /> : route.name === 'editor' ? <Editor key={route.id} id={route.id} tab={route.tab} />
+        {session.state === 'loading' ? <div className="center"><Spinner /></div>
+          : route.name === 'reset' || route.name === 'verify' ? <TokenPage kind={route.name} token={route.token} />
+          : session.state === 'out' ? <AuthPage signups={session.signups} onSignedIn={user => setSession({ state: 'in', user })} />
+          : route.name === 'new' ? <Create /> : route.name === 'making' ? <Making id={route.id} job={route.job} /> : route.name === 'editor' ? <Editor key={route.id} id={route.id} tab={route.tab} />
           : route.name === 'library' ? <Library /> : route.name === 'settings' ? <Settings /> : <Projects />}
       </main>
     </div>

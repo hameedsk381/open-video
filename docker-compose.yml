@@ -1,0 +1,30 @@
+# `docker compose up --build` starts the AI Studio on http://127.0.0.1:3100/ (put GROQ_API_KEY in a .env file, or leave it out and use --provider mock).
+# Set STUDIO_PORT to use another port on this machine (for example when 3100 is taken).
+# The studio has no login, so the port is published to this machine only. The container is locked down because it renders untrusted
+# compositions in Chromium: non-root, no capabilities, read-only root filesystem, limited memory, CPUs and processes.
+services:
+  studio:
+    build: .
+    image: ove-studio:local
+    init: true
+    ports:
+      - "127.0.0.1:${STUDIO_PORT:-3100}:3100"
+    command: ["ai", "studio", "--host", "0.0.0.0", "--port", "3100", "--public-port", "${STUDIO_PORT:-3100}", "--out", "/data"]
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ove-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/node:mode=1777
+    shm_size: 1gb
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 4g
+    cpus: 2
+    pids_limit: 512
+    restart: unless-stopped
+volumes:
+  ove-data:

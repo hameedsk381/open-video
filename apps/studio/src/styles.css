@@ -111,3 +111,4 @@ details { margin: 4px 0 20px; } summary { cursor: pointer; color: var(--muted); 
 @media (max-width: 900px) {
   .editor { grid-template-columns: 1fr; height: auto; } .side { border-left: 0; border-top: 1px solid var(--border); } .main.fixed { overflow: auto; } .topbar { padding: 0 14px; } .busy { display: none; } .two { grid-template-columns: 1fr; } .page { padding-top: 24px; }
 }
+.link { color: var(--blue); cursor: pointer; }

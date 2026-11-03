@@ -1,12 +1,13 @@
 import { useSyncExternalStore } from 'react';
 
-export type Route = { name: 'projects' | 'new' | 'library' | 'settings' } | { name: 'making'; id: string; job: string } | { name: 'editor'; id: string; tab: string };
+export type Route = { name: 'projects' | 'new' | 'library' | 'settings' } | { name: 'reset' | 'verify'; token: string } | { name: 'making'; id: string; job: string } | { name: 'editor'; id: string; tab: string };
 
 const read = () => location.hash;
 const subscribe = (fn: () => void) => { window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn); };
 
 export function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  if ((parts[0] === 'reset' || parts[0] === 'verify') && parts[1]) return { name: parts[0], token: parts[1] };
   if (parts[0] === 'new') return { name: 'new' };
   if (parts[0] === 'library') return { name: 'library' };
   if (parts[0] === 'settings') return { name: 'settings' };
