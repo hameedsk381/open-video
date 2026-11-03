@@ -91,7 +91,9 @@ async function htmlSvg(op){const l=op.layer,w=l.width,h=l.height,k=l.resolution|
   root.setAttribute('style',Object.entries(op.vars||{}).map(([name,value])=>name+':'+value+';').join('')+'width:'+w+'px;height:'+h+'px;overflow:hidden;position:relative;margin:0');
   style.textContent=(await fontCss())+'*{animation-play-state:paused!important;transition:none!important}'+(await inlineRefs(l.css||''));root.appendChild(style);for(const n of [...doc.body.childNodes])root.appendChild(n);
   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w*k+'" height="'+h*k+'" viewBox="0 0 '+w+' '+h+'"><foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+new XMLSerializer().serializeToString(root)+'</foreignObject></svg>'}
-async function prepareHtml(ops){for(const op of ops){if(op.kind==='group'){await prepareHtml(op.children||[]);continue}if(op.kind!=='html')continue;const l=op.layer;op.htmlKey=JSON.stringify([l.html,l.css,op.vars,l.width,l.height,l.resolution]);
+async function prepareHtml(ops){for(const op of ops){if(op.kind==='group'){await prepareHtml(op.children||[]);continue}if(op.kind!=='html')continue;const l=op.layer,usesTime=/var\(\s*--(t|frame)\b/.test(l.html+'\n'+l.css),keyVars=usesTime?op.vars:Object.fromEntries(Object.entries(op.vars||{}).filter(([name])=>name!=='--t'&&name!=='--frame'));
+    // --t and --frame change every frame, so they only count towards the cache key when the markup or CSS actually reads them; a static card is drawn once.
+    op.htmlKey=JSON.stringify([l.html,l.css,keyVars,l.width,l.height,l.resolution]);
     const cached=htmlImages.get(op.htmlKey);if(cached){htmlImages.delete(op.htmlKey);htmlImages.set(op.htmlKey,cached);continue}
     try{const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(await htmlSvg(op));await img.decode();htmlImages.set(op.htmlKey,img)}
     catch(e){const err=new Error('Layer "'+l.id+'" (html): could not be drawn ('+(e&&e.message||'the markup or CSS may be malformed')+')');err.oveLayer=true;throw err}

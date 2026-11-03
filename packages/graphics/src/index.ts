@@ -16,7 +16,7 @@ export const toDrawOperations = (layers: EvaluatedLayer[]): DrawOperation[] => l
 export const flattenLayers = (layers: readonly any[]): any[] => layers.flatMap(l => l.type === 'group' ? [l, ...flattenLayers(l.children ?? [])] : [l]);
 export const flattenOperations = (operations: readonly DrawOperation[]): DrawOperation[] => operations.flatMap(op => op.kind === 'group' ? [op, ...flattenOperations(op.children ?? [])] : [op]);
 // Pictures an html layer refers to: src="…" attributes and url(…) in its markup and CSS, other than data: URLs and fragments.
-export const htmlReferences = (layer: { html?: string; css?: string }): string[] => { const text = `${layer.html ?? ''}\n${layer.css ?? ''}`, refs = [...text.matchAll(/\bsrc\s*=\s*(["'])([^"']+)\1/gi)].map(m => m[2]!).concat([...text.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi)].map(m => m[2]!.trim()));
+export const htmlReferences = (layer: { html?: string; css?: string }): string[] => { const text = `${layer.html ?? ''}\n${layer.css ?? ''}`, refs = [...text.matchAll(/(?<![\w:-])src\s*=\s*(["'])([^"']+)\1/gi)].map(m => m[2]!).concat([...text.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi)].map(m => m[2]!.trim()));
   return refs.filter(ref => !/^(data:|#|blob:)/i.test(ref)); };
 // The Lottie animations a composition draws, by src.
 export const collectLottieSources = (layers: readonly any[]): string[] => [...new Set(flattenLayers(layers).filter(l => l.type === 'lottie').map(l => l.src as string))];

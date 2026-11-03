@@ -10,6 +10,7 @@ describe('html layers', () => {
     expect(() => comp({ animations: [{ property: '--w', keyframes: [{ frame: 0, value: 0 }, { frame: 10, value: '#fff' }] }] })).not.toThrow(); });
   it('finds the pictures its markup and CSS use', () => { expect(htmlReferences({ html: `<img src="logo"><img src='./a.png'><img src="data:image/png;base64,x">`, css: `.a{background:url(bg.jpg)} .b{mask:url("#m")}` })).toEqual(['logo', './a.png', 'bg.jpg']);
     expect(collectImageSources(comp({ html: '<img src="logo">' }).scenes[0]!.layers)).toEqual(['logo']); });
+  it('only counts src attributes, not data-src or similar', () => { expect(htmlReferences({ html: `<img data-src="lazy.png" src="logo"><div data-lottie-src='x.json'></div>` })).toEqual(['logo']); });
   it('gives the runtime its CSS variables at each frame, animated ones included', () => { const c = comp({ vars: { '--accent': '#22d3ee' }, animations: [{ property: '--progress', keyframes: [{ frame: 0, value: 0 }, { frame: 30, value: 1 }] }] });
     const op = prepareOperations(toDrawOperations(evaluateFrame(c, 6 + 15)), 30)[0]!; expect(op.kind).toBe('html'); expect(op.vars).toEqual({ '--accent': '#22d3ee', '--progress': 0.5, '--t': 0.5, '--frame': 15 }); });
 });
