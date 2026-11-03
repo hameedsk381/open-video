@@ -29,6 +29,7 @@
     "@ove/graphics": "workspace:*",
     "@ove/react": "workspace:*",
     "@ove/renderer": "workspace:*",
+    "@ove/storage": "workspace:*",
     "@ove/schema": "workspace:*",
     "@ove/timeline": "workspace:*",
     "@types/node": "^24.19.2",

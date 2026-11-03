@@ -5,7 +5,7 @@ import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { dirname, extname, isAbsolute, relative as relativePath, resolve, sep } from 'node:path';
 import {
-  assetProblems, mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta, captionAudio, composeVideo, createProvider, extractJson, fieldsFromRows, generateImage, narrate, planBatch,
+  assetProblems, mergeNarration, ensureBaseline, saveRevision, type RevisionMeta, captionAudio, composeVideo, createProvider, extractJson, fieldsFromRows, generateImage, narrate, planBatch,
   providerCapabilities, refineVideo, renderBatch, sanitizeCompositionJson, systemPrompt, userPrompt, writeCompositionProject, type AiProvider, type BatchSettings, type ComposeOptions,
 } from '@ove/ai';
 import {
@@ -22,7 +22,8 @@ import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequ
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
-import { assetKinds, copyProject, listAssets, listProjects, projectMode, projectVariables, setVariableValues, slugify, textLayers, trashProject, uniqueFolder } from './ai-studio-projects';
+import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from './ai-studio-projects';
+import { FsProjectStore, LOCAL_PRINCIPAL, within } from '@ove/storage';
 import { listTemplates } from './templates';
 import { composeSmart, narrateSmart } from './templates';
 import { assetIdFromPath } from '@ove/ai';
@@ -100,11 +101,7 @@ export function folderName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'video';
 }
 
-/** True when target is a file or folder strictly below root (root itself is not allowed). */
-export function within(root: string, target: string): boolean {
-  const rel = relativePath(resolve(root), resolve(target));
-  return rel !== '' && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
-}
+export { within };
 
 type JobStatus = 'queued' | 'running' | 'done' | 'error';
 type JobKind = 'thumbnail' | 'compose' | 'render' | 'review' | 'narrate' | 'transcribe' | 'image' | 'batch' | 'refine' | 'import';
@@ -143,6 +140,8 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
   try { provider = createProvider({ provider: options.provider, model: options.model, baseUrl: options.baseUrl }); }
   catch (error) { providerError = describeError(error); }
 
+  // Projects are reached only through the store, as one principal. A hosted API will make a principal per signed-in user.
+  const store = new FsProjectStore(root), who = LOCAL_PRINCIPAL;
   const clients = new Set<ServerResponse>();
   const jobs = new Map<string, Job>();
   const queue: Job[] = [];
@@ -188,13 +187,10 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
   };
 
   const readJson = async (file: string) => JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
-  const relative = (file: string) => relativePath(root, file).split(sep).join('/');
+  const relative = (file: string) => store.relative(who, file);
   const urlFor = (file: string) => '/files/' + relative(file).split('/').map(encodeURIComponent).join('/');
-  const inside = (value: string, label: string, base = root) => {
-    const target = isAbsolute(value) ? resolve(value) : resolve(base, value);
-    if (!within(root, target)) throw new Error(`${label} must be inside ${root}`);
-    return target;
-  };
+  const idOf = (file: string) => relative(file).split('/')[0]!;
+  const inside = (value: string, label: string, base?: string) => store.resolve(who, value, label, base);
   const projectDir = (value: unknown, brief: string) => inside(optionalText(value) ?? folderName(brief), 'folder');
   const fileInside = (value: unknown, label: string) => inside(textOf(value, label), label);
   // Files you already have may be anywhere on disk, but only the kinds the job uses: audio is sent to the provider, rows are read as data.
@@ -229,13 +225,8 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     };
   };
   // A project edit writes the file's own JSON (variables, components and all), kept as a revision.
-  const writeRaw = async (file: string, raw: unknown, meta: RevisionMeta) => {
-    loadComposition(raw);
-    await ensureBaseline(file);
-    await writeFile(file, JSON.stringify(raw, null, 2) + '\n');
-    await saveRevision(file, { provider: provider?.id, model: provider?.model, ...meta });
-  };
-  const projectFile = (id: unknown) => { const dir = inside(textOf(id, 'project'), 'project'); return { dir, file: resolve(dir, 'composition.json') }; };
+  const writeRaw = async (id: string, raw: unknown, meta: RevisionMeta) => { loadComposition(raw); await store.writeRaw(who, id, raw, { provider: provider?.id, model: provider?.model, ...meta }); };
+  const projectFile = (value: unknown) => { const id = textOf(value, 'project'), dir = store.projectDir(who, id); return { id, dir, file: resolve(dir, 'composition.json') }; };
   const readBytes = (req: IncomingMessage, limit: number) => new Promise<Buffer>((ok, fail) => {
     const parts: Buffer[] = []; let size = 0;
     req.on('data', (chunk: Buffer) => { size += chunk.length; if (size > limit) { fail(new Error('That file is too large')); req.destroy(); } else parts.push(chunk); });
@@ -248,23 +239,21 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     apply(node);
   };
   const projectDetail = async (id: string) => {
-    const { dir, file } = projectFile(id), raw = await readJson(file), composition = loadComposition(raw), mode = projectMode(raw);
+    const { dir } = await store.workdir(who, id), raw = await store.readRaw(who, id), composition = loadComposition(raw), mode = projectMode(raw);
     const declared = variablesSchema.parse(raw.variables ?? {}), values = resolveVariables(declared, {});
     return {
       id, name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, mode,
       scenes: composition.scenes.map(scene => ({ id: scene.id, name: scene.name, startFrame: scene.startFrame, durationFrames: scene.durationFrames })),
       variables: mode === 'template' ? projectVariables(raw) : [], theme: Object.fromEntries(themeTokens.filter(token => token in declared).map(token => [token, values[token]])),
-      texts: mode === 'finished' ? textLayers(composition) : [], assets: await listAssets(dir), revisions: (await listRevisions(file)).length,
+      texts: mode === 'finished' ? textLayers(composition) : [], assets: await store.assets(who, id), revisions: (await store.revisions(who, id)).length,
       source: { raw, media: await measureMedia(raw, dir), base: `/files/${id}/` },
     };
   };
   const thumbFor = async (id: string) => {
-    const { dir, file } = projectFile(id), cache = resolve(dir, '.studio', 'thumb.png');
-    const [source, cached] = await Promise.all([stat(file), stat(cache).catch(() => undefined)]);
-    if (cached && cached.mtimeMs >= source.mtimeMs) return readFile(cache);
-    const { raw, baseDir } = await loadForRender(file);
-    const made = await makeThumbnail(raw, {}, baseDir, { width: 480 });
-    await mkdir(dirname(cache), { recursive: true }); await writeFile(cache, made.png);
+    const saved = await store.thumb(who, id); if (saved) return saved;
+    const work = await store.workdir(who, id), raw = await store.readRaw(who, id);
+    const made = await makeThumbnail(raw, {}, work.dir, { width: 480 });
+    await store.putThumb(who, id, made.png);
     return made.png;
   };
   const resultFile = (file: string) => ({ file, relative: relative(file), url: urlFor(file) });
@@ -275,7 +264,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     const dir = projectDir(input.folder, brief);
     return enqueue('compose', async progress => {
       const ai = requireProvider();
-      const pictures = (await listAssets(dir)).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
+      const pictures = (await store.assets(who, idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
       const options: ComposeOptions = {
         ...canvas, brief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
         includeSchema: boolOf(input.schema), maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
@@ -571,7 +560,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
       }
       if (req.method === 'GET' && url.pathname === '/api/history') {
         const file = fileInside(url.searchParams.get('file'), 'file');
-        return sendJson(res, 200, { revisions: await listRevisions(file) });
+        return sendJson(res, 200, { revisions: await store.revisions(who, idOf(file)) });
       }
       if (req.method === 'GET' && url.pathname === '/api/still') {
         const file = fileInside(url.searchParams.get('file'), 'file');
@@ -580,7 +569,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
         const frame = requested === null ? Math.floor(composition.durationFrames / 2) : integerIn(requested, 0, 'frame', 0, Math.max(0, composition.durationFrames - 1));
         return send(res, 200, 'image/png', await renderStill(composition, { frame, baseDir }));
       }
-      if (req.method === 'GET' && url.pathname === '/api/projects') return sendJson(res, 200, { projects: await listProjects(root) });
+      if (req.method === 'GET' && url.pathname === '/api/projects') return sendJson(res, 200, { projects: await listProjects(store, who) });
       if (req.method === 'GET' && url.pathname === '/api/project') return sendJson(res, 200, await projectDetail(textOf(url.searchParams.get('id'), 'project')));
       if (req.method === 'GET' && url.pathname === '/api/thumb') return send(res, 200, 'image/png', await thumbFor(textOf(url.searchParams.get('id'), 'project')));
       if (req.method === 'GET' && url.pathname === '/api/library') return sendJson(res, 200, {
@@ -598,63 +587,54 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
       }
       if (req.method === 'GET' && url.pathname.startsWith('/files/')) return await serveFile(req, res, url.pathname);
       if (req.method === 'POST' && url.pathname === '/api/upload') {
-        const { dir } = projectFile(url.searchParams.get('project')), name = textOf(url.searchParams.get('name'), 'name').split(/[\\/]/).pop()!.replace(/[^A-Za-z0-9._-]+/g, '-');
-        if (!assetKinds[extname(name).toLowerCase()]) throw new Error(`Pictures, video and audio only (${Object.keys(assetKinds).join(' ')})`);
-        const taken = new Set(await readdir(resolve(dir, 'assets')).catch(() => [])); let final = name;
-        for (let n = 2; taken.has(final); n++) final = name.replace(/(\.[^.]*)?$/, `-${n}$1`);
-        await mkdir(resolve(dir, 'assets'), { recursive: true });
-        await writeFile(resolve(dir, 'assets', final), await readBytes(req, 150_000_000));
-        return sendJson(res, 200, { assets: await listAssets(dir) });
+        const { id } = projectFile(url.searchParams.get('project')), name = textOf(url.searchParams.get('name'), 'name');
+        return sendJson(res, 200, { assets: await store.putAsset(who, id, name, await readBytes(req, 150_000_000)) });
       }
       if (req.method === 'POST' && url.pathname !== '/api/upload') {
         const body = JSON.parse(await readBody(req) || '{}');
         if (!body || typeof body !== 'object' || Array.isArray(body)) return sendError(res, new Error('Expected a JSON object'));
         if (url.pathname === '/api/project/new') {
           const { name } = parseRequest(newProjectRequest, body); canvasFor(body);
-          const id = await uniqueFolder(root, slugify(name));
-          await mkdir(resolve(root, id, 'assets'), { recursive: true });
-          return sendJson(res, 200, { id });
+          return sendJson(res, 200, { id: await store.create(who, name) });
         }
         if (url.pathname === '/api/project/blank') {
-          const { name } = parseRequest(newProjectRequest, body), canvas = canvasFor(body), id = await uniqueFolder(root, slugify(name)), dir = resolve(root, id);
-          await mkdir(resolve(dir, 'assets'), { recursive: true });
-          await writeFile(resolve(dir, 'composition.json'), JSON.stringify(emptyComposition(name, canvas.width, canvas.height, canvas.fps), null, 2) + '\n');
+          const { name } = parseRequest(newProjectRequest, body), canvas = canvasFor(body), id = await store.create(who, name);
+          await store.writeRaw(who, id, emptyComposition(name, canvas.width, canvas.height, canvas.fps));
           return sendJson(res, 200, { id });
         }
         if (url.pathname === '/api/project/rename') {
-          const request = parseRequest(renameRequest, body), { file } = projectFile(request.id), raw = await readJson(file); raw.name = request.name;
-          await writeRaw(file, raw, { kind: 'edit', label: 'Renamed' }); return sendJson(res, 200, { ok: true });
+          const request = parseRequest(renameRequest, body), { id } = projectFile(request.id), raw = await store.readRaw(who, id); raw.name = request.name;
+          await writeRaw(id, raw, { kind: 'edit', label: 'Renamed' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/project/duplicate') {
-          const request = parseRequest(idRequest, body), { file } = projectFile(request.id), raw = await readJson(file), id = await uniqueFolder(root, `${request.id.replace(/-\d+$/, '')}-copy`);
-          await copyProject(root, request.id, id);
-          const copy = resolve(root, id, 'composition.json'); raw.name = `${raw.name ?? id} copy`.slice(0, 120); await writeFile(copy, JSON.stringify(raw, null, 2) + '\n');
+          const request = parseRequest(idRequest, body), { id: source } = projectFile(request.id);
+          const id = await store.duplicate(who, source, raw => ({ ...raw, name: `${raw.name ?? source} copy`.slice(0, 120) }));
           return sendJson(res, 200, { id });
         }
-        if (url.pathname === '/api/project/delete') { const request = parseRequest(idRequest, body); projectFile(request.id); await trashProject(root, request.id); return sendJson(res, 200, { ok: true }); }
+        if (url.pathname === '/api/project/delete') { const request = parseRequest(idRequest, body), { id } = projectFile(request.id); await store.trash(who, id); return sendJson(res, 200, { ok: true }); }
         if (url.pathname === '/api/variables') {
-          const request = parseRequest(variablesRequest, body), { file } = projectFile(request.id);
-          await writeRaw(file, setVariableValues(await readJson(file), request.values), { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
+          const request = parseRequest(variablesRequest, body), { id } = projectFile(request.id);
+          await writeRaw(id, setVariableValues(await store.readRaw(who, id), request.values), { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/theme') {
-          const request = parseRequest(themeRequest, body), { file } = projectFile(request.id), theme = await readTheme(request.theme);
-          await writeRaw(file, applyTheme(await readJson(file), theme), { kind: 'edit', label: `Look: ${theme.name}` }); return sendJson(res, 200, { ok: true });
+          const request = parseRequest(themeRequest, body), { id } = projectFile(request.id), theme = await readTheme(request.theme);
+          await writeRaw(id, applyTheme(await store.readRaw(who, id), theme), { kind: 'edit', label: `Look: ${theme.name}` }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/text') {
-          const request = parseRequest(textRequest, body), { file } = projectFile(request.id), content = request.content, composition = loadComposition(await readJson(file)) as any;
+          const request = parseRequest(textRequest, body), { id } = projectFile(request.id), content = request.content, composition = loadComposition(await store.readRaw(who, id)) as any;
           setAtPath(composition, request.path, layer => { if (layer.type !== 'text') throw new Error('That layer is not text'); if (typeof layer.content === 'string' && layer.content) layer.content = content; else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }]; else layer.content = content; });
-          await writeRaw(file, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
+          await writeRaw(id, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/add-block') {
-          const request = parseRequest(addBlockRequest, body), { file } = projectFile(request.id), block = await readBlock(request.block);
-          const added = addBlock(await readJson(file), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });
-          await writeRaw(file, added.composition, { kind: 'edit', label: `Added ${block.name}` }); return sendJson(res, 200, { placed: added.placed, where: added.where });
+          const request = parseRequest(addBlockRequest, body), { id } = projectFile(request.id), block = await readBlock(request.block);
+          const added = addBlock(await store.readRaw(who, id), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });
+          await writeRaw(id, added.composition, { kind: 'edit', label: `Added ${block.name}` }); return sendJson(res, 200, { placed: added.placed, where: added.where });
         }
         if (url.pathname === '/api/compose') return sendJson(res, 202, { job: composeJob(body) });
         if (url.pathname === '/api/thumbnail') return sendJson(res, 202, { job: thumbnailJob(body) });
         if (url.pathname === '/api/restore') {
           const request = parseRequest(restoreRequest, body), file = fileInside(request.file, 'file');
-          return sendJson(res, 200, { revision: await restoreRevision(file, request.n) });
+          return sendJson(res, 200, { revision: await store.restore(who, idOf(file), request.n) });
         }
         if (url.pathname === '/api/refine') return sendJson(res, 202, { job: refineJob(body) });
         if (url.pathname === '/api/import') return sendJson(res, 202, { job: importJob(body) });

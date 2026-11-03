@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadComposition } from '@ove/schema';
-import { projectMode, projectVariables, setVariableValues, slugify, textLayers } from '../../packages/cli/src/ai-studio-projects';
+import { projectMode, projectVariables, setVariableValues, textLayers } from '../../packages/cli/src/ai-studio-projects';
+import { slugify } from '@ove/storage';
 import { aiStudioPage } from '../../packages/cli/src/ai-studio-page';
 
 const template = { version: '1.0', id: 't', name: 'T', width: 100, height: 100, fps: 30, durationFrames: 30, variables: { headline: { type: 'string', default: 'Hi' }, accent: { type: 'color', default: '#ff0000' } },

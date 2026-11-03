@@ -68,3 +68,25 @@ Every storage and queue call takes a `Principal`, even in local mode (a fixed on
 ## Not in this plan
 
 Billing, plans, email, a hosted database schema, and the render sandbox's network and syscall policy. They sit on top of these seams and need their own design.
+
+## Decisions (made with the project owner)
+
+- **Hosting:** one or two VPS machines running containers (Postgres, Redis, the API, render workers). Scale out by adding worker machines.
+- **Auth:** built in the API, not a hosted provider: email and password, server-side sessions in Postgres, password hashing (argon2id), email verification and reset, login rate limiting and lockout, CSRF protection for the cookie session. The `Auth` port keeps a hosted provider possible later.
+- **Billing:** none for the free beta. Instead of plans, per-user limits (renders per day, render minutes, AI calls, storage) enforced in the API and worker, with the numbers in configuration. Metering is built now so billing can be added without redesign.
+
+## Roadmap to a hosted beta
+
+1-4 above are the refactor (no new infrastructure). Then:
+
+5. **Auth seam and accounts.** Postgres schema: `users`, `sessions`, `tenants` (one per user at first), `projects` (metadata and ownership; files stay in object storage), `jobs`, `usage`. Sign-up, sign-in, sign-out, reset. The cross-tenant test from step 5 runs against the HTTP API.
+6. **Worker and queue.** Redis queue, worker process, per-job timeouts, retries, one job per worker at a time, results written back through `ProjectStore`. Object storage adapter (S3-compatible, e.g. MinIO on the VPS or a bucket) for `AssetStore`/`ProjectStore`.
+7. **Render sandbox and containers.** Worker image runs with no network, no capabilities, read-only root, CPU/memory/time limits; compositions from users never run code layers (`allowCode` is not available to tenants). API image has no Chromium.
+8. **Beta limits and abuse controls.** Per-user quotas, upload size and type limits, request rate limits, AI spend cap per user and globally, an admin switch to disable an account.
+9. **Operations.** Health and readiness endpoints, structured logs, metrics, backups (Postgres and object storage), TLS and a reverse proxy, staged deploys, an on-call checklist.
+10. **Docs and ownership** (the old step 8).
+
+## Status
+
+- Step 1 (contracts): done, committed.
+- Step 2 (storage): `@ove/storage` has the store interface, `FsProjectStore`, tenant spaces and path safety, all tested. The studio's project-level routes (list, detail, rename, duplicate, delete, variables, theme, text, blocks, assets, thumbnails, history, restore) use it. Job handlers (compose, refine, render, narrate, ...) still read and write files by path; they move behind `workdir` in step 3.

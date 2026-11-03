@@ -45,6 +45,9 @@ importers:
       '@ove/schema':
         specifier: workspace:*
         version: link:packages/schema
+      '@ove/storage':
+        specifier: workspace:*
+        version: link:packages/storage
       '@ove/timeline':
         specifier: workspace:*
         version: link:packages/timeline
@@ -153,6 +156,9 @@ importers:
       '@ove/schema':
         specifier: workspace:*
         version: link:../schema
+      '@ove/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/contracts:
     dependencies:
@@ -263,6 +269,12 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
+
+  packages/storage:
+    dependencies:
+      '@ove/ai':
+        specifier: workspace:*
+        version: link:../ai
 
   packages/timeline:
     dependencies:
