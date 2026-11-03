@@ -1,13 +1,15 @@
 {
-  "name": "open-video-engine",
+  "name": "motionrender",
   "private": true,
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "workspaces": [
     "packages/*"
   ],
   "packageManager": "pnpm@10.0.0",
   "scripts": {
+    "mr": "tsx packages/cli/src/index.ts",
+    "motionrender": "tsx packages/cli/src/index.ts",
     "ove": "tsx packages/cli/src/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

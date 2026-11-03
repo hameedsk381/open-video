@@ -1,31 +1,36 @@
 #!/usr/bin/env node
 try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
 import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
-const usage = `Usage:
-  ove init <dir> [--template id] [--force] [--no-skill]
-  ove schema [--output composition.schema.json]
-  ove doctor                      check Node, FFmpeg encoders and the browser
-  ove cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
-  ove browser install             download Playwright's Chromium for rendering
-  ove thumbnail <composition.json> [--frame n] [--title "text"] [--width 1280] [--output thumbnail.png] [variables]   a cover image, with an optional title over it
-  ove build <video.ts|video.js> [--output composition.json]   run a video written as code (open-video-engine/builder) and write its composition JSON
-  ove track <matte> [--fps 30] [--output track.json]   follow the speaker through a matte video (for fx-tracked-label)
-  ove blocks [--json]             list the ready-made scenes and overlays and the themes
-  ove add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
-  ove theme [id] [composition.json]   list themes, or switch a composition to one
-  ove serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
-  ove job-worker                  runs queued jobs for ove serve (JOB_LANE=render|ai)
-  ove worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
-  ove dev <composition.json> [--port 3000] [--allow-host name] [variables]
-  ove validate <composition.json> [variables]
+const usage = `MotionRender: JSON-first, frame-deterministic motion graphics video engine.
+
+Usage:
+  motionrender <command> [options] (aliases: mr, ove)
+
+Commands:
+  mr init <dir> [--template id] [--force] [--no-skill]
+  mr schema [--output composition.schema.json]
+  mr doctor                      check Node, FFmpeg encoders and the browser
+  mr cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
+  mr browser install             download Playwright's Chromium for rendering
+  mr thumbnail <composition.json> [--frame n] [--title "text"] [--width 1280] [--output thumbnail.png] [variables]   a cover image, with an optional title over it
+  mr build <video.ts|video.js> [--output composition.json]   run a video written as code (motionrender/builder) and write its composition JSON
+  mr track <matte> [--fps 30] [--output track.json]   follow the speaker through a matte video (for fx-tracked-label)
+  mr blocks [--json]             list the ready-made scenes and overlays and the themes
+  mr add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
+  mr theme [id] [composition.json]   list themes, or switch a composition to one
+  mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
+  mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
+  mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
+  mr dev <composition.json> [--port 3000] [--allow-host name] [variables]
+  mr validate <composition.json> [variables]
     (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
-  ove inspect <composition.json> [variables]          scenes, timing and measured media
-  ove captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
-  ove still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
-  ove review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
-  ove render <composition.json> [--output output.mp4] [render options] [variables]
-  ove render <composition.json> --batch rows.json --output "out/{{name}}.mp4" [render options]
-  ove ai doctor | compose | narrate | transcribe | image | batch | studio   AI-assisted authoring; run "ove ai" for details
+  mr inspect <composition.json> [variables]          scenes, timing and measured media
+  mr captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
+  mr still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
+  mr review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
+  mr render <composition.json> [--output output.mp4] [render options] [variables]
+  mr render <composition.json> --batch rows.json --output "out/{{name}}.mp4" [render options]
+  mr ai doctor | compose | narrate | transcribe | image | batch | studio   AI-assisted authoring; run "mr ai" for details
 
 Render options:
   --format mp4|webm|mov|gif|png   default: from the --output extension, then export.format (png writes a folder of frames)
@@ -37,12 +42,12 @@ Render options:
   --loudness -14                  make the sound this loud overall (LUFS), with peaks limited
   --no-motion-blur                skip the composition's motion blur, for a quicker draft
   --concurrency n --preset veryfast
-  --workers URL,URL [--chunk-size 60] [--token T]   split the render across "ove worker" processes (mp4, webm, mov)
+  --workers URL,URL [--chunk-size 60] [--token T]   split the render across worker processes (mp4, webm, mov)
 Variables: --var name=value (repeatable) and/or --vars values.json; --var wins.
-Options also take the form --name=value. ove --help shows this list.`;
+Options also take the form --name=value. Run "mr --help" or "ove --help" for this list.`;
 // Options are checked against each command's list first (args.ts), so typos fail instead of being ignored.
 if (wantsHelp(process.argv.slice(2))) { console.log(usage); process.exit(0); }
-let argv: string[]; try { argv=checkArgs(process.argv.slice(2)); } catch (error) { console.error(`${(error as Error).message}\nRun "ove --help" for the options.`); process.exit(1); }
+let argv: string[]; try { argv=checkArgs(process.argv.slice(2)); } catch (error) { console.error(`${(error as Error).message}\nRun "mr --help" for options.`); process.exit(1); }
 const [command,file]=argv; const option=(name:string)=>{ const index=argv.indexOf(name); return index < 0 ? undefined : argv[index+1]; }; const flag=(name:string)=>argv.includes(name);
 const readJson=async (path:string) => JSON.parse(await readFile(resolve(path),'utf8'));
 async function suppliedValues(): Promise<Record<string, unknown>> { const fromFile=option('--vars') ? await readJson(option('--vars')!) : {}; if (typeof fromFile !== 'object' || fromFile === null || Array.isArray(fromFile)) throw new Error('--vars must be a JSON object of name: value'); const fromFlags=Object.fromEntries(argv.flatMap((arg, i) => { if (arg !== '--var') return []; const pair=argv[i+1] ?? '', at=pair.indexOf('='); if (at < 1) throw new Error(`--var expects name=value, got "${pair}"`); return [[pair.slice(0, at), pair.slice(at+1).replace(/\\n/g, '\n')]]; })); return { ...fromFile, ...fromFlags }; } // a typed \n in --var is a line break

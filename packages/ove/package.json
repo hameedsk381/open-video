@@ -1,7 +1,7 @@
 {
-  "name": "open-video-engine",
-  "version": "0.2.0",
-  "description": "JSON-first, frame-deterministic video engine: render compositions to MP4, WebM, ProRes, GIF or PNG frames from Node or the command line.",
+  "name": "motionrender",
+  "version": "0.2.1",
+  "description": "JSON-first, frame-deterministic motion graphics video engine: render compositions to MP4, WebM, ProRes, GIF or PNG frames from Node or the command line.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,7 +26,9 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "ove": "./dist/cli.js"
+    "motionrender": "dist/cli.js",
+    "mr": "dist/cli.js",
+    "ove": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -48,11 +50,15 @@
     "zod": "^4.6.7"
   },
   "keywords": [
+    "motionrender",
+    "motion-graphics",
     "video",
     "render",
-    "motion-graphics",
+    "remotion-alternative",
     "ffmpeg",
     "json",
+    "animation",
+    "canvas",
     "template"
   ],
   "peerDependencies": {

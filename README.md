@@ -1,10 +1,24 @@
-# Open Video Engine
+# MotionRender
 
-An independent, JSON-first, frame-deterministic video engine. A video is one canonical JSON composition: OVE validates it, evaluates each frame with Chromium Canvas 2D, and streams the frames into FFmpeg for MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or PNG frames.
+An independent, JSON-first, frame-deterministic motion graphics video engine. A video is one canonical JSON composition: MotionRender validates it, evaluates each frame with Chromium Canvas 2D, and streams the frames into FFmpeg for MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or PNG frames.
 
-## Setup
+## Quickstart
 
-Prerequisites: Node.js 22+ (the development machine has Node 26), pnpm, and an FFmpeg build with libx264, libx265, libvpx-vp9, libopus and ProRes (most full builds have all of them). Install dependencies then install Chromium:
+```sh
+# Run anywhere with npx (zero installation)
+npx motionrender init my-video
+npx motionrender dev my-video/composition.json
+npx motionrender render my-video/composition.json --output out.mp4
+
+# Or launch the AI Studio UI
+npx motionrender ai studio
+```
+
+*(Aliases: `mr` and `ove` can be used interchangeably with `motionrender`)*
+
+## Setup (Local Development)
+
+Prerequisites: Node.js 22+, pnpm, and an FFmpeg build with libx264, libx265, libvpx-vp9, libopus and ProRes. Install dependencies then install Chromium:
 
 ```sh
 pnpm install
@@ -15,9 +29,9 @@ pnpm test
 ## Start a video
 
 ```sh
-pnpm ove init my-video
-pnpm ove still my-video/composition.json --frame 45 --output still.png
-pnpm ove render my-video/composition.json --output my-video/out.mp4
+pnpm mr init my-video
+pnpm mr still my-video/composition.json --frame 45 --output still.png
+pnpm mr render my-video/composition.json --output my-video/out.mp4
 ```
 
 Text uses Inter by default, an open-licence font built into OVE, so videos look the same on every machine with no fonts installed. Compositions can set a gradient `background` and `grain` (moving film grain). Text can animate word by word, letter by letter or line by line (`split`, with presets such as `rise`, `pop`, `blur` and `typewriter`), and `export.loudness` (or `--loudness -14`) makes the sound a set loudness. An `html` layer draws HTML and CSS (flexbox, grid, rich text, inline SVG) as part of the frame, with no scripts and nothing fetched from the web; CSS variables and `@keyframes` animate it frame-exactly ([examples/html-card](examples/html-card/composition.json)). Lottie animations play frame-exactly, GLSL shaders (Shadertoy code included) fill boxes with animated textures, and groups can lay their children out in rows and columns ([examples/expressive](examples/expressive/composition.json)). A scene `camera` pans, zooms, turns and shakes the whole scene (layers marked `fixed`, such as captions, stay put), and `motionBlur` blurs fast motion like a film camera. Paths can morph from one shape into another, transitions include iris, push, dip and blur, `sfx:whoosh` and six other built-in sound effects need no files, a `tempo` gives expressions `beat()`, `bar()` and `beats()` so cuts land on the music, and captions drop filler words and can emphasise key words.

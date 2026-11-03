@@ -1,6 +1,6 @@
-# open-video-engine
+# motionrender
 
-A JSON-first, frame-deterministic video engine. A video is one JSON composition: layers, animation, transitions, video and audio, text, drawing and templates with variables, lists and components. OVE renders it in headless Chromium and encodes it with FFmpeg to MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or a folder of PNG frames.
+A JSON-first, frame-deterministic motion graphics video engine. A video is one JSON composition: layers, animation, transitions, video and audio, text, drawing and templates with variables, lists and components. MotionRender renders it in headless Chromium and encodes it with FFmpeg to MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or a folder of PNG frames.
 
 ## Requirements
 
@@ -11,18 +11,19 @@ A JSON-first, frame-deterministic video engine. A video is one JSON composition:
 ## Command line
 
 ```sh
-npm install open-video-engine
-npx ove init my-video
-npx ove dev my-video/composition.json
-npx ove render my-video/composition.json --output out.mp4
+npm install motionrender
+npx motionrender init my-video
+npx motionrender dev my-video/composition.json
+npx motionrender render my-video/composition.json --output out.mp4
 ```
 
-`npx ove` with no arguments lists every command: `init`, `schema`, `doctor` (checks FFmpeg, encoders and the browser), `browser install`, `dev` (preview with live playback and sound, plus a Studio for editing layer timing and properties), `validate`, `inspect`, `still`, `render` (formats, codecs, transparency, frame ranges, batch rendering from a data file), `worker` (distributed rendering: `ove render --workers URL,URL --token T`) and `ai` (prompt-to-composition, narration, word-timed captions for existing audio, images and prompt-to-batch; provider: Groq or an offline mock). `ove ai studio` opens the same AI commands as a local page with a brief form, live progress and a rendered preview.
+You can use `motionrender`, `mr`, or `ove` interchangeably:
+`npx motionrender` lists every command: `init`, `schema`, `doctor`, `browser install`, `dev` (live preview with audio), `render` (formats, codecs, transparency, frame ranges, batch rendering), `ai` and `ai studio` (`motionrender ai studio`).
 
 ## Node API
 
 ```js
-import { loadCompositionFile, renderMedia, renderStill } from 'open-video-engine';
+import { loadCompositionFile, renderMedia, renderStill } from 'motionrender';
 
 const { composition, baseDir } = await loadCompositionFile('my-video/composition.json', { title: 'Hello from Node' });
 
@@ -38,14 +39,17 @@ await renderMedia(composition, {
 const png = await renderStill(composition, { baseDir, frame: 45 }); // a Buffer
 ```
 
-Also exported: `loadComposition` (from an object), `compositionJsonSchema`, `describeError` for readable validation errors, `createRenderer` and `renderFrames` for custom pipelines, and the composition types.
+## React Videos & Builder
 
-Distributed rendering is available from Node as well: `renderDistributed(composition, { output, workers: [httpWorker(url, token)], chunkSize })`.
+```js
+import { AbsoluteFill, Series, interpolate, spring, useCurrentFrame, useVideoConfig } from 'motionrender/react';
+import { createVideo, text, rect, sample } from 'motionrender/builder';
+```
 
 ## Player (browser)
 
 ```js
-import { createPlayer } from 'open-video-engine/player';
+import { createPlayer } from 'motionrender/player';
 const player = await createPlayer(document.querySelector('#video'), { composition, assetBase: '/media/', controls: true });
 ```
 
