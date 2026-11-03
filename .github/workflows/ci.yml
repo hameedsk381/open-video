@@ -36,7 +36,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:studio
       - run: pnpm --filter @ove/studio typecheck
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/AppData/Local/ms-playwright
+            ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: pnpm exec playwright install-deps chromium
 
       - run: pnpm ove doctor
       - run: pnpm typecheck

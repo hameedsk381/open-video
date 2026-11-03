@@ -21,10 +21,22 @@ RUN pnpm install --frozen-lockfile \
  && pnpm build:package \
  && mkdir -p /out && cd packages/ove && npm pack --pack-destination /out
 
-# The package and ffmpeg (which encodes, and measures uploaded media), without a browser.
-FROM node:22-bookworm-slim AS base
+# System runtime base with ffmpeg, shared across images.
+FROM node:22-bookworm-slim AS runtime-base
 ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Pre-install Chromium and all OS libraries in an independent layer BEFORE copying application code.
+# Because this stage has no dependency on the repo source or build tarball, Docker caches it
+# permanently across deployments and never re-downloads Chromium or apt packages.
+FROM runtime-base AS chromium-base
+RUN npx -y playwright@1.64.1 install --with-deps chromium \
+ && rm -rf /var/lib/apt/lists/* /root/.npm \
+ && chmod -R a+rX /ms-playwright
+ENV OVE_CHROMIUM_ARGS=--no-sandbox
+
+# The package and ffmpeg, without a browser (used by API).
+FROM runtime-base AS base
 COPY --from=build /out/*.tgz /tmp/app.tgz
 RUN npm install -g --omit=dev /tmp/app.tgz && rm /tmp/app.tgz \
  && mkdir -p /data && chown node:node /data
@@ -39,13 +51,14 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3100/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 CMD ["serve"]
 
-# Adds the Chromium that Playwright installs (with its system libraries); it draws the frames.
-FROM base AS chromium
-RUN node "$(npm root -g)/motionrender/node_modules/playwright/cli.js" install --with-deps chromium \
- && rm -rf /var/lib/apt/lists/* && chmod -R a+rX /ms-playwright
-# Chromium's own sandbox needs privileges a container does not (and should not) have. The container is the sandbox: non-root user, no
-# capabilities, read-only filesystem (see compose.yml), and for render workers no network. So the flag is set here, for these images only.
-ENV OVE_CHROMIUM_ARGS=--no-sandbox
+# Adds the application onto the pre-cached Chromium base (for workers and studio).
+FROM chromium-base AS chromium
+COPY --from=build /out/*.tgz /tmp/app.tgz
+RUN npm install -g --omit=dev /tmp/app.tgz && rm /tmp/app.tgz \
+ && mkdir -p /data && chown node:node /data
+WORKDIR /data
+VOLUME /data
+ENTRYPOINT ["ove"]
 
 FROM chromium AS worker
 USER node
