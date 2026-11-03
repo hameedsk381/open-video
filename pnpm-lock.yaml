@@ -36,6 +36,9 @@ importers:
       '@ove/graphics':
         specifier: workspace:*
         version: link:packages/graphics
+      '@ove/jobs':
+        specifier: workspace:*
+        version: link:packages/jobs
       '@ove/react':
         specifier: workspace:*
         version: link:packages/react
@@ -147,6 +150,9 @@ importers:
       '@ove/graphics':
         specifier: workspace:*
         version: link:../graphics
+      '@ove/jobs':
+        specifier: workspace:*
+        version: link:../jobs
       '@ove/player':
         specifier: workspace:*
         version: link:../player
@@ -203,6 +209,21 @@ importers:
       lottie-web:
         specifier: ^5.13.0
         version: 5.13.0
+
+  packages/jobs:
+    dependencies:
+      '@ove/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@ove/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@ove/core':
+        specifier: workspace:*
+        version: link:../core
+      '@ove/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/ove:
     dependencies:

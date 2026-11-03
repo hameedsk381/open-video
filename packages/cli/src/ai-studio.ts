@@ -24,6 +24,7 @@ import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlo
 import { playerScript } from './dev';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from './ai-studio-projects';
 import { FsProjectStore, LOCAL_PRINCIPAL, within } from '@ove/storage';
+import { InProcessQueue, boolOf, canvasFor, createFsPaths, createHandlers, folderName, integerIn, localInputFile, numberIn, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { listTemplates } from './templates';
 import { composeSmart, narrateSmart } from './templates';
 import { assetIdFromPath } from '@ove/ai';
@@ -44,78 +45,9 @@ export type AiStudioOptions = {
 
 export type AiStudioServer = { url: string; close(): Promise<void> };
 
-const kinds: Record<string, { aspect: string; duration: number; label: string }> = {
-  reel: { aspect: '9:16', duration: 20, label: 'vertical social reel' },
-  product: { aspect: '1:1', duration: 18, label: 'product video' },
-  promo: { aspect: '16:9', duration: 30, label: 'promo' },
-  project: { aspect: '16:9', duration: 60, label: 'project or case-study video' },
-};
-const aspects: Record<string, [number, number]> = { '9:16': [1080, 1920], '1:1': [1080, 1080], '16:9': [1920, 1080], '4:5': [1080, 1350], '3:4': [1080, 1440] };
+// The request helpers and the job handlers live in @ove/jobs; these are re-exported because tests and callers import them from here.
+export { canvasFor, folderName, within };
 
-const textOf = (value: unknown, label: string) => {
-  const text = typeof value === 'string' ? value.trim() : '';
-  if (!text) throw new Error(`${label} is required`);
-  return text;
-};
-const optionalText = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : undefined;
-const boolOf = (value: unknown) => value === true || value === 'true' || value === 'on';
-
-function numberIn(value: unknown, fallback: number, label: string, min: number, max: number): number {
-  if (value === undefined || value === null || value === '') return fallback;
-  const number = Number(value);
-  if (!Number.isFinite(number) || number < min || number > max) throw new Error(`${label} must be a number from ${min} to ${max}`);
-  return number;
-}
-
-function optionalNumber(value: unknown, label: string, min: number, max: number): number | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  return numberIn(value, 0, label, min, max);
-}
-
-function integerIn(value: unknown, fallback: number, label: string, min: number, max: number): number {
-  const number = numberIn(value, fallback, label, min, max);
-  if (!Number.isInteger(number)) throw new Error(`${label} must be a whole number`);
-  return number;
-}
-
-/** The canvas from the same presets the CLI uses, so a page and a command produce the same shape. */
-export function canvasFor(input: Record<string, unknown> = {}) {
-  const kindName = optionalText(input.kind) ?? 'promo';
-  const preset = kinds[kindName];
-  if (!preset) throw new Error(`kind must be one of: ${Object.keys(kinds).join(', ')}`);
-  const aspect = optionalText(input.aspect) ?? preset.aspect;
-  const custom = /^(\d+)x(\d+)$/.exec(aspect);
-  const dimensions = custom ? [Number(custom[1]), Number(custom[2])] as [number, number] : aspects[aspect];
-  if (!dimensions) throw new Error(`aspect must be one of ${Object.keys(aspects).join(', ')}, or WIDTHxHEIGHT`);
-  return {
-    kind: preset.label,
-    width: dimensions[0],
-    height: dimensions[1],
-    durationSeconds: numberIn(input.duration, preset.duration, 'duration', 0.1, 3600),
-    fps: integerIn(input.fps, 30, 'fps', 1, 120),
-  };
-}
-
-/** A folder name that is safe on Windows and POSIX, used when the page leaves the folder blank. */
-export function folderName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'video';
-}
-
-export { within };
-
-type JobStatus = 'queued' | 'running' | 'done' | 'error';
-type JobKind = 'thumbnail' | 'compose' | 'render' | 'review' | 'narrate' | 'transcribe' | 'image' | 'batch' | 'refine' | 'import';
-type Job = {
-  id: string;
-  kind: JobKind;
-  status: JobStatus;
-  messages: string[];
-  result?: unknown;
-  error?: string;
-  startedAt?: number;
-  endedAt?: number;
-  run: (progress: (message: string) => void) => Promise<unknown>;
-};
 
 const mediaTypes: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif',
@@ -143,12 +75,9 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
   // Projects are reached only through the store, as one principal. A hosted API will make a principal per signed-in user.
   const store = new FsProjectStore(root), who = LOCAL_PRINCIPAL;
   const clients = new Set<ServerResponse>();
-  const jobs = new Map<string, Job>();
-  const queue: Job[] = [];
-  let running = false, nextId = 0, port = 0;
+  const queue = new InProcessQueue();
+  let port = 0;
 
-  const publicJob = (job: Job) => { const { run, ...rest } = job; return rest; };
-  const recentJobs = () => [...jobs.values()].slice(-20).map(publicJob);
   const providerState = () => provider
     ? { provider: { id: provider.id, model: provider.model, baseUrl: provider.baseUrl, capabilities: providerCapabilities(provider) }, error: null }
     : { provider: null, error: providerError ?? 'No AI provider is configured' };
@@ -158,72 +87,14 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const client of [...clients]) { try { client.write(message); } catch { clients.delete(client); } }
   };
-  const broadcast = (job: Job) => sendEvent('job', publicJob(job));
-  const pump = async () => {
-    if (running) return;
-    const job = queue.shift();
-    if (!job) return;
-    running = true; job.status = 'running'; job.startedAt = Date.now(); broadcast(job);
-    try {
-      job.result = await job.run(message => {
-        job.messages.push(String(message));
-        if (job.messages.length > 200) job.messages.shift();
-        broadcast(job);
-      });
-      job.status = 'done';
-    } catch (error) {
-      job.error = describeError(error);
-      job.status = 'error';
-    } finally {
-      job.endedAt = Date.now(); running = false; broadcast(job); void pump();
-    }
-  };
-  const enqueue = (kind: JobKind, run: Job['run']) => {
-    const job: Job = { id: String(++nextId), kind, status: 'queued', messages: [], run };
-    jobs.set(job.id, job); queue.push(job);
-    if (jobs.size > 40) for (const [id, old] of jobs) { if (jobs.size <= 20) break; if (old.status === 'done' || old.status === 'error') jobs.delete(id); }
-    broadcast(job); void pump();
-    return publicJob(job);
-  };
+  queue.subscribe(job => sendEvent('job', job));
 
-  const readJson = async (file: string) => JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
-  const relative = (file: string) => store.relative(who, file);
-  const urlFor = (file: string) => '/files/' + relative(file).split('/').map(encodeURIComponent).join('/');
-  const idOf = (file: string) => relative(file).split('/')[0]!;
-  const inside = (value: string, label: string, base?: string) => store.resolve(who, value, label, base);
-  const projectDir = (value: unknown, brief: string) => inside(optionalText(value) ?? folderName(brief), 'folder');
-  const fileInside = (value: unknown, label: string) => inside(textOf(value, label), label);
-  // Files you already have may be anywhere on disk, but only the kinds the job uses: audio is sent to the provider, rows are read as data.
-  const audioTypes = ['.wav', '.mp3', '.ogg', '.m4a', '.aac', '.flac', '.webm', '.mp4', '.mov', '.mkv'];
-  const inputFile = (value: unknown, label: string, extensions: string[]) => {
-    const text = textOf(value, label);
-    const file = isAbsolute(text) ? resolve(text) : resolve(process.cwd(), text);
-    if (!extensions.includes(extname(file).toLowerCase())) throw new Error(`${label} must be a ${extensions.join(', ')} file`);
-    return file;
-  };
-  const loadForRender = async (file: string) => {
-    const raw = await readJson(file);
-    const baseDir = dirname(file);
-    const composition = await attachCaptions(loadComposition(raw), baseDir);
-    return { raw, composition: composition as Composition, baseDir };
-  };
-  // With `meta`, the change is kept as a numbered revision (and what was there before, the first time).
-  const writeComposition = async (file: string, composition: Composition, meta?: RevisionMeta) => {
-    if (meta) await ensureBaseline(file);
-    await writeFile(file, JSON.stringify({ $schema: './composition.schema.json', ...composition }, null, 2) + '\n');
-    if (meta) await saveRevision(file, { provider: provider?.id, model: provider?.model, ...meta });
-  };
-  const renderSettings = (input: Record<string, unknown>): BatchSettings => {
-    const preset = optionalText(input.preset) ?? defaultPreset;
-    if (!x264Presets.includes(preset as never)) throw new Error(`preset must be one of: ${x264Presets.join(', ')}`);
-    return {
-      scale: optionalNumber(input.scale, 'scale', 0.05, 1),
-      loudness: optionalNumber(input.loudness, 'loudness', -60, 0),
-      crf: optionalNumber(input.crf, 'crf', 0, 51),
-      preset: preset as BatchSettings['preset'],
-      concurrency: defaultConcurrency(),
-    };
-  };
+  // The jobs get the store's paths, the provider and the pieces that ship with the command line.
+  const providerInfo = () => ({ provider: provider?.id, model: provider?.model });
+  const paths = createFsPaths(store, who, providerInfo);
+  const handlers = createHandlers({ who, paths, provider: requireProvider, providerInfo, assets: id => store.assets(who, id), capabilities: { composeSmart, narrateSmart, makeThumbnail }, local: { inputFile: localInputFile } });
+  const { readJson, relative, urlFor, idOf, fileInside, loadForRender, resultFile } = paths;
+
   // A project edit writes the file's own JSON (variables, components and all), kept as a revision.
   const writeRaw = async (id: string, raw: unknown, meta: RevisionMeta) => { loadComposition(raw); await store.writeRaw(who, id, raw, { provider: provider?.id, model: provider?.model, ...meta }); };
   const projectFile = (value: unknown) => { const id = textOf(value, 'project'), dir = store.projectDir(who, id); return { id, dir, file: resolve(dir, 'composition.json') }; };
@@ -256,231 +127,6 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
     await store.putThumb(who, id, made.png);
     return made.png;
   };
-  const resultFile = (file: string) => ({ file, relative: relative(file), url: urlFor(file) });
-
-  const composeJob = (input: Record<string, unknown>) => {
-    const brief = textOf(input.brief, 'brief');
-    const canvas = canvasFor(input);
-    const dir = projectDir(input.folder, brief);
-    return enqueue('compose', async progress => {
-      const ai = requireProvider();
-      const pictures = (await store.assets(who, idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
-      const options: ComposeOptions = {
-        ...canvas, brief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
-        includeSchema: boolOf(input.schema), maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
-        onProgress: message => progress(message),
-      };
-      const result = await composeSmart(ai, options, { full: boolOf(input.full) });
-      let composition = result.composition;
-      let narration: Record<string, unknown> | undefined;
-      if (options.narration) {
-        const produced = await narrateSmart(ai, result, {
-          brief, outDir: resolve(dir, 'assets'), durationSeconds: canvas.durationSeconds, composition,
-          compositionPath: resolve(dir, 'composition.json'), tailSeconds: 0.8, onProgress: message => progress(message),
-        });
-        composition = produced.composition ?? composition;
-        narration = {
-          audio: produced.audio, audioUrl: urlFor(produced.audio),
-          captions: produced.captions, captionsUrl: produced.captions ? urlFor(produced.captions) : undefined,
-          words: produced.words, durationSeconds: produced.durationSeconds,
-        };
-      }
-      await ensureBaseline(resolve(dir, 'composition.json'));
-      const source = (result as any).source ? (options.narration ? mergeNarration((result as any).source, composition) : (result as any).source) : undefined;
-      const files = await writeCompositionProject(dir, composition, { force: true, source });
-      await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: ai.id, model: ai.model, template: (result as any).template, attempts: result.attempts });
-      return {
-        dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps,
-        scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings,
-        issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), narration,
-      };
-    });
-  };
-
-  const refineJob = (input: Record<string, unknown>) => {
-    const file = fileInside(input.file, 'composition');
-    const instruction = textOf(input.instruction, 'instruction');
-    const review = boolOf(input.review);
-    return enqueue('refine', async progress => {
-      const current = await readJson(file) as Composition;
-      const baseDir = dirname(file);
-      const result = await refineVideo(requireProvider(), current, {
-        instruction,
-        review,
-        baseDir,
-        onProgress: message => progress(message),
-      });
-      await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
-      return {
-        ...resultFile(file),
-        frames: result.composition.durationFrames,
-        seconds: result.composition.durationFrames / result.composition.fps,
-        scenes: result.composition.scenes.length,
-        attempts: result.attempts,
-        warnings: result.warnings,
-        issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message),
-        instruction,
-      };
-    });
-  };
-
-  const importJob = (input: Record<string, unknown>) => {
-    const rawText = textOf(input.json, 'JSON content');
-    return enqueue('import', async progress => {
-      progress('Extracting JSON and validating against OVE schema…');
-      const parsed = extractJson(rawText);
-      const sanitized = sanitizeCompositionJson(parsed);
-      const composition = loadComposition(sanitized);
-      // Nothing is supplied with pasted JSON, so it may only use built-in sounds and files that stay inside its own project folder.
-      const problems = assetProblems(composition, { assets: new Map(), relativeInside: true });
-      if (problems.length) throw new Error(`The pasted composition refers to files outside its project:\n${problems.join('\n')}`);
-      const folder = folderName(optionalText(input.folder) ?? composition.id ?? composition.name ?? 'imported-video');
-      const taken = (target: string) => stat(resolve(target, 'composition.json')).then(() => true, () => false);
-      let dir = projectDir(folder, folder);
-      if (await taken(dir)) {
-        // Never replace a project that is already there: a name nobody chose gets the next free number, a chosen one is an error.
-        if (optionalText(input.folder)) throw new Error(`${relative(dir)} already has a composition. Choose another folder name, or leave the folder empty to get a new one.`);
-        for (let n = 2; await taken(dir); n++) dir = projectDir(`${folder}-${n}`, folder);
-      }
-      progress(`Writing composition files to ${folder}…`);
-      const files = await writeCompositionProject(dir, composition, { force: true });
-      await saveRevision(files.composition, { kind: 'import', label: 'Pasted composition' });
-      return {
-        id: relative(dir),
-        dir,
-        ...resultFile(files.composition),
-        frames: composition.durationFrames,
-        seconds: composition.durationFrames / composition.fps,
-        scenes: composition.scenes.length,
-        attempts: 1,
-        warnings: [],
-        issues: [],
-      };
-    });
-  };
-
-  const renderJob = (input: Record<string, unknown>) => {
-    const file = fileInside(input.file, 'composition');
-    const baseDir = dirname(file);
-    const output = inside(optionalText(input.output) ?? 'out.mp4', 'output', baseDir);
-    const settings = renderSettings(input);
-    return enqueue('render', async progress => {
-      const { composition } = await loadForRender(file);
-      let last = 0;
-      const result = await renderMedia(composition, { ...settings, baseDir, output,
-        onProgress: ({ rendered, total }) => { if (rendered === total || Date.now() - last > 1000) { last = Date.now(); progress(`Rendered ${rendered}/${total} frames`); } } });
-      return { ...resultFile(result.output), frames: result.frames, seconds: result.durationSeconds, format: result.format };
-    });
-  };
-
-  const thumbnailJob = (input: Record<string, unknown>) => {
-    const file = fileInside(input.file, 'composition');
-    const output = inside(optionalText(input.output) ?? 'thumbnail.png', 'output', dirname(file));
-    const frame = optionalNumber(input.frame, 'frame', 0, 10_000_000), width = optionalNumber(input.width, 'width', 160, 7680);
-    return enqueue('thumbnail', async () => {
-      const { raw, baseDir } = await loadForRender(file);
-      const made = await makeThumbnail(raw, {}, baseDir, { frame: frame === undefined ? undefined : Math.round(frame), title: optionalText(input.title), width: width === undefined ? undefined : Math.round(width) });
-      await writeFile(output, made.png);
-      return { ...resultFile(output), frame: made.frame, width: made.width, height: made.height };
-    });
-  };
-
-  const reviewJob = (input: Record<string, unknown>) => {
-    const file = fileInside(input.file, 'composition');
-    const output = inside(optionalText(input.output) ?? 'review.png', 'output', dirname(file));
-    return enqueue('review', async progress => {
-      const { composition, baseDir } = await loadForRender(file);
-      let last = 0;
-      const result = await reviewComposition(composition, { baseDir,
-        onProgress: (done, total) => { if (done === total || done - last >= 10) { last = done; progress(`Checked ${done}/${total} frames`); } } });
-      await writeFile(output, result.sheet);
-      return { ...resultFile(output), issues: result.issues, loudness: result.loudness, sampledFrames: result.sampledFrames, sheetFrames: result.sheetFrames };
-    });
-  };
-
-  const narrateJob = (input: Record<string, unknown>) => {
-    const file = optionalText(input.file) ? fileInside(input.file, 'composition') : undefined;
-    const script = optionalText(input.script), brief = optionalText(input.brief);
-    if (!script && !brief) throw new Error('Give a script or a brief for the narration');
-    const baseDir = file ? dirname(file) : inside(optionalText(input.folder) ?? 'narration', 'folder');
-    const outDir = inside(optionalText(input.out) ?? 'assets', 'out', baseDir);
-    return enqueue('narrate', async progress => {
-      const ai = requireProvider();
-      const composition = file ? await readJson(file) as Composition : undefined;
-      const produced = await narrate(ai, {
-        text: script, brief, outDir, composition, compositionPath: file, voice: optionalText(input.voice),
-        language: optionalText(input.language), durationSeconds: optionalNumber(input.duration, 'duration', 0.1, 3600) ?? 20,
-        tailSeconds: optionalNumber(input.tail, 'tail', 0, 10) ?? 0.8, onProgress: message => progress(message),
-      });
-      if (produced.composition && file) await writeComposition(file, produced.composition, { kind: 'edit', label: 'Narration added' });
-      return {
-        ...resultFile(produced.audio), audioUrl: urlFor(produced.audio),
-        captions: produced.captions, captionsUrl: produced.captions ? urlFor(produced.captions) : undefined,
-        words: produced.words, durationSeconds: produced.durationSeconds, text: produced.text,
-        composition: file ? resultFile(file) : undefined,
-      };
-    });
-  };
-
-  const transcribeJob = (input: Record<string, unknown>) => {
-    const audio = inputFile(input.audio, 'audio', audioTypes);
-    const file = optionalText(input.file) ? fileInside(input.file, 'composition') : undefined;
-    const baseDir = file ? dirname(file) : root;
-    const outDir = inside(optionalText(input.out) ?? (file ? 'assets' : 'captions'), 'out', baseDir);
-    return enqueue('transcribe', async progress => {
-      const composition = file ? await readJson(file) as Composition : undefined;
-      const result = await captionAudio(requireProvider(), {
-        audio, outDir, composition, compositionPath: file, language: optionalText(input.language),
-        startSeconds: optionalNumber(input.start, 'start', 0, 86_400) ?? 0, onProgress: message => progress(message),
-      });
-      if (result.composition && file) await writeComposition(file, result.composition, { kind: 'edit', label: 'Captions added' });
-      return {
-        ...resultFile(result.captions), captionsUrl: urlFor(result.captions), words: result.words, cues: result.cues,
-        durationSeconds: result.durationSeconds, composition: file ? resultFile(file) : undefined,
-      };
-    });
-  };
-
-  const imageJob = (input: Record<string, unknown>) => {
-    const prompt = textOf(input.prompt, 'prompt');
-    const file = optionalText(input.file) ? fileInside(input.file, 'composition') : undefined;
-    const out = inside(optionalText(input.out) ?? 'assets/image.png', 'out', file ? dirname(file) : root);
-    return enqueue('image', async () => {
-      const composition = file ? await readJson(file) as Composition : undefined;
-      const result = await generateImage(requireProvider(), { out, prompt, size: optionalText(input.size), composition, compositionPath: file, id: optionalText(input.id) });
-      if (result.composition && file) await writeComposition(file, result.composition, { kind: 'edit', label: 'Picture added' });
-      return { ...resultFile(result.file), id: result.id, composition: file ? resultFile(file) : undefined };
-    });
-  };
-
-  const batchJob = (input: Record<string, unknown>) => {
-    const rowsFile = inputFile(input.rows, 'rows', ['.json']);
-    const brief = textOf(input.brief, 'brief');
-    const dir = projectDir(input.folder ? `${optionalText(input.folder)}-template` : undefined, brief);
-    const pattern = inside(optionalText(input.output) ?? 'out/{{id}}.mp4', 'output');
-    const templateInput = optionalText(input.template);
-    return enqueue('batch', async progress => {
-      const rows = JSON.parse((await readFile(rowsFile, 'utf8')).replace(/^\uFEFF/, ''));
-      if (!Array.isArray(rows) || rows.length === 0) throw new Error('The rows file must be a JSON array with at least one object');
-      let composition: Composition, templateDir: string, templatePath: string;
-      if (templateInput) {
-        templatePath = fileInside(templateInput, 'template');
-        templateDir = dirname(templatePath);
-        composition = await readJson(templatePath) as Composition;
-      } else {
-        const canvas = canvasFor(input);
-        const result = await composeVideo(requireProvider(), { ...canvas, brief, fields: fieldsFromRows(rows), baseDir: dir, onProgress: message => progress(message) });
-        composition = result.composition;
-        const files = await writeCompositionProject(dir, composition, { force: true });
-        templatePath = files.composition; templateDir = dir;
-      }
-      const limit = input.limit === undefined || input.limit === '' ? undefined : integerIn(input.limit, 1, 'limit', 1, 1000);
-      const plan = await planBatch(composition, rows, pattern, templateDir);
-      const rendered = await renderBatch(plan, templateDir, renderSettings(input), { limit, onProgress: message => progress(message) });
-      return { ...resultFile(templatePath), outputs: rendered.outputs.map(output => ({ ...resultFile(output) })), count: rendered.outputs.length };
-    });
-  };
-
   const send = (res: ServerResponse, status: number, type: string, body: string | Buffer) => {
     res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
     res.end(body);
@@ -545,16 +191,16 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
         if (app) return send(res, 200, mediaTypes[extname(app).toLowerCase()] ?? 'application/octet-stream', await readFile(app));
         if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', aiStudioPage);
       }
-      if (req.method === 'GET' && url.pathname === '/api/status') return sendJson(res, 200, { outDir: root, ...providerState(), jobs: recentJobs() });
-      if (req.method === 'GET' && url.pathname === '/api/jobs') return sendJson(res, 200, { jobs: recentJobs() });
+      if (req.method === 'GET' && url.pathname === '/api/status') return sendJson(res, 200, { outDir: root, ...providerState(), jobs: queue.recent() });
+      if (req.method === 'GET' && url.pathname === '/api/jobs') return sendJson(res, 200, { jobs: queue.recent() });
       if (req.method === 'GET' && url.pathname === '/api/job') {
-        const job = jobs.get(url.searchParams.get('id') ?? '');
-        return job ? sendJson(res, 200, { job: publicJob(job) }) : sendJson(res, 404, { error: 'No such job' });
+        const job = queue.get(url.searchParams.get('id') ?? '');
+        return job ? sendJson(res, 200, { job }) : sendJson(res, 404, { error: 'No such job' });
       }
       if (req.method === 'GET' && url.pathname === '/api/events') {
         res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
         res.write(': connected\n\n');
-        res.write(`event: snapshot\ndata: ${JSON.stringify({ jobs: recentJobs() })}\n\n`);
+        res.write(`event: snapshot\ndata: ${JSON.stringify({ jobs: queue.recent() })}\n\n`);
         clients.add(res); req.on('close', () => clients.delete(res));
         return;
       }
@@ -630,14 +276,14 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
           const added = addBlock(await store.readRaw(who, id), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });
           await writeRaw(id, added.composition, { kind: 'edit', label: `Added ${block.name}` }); return sendJson(res, 200, { placed: added.placed, where: added.where });
         }
-        if (url.pathname === '/api/compose') return sendJson(res, 202, { job: composeJob(body) });
-        if (url.pathname === '/api/thumbnail') return sendJson(res, 202, { job: thumbnailJob(body) });
+        if (url.pathname === '/api/compose') return sendJson(res, 202, { job: queue.enqueue(handlers.compose(body)) });
+        if (url.pathname === '/api/thumbnail') return sendJson(res, 202, { job: queue.enqueue(handlers.thumbnail(body)) });
         if (url.pathname === '/api/restore') {
           const request = parseRequest(restoreRequest, body), file = fileInside(request.file, 'file');
           return sendJson(res, 200, { revision: await store.restore(who, idOf(file), request.n) });
         }
-        if (url.pathname === '/api/refine') return sendJson(res, 202, { job: refineJob(body) });
-        if (url.pathname === '/api/import') return sendJson(res, 202, { job: importJob(body) });
+        if (url.pathname === '/api/refine') return sendJson(res, 202, { job: queue.enqueue(handlers.refine(body)) });
+        if (url.pathname === '/api/import') return sendJson(res, 202, { job: queue.enqueue(handlers.import(body)) });
         if (url.pathname === '/api/prompt') {
           const brief = optionalText(body.brief) ?? 'A clean promotional video with animated text and shapes';
           const canvas = canvasFor(body);
@@ -645,12 +291,12 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
           const user = userPrompt(brief, { ...canvas, narration: boolOf(body.narration) });
           return sendJson(res, 200, { prompt: `${system}\n\n---\n\n# User Request\n${user}` });
         }
-        if (url.pathname === '/api/render') return sendJson(res, 202, { job: renderJob(body) });
-        if (url.pathname === '/api/review') return sendJson(res, 202, { job: reviewJob(body) });
-        if (url.pathname === '/api/narrate') return sendJson(res, 202, { job: narrateJob(body) });
-        if (url.pathname === '/api/transcribe') return sendJson(res, 202, { job: transcribeJob(body) });
-        if (url.pathname === '/api/image') return sendJson(res, 202, { job: imageJob(body) });
-        if (url.pathname === '/api/batch') return sendJson(res, 202, { job: batchJob(body) });
+        if (url.pathname === '/api/render') return sendJson(res, 202, { job: queue.enqueue(handlers.render(body)) });
+        if (url.pathname === '/api/review') return sendJson(res, 202, { job: queue.enqueue(handlers.review(body)) });
+        if (url.pathname === '/api/narrate') return sendJson(res, 202, { job: queue.enqueue(handlers.narrate(body)) });
+        if (url.pathname === '/api/transcribe') return sendJson(res, 202, { job: queue.enqueue(handlers.transcribe(body)) });
+        if (url.pathname === '/api/image') return sendJson(res, 202, { job: queue.enqueue(handlers.image(body)) });
+        if (url.pathname === '/api/batch') return sendJson(res, 202, { job: queue.enqueue(handlers.batch(body)) });
         return send(res, 404, 'text/plain', 'Not found');
       }
       send(res, 404, 'text/plain', 'Not found');

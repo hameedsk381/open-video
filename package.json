@@ -27,6 +27,7 @@
     "@ove/core": "workspace:*",
     "@ove/ffmpeg": "workspace:*",
     "@ove/graphics": "workspace:*",
+    "@ove/jobs": "workspace:*",
     "@ove/react": "workspace:*",
     "@ove/renderer": "workspace:*",
     "@ove/storage": "workspace:*",
