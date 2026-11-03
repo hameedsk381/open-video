@@ -192,7 +192,7 @@ function confirmBox(text, ok) { var m = h('div', { class: 'modal' }, h('div', nu
 function updateStatusBadge() {
   api('/api/status').then(function (s) {
     var ptext = $('#pbadgetext'); if (!ptext) return;
-    if (s.provider) ptext.textContent = (s.provider.id === 'groq' ? '⚡ Groq · ' : '✨ ' + s.provider.id + ' · ') + s.provider.model;
+    if (s.provider) ptext.textContent = (s.provider.id === 'groq' ? '⚡ Groq · ' : s.provider.id === 'nvidia' ? '🟢 NVIDIA · ' : '✨ ' + s.provider.id + ' · ') + s.provider.model;
     else ptext.textContent = '📋 Paste JSON mode';
   }, function () {});
 }

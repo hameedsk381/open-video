@@ -25,7 +25,7 @@ export type AiProvider = {
   transcribe?(audio: Uint8Array, filename: string, options?: { language?: string; signal?: AbortSignal }): Promise<Transcript>;
 };
 
-export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'mock';
+export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'nvidia' | 'nim' | 'mock';
 
 export type ProviderConfig = {
   provider?: string;
@@ -327,13 +327,61 @@ export class AnthropicProvider implements AiProvider {
   }
 }
 
+export class NvidiaProvider implements AiProvider {
+  id = 'nvidia';
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+
+  constructor(config: ProviderConfig = {}) {
+    this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.NVIDIA_API_KEY ?? '';
+    if (!this.apiKey) throw new Error('The nvidia provider needs an API key: set NVIDIA_API_KEY (or OVE_AI_API_KEY)');
+    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'meta/llama-3.3-70b-instruct';
+    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1');
+  }
+
+  private headers() { return { authorization: `Bearer ${this.apiKey}` }; }
+
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const body = (json: boolean) => JSON.stringify({
+      model: this.model,
+      messages,
+      temperature: options.temperature ?? 0.4,
+      max_tokens: options.maxTokens ?? completionBudget(messages),
+      ...(json ? { response_format: { type: 'json_object' } } : {}),
+    });
+
+    let response: Response;
+    try {
+      response = await request(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        signal: timeoutSignal(options.signal),
+        headers: jsonHeaders(this.headers()),
+        body: body(!!options.json),
+      }, 'NVIDIA chat');
+    } catch (error) {
+      if (!options.json) throw error;
+      response = await request(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        signal: timeoutSignal(options.signal),
+        headers: jsonHeaders(this.headers()),
+        body: body(false),
+      }, 'NVIDIA chat');
+    }
+    const data: any = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (typeof text !== 'string' || !text.trim()) throw new Error('NVIDIA chat returned no text');
+    return text;
+  }
+}
+
 const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvider => {
   if (provider.speak || provider.transcribe || !process.env.GROQ_API_KEY) return provider;
   try {
     const groq = new GroqProvider({ apiKey: process.env.GROQ_API_KEY, speechModel: config.speechModel, transcriptionModel: config.transcriptionModel, baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1' });
     provider.speak = groq.speak.bind(groq);
     provider.transcribe = groq.transcribe.bind(groq);
-  } catch { /* Groq audio is optional when composing with Claude */ }
+  } catch { /* Groq audio is optional when composing with Claude or NVIDIA */ }
   return provider;
 };
 
@@ -410,14 +458,16 @@ export class MockProvider implements AiProvider {
 }
 
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  const id = (config.provider || process.env.OVE_AI_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')).toLowerCase();
+  const id = (config.provider || process.env.OVE_AI_PROVIDER || (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')).toLowerCase();
   switch (id) {
+    case 'nvidia':
+    case 'nim': return attachGroqAudio(new NvidiaProvider(config), config);
     case 'anthropic':
     case 'claude': return attachGroqAudio(new AnthropicProvider(config), config);
     case 'groq': return new GroqProvider(config);
     case 'mock': return new MockProvider();
-    case '': throw new Error('No AI provider chosen: pass --provider anthropic|groq|mock, or set ANTHROPIC_API_KEY or GROQ_API_KEY');
-    default: throw new Error(`Unknown AI provider "${id}"; use anthropic, groq or mock`);
+    case '': throw new Error('No AI provider chosen: pass --provider nvidia|groq|anthropic|mock, or set NVIDIA_API_KEY, GROQ_API_KEY or ANTHROPIC_API_KEY');
+    default: throw new Error(`Unknown AI provider "${id}"; use nvidia, groq, anthropic or mock`);
   }
 }
 

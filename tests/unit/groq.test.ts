@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AnthropicProvider, concatWav, createProvider, GroqProvider, splitSpeech, type AiProvider } from '@ove/ai';
+import { AnthropicProvider, concatWav, createProvider, GroqProvider, NvidiaProvider, splitSpeech, type AiProvider } from '@ove/ai';
 
 // A minimal 16-bit mono PCM WAV, the shape Groq's speech endpoint returns.
 function wav(samples: number[], sampleRate = 24000): Uint8Array<ArrayBuffer> {
@@ -155,6 +155,40 @@ describe('Anthropic provider', () => {
     vi.stubEnv('GROQ_API_KEY', 'gsk-test');
     const provider = createProvider();
     expect(provider.id).toBe('anthropic');
+    expect(provider.speak).toBeTypeOf('function');
+    expect(provider.transcribe).toBeTypeOf('function');
+  });
+});
+
+describe('NVIDIA provider', () => {
+  it('posts to OpenAI-compatible chat completions on integrate.api.nvidia.com', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return json({ choices: [{ message: { content: '{"status":"ok"}' } }] });
+    }));
+    const provider = new NvidiaProvider({ apiKey: 'nvapi-test' });
+    const text = await provider.chat([{ role: 'system', content: 'Write JSON' }, { role: 'user', content: 'plan video' }], { json: true });
+    expect(text).toBe('{"status":"ok"}');
+    expect(calls[0]!.url).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
+    expect((calls[0]!.init.headers as Record<string, string>)['authorization']).toBe('Bearer nvapi-test');
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body.model).toBe('meta/llama-3.3-70b-instruct');
+    expect(body.response_format).toEqual({ type: 'json_object' });
+  });
+
+  it('is selected automatically when NVIDIA_API_KEY is set', () => {
+    for (const name of ['OVE_AI_PROVIDER']) vi.stubEnv(name, '');
+    vi.stubEnv('NVIDIA_API_KEY', 'nvapi-test');
+    const provider = createProvider();
+    expect(provider.id).toBe('nvidia');
+  });
+
+  it('attaches Groq audio for voiceover when GROQ_API_KEY is also present', () => {
+    vi.stubEnv('NVIDIA_API_KEY', 'nvapi-test');
+    vi.stubEnv('GROQ_API_KEY', 'gsk-test');
+    const provider = createProvider();
+    expect(provider.id).toBe('nvidia');
     expect(provider.speak).toBeTypeOf('function');
     expect(provider.transcribe).toBeTypeOf('function');
   });
