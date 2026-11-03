@@ -24,6 +24,9 @@ importers:
       '@ove/builder':
         specifier: workspace:*
         version: link:packages/builder
+      '@ove/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
       '@ove/core':
         specifier: workspace:*
         version: link:packages/core
@@ -81,6 +84,9 @@ importers:
 
   apps/studio:
     devDependencies:
+      '@ove/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@vitejs/plugin-react':
         specifier: ^5.0.0
         version: 5.2.0(vite@7.3.7(@types/node@24.19.2)(lightningcss@1.33.0)(tsx@4.23.15))
@@ -129,6 +135,9 @@ importers:
       '@ove/builder':
         specifier: workspace:*
         version: link:../builder
+      '@ove/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@ove/core':
         specifier: workspace:*
         version: link:../core
@@ -144,6 +153,12 @@ importers:
       '@ove/schema':
         specifier: workspace:*
         version: link:../schema
+
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   packages/core:
     dependencies:

@@ -1,18 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
-export type Project = { id: string; name: string; width: number; height: number; fps: number; durationFrames: number; seconds: number; scenes: number; modified: number; revisions: number; mode: 'template' | 'finished' };
-export type Variable = { name: string; type: 'string' | 'number' | 'boolean' | 'color' | 'list'; description?: string; value: any };
-export type TextLayer = { path: string; scene: string; id: string; content: string; fontSize: number };
-export type Asset = { name: string; path: string; kind: string; bytes: number };
-export type Scene = { id: string; name: string; startFrame: number; durationFrames: number };
-export type Detail = { id: string; name: string; width: number; height: number; fps: number; durationFrames: number; mode: 'template' | 'finished'; scenes: Scene[]; variables: Variable[];
-  theme: Record<string, string | number>; texts: TextLayer[]; assets: Asset[]; revisions: number; source: { raw: unknown; media: Record<string, unknown>; base: string } };
-export type Revision = { n: number; at: string; kind: string; label: string; changes: string[] };
-export type Block = { id: string; name: string; description: string; category: string; kind: 'scene' | 'overlay'; durationFrames: number };
-export type Theme = { id: string; name: string; description: string; variables: Record<string, string | number> };
-export type Library = { blocks: Block[]; themes: Theme[]; templates: { id: string; name: string; description: string }[] };
-export type Status = { outDir: string; provider: { id: string; model: string } | null; error: string | null };
-export type Job = { id: string; kind: string; status: 'queued' | 'running' | 'done' | 'error'; messages: string[]; result?: any; error?: string };
+export type { Asset, Block, Detail, Job, Library, Project, Revision, Scene, Status, TextLayer, Theme, Variable } from '@ove/contracts';
+import type { Job } from '@ove/contracts';
 
 export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, body === undefined ? undefined : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });

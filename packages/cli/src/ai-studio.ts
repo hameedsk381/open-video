@@ -18,6 +18,7 @@ import { builtinFontDir } from '@ove/graphics/fonts';
 import { resolveVariables, sfxNames, variablesSchema } from '@ove/schema';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, textRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
@@ -28,6 +29,10 @@ import { assetIdFromPath } from '@ove/ai';
 import { makeThumbnail } from './thumbnail';
 
 export type AiStudioOptions = {
+  /** Interface to listen on. Defaults to 127.0.0.1; anything else exposes a server that has no login. */
+  host?: string;
+  /** The port people use to reach the studio when it differs from the one it listens on (a container's published port). */
+  publicPort?: number;
   port?: number;
   outDir?: string;
   provider?: string;
@@ -502,7 +507,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
 
   const hostAllowed = (host: string) => {
     const name = host.toLowerCase().replace(/:\d+$/, ''), hostPort = Number(/:(\d+)$/.exec(host)?.[1]);
-    return hostPort === port && (name === '127.0.0.1' || name === 'localhost' || name === '[::1]' ||
+    return (hostPort === port || hostPort === options.publicPort) && (name === '127.0.0.1' || name === 'localhost' || name === '[::1]' ||
       (options.allowHosts ?? []).some(allowed => allowed.toLowerCase() === name));
   };
   const refusal = (req: IncomingMessage): string | undefined => {
@@ -605,52 +610,51 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
         const body = JSON.parse(await readBody(req) || '{}');
         if (!body || typeof body !== 'object' || Array.isArray(body)) return sendError(res, new Error('Expected a JSON object'));
         if (url.pathname === '/api/project/new') {
-          const name = textOf(body.name, 'name'), canvas = canvasFor(body), id = await uniqueFolder(root, slugify(name));
+          const { name } = parseRequest(newProjectRequest, body); canvasFor(body);
+          const id = await uniqueFolder(root, slugify(name));
           await mkdir(resolve(root, id, 'assets'), { recursive: true });
           return sendJson(res, 200, { id });
         }
         if (url.pathname === '/api/project/blank') {
-          const name = textOf(body.name, 'name'), canvas = canvasFor(body), id = await uniqueFolder(root, slugify(name)), dir = resolve(root, id);
+          const { name } = parseRequest(newProjectRequest, body), canvas = canvasFor(body), id = await uniqueFolder(root, slugify(name)), dir = resolve(root, id);
           await mkdir(resolve(dir, 'assets'), { recursive: true });
           await writeFile(resolve(dir, 'composition.json'), JSON.stringify(emptyComposition(name, canvas.width, canvas.height, canvas.fps), null, 2) + '\n');
           return sendJson(res, 200, { id });
         }
         if (url.pathname === '/api/project/rename') {
-          const { file } = projectFile(body.id), raw = await readJson(file); raw.name = textOf(body.name, 'name').slice(0, 120);
+          const request = parseRequest(renameRequest, body), { file } = projectFile(request.id), raw = await readJson(file); raw.name = request.name;
           await writeRaw(file, raw, { kind: 'edit', label: 'Renamed' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/project/duplicate') {
-          const { file } = projectFile(body.id), raw = await readJson(file), id = await uniqueFolder(root, `${String(body.id).replace(/-\d+$/, '')}-copy`);
-          await copyProject(root, String(body.id), id);
+          const request = parseRequest(idRequest, body), { file } = projectFile(request.id), raw = await readJson(file), id = await uniqueFolder(root, `${request.id.replace(/-\d+$/, '')}-copy`);
+          await copyProject(root, request.id, id);
           const copy = resolve(root, id, 'composition.json'); raw.name = `${raw.name ?? id} copy`.slice(0, 120); await writeFile(copy, JSON.stringify(raw, null, 2) + '\n');
           return sendJson(res, 200, { id });
         }
-        if (url.pathname === '/api/project/delete') { projectFile(body.id); await trashProject(root, String(body.id)); return sendJson(res, 200, { ok: true }); }
+        if (url.pathname === '/api/project/delete') { const request = parseRequest(idRequest, body); projectFile(request.id); await trashProject(root, request.id); return sendJson(res, 200, { ok: true }); }
         if (url.pathname === '/api/variables') {
-          const { file } = projectFile(body.id), values = body.values;
-          if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error('values must be an object');
-          await writeRaw(file, setVariableValues(await readJson(file), values), { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
+          const request = parseRequest(variablesRequest, body), { file } = projectFile(request.id);
+          await writeRaw(file, setVariableValues(await readJson(file), request.values), { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/theme') {
-          const { file } = projectFile(body.id), theme = await readTheme(textOf(body.theme, 'theme'));
+          const request = parseRequest(themeRequest, body), { file } = projectFile(request.id), theme = await readTheme(request.theme);
           await writeRaw(file, applyTheme(await readJson(file), theme), { kind: 'edit', label: `Look: ${theme.name}` }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/text') {
-          const { file } = projectFile(body.id), content = textOf(body.content, 'text'), composition = loadComposition(await readJson(file)) as any;
-          setAtPath(composition, textOf(body.path, 'path'), layer => { if (layer.type !== 'text') throw new Error('That layer is not text'); if (typeof layer.content === 'string' && layer.content) layer.content = content; else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }]; else layer.content = content; });
+          const request = parseRequest(textRequest, body), { file } = projectFile(request.id), content = request.content, composition = loadComposition(await readJson(file)) as any;
+          setAtPath(composition, request.path, layer => { if (layer.type !== 'text') throw new Error('That layer is not text'); if (typeof layer.content === 'string' && layer.content) layer.content = content; else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }]; else layer.content = content; });
           await writeRaw(file, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Edited the text' }); return sendJson(res, 200, { ok: true });
         }
         if (url.pathname === '/api/add-block') {
-          const { file } = projectFile(body.id), block = await readBlock(textOf(body.block, 'block')), set = body.set && typeof body.set === 'object' ? body.set : {};
-          const added = addBlock(await readJson(file), block, { at: optionalNumber(body.at, 'at', 0, 1e7), frames: optionalNumber(body.frames, 'frames', 1, 1e7), scene: optionalText(body.scene), set });
+          const request = parseRequest(addBlockRequest, body), { file } = projectFile(request.id), block = await readBlock(request.block);
+          const added = addBlock(await readJson(file), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });
           await writeRaw(file, added.composition, { kind: 'edit', label: `Added ${block.name}` }); return sendJson(res, 200, { placed: added.placed, where: added.where });
         }
         if (url.pathname === '/api/compose') return sendJson(res, 202, { job: composeJob(body) });
         if (url.pathname === '/api/thumbnail') return sendJson(res, 202, { job: thumbnailJob(body) });
         if (url.pathname === '/api/restore') {
-          const file = fileInside((body as any).file, 'file'), n = (body as any).n;
-          if (!Number.isInteger(n) || n < 1) throw new Error('n must be a revision number');
-          return sendJson(res, 200, { revision: await restoreRevision(file, n) });
+          const request = parseRequest(restoreRequest, body), file = fileInside(request.file, 'file');
+          return sendJson(res, 200, { revision: await restoreRevision(file, request.n) });
         }
         if (url.pathname === '/api/refine') return sendJson(res, 202, { job: refineJob(body) });
         if (url.pathname === '/api/import') return sendJson(res, 202, { job: importJob(body) });
@@ -680,7 +684,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
         if (error.code === 'EADDRINUSE' && attempt < (options.port ?? 3100) + 20) { attempt++; tryListen(); }
         else fail(error);
       });
-      server.listen(attempt, '127.0.0.1', () => ok(attempt));
+      server.listen(attempt, options.host ?? '127.0.0.1', () => ok(attempt));
     };
     tryListen();
   });

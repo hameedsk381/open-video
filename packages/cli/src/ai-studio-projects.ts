@@ -4,9 +4,10 @@
 import { cp, mkdir, readdir, readFile, rename, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { listRevisions } from '@ove/ai';
+import type { Project } from '@ove/contracts';
 import { coerceVariable, loadComposition, resolveVariables, variablesSchema, type Composition } from '@ove/schema';
 
-export type ProjectSummary = { id: string; name: string; width: number; height: number; fps: number; durationFrames: number; seconds: number; scenes: number; modified: number; revisions: number; mode: 'template' | 'finished' };
+export type ProjectSummary = Project;
 export type TextLayer = { path: string; scene: string; id: string; content: string; fontSize: number };
 
 const plain = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);

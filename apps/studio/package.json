@@ -10,6 +10,7 @@
     "typecheck": "tsc -p ."
   },
   "devDependencies": {
+    "@ove/contracts": "workspace:*",
     "@vitejs/plugin-react": "^5.0.0",
     "vite": "^7.0.0"
   }

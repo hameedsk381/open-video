@@ -23,6 +23,7 @@
     "@ove/animation": "workspace:*",
     "@ove/assets": "workspace:*",
     "@ove/builder": "workspace:*",
+    "@ove/contracts": "workspace:*",
     "@ove/core": "workspace:*",
     "@ove/ffmpeg": "workspace:*",
     "@ove/graphics": "workspace:*",
