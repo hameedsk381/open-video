@@ -52,6 +52,8 @@ Effects are blocks named `fx-*`. `ove blocks` lists them under "Effects". They a
 | 37 Paper collage | `fx-paper-collage` | scene; editorial halftone cutout with cardstock backing and tape |
 | 38 B-roll loop | `fx-broll-loop` | scene; seamless floating hero card and pulsing ambient aura |
 | 39 Papercut explainer | `fx-papercut-explainer` | scene; 3D construction papercraft diorama with stacked depth shadows |
+| 40 Logo reveal | `fx-logo-reveal` | scene; orbital halo, SVG stroke, and brand bumper reveal |
+| 41 One-take flow | `fx-onetake-flow` | scene; continuous spatial push without slide cuts |
 
 ## Effects that need a matte
 

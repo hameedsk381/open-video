@@ -1,0 +1,212 @@
+{
+  "id": "fx-logo-reveal",
+  "name": "Logo reveal",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 120,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Kinetic brand bumper / logo reveal: geometric halo ring scales in, SVG stroke draws, and brand title snaps with glow aura.",
+  "params": {
+    "logo": {
+      "type": "string",
+      "default": "",
+      "description": "Logo image or SVG (asset id or path)"
+    },
+    "brand": {
+      "type": "string",
+      "default": "ACME STUDIO",
+      "description": "Brand or product name"
+    },
+    "tagline": {
+      "type": "string",
+      "default": "Crafted with precision",
+      "description": "Brand slogan or subtitle"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "ambient-halo",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.44)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.7)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.16,
+      "blur": 90,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 0, "value": 0.2, "easing": "easeOutCubic" },
+            { "frame": 30, "value": 1.1 },
+            { "frame": 120, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orbital-ring",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.44)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.36)}}",
+      "fill": "transparent",
+      "stroke": "{{accent}}",
+      "strokeWidth": 3,
+      "shadow": {
+        "color": "{{accent}}",
+        "blur": 16,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 6, "value": 0.1, "easing": "easeOutBack" },
+            { "frame": 26, "value": 1.0 }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            { "frame": 6, "value": -90, "easing": "easeOutCubic" },
+            { "frame": 120, "value": 90 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{logo}}",
+      "id": "logo-image",
+      "type": "image",
+      "src": "{{logo}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.44)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.22)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.22)}}",
+      "objectFit": "contain",
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 12, "value": 0.2, "easing": "easeOutBack" },
+            { "frame": 28, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{!logo}}",
+      "id": "logo-symbol",
+      "type": "text",
+      "content": "✦",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.16)}}",
+      "color": "{{accent}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.428)}}",
+      "shadow": {
+        "color": "{{accent}}",
+        "blur": 20,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 10, "value": 0.1, "easing": "easeOutBack" },
+            { "frame": 26, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brand-title",
+      "type": "text",
+      "content": "{{brand}}",
+      "fontFamily": "Inter",
+      "fontWeight": 900,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.054)}}",
+      "letterSpacing": 4,
+      "color": "{{text}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.68)}}",
+      "startFrame": 20,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 20, "value": "{{round(canvas.height * 0.72)}}", "easing": "easeOutCubic" },
+            { "frame": 34, "value": "{{round(canvas.height * 0.68)}}" }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 20, "value": 0 },
+            { "frame": 32, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tagline-text",
+      "type": "text",
+      "content": "{{tagline}}",
+      "fontFamily": "Inter",
+      "fontWeight": 600,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+      "letterSpacing": 1.5,
+      "color": "{{muted}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.76)}}",
+      "startFrame": 28,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 28, "value": 0 },
+            { "frame": 40, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-whoosh",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 4,
+      "volume": 0.65
+    },
+    {
+      "id": "sfx-reveal-sparkle",
+      "type": "audio",
+      "src": "sfx:shimmer",
+      "startFrame": 16,
+      "volume": 0.75
+    },
+    {
+      "id": "sfx-settle-impact",
+      "type": "audio",
+      "src": "sfx:impact",
+      "startFrame": 24,
+      "volume": 0.85
+    }
+  ]
+}
+

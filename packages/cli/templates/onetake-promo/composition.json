@@ -1,0 +1,266 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "onetake-promo",
+  "name": "One-Take Promo",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 300,
+  "background": "#0a0c10",
+  "grain": 0.08,
+  "variables": {
+    "brand": {
+      "type": "string",
+      "default": "MOTIONRENDER",
+      "description": "Brand or product name"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Never cut to the next slide",
+      "description": "Opening statement"
+    },
+    "subhead": {
+      "type": "string",
+      "default": "Every beat flows naturally into the next with continuous motion.",
+      "description": "Elaboration"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#38bdf8",
+      "description": "Accent glow color"
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene-1-flow",
+      "name": "Flow",
+      "startFrame": 0,
+      "durationFrames": 150,
+      "camera": {
+        "zoom": 1.0,
+        "keyframes": [
+          { "frame": 0, "zoom": 1.0, "easing": "easeInOut" },
+          { "frame": 150, "zoom": 1.06, "easing": "drift" }
+        ]
+      },
+      "layers": [
+        {
+          "id": "bg-glow-1",
+          "type": "circle",
+          "x": 960,
+          "y": 540,
+          "width": 1200,
+          "fill": "{{accent}}",
+          "opacity": 0.14,
+          "blur": 120
+        },
+        {
+          "id": "watermark-01",
+          "type": "text",
+          "content": "01",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 560,
+          "color": "#161b26",
+          "x": 960,
+          "y": 540,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                { "frame": 0, "value": 1040 },
+                { "frame": 150, "value": 880, "easing": "drift" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card-1",
+          "type": "rect",
+          "x": 960,
+          "y": 540,
+          "width": 1100,
+          "height": 480,
+          "fill": "#111622",
+          "radius": 20,
+          "stroke": "rgba(255,255,255,0.08)",
+          "strokeWidth": 1.5,
+          "shadow": {
+            "color": "rgba(0,0,0,0.4)",
+            "blur": 36,
+            "offsetX": 0,
+            "offsetY": 18
+          }
+        },
+        {
+          "id": "kicker-1",
+          "type": "text",
+          "content": "{{brand}}",
+          "fontFamily": "Inter",
+          "fontWeight": 800,
+          "fontSize": 32,
+          "letterSpacing": 3,
+          "color": "{{accent}}",
+          "x": 960,
+          "y": 420,
+          "textAlign": "center"
+        },
+        {
+          "id": "headline-1",
+          "type": "text",
+          "content": "{{headline}}",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 64,
+          "color": "#f8fafc",
+          "x": 960,
+          "y": 500,
+          "textAlign": "center"
+        },
+        {
+          "id": "subhead-1",
+          "type": "text",
+          "content": "{{subhead}}",
+          "fontFamily": "Inter",
+          "fontWeight": 500,
+          "fontSize": 36,
+          "color": "#94a3b8",
+          "maxWidth": 880,
+          "textAlign": "center",
+          "x": 960,
+          "y": 600
+        },
+        {
+          "id": "sfx-glide-1",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 0,
+          "volume": 0.6
+        }
+      ]
+    },
+    {
+      "id": "scene-2-depth",
+      "name": "Depth",
+      "startFrame": 150,
+      "durationFrames": 150,
+      "transitionIn": {
+        "type": "push",
+        "durationFrames": 18,
+        "direction": "left",
+        "easing": "glide"
+      },
+      "camera": {
+        "zoom": 1.0,
+        "keyframes": [
+          { "frame": 0, "zoom": 1.0, "easing": "easeInOut" },
+          { "frame": 150, "zoom": 1.05, "easing": "drift" }
+        ]
+      },
+      "layers": [
+        {
+          "id": "bg-glow-2",
+          "type": "circle",
+          "x": 960,
+          "y": 540,
+          "width": 1200,
+          "fill": "#6366f1",
+          "opacity": 0.14,
+          "blur": 120
+        },
+        {
+          "id": "watermark-02",
+          "type": "text",
+          "content": "02",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 560,
+          "color": "#161b26",
+          "x": 960,
+          "y": 540,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                { "frame": 0, "value": 1040 },
+                { "frame": 150, "value": 880, "easing": "drift" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card-2",
+          "type": "rect",
+          "x": 960,
+          "y": 540,
+          "width": 1100,
+          "height": 480,
+          "fill": "#111622",
+          "radius": 20,
+          "stroke": "rgba(255,255,255,0.08)",
+          "strokeWidth": 1.5,
+          "shadow": {
+            "color": "rgba(0,0,0,0.4)",
+            "blur": 36,
+            "offsetX": 0,
+            "offsetY": 18
+          }
+        },
+        {
+          "id": "kicker-2",
+          "type": "text",
+          "content": "SPATIAL CHOREOGRAPHY",
+          "fontFamily": "Inter",
+          "fontWeight": 800,
+          "fontSize": 32,
+          "letterSpacing": 3,
+          "color": "#818cf8",
+          "x": 960,
+          "y": 420,
+          "textAlign": "center"
+        },
+        {
+          "id": "headline-2",
+          "type": "text",
+          "content": "Built for AI coding agents",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 64,
+          "color": "#f8fafc",
+          "x": 960,
+          "y": 500,
+          "textAlign": "center"
+        },
+        {
+          "id": "subhead-2",
+          "type": "text",
+          "content": "Zero dependencies, frame-deterministic, and renderable in seconds.",
+          "fontFamily": "Inter",
+          "fontWeight": 500,
+          "fontSize": 36,
+          "color": "#94a3b8",
+          "maxWidth": 880,
+          "textAlign": "center",
+          "x": 960,
+          "y": 600
+        },
+        {
+          "id": "sfx-glide-2",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 0,
+          "volume": 0.6
+        },
+        {
+          "id": "sfx-impact-2",
+          "type": "audio",
+          "src": "sfx:impact",
+          "startFrame": 18,
+          "volume": 0.7
+        }
+      ]
+    }
+  ]
+}
+

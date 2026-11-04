@@ -1,0 +1,160 @@
+{
+  "id": "fx-onetake-flow",
+  "name": "One-take flow",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "push",
+    "durationFrames": 16,
+    "direction": "left",
+    "easing": "glide"
+  },
+  "description": "Continuous one-take motion: seamless spatial push through layered cards with synchronized camera drift.",
+  "params": {
+    "title": {
+      "type": "string",
+      "default": "CONTINUOUS MOTION",
+      "description": "Primary section title"
+    },
+    "subtitle": {
+      "type": "string",
+      "default": "Every beat grows out of the one before.",
+      "description": "Supporting line"
+    },
+    "badge": {
+      "type": "string",
+      "default": "01",
+      "description": "Index or sequence number"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "watermark-num",
+      "type": "text",
+      "content": "{{badge}}",
+      "fontFamily": "Inter",
+      "fontWeight": 900,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.42)}}",
+      "color": "{{surface}}",
+      "opacity": 0.45,
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46)}}",
+      "animations": [
+        {
+          "property": "x",
+          "keyframes": [
+            { "frame": 0, "value": "{{round(canvas.width * 0.55)}}" },
+            { "frame": 150, "value": "{{round(canvas.width * 0.45)}}", "easing": "drift" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hero-card",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.48)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.76)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.48)}}",
+      "fill": "{{surface}}",
+      "radius": 16,
+      "stroke": "{{muted}}",
+      "strokeWidth": 1.5,
+      "shadow": {
+        "color": "rgba(0,0,0,0.22)",
+        "blur": 30,
+        "offsetX": 0,
+        "offsetY": 14
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 0, "value": 0.9, "easing": "easeOutCubic" },
+            { "frame": 24, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "title-text",
+      "type": "text",
+      "content": "{{title}}",
+      "fontFamily": "Inter",
+      "fontWeight": 900,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.052)}}",
+      "letterSpacing": 2,
+      "color": "{{text}}",
+      "textAlign": "center",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.68)}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.44)}}",
+      "startFrame": 8,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 8, "value": "{{round(canvas.height * 0.47)}}", "easing": "easeOutCubic" },
+            { "frame": 22, "value": "{{round(canvas.height * 0.44)}}" }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 8, "value": 0 },
+            { "frame": 20, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "subtitle-text",
+      "type": "text",
+      "content": "{{subtitle}}",
+      "fontFamily": "Inter",
+      "fontWeight": 500,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+      "lineHeight": 1.3,
+      "color": "{{muted}}",
+      "textAlign": "center",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.66)}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.53)}}",
+      "startFrame": 16,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 16, "value": 0 },
+            { "frame": 28, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-glide",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 0,
+      "volume": 0.6
+    },
+    {
+      "id": "sfx-snap",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 18,
+      "volume": 0.5
+    }
+  ]
+}
+
