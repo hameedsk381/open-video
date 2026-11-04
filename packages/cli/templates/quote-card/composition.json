@@ -28,6 +28,11 @@
       "name": "Quote",
       "startFrame": 0,
       "durationFrames": 270,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 270, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 12 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [

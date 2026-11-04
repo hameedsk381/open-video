@@ -32,6 +32,11 @@
       "name": "Invitation",
       "startFrame": 0,
       "durationFrames": 240,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 240, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 12 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [
@@ -162,6 +167,11 @@
       "name": "Save your seat",
       "startFrame": 240,
       "durationFrames": 120,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 120, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "zoom", "durationFrames": 16 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [

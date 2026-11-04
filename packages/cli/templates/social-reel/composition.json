@@ -33,6 +33,11 @@
       "name": "Hook",
       "startFrame": 0,
       "durationFrames": 180,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 180, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 12 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [
@@ -127,6 +132,11 @@
       "name": "Three steps",
       "startFrame": 180,
       "durationFrames": 240,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 240, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "slide", "direction": "left", "durationFrames": 18 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [
@@ -194,6 +204,11 @@
       "name": "Call to action",
       "startFrame": 420,
       "durationFrames": 180,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 180, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 14 },
       "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [

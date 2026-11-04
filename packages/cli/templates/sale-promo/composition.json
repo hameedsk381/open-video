@@ -32,6 +32,11 @@
       "name": "The offer",
       "startFrame": 0,
       "durationFrames": 210,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 210, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 10 },
       "transitionOut": { "type": "fade", "durationFrames": 10 },
       "layers": [
@@ -141,6 +146,11 @@
       "name": "The code",
       "startFrame": 210,
       "durationFrames": 150,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 150, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "slide", "direction": "bottom", "durationFrames": 16 },
       "transitionOut": { "type": "fade", "durationFrames": 10 },
       "layers": [
@@ -220,6 +230,11 @@
       "name": "Call to action",
       "startFrame": 360,
       "durationFrames": 90,
+      "camera": {
+        "animations": [
+          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 90, "value": 1.08, "easing": "drift" }] }
+        ]
+      },
       "transitionIn": { "type": "fade", "durationFrames": 12 },
       "transitionOut": { "type": "fade", "durationFrames": 10 },
       "layers": [
