@@ -29,5 +29,11 @@ describe('transitions', () => {
 });
 describe('sound effects', () => {
   it('has a recipe for every name and checks names', () => { expect(Object.keys(sfxRecipes).sort()).toEqual([...sfxNames].sort()); expect(sfxArgs('pop', 'x.wav').at(-1)).toBe('x.wav');
-    const audio = (src: string) => parseComposition({ ...base([{ id: 's', name: 'S', startFrame: 0, durationFrames: 30, layers: [{ id: 'a', type: 'audio', src }] }]), durationFrames: 30 }); expect(() => audio('sfx:whoosh')).not.toThrow(); expect(() => audio('sfx:boing')).toThrow(/Built-in sounds are/); });
+    const audio = (src: string) => parseComposition({ ...base([{ id: 's', name: 'S', startFrame: 0, durationFrames: 30, layers: [{ id: 'a', type: 'audio', src }] }]), durationFrames: 30 });
+    expect(() => audio('sfx:whoosh')).not.toThrow();
+    expect(() => audio('sfx:shimmer')).not.toThrow();
+    expect(() => audio('sfx:sparkle')).not.toThrow();
+    expect(() => audio('sfx:impact')).not.toThrow();
+    expect(() => audio('sfx:ambient-pad')).not.toThrow();
+    expect(() => audio('sfx:boing')).toThrow(/Built-in sounds are/); });
 });

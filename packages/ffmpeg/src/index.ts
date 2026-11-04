@@ -45,6 +45,10 @@ export const sfxRecipes: Record<string, string[]> = {
   ding: tone('0.5*sin(2*PI*1318*t)*exp(-t*3)+0.25*sin(2*PI*3640*t)*exp(-t*5)+0.12*sin(2*PI*7110*t)*exp(-t*8)', 1.8),
   riser: tone('(t/1.6)*(t/1.6)*(0.6*sin(2*PI*(180*t+380*t*t))+0.25*sin(2*PI*(360*t+760*t*t)))', 1.6),
   whoosh: ['-f','lavfi','-i','anoisesrc=d=0.7:c=pink:a=0.9:r=48000:seed=11','-af',"highpass=f=300,lowpass=f=3500,volume='sin(PI*t/0.7)*sin(PI*t/0.7)*sin(PI*t/0.7)':eval=frame,volume=3"],
+  shimmer: tone('0.3*sin(2*PI*1318*t)*exp(-t*2.5)+0.25*sin(2*PI*1661*t)*exp(-t*3)+0.2*sin(2*PI*1975*t)*exp(-t*3.5)+0.15*sin(2*PI*2637*t)*exp(-t*4)', 1.5),
+  sparkle: tone('0.35*sin(2*PI*2093*t)*exp(-t*4)+0.25*sin(2*PI*2637*t)*exp(-t*5)+0.2*sin(2*PI*3136*t)*exp(-t*6)+0.15*sin(2*PI*4186*t)*exp(-t*7)', 1.2),
+  impact: tone('0.9*sin(2*PI*(160*t-120*t*t))*exp(-t*4)+0.6*sin(2*PI*(70*t-30*t*t))*exp(-t*2)+0.3*sin(2*PI*40*t)*exp(-t*1.5)', 1.0),
+  'ambient-pad': tone('0.25*(sin(2*PI*130.8*t)+0.2*sin(2*PI*131.2*t))+0.2*(sin(2*PI*196*t)+0.2*sin(2*PI*196.4*t))+0.2*(sin(2*PI*261.6*t)+0.15*sin(2*PI*329.6*t))*sin(PI*t/3.0)', 3.0),
 };
 export const sfxArgs = (name: string, output: string) => { const recipe=sfxRecipes[name]; if (!recipe) throw new Error(`Unknown sound effect "${name}"`); return ['-v','error','-y',...recipe,'-ac','2','-ar','48000','-c:a','pcm_s16le',output]; };
 export type VideoFormat = 'mp4' | 'webm' | 'mov' | 'gif';

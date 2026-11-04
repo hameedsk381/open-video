@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
-import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, ensureFfmpeg, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
+import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, ensureFfmpeg, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
 const usage = `MotionRender: JSON-first, frame-deterministic motion graphics video engine.
 
 Usage:
@@ -47,6 +47,20 @@ Variables: --var name=value (repeatable) and/or --vars values.json; --var wins.
 Options also take the form --name=value. Run "mr --help" or "ove --help" for this list.`;
 // Options are checked against each command's list first (args.ts), so typos fail instead of being ignored.
 if (wantsHelp(process.argv.slice(2))) { console.log(usage); process.exit(0); }
+if (wantsVersion(process.argv.slice(2))) {
+  let version = '0.2.7';
+  try {
+    const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+    version = pkg.version || version;
+  } catch {
+    try {
+      const pkg = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
+      version = pkg.version || version;
+    } catch {}
+  }
+  console.log(`motionrender ${version}`);
+  process.exit(0);
+}
 let argv: string[]; try { argv=checkArgs(process.argv.slice(2)); } catch (error) { console.error(`${(error as Error).message}\nRun "mr --help" for options.`); process.exit(1); }
 const [command,file]=argv; const option=(name:string)=>{ const index=argv.indexOf(name); return index < 0 ? undefined : argv[index+1]; }; const flag=(name:string)=>argv.includes(name);
 const readJson=async (path:string) => JSON.parse(await readFile(resolve(path),'utf8'));
@@ -58,13 +72,20 @@ function renderSettings() { const concurrency=Number(option('--concurrency') ?? 
   return { concurrency, preset, format, codec: codec as 'h264' | 'h265' | undefined, transparent: flag('--transparent') ? true : undefined, frameRange: range ? [Number(range[1]), Number(range[2])] as [number, number] : undefined,
     crf: number('--crf'), bitrate: option('--bitrate'), audioBitrate: option('--audio-bitrate'), scale: number('--scale'), loudness: number('--loudness'), motionBlur: flag('--no-motion-blur') ? false : undefined }; }
 const workerToken=() => { const token=option('--token') ?? process.env.OVE_WORKER_TOKEN; if (!token) throw new Error("--workers needs the workers' token: --token T or OVE_WORKER_TOKEN"); return token; };
-async function renderVideo(composition: Composition, baseDir: string, output: string, settings: ReturnType<typeof renderSettings>) { const started=Date.now(); let lastReport=0;
+async function renderVideo(composition: Composition, baseDir: string, output: string, settings: ReturnType<typeof renderSettings>) { const started=Date.now(); let lastReport=0, lastPct=-1; const isTty=Boolean(process.stdout.isTTY);
   const workers=option('--workers'); if (workers) { const chunkSize=option('--chunk-size') === undefined ? undefined : Number(option('--chunk-size')); if (chunkSize !== undefined && !(Number.isInteger(chunkSize) && chunkSize > 0)) throw new Error('--chunk-size must be a positive whole number of frames'); const token=workerToken();
     if (settings.format && !['mp4','webm','mov'].includes(settings.format)) throw new Error('--workers renders mp4, webm or mov');
     const result=await renderDistributed(composition, { baseDir, output, workers: workers.split(',').map(url => httpWorker(url.trim(), token)), chunkSize, frameRange: settings.frameRange, format: settings.format as 'mp4' | 'webm' | 'mov' | undefined, codec: settings.codec, transparent: settings.transparent, preset: settings.preset, crf: settings.crf, bitrate: settings.bitrate, audioBitrate: settings.audioBitrate, scale: settings.scale, loudness: settings.loudness, motionBlur: settings.motionBlur,
       onProgress: ({ rendered, total, chunk, worker }) => console.log(`Chunk ${chunk} done by ${worker} (${rendered}/${total} frames)`), onWorkerError: (worker, error) => console.log(`${worker} failed a chunk, retrying elsewhere: ${error.message.split(/\r?\n/)[0]}`) });
     console.log(`Created ${result.output} (${result.format}, ${result.frames} frames, ${result.durationSeconds.toFixed(2)} seconds; rendered in ${((Date.now()-started)/1000).toFixed(1)}s on ${workers.split(',').length} worker${workers.includes(',') ? 's' : ''})`); return; }
-  const result=await renderMedia(composition, { ...settings, baseDir, output, allowCode: flag('--allow-code'), onProgress: ({ rendered, total }) => { if (rendered === total || Date.now()-lastReport > 1000) { lastReport=Date.now(); console.log(`Rendered ${rendered}/${total}`); } } });
+  const result=await renderMedia(composition, { ...settings, baseDir, output, allowCode: flag('--allow-code'), onProgress: ({ rendered, total }) => {
+    const pct=Math.floor((rendered/total)*100);
+    if (isTty) {
+      if (rendered === total || Date.now()-lastReport > 200) { lastReport=Date.now(); process.stdout.write(`Rendered ${rendered}/${total} (${pct}%)\r`); if (rendered === total) process.stdout.write('\n'); }
+    } else {
+      if (rendered === total || (pct >= lastPct + 10 && Date.now()-lastReport > 1000)) { lastReport=Date.now(); lastPct=pct; console.log(`Rendered ${rendered}/${total} (${pct}%)`); }
+    }
+  } });
   console.log(`Created ${result.output} (${result.format}, ${result.frames} frames, ${result.durationSeconds.toFixed(2)} seconds; rendered in ${((Date.now()-started)/1000).toFixed(1)}s with ${settings.concurrency} page${settings.concurrency === 1 ? '' : 's'})`); }
 // One video per row of the batch file. Every row is resolved and every output path checked before anything renders, so a bad row
 // or two rows writing the same file fail fast instead of halfway through.
@@ -119,10 +140,34 @@ Press Ctrl+C to stop.`);
       if (command === 'validate') console.log(`Valid: ${composition.name} (${composition.durationFrames} frames)`);
       else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
       else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
-      else if (command === 'still') { const frame=Number(option('--frame') ?? 0); if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`); const output=resolve(option('--output') ?? `still-${frame}.png`); await renderStill(composition, { frame, output, baseDir, allowCode: flag('--allow-code'), transparent: flag('--transparent') ? true : undefined }); console.log(`Created ${output}`); }
+      else if (command === 'still') {
+        const frame=Number(option('--frame') ?? 0);
+        if (!Number.isInteger(frame) || frame < 0 || frame >= composition.durationFrames) throw new Error(`--frame must be an integer from 0 to ${composition.durationFrames-1}`);
+        const output=resolve(option('--output') ?? `still-${frame}.png`);
+        let done=false;
+        if (!flag('--transparent')) {
+          const targetFile=resolve(file);
+          for (let p=3000; p<=3020; p++) {
+            try {
+              const c=new AbortController(), t=setTimeout(() => c.abort(), 120);
+              const res=await fetch(`http://127.0.0.1:${p}/api/state`, { signal: c.signal });
+              clearTimeout(t);
+              if (res.ok) {
+                const s=await res.json() as any;
+                if (s?.file && resolve(s.file) === targetFile && !s.error) {
+                  const fr=await fetch(`http://127.0.0.1:${p}/api/frame?f=${frame}`);
+                  if (fr.ok) { await writeFile(output, Buffer.from(await fr.arrayBuffer())); done=true; break; }
+                }
+              }
+            } catch {}
+          }
+        }
+        if (!done) await renderStill(composition, { frame, output, baseDir, allowCode: flag('--allow-code'), transparent: flag('--transparent') ? true : undefined });
+        console.log(`Created ${output}`);
+      }
       else if (command === 'review') { const output=resolve(option('--output') ?? 'review.png'), every=option('--every') === undefined ? undefined : Number(option('--every')), sheetOption=option('--sheet-frames') ?? option('--frames'), sheetFrames=sheetOption === undefined ? undefined : Number(sheetOption);
         if (every !== undefined && !(Number.isInteger(every) && every > 0)) throw new Error('--every must be a whole number of frames'); if (sheetFrames !== undefined && !(Number.isInteger(sheetFrames) && sheetFrames > 0 && sheetFrames <= 60)) throw new Error('--sheet-frames must be from 1 to 60');
-        const result=await reviewComposition(composition, { baseDir, allowCode: flag('--allow-code'), every, sheetFrames, onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
+        const result=await reviewComposition(composition, { baseDir, allowCode: flag('--allow-code'), every, sheetFrames, showSafeZones: flag('--show-safe-zones'), onProgress: (done, total) => { if (!flag('--json') && (done === total || done % 10 === 0)) process.stderr.write(`Checked ${done}/${total} frames\r`); } }); await writeFile(output, result.sheet);
         if (flag('--json')) console.log(JSON.stringify({ sheet: output, sheetFrames: result.sheetFrames, sampledFrames: result.sampledFrames, loudness: result.loudness, issues: result.issues }, null, 2));
         else { process.stderr.write('\n'); const mark={ error: 'ERROR', warning: 'warn ', info: 'info ' }; for (const issue of result.issues) console.log(`${mark[issue.severity]}  ${issue.frame === undefined ? '' : `frame ${issue.frame} (${(issue.frame/composition.fps).toFixed(1)} s)  `}${issue.message}${issue.layer ? `  [${issue.layer}]` : ''}`);
           const count=(s: string) => result.issues.filter(i => i.severity === s).length; console.log(`${result.issues.length ? '\n' : ''}${count('error')} errors, ${count('warning')} warnings, ${count('info')} notes from ${result.sampledFrames} sampled frames${result.loudness ? `; sound ${result.loudness.integrated.toFixed(1)} LUFS, peak ${result.loudness.truePeak.toFixed(1)} dBTP` : ''}\nContact sheet: ${output} (frames ${result.sheetFrames.join(', ')})`); }

@@ -17,10 +17,14 @@ export async function planAudio(composition: Composition, baseDir: string, probe
   const soundtrack=composition.export.audio === undefined ? undefined : await sourceOf(composition, composition.export.audio, baseDir); if (soundtrack) { await ensureExists(soundtrack); const duration=composition.durationFrames/fps;
     clips.push({ source: soundtrack, start: 0, duration, loop: true, volume: composition.export.audioVolume, envelope: volumeEnvelope({ layer: { volume: composition.export.audioVolume }, fps, start: 0, duration, duck: composition.export.duck, others }) }); }
   const hasAudio=new Map<string, Promise<boolean>>();
-  for (const { layer, startFrame, endFrame } of windows) { const source=await sourceOf(composition, layer.src, baseDir); await ensureExists(source);
+  for (const { layer, startFrame, endFrame, scene } of windows) { const source=await sourceOf(composition, layer.src, baseDir); await ensureExists(source);
     if (layer.type === 'video') { if (!hasAudio.has(source)) hasAudio.set(source, probe(source)); if (!(await hasAudio.get(source))) continue; }
     const start=startFrame/fps, duration=(endFrame-startFrame)/fps;
-    clips.push({ source, start, duration, trim: layer.trimStart/fps, rate: layer.playbackRate, loop: layer.loop, volume: layer.volume, envelope: volumeEnvelope({ layer, fps, start, duration, duck: layer.duck, others }), ...(layer.type === 'audio' ? { fadeIn: layer.fadeInFrames/fps, fadeOut: layer.fadeOutFrames/fps } : {}) }); }
+    let fadeIn=(layer.type === 'audio' ? (layer.fadeInFrames ?? 0)/fps : 0);
+    let fadeOut=(layer.type === 'audio' ? (layer.fadeOutFrames ?? 0)/fps : 0);
+    if (scene?.transitionIn?.type === 'fade' && fadeIn === 0 && startFrame === scene.startFrame) fadeIn=scene.transitionIn.durationFrames/fps;
+    if (scene?.transitionOut?.type === 'fade' && fadeOut === 0 && endFrame === Math.min(scene.startFrame+scene.durationFrames, composition.durationFrames)) fadeOut=scene.transitionOut.durationFrames/fps;
+    clips.push({ source, start, duration, trim: layer.trimStart/fps, rate: layer.playbackRate, loop: layer.loop, volume: layer.volume, envelope: volumeEnvelope({ layer, fps, start, duration, duck: layer.duck, others }), ...(layer.type === 'audio' ? { fadeIn, fadeOut } : (fadeIn || fadeOut ? { fadeIn, fadeOut } : {})) }); }
   return clips.length ? { clips, durationSeconds: composition.durationFrames/fps } : undefined; }
 
 // Mixes a planned soundtrack exactly as a render would (into a temporary WAV) and measures it with FFmpeg's EBU R128 meter.

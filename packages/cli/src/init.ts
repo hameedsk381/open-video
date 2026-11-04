@@ -28,6 +28,32 @@ export async function initProject(dir: string, options: InitOptions = {}): Promi
   loadComposition(composition);
   await writeFile(compositionPath, JSON.stringify(composition, null, 2) + '\n');
   await writeFile(join(target, 'composition.schema.json'), JSON.stringify(compositionJsonSchema, null, 2) + '\n');
-  if (options.skill !== false) await cp(skillsRoot, join(target, '.claude', 'skills'), { recursive: true, force: true });
+  if (options.skill !== false) {
+    await cp(skillsRoot, join(target, '.claude', 'skills'), { recursive: true, force: true });
+    await cp(skillsRoot, join(target, '.agent', 'skills'), { recursive: true, force: true });
+    const agentsMd = `# MotionRender (OVE) Agent Instructions
+
+MotionRender is a frame-deterministic motion graphics video engine.
+
+## Essential Commands
+- \`mr dev\`: Start local hot-reloading preview server
+- \`mr render\`: Headless video rendering
+- \`mr still --frame <n>\`: Export a single frame as image
+- \`mr review\`: Automated design, type scale, safe-zone, and audio check
+- \`mr review --show-safe-zones\`: Generate contact sheet with social UI overlays
+
+## Composition Grammar
+Full skill documentation and guidelines are located in:
+- \`.agent/skills/ove/SKILL.md\`
+- \`.claude/skills/ove/SKILL.md\`
+`;
+    await writeFile(join(target, 'AGENTS.md'), agentsMd);
+    const cursorRules = `# MotionRender Rules
+- Motion graphics compositions are defined in \`composition.json\` adhering to \`composition.schema.json\`.
+- Use \`mr review\` to verify visual hierarchy, text safety, and audio loudness.
+- Detailed agent skills are located in \`.agent/skills/\`.
+`;
+    await writeFile(join(target, '.cursorrules'), cursorRules);
+  }
   return (await listFiles(target)).map(file => relative(target, file)).sort();
 }

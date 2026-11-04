@@ -25,7 +25,7 @@ export const commandSpecs: Record<string, Spec> = {
   inspect: { values: variables, positionals: 1 },
   captions: { values: ['--output', ...variables], positionals: 1 },
   still: { values: ['--frame', '--output', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
-  review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json', '--allow-code'], positionals: 1 },
+  review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
   ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--size', '--composition', '--id', '--start', '--output', '--template', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format'],
     flags: ['--force', '--dry-run', '--json', '--review', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--transparent', '--no-motion-blur'], positionals: 3 },
@@ -34,6 +34,7 @@ export const commandSpecs: Record<string, Spec> = {
 const distance = (a: string, b: string) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]); for (let j = 1; j <= b.length; j++) d[0]![j] = j;
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i]![j] = Math.min(d[i-1]![j]! + 1, d[i]![j-1]! + 1, d[i-1]![j-1]! + (a[i-1] === b[j-1] ? 0 : 1)); return d[a.length]![b.length]!; };
 export const wantsHelp = (argv: string[]) => argv.includes('--help') || argv.includes('-h') || argv[0] === 'help';
+export const wantsVersion = (argv: string[]) => argv.includes('--version') || argv.includes('-v') || argv[0] === 'version';
 // Splits --name=value, then checks the command's options. Returns the argument list the rest of the CLI reads.
 export function checkArgs(argv: string[]): string[] { const args = argv.flatMap(arg => /^--[a-z-]+=/.test(arg) ? [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)] : [arg]);
   const [command] = args; if (command === undefined) return args; const spec = commandSpecs[command];

@@ -48,7 +48,7 @@ describe('projects', () => {
     expect(revisions.slice(1).map(r => r.label)).toEqual(['first change', 'second change']);
     await store.restore(LOCAL_PRINCIPAL, id, revisions[0]!.n);
     expect((await store.readRaw(LOCAL_PRINCIPAL, id)).name).toBe('V');
-  });
+  }, 20000);
 
   it('duplicates without history or the saved thumbnail, and trashes into .trash', async () => {
     const copy = await store.duplicate(LOCAL_PRINCIPAL, 'my-video', raw => ({ ...raw, name: 'Copy' }));

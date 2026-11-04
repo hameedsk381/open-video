@@ -4,10 +4,10 @@
 // several headlines competing; caption lines too fast to read; sounds cut off mid-phrase; and, when there is sound, loudness. It also makes a
 // contact sheet. The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
 import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness, sourceOf } from './audio'; import { captionTrack, measureSource } from './media'; import { layerWindows } from '@ove/timeline';
-export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string };
+export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string; suggestion?: Record<string, unknown> };
 export type ReviewResult = { issues: ReviewIssue[]; sheet: Buffer; sheetFrames: number[]; sampledFrames: number; loudness?: { integrated: number; truePeak: number } };
 export type SafeZone = { top?: number; bottom?: number; left?: number; right?: number };
-export type ReviewOptions = { allowCode?: boolean; baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; safeZone?: SafeZone; onProgress?: (done: number, total: number) => void };
+export type ReviewOptions = { allowCode?: boolean; baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; safeZone?: SafeZone; showSafeZones?: boolean; onProgress?: (done: number, total: number) => void };
 
 const area = (a: TextNote) => Math.max(0, a.x1 - a.x0) * Math.max(0, a.y1 - a.y0);
 type Rect = { x0: number; y0: number; x1: number; y1: number };
@@ -39,9 +39,11 @@ export function safeZoneBands(width: number, height: number, override?: SafeZone
 export async function reviewComposition(composition: Composition, options: ReviewOptions = {}): Promise<ReviewResult> { const { fps, width, height, durationFrames }=composition, baseDir=options.baseDir ?? process.cwd();
   const every=Math.max(1, Math.round(options.every ?? fps/2)), frames: number[]=[]; for (let f=0; f < durationFrames; f+=every) frames.push(f); if (frames.at(-1) !== durationFrames-1) frames.push(durationFrames-1);
   const sheetCount=Math.max(1, Math.min(options.sheetFrames ?? 20, durationFrames)), sheetFrames=Array.from({ length: sheetCount }, (_, i) => Math.min(durationFrames-1, Math.round((i+0.5)*durationFrames/sheetCount)));
+  const bands=safeZoneBands(width, height, options.safeZone);
+  const safeBands = options.showSafeZones ? bands.map(b => ({ x0: b.x0 / width, y0: b.y0 / height, x1: b.x1 / width, y1: b.y1 / height })) : undefined;
   const renderer=await createRenderer(composition, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: Math.min(1, 1280/Math.max(width, height)), allowCode: options.allowCode });
   let reports: FrameReport[]=[], sheet: Buffer; try { let done=0; reports=await Promise.all(frames.map(f => renderer.inspectFrame(f).then(r => { options.onProgress?.(++done, frames.length); return r; })));
-    sheet=await renderer.contactSheet(sheetFrames, { columns: options.columns ?? (width >= height ? 4 : 6) }); } finally { await renderer.close(); }
+    sheet=await renderer.contactSheet(sheetFrames, { columns: options.columns ?? (width >= height ? 4 : 6), safeBands }); } finally { await renderer.close(); }
   const issues: ReviewIssue[]=[], minSide=Math.min(width, height), visible=(t: TextNote) => t.alpha >= 0.95;
   // Problems that last: a layer reported once per kind, at the first sampled frame, and only when it holds for at least `hold` samples
   // in a row (so things sliding in from off-frame, or crossing during a transition, are not flagged).
@@ -60,7 +62,6 @@ export async function reviewComposition(composition: Composition, options: Revie
   // Platform UI bands: on a vertical canvas the app's own chrome covers the bottom and right of the frame, so text there is
   // hidden behind the caption, audio tag and action buttons in the feed. Flagged as a warning — the text is still readable
   // when the video is played full-screen, it just loses the fight with the app UI.
-  const bands=safeZoneBands(width, height, options.safeZone);
   if (bands.length) persistent('safe-zone', hold, t => { if (!visible(t)) return; const band=bands.find(b => overlap(t, b) > 0.25*area(t));
     return band ? `"${t.text}" sits in the ${band.name}: ${band.hint}` : undefined; }, 'warning');
   // A busy frame: more words on screen at once than anyone reads in a shot, for a second or more (not just while scenes cross-fade).
@@ -71,7 +72,10 @@ export async function reviewComposition(composition: Composition, options: Revie
   const steps: number[][]=[]; for (const size of sizes) { const step=steps.at(-1); if (step && step[0]!/size <= 1.12) step.push(size); else steps.push([size]); }
   const near=steps.filter(s => s.length > 1);
   if (steps.length > 8) issues.push({ severity: 'warning', code: 'type-scale', message: `${steps.length} steps of font size (${steps.map(s => s.join('/')).join(', ')}): pick a scale of 5–8 sizes and reuse them` });
-  else if (near.length) issues.push({ severity: 'warning', code: 'type-scale', message: `Nearly equal font sizes (${near.map(s => s.join('/')).join(', ')}): use one size for each step of the type scale` });
+  else if (near.length) {
+    const replace = Object.fromEntries(near.flatMap(group => group.slice(1).map(s => [String(s), group[0]!])));
+    issues.push({ severity: 'warning', code: 'type-scale', message: `Nearly equal font sizes (${near.map(s => s.join('/')).join(', ')}): use one size for each step of the type scale`, suggestion: { replace } });
+  }
   if (colours.length > 5) issues.push({ severity: 'warning', code: 'text-colours', message: `${colours.length} text colours (${colours.join(', ')}): use a heading colour, a body colour and one or two accents` });
   // Motion: stretches where the picture does not change (a closing hold may run longer: 6 s rather than 4) (mean change below half a grey level between samples).
   const change=reports.slice(1).map((r, i) => { const a=reports[i]!.thumb.pixels, b=r.thumb.pixels; let sum=0; for (let k=0; k < a.length; k++) sum+=Math.abs(a[k]!-b[k]!); return sum/a.length; });
