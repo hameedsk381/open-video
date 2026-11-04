@@ -25,6 +25,7 @@ ove agent "<brief>" [dir] [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
+| `--url <website>` | Ingest brand colors, logo and value propositions from a website URL | None |
 | `--landscape` | Landscape 16:9 video for YouTube/Web (1920×1080) | Off (default: 9:16 reel) |
 | `--duration <sec>` | Length in seconds | `6` |
 | `--fps <number>` | Frames per second | `30` |

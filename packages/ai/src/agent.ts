@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import type { AiProvider, ChatMessage } from './providers';
+import { distillBrandPack, scrapeWebsiteBrand } from './brand-scraper';
 
 export type VideoFormat = 'reel' | 'landscape';
 
@@ -15,7 +16,8 @@ export type BrandPack = {
 };
 
 export type AgentOptions = {
-  brief: string;
+  brief?: string;
+  url?: string;
   dir?: string;
   format?: VideoFormat;
   durationSeconds?: number;
@@ -159,12 +161,53 @@ export async function runVideoAgent(
   options: AgentOptions,
   buildHelper?: (source: string, output: string) => Promise<void>
 ): Promise<AgentResult> {
+  let activeBrief = options.brief?.trim() || '';
+  let activeBrand = options.brand;
+
+  // If a website URL is provided, autonomously scrape brand tokens and value props
+  if (options.url) {
+    options.onProgress?.(`🌐 Ingesting brand and value propositions from ${options.url}…`);
+    try {
+      const scraped = await scrapeWebsiteBrand(options.url);
+      const distilled = await distillBrandPack(scraped, provider);
+      
+      // Merge brand tokens: explicitly provided brand overrides scraped values
+      activeBrand = {
+        name: options.brand?.name || distilled.brand.name,
+        colors: {
+          primary: options.brand?.colors?.primary || distilled.brand.colors?.primary || '#6366f1',
+          ...distilled.brand.colors,
+          ...options.brand?.colors,
+        },
+        fonts: {
+          ...distilled.brand.fonts,
+          ...options.brand?.fonts,
+        },
+        logo: options.brand?.logo || distilled.brand.logo,
+        style: options.brand?.style || distilled.brand.style,
+      };
+
+      if (!activeBrief) {
+        activeBrief = distilled.suggestedBrief;
+        options.onProgress?.(`💡 Auto-synthesized brief from ${options.url}: "${activeBrief}"`);
+      } else {
+        options.onProgress?.(`🎨 Extracted brand "${activeBrand?.name || 'Brand'}" (${activeBrand?.colors?.primary || '#6366f1'}) from ${options.url}`);
+      }
+    } catch (err: any) {
+      options.onProgress?.(`⚠️ Website brand ingestion warning: ${err?.message || err}. Continuing with default styling.`);
+    }
+  }
+
+  if (!activeBrief) {
+    activeBrief = 'Create a punchy modern motion graphics product launch video';
+  }
+
   // Determine format: explicit > auto-detect from brief > default landscape
   let format: VideoFormat;
   let reelSafeZone = false;
   if (options.format) {
     format = options.format;
-  } else if (detectReelFormat(options.brief)) {
+  } else if (detectReelFormat(activeBrief)) {
     format = 'reel';
     reelSafeZone = true;
   } else {
@@ -181,10 +224,10 @@ export async function runVideoAgent(
   await mkdir(dir, { recursive: true });
 
   const messages: ChatMessage[] = [
-    { role: 'system', content: agentSystemPrompt(format, width, height, durationFrames, fps, reelSafeZone, options.brand) },
+    { role: 'system', content: agentSystemPrompt(format, width, height, durationFrames, fps, reelSafeZone, activeBrand) },
     {
       role: 'user',
-      content: `Create a broadcast-quality ${format === 'reel' ? '9:16 vertical reel' : '16:9 landscape'} video for this brief:\n"${options.brief}"\n\nMake it visually stunning, cinematic, and punchy. Write the complete video.tsx file now.`
+      content: `Create a broadcast-quality ${format === 'reel' ? '9:16 vertical reel' : '16:9 landscape'} video for this brief:\n"${activeBrief}"\n\nMake it visually stunning, cinematic, and punchy. Write the complete video.tsx file now.`
     }
   ];
 

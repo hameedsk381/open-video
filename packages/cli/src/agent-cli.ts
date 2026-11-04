@@ -16,18 +16,23 @@ const flag = (argv: string[], name: string): boolean => argv.includes(name);
 /** The agent's settings parsed from the checked arguments index.ts passes ([command, ...args]). */
 export function agentArgs(argv: string[]) {
   const args = argv.slice(1);
-  const values = ['--brief', '--duration', '--fps', '--provider', '--model', '--format'];
-  let brief: string | undefined, dir: string | undefined;
+  const values = ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url'];
+  let brief: string | undefined, dir: string | undefined, url: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg.startsWith('--')) { if (values.includes(arg)) i++; continue; }
-    // A bare argument is the brief, or the output directory after it; option values are skipped above.
-    if (brief === undefined) brief = arg;
-    else if (dir === undefined) dir = arg;
+    // A bare argument is the brief or url, or the output directory after it; option values are skipped above.
+    if (brief === undefined) {
+      if (/^https?:\/\//i.test(arg)) url = arg;
+      else brief = arg;
+    } else if (dir === undefined) {
+      dir = arg;
+    }
   }
   brief = brief ?? option(argv, '--brief');
+  url = url ?? option(argv, '--url');
   return {
-    brief, dir,
+    brief, dir, url,
     format: (flag(argv, '--landscape') ? 'landscape' : 'reel') as VideoFormat,
     durationSeconds: Number(option(argv, '--duration') ?? 6),
     fps: Number(option(argv, '--fps') ?? 30),
@@ -76,13 +81,15 @@ async function runJsonAgent(provider: Awaited<ReturnType<typeof createProvider>>
 export async function runAgentCli(argv: string[]): Promise<number> {
   // index.ts passes the checked argument list: [command, ...args].
   const args = agentArgs(argv);
-  if (!args.brief) {
+  if (!args.brief && !args.url) {
     console.log(`Open Video Engine AI Agent: Autonomous Motion Graphics Director
 
 Usage:
   ove agent "<brief>" [dir] [options]
+  ove agent --url <website> [options]
 
 Options:
+  --url <website>    Ingest brand colors, logo & value propositions from a website URL
   --reel             Vertical 9:16 video for Reels/TikTok/Shorts (1080x1920, default)
   --landscape        Landscape 16:9 video for YouTube/Web (1920x1080)
   --duration <sec>   Length in seconds (default: 6)
@@ -93,6 +100,7 @@ Options:
   --model <id>       Model ID override
 
 Examples:
+  ove agent --url https://linear.app
   ove agent "A viral launch reel for an open-source AI vector database"
   ove agent "Modern SaaS product demo with 10x speed metric" --landscape
   ove agent "Coffee shop flash sale promo" --duration 5 --reel
@@ -110,13 +118,15 @@ Examples:
 
   console.log(`\n🤖 Starting Open Video Engine Autonomous Agent`);
   console.log(`   Provider: ${provider.id} (${provider.model})`);
+  if (args.url) console.log(`   Source:   ${args.url}`);
   console.log(`   Format:   ${format === 'reel' ? '9:16 Vertical Reel' : '16:9 Landscape'}`);
   console.log(`   Duration: ${duration}s @ ${fps}fps`);
   console.log(`   Target:   ${targetDir}\n`);
 
   // The shared planner decides the route first: a brief that suits a plain composition is produced there, and only a
   // bespoke motion-graphics brief goes to the React loop. `--no-plan` keeps the React loop as before.
-  if (!args.noPlan) {
+  // Note: If --url is provided, always route to the React agent to leverage bespoke brand tokens & components.
+  if (!args.noPlan && !args.url && args.brief) {
     try {
       const canvas = { width: format === 'reel' ? 1080 : 1920, height: format === 'reel' ? 1920 : 1080 };
       const plan = await planBuild(provider, {
@@ -133,6 +143,7 @@ Examples:
     provider,
     {
       brief: args.brief,
+      url: args.url,
       dir: targetDir,
       format,
       durationSeconds: duration,
