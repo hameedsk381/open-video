@@ -49,6 +49,7 @@ Effects are blocks named `fx-*`. `ove blocks` lists them under "Effects". They a
 | 34 Split reveal | `fx-split-reveal` | overlay |
 | 35 Gallery | `fx-gallery` | scene |
 | 36 CTA end card | `fx-cta-card` | scene; footage in a rounded window, not a cut-out |
+| 37 Paper collage | `fx-paper-collage` | scene; editorial halftone cutout with cardstock backing and tape |
 
 ## Effects that need a matte
 

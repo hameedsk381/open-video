@@ -1,0 +1,212 @@
+{
+  "id": "fx-paper-collage",
+  "name": "Paper collage",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Editorial paper-collage B-roll: stop-motion cutouts drop and slide over cardstock backing with tape strips and punchy label tags.",
+  "params": {
+    "subject": {
+      "type": "string",
+      "default": "",
+      "description": "Subject cutout image (asset id or path)"
+    },
+    "label": {
+      "type": "string",
+      "default": "KEY TAKEAWAY",
+      "description": "Punchy kicker on tape tag"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Visual metaphor in motion",
+      "description": "Editorial caption text"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "backing-paper",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.48)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.76)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.95)}}",
+      "rotation": -2.5,
+      "fill": "{{surface}}",
+      "radius": 4,
+      "shadow": {
+        "color": "rgba(0,0,0,0.2)",
+        "blur": 26,
+        "offsetX": 6,
+        "offsetY": 12
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{canvas.height + 200}}", "easing": "easeOutBack" },
+            { "frame": 18, "value": "{{round(canvas.height * 0.48)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{subject}}",
+      "id": "subject-image",
+      "type": "image",
+      "src": "{{subject}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.45)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.62)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.62)}}",
+      "rotation": 3,
+      "filter": "grayscale(1) contrast(1.75) brightness(1.05)",
+      "shadow": {
+        "color": "rgba(0,0,0,0.25)",
+        "blur": 18,
+        "offsetX": 5,
+        "offsetY": 9
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 10, "value": 0.4, "easing": "easeOutBack" },
+            { "frame": 24, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{!subject}}",
+      "id": "subject-placeholder",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.45)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.58)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.58)}}",
+      "rotation": 2,
+      "fill": "{{muted}}",
+      "radius": 8,
+      "shadow": {
+        "color": "rgba(0,0,0,0.2)",
+        "blur": 16,
+        "offsetX": 4,
+        "offsetY": 8
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 10, "value": 0.4, "easing": "easeOutBack" },
+            { "frame": 24, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tape-strip",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.38)}}",
+      "y": "{{round(canvas.height * 0.48 - min(canvas.width, canvas.height) * 0.45)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.24)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.055)}}",
+      "rotation": -16,
+      "fill": "rgba(240, 230, 210, 0.85)",
+      "startFrame": 20,
+      "shadow": {
+        "color": "rgba(0,0,0,0.1)",
+        "blur": 4,
+        "offsetX": 1,
+        "offsetY": 2
+      }
+    },
+    {
+      "id": "label-tag",
+      "type": "text",
+      "content": "{{label}}",
+      "fontFamily": "Inter",
+      "fontWeight": 900,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.042)}}",
+      "color": "#111111",
+      "background": "{{accent}}",
+      "padding": "{{round(min(canvas.width, canvas.height) * 0.015)}}",
+      "rotation": -3.5,
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.72)}}",
+      "startFrame": 28,
+      "shadow": {
+        "color": "rgba(0,0,0,0.2)",
+        "blur": 12,
+        "offsetX": 4,
+        "offsetY": 6
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 28, "value": "{{round(canvas.height * 0.78)}}", "easing": "easeOutCubic" },
+            { "frame": 38, "value": "{{round(canvas.height * 0.72)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "headline-text",
+      "type": "text",
+      "content": "{{headline}}",
+      "fontFamily": "Inter",
+      "fontWeight": 700,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.038)}}",
+      "color": "{{text}}",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.75)}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.81)}}",
+      "startFrame": 36,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 36, "value": 0 },
+            { "frame": 46, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-paper-drop",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 14,
+      "volume": 0.85
+    },
+    {
+      "id": "sfx-subject-slide",
+      "type": "audio",
+      "src": "sfx:whoosh",
+      "startFrame": 18,
+      "volume": 0.6
+    },
+    {
+      "id": "sfx-tag-snap",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 28,
+      "volume": 0.65
+    }
+  ]
+}
+
