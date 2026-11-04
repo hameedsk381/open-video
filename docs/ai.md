@@ -49,6 +49,32 @@ Templates built from blocks (`launch-wide`, `story-tall`, `explainer-square`, `k
 
 When a full composition has problems, the model is asked for a patch instead of the whole composition again: `{"fixes": [{"path": "scenes[1].layers[0]", "value": {…}}, {"layer": "title", "set": {…}}, {"path": "scenes[0].layers[3]", "remove": true}]}`. A complete composition is still accepted as the reply.
 
+## The planner decides the route first
+
+Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects and sounds that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. With a valid plan:
+
+- route **template** → that template id and theme are filled (the old template mode, now aimed by the planner);
+- route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
+- route **react** is produced by `ove agent` (below); `compose` never picks it.
+
+If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to the routing that always worked (template first, then a full composition). Pass `--no-plan` to skip planning entirely.
+
+```sh
+ove ai capabilities            # list every registered capability the AI may use
+ove ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
+```
+
+The registry (registry v1, about 110 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects and the React component kit. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
+
+## `ove agent`: the planner routes into React code
+
+`ove agent "<brief>"` runs the same planner restricted to the two routes it can act on. A brief that suits a plain composition is produced the way `ove ai compose` does (schema-checked JSON, deterministic render); only a brief that needs bespoke motion graphics goes to the React agent loop (`@ove/react`, esbuild bundle, `type: "react"` layer). `--no-plan` keeps the previous behaviour of always running the React loop.
+
+```sh
+ove agent "A viral launch reel for an open-source vector database"
+ove agent "Modern SaaS demo" --landscape --duration 9
+```
+
 ## History: every AI change is kept
 
 Each `compose`, `refine`, `narrate`, `transcribe` and `image` (when it changes a composition) keeps the result as a numbered revision in `history/composition/` beside the file (`0001.json`, `index.json`), with what produced it (brief or instruction, provider, model, template, attempts) and a short note of what changed. The first AI change keeps the file as it was as revision 1, so a hand-made video is never lost.
@@ -125,7 +151,7 @@ ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudnes
 - `--max-attempts 3` (default) bounds the validation loop.
 - `--schema` appends the exact JSON Schema to the prompt. More tokens, fewer format mistakes on small models.
 - `--dry-run` prints the composition without writing; `--render` renders to `<dir>/out.mp4`; `--json` prints a
-  machine-readable summary.
+  machine-readable summary; `--no-plan` skips the planner (template-first routing, then a straight composition).
 
 What the loop does:
 

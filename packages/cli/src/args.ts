@@ -12,7 +12,7 @@ export const commandSpecs: Record<string, Spec> = {
   browser: { positionals: 1 },
   blocks: { flags: ['--json'] },
   build: { values: ['--output'], positionals: 1 },
-  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format'], flags: ['--reel', '--landscape', '--render', '--no-render'], positionals: 2 },
+  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format'], flags: ['--reel', '--landscape', '--render', '--no-render', '--no-plan'], positionals: 2 },
   track: { values: ['--fps', '--output'], positionals: 1 },
   thumbnail: { values: ['--frame', '--title', '--width', '--output', ...variables], flags: ['--allow-code'], positionals: 1 },
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
@@ -28,7 +28,7 @@ export const commandSpecs: Record<string, Spec> = {
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json', '--allow-code'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
   ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--size', '--composition', '--id', '--start', '--output', '--template', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format'],
-    flags: ['--force', '--dry-run', '--json', '--review', '--full', '--narration', '--render', '--schema', '--no-captions', '--transparent', '--no-motion-blur'], positionals: 3 },
+    flags: ['--force', '--dry-run', '--json', '--review', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--transparent', '--no-motion-blur'], positionals: 3 },
 };
 // Edit distance, for "did you mean".
 const distance = (a: string, b: string) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]); for (let j = 1; j <= b.length; j++) d[0]![j] = j;

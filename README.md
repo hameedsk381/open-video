@@ -118,8 +118,15 @@ pnpm ove ai batch products.json --brief "A clean product card" --output "out/{{i
 pnpm ove ai image "a soft teal background, no text" --out assets/bg.png --composition video.json --id bg
 pnpm ove ai narrate --brief "Why deterministic rendering matters" --composition video.json
 pnpm ove ai transcribe assets/voice.wav --composition video.json --start 1.2
+pnpm ove ai capabilities               # every template, theme, block, component, effect and sound the AI may use
+pnpm ove agent "A viral launch reel for an open-source vector database"   # routes to JSON or React code, then produces the video
 pnpm ove ai doctor
 ```
+
+A **planner** decides the route before anything is generated — fill a template for speed and consistency, write a plain
+composition for bespoke scenes, or React code for high-end motion graphics — and its answer is checked against the
+**capability registry** so the model can only point at capabilities that exist and fit the canvas. `--no-plan` keeps the
+older always-worked routing on both commands.
 
 The model's JSON is validated with the same schema as a hand-written composition; errors go back to the model until
 it is valid, and `--review` can add the renderer's design checks as feedback. `--provider mock` runs the whole
@@ -211,7 +218,8 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 | `ove render <composition.json> [--output file.mp4] [--loudness -14] [--no-motion-blur] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--crf n | --bitrate 8M] [--scale 0.5] [--concurrency n] [--preset name]` | Render the video. `--crf`/`--bitrate` (and `--audio-bitrate`) set quality (default crf 20 for H.264); `--scale 0.5` makes a quick half-size draft. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
 | `ove render <composition.json> --batch rows.json --output "dir/{{var}}.mp4"` | Render one video per row of variable values |
 | `ove ai doctor` | Show the AI provider, model and capabilities |
-| `ove ai compose <dir> --brief "…"` | Generate a composition from a brief, validate and repair it (optional narration and render) |
+| `ove ai capabilities` | List the capability registry: every template, theme, block, React component, effect and sound the AI may use |
+| `ove ai compose <dir> --brief "…"` | Plan the route (template, JSON composition or React), generate, validate and repair (optional `--no-plan`, narration and render) |
 | `ove ai refine <composition.json> --instruction "…"` | Refine an existing composition using natural language instructions while preserving the rest |
 | `ove ai narrate <script\|--brief>` | Write/speak a voiceover and add word-timed captions to a video |
 | `ove ai transcribe <audio>` | Write captions for existing audio (and optionally add them to a video) |

@@ -10,10 +10,12 @@ import { composeSmart, narrateSmart } from './templates';
 
 const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
+  ove ai capabilities [--json]     list every registered capability the AI may use
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
   ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
       [--narration] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
+      [--no-plan]   skip the planner: template-first routing, then a straight composition
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
   ove ai narrate --brief "..." [--duration 20] [--composition video.json]
@@ -142,7 +144,7 @@ async function composeCommand(argv: string[]): Promise<number> {
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full });
+    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan') });
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }
@@ -337,6 +339,25 @@ function doctorCommand(argv: string[]): number {
   return 0;
 }
 
+/** `ove ai capabilities`: the registry of everything the AI may use to make a video. */
+async function capabilitiesCommand(argv: string[]): Promise<number> {
+  const { cliRegistry } = await import('./templates');
+  const registry = await cliRegistry();
+  if (flag(argv, '--json')) { console.log(JSON.stringify(registry, null, 2)); return 0; }
+  const counts = registry.counts();
+  console.log(`Capability registry v${registry.version}: ${Object.values(counts).reduce((total, n) => total + n, 0)} capabilities (${Object.entries(counts).map(([kind, n]) => `${kind} ${n}`).join(', ')})`);
+  const kindOf = (kind: string) => registry.capabilities.filter(capability => capability.kind === kind);
+  for (const kind of ['template', 'theme', 'block', 'component', 'effect', 'sound'] as const) {
+    console.log(`\n${kind}:`);
+    for (const capability of kindOf(kind)) {
+      console.log(`  ${capability.id}${capability.fit ? `  (${capability.fit})` : ''}${capability.paths.length && !capability.paths.every(path => path === 'json') ? `  [${capability.paths.join(', ')}]` : ''}`);
+      if (capability.description) console.log(`    ${capability.description}`);
+      if (capability.params.length) console.log(`    values: ${capability.params.map(param => `${param.name} (${param.type})`).join(', ')}`);
+    }
+  }
+  return 0;
+}
+
 async function studioCommand(argv: string[]): Promise<number> {
   const { startAiStudio } = await import('./ai-studio');
   const rawPort = option(argv, '--port');
@@ -361,6 +382,7 @@ export async function runAi(argv: string[]): Promise<number> {
   try {
     switch (sub) {
       case 'doctor': return doctorCommand(argv);
+      case 'capabilities': return await capabilitiesCommand(argv);
       case 'compose': return await composeCommand(argv);
       case 'refine': return await refineCommand(argv);
       case 'narrate': return await narrateCommand(argv);

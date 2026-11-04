@@ -5,8 +5,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadComposition, variablesSchema } from '@ove/schema';
-import { listThemes } from './blocks';
-import { composeFromTemplate, composeVideo, narrate, narrateScenes, type NarrateOptions, type NarrateResult, type AiProvider, type ComposeOptions, type ComposeResult, type TemplateChoice } from '@ove/ai';
+import { listBlocks, listThemes } from './blocks';
+import { buildRegistry, composeFromTemplate, composeVideo, narrate, narrateScenes, planBuild, type BuildPlan, type NarrateOptions, type NarrateResult, type AiProvider, type ComposeOptions, type ComposeResult, type Registry, type TemplateChoice } from '@ove/ai';
 
 export const templatesDir = fileURLToPath(new URL('../templates', import.meta.url));
 
@@ -106,23 +106,53 @@ export async function templateChoices(root = templatesDir): Promise<TemplateChoi
 }
 
 /**
+ * The capability registry built from this package's own catalogues: templates, themes and blocks plus the built-in
+ * effects, sounds and the React kit that @ove/ai adds by itself. Read by the planner and `ove ai capabilities`.
+ */
+export async function cliRegistry(): Promise<Registry> {
+  const [choices, themes, blocks] = await Promise.all([templateChoices(), listThemes(), listBlocks()]);
+  return buildRegistry({
+    templates: choices.map(choice => ({ id: choice.id, name: choice.name, description: choice.description, width: choice.width, height: choice.height, durationSeconds: choice.durationSeconds, themed: choice.themed,
+      variables: choice.variables.map(variable => ({ name: variable.name, type: variable.type, description: variable.description })) })),
+    themes: themes.map(theme => ({ id: theme.id, name: theme.name, description: theme.description })),
+    blocks: blocks.map(block => ({ id: block.id, name: block.name, description: block.description, category: block.category, kind: block.kind, durationFrames: block.durationFrames })),
+  });
+}
+
+/**
  * Compose by filling a ready-made template (a few hundred tokens), and write the whole composition only when that cannot
  * work: `full` was asked for, assets or batch fields were supplied (templates use neither), no template has the wanted shape,
- * or the model finds none that suits the brief.
+ * or the model finds none that suits the brief. Before either path, the planner (plan.ts) decides the route and, for a
+ * JSON video, supplies the beats the composition must follow. Planning failure or `--no-plan` keeps the old routing.
  */
-export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
+export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; registry?: Registry } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
   // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.
-  const usable = !mode.full && !options.fields?.length && (options.assets ?? []).every(asset => asset.type === 'image');
-  if (usable) {
+  const needsFull = mode.full || !!options.fields?.length || (options.assets ?? []).some(asset => asset.type !== 'image');
+  let plan: BuildPlan | undefined;
+  if (!mode.noPlan) {
+    const registry = mode.registry ?? await cliRegistry();
+    try { plan = await planBuild(provider, { ...options, registry, maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
+    catch (error) { options.onProgress?.(`Planning skipped (${(error as Error).message.split('\n')[0]}); using the built-in routing.`); }
+  }
+  // A refusal to plan keeps the safest pre-planner behaviour: try the template catalogue first, else write from scratch.
+  const templatePath = plan ? plan.path === 'template' : !needsFull;
+  if (templatePath && !needsFull) {
     try {
-      const filled = await composeFromTemplate(provider, await templateChoices(), { ...options, assets: options.assets, themes: await listThemes() });
-      if (filled) return { composition: filled.composition, source: filled.source, attempts: filled.attempts, issues: [], warnings: filled.warnings, template: filled.template };
+      const choices = await templateChoices();
+      const picked = plan?.template ? choices.filter(choice => choice.id === plan.template) : choices;
+      const themes = plan?.theme ? (await listThemes()).filter(theme => theme.id === plan!.theme) : await listThemes();
+      const filled = await composeFromTemplate(provider, picked.length ? picked : choices, { ...options, themes });
+      if (filled) {
+        return { composition: filled.composition, source: filled.source, attempts: filled.attempts + (plan ? 1 : 0), issues: [], warnings: filled.warnings, template: filled.template };
+      }
       options.onProgress?.('No template suits this brief; writing a full composition.');
     } catch (error) {
       options.onProgress?.(`Template mode failed (${(error as Error).message.split('\n')[0]}); writing a full composition.`);
     }
   }
-  return composeVideo(provider, options);
+  // The planner's beats become the motion plan the composition must follow, so planning is never wasted.
+  const motionPlan = plan && plan.path !== 'template' ? { idea: plan.idea, beats: plan.beats } : undefined;
+  return composeVideo(provider, { ...options, plan: options.plan || motionPlan !== undefined, motionPlan });
 }
 
 /**

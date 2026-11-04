@@ -1,9 +1,10 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderMedia, renderStill } from '@ove/core';
-import { createProvider } from '@ove/ai';
+import { composeVideo, createProvider, planBuild, writeCompositionProject } from '@ove/ai';
 import { runVideoAgent, type VideoFormat } from '../../ai/src/agent';
 import { buildReact } from './build';
+import { cliRegistry } from './templates';
 
 const option = (argv: string[], name: string): string | undefined => {
   const at = argv.indexOf(name);
@@ -12,10 +13,70 @@ const option = (argv: string[], name: string): string | undefined => {
 
 const flag = (argv: string[], name: string): boolean => argv.includes(name);
 
+/** The agent's settings parsed from the checked arguments index.ts passes ([command, ...args]). */
+export function agentArgs(argv: string[]) {
+  const args = argv.slice(1);
+  const values = ['--brief', '--duration', '--fps', '--provider', '--model', '--format'];
+  let brief: string | undefined, dir: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg.startsWith('--')) { if (values.includes(arg)) i++; continue; }
+    // A bare argument is the brief, or the output directory after it; option values are skipped above.
+    if (brief === undefined) brief = arg;
+    else if (dir === undefined) dir = arg;
+  }
+  brief = brief ?? option(argv, '--brief');
+  return {
+    brief, dir,
+    format: (flag(argv, '--landscape') ? 'landscape' : 'reel') as VideoFormat,
+    durationSeconds: Number(option(argv, '--duration') ?? 6),
+    fps: Number(option(argv, '--fps') ?? 30),
+    shouldRender: !flag(argv, '--no-render'),
+    noPlan: flag(argv, '--no-plan'),
+    providerName: option(argv, '--provider'),
+    model: option(argv, '--model'),
+  };
+}
+
+/**
+ * The planner chose a plain composition: produce it the way `ove ai compose` does (schema-checked JSON, one source of
+ * truth), then render with the same pipeline — no `react` layer, so allowCode is not needed.
+ */
+async function runJsonAgent(provider: Awaited<ReturnType<typeof createProvider>>, plan: { idea?: string; beats: { name: string; onScreen?: string; seconds?: number; motion?: string }[] },
+  options: { brief: string; dir: string; width: number; height: number; fps: number; durationSeconds: number; shouldRender: boolean }): Promise<number> {
+  console.log('   Route: JSON composition (the planner found no brief that needs bespoke React code)\n');
+  const result = await composeVideo(provider, {
+    width: options.width, height: options.height, fps: options.fps, durationSeconds: options.durationSeconds, brief: options.brief, baseDir: options.dir,
+    motionPlan: { idea: plan.idea, beats: plan.beats }, plan: true, onProgress: message => console.log(message),
+  });
+  const files = await writeCompositionProject(options.dir, result.composition, { force: true });
+  console.log(`📁 Composition written: ${files.composition}`);
+  for (const warning of result.warnings) console.log(`   note: ${warning}`);
+  if (!options.shouldRender) {
+    console.log(`\nNext: ove dev ${files.composition}`);
+    return 0;
+  }
+  console.log(`\n🎥 Rendering video with headless Chromium engine…`);
+  const mp4Path = resolve(options.dir, 'output.mp4');
+  const stillPath = resolve(options.dir, 'preview.png');
+  const midFrame = Math.round(result.composition.durationFrames / 2);
+  await renderStill(result.composition, { frame: midFrame, output: stillPath, baseDir: options.dir });
+  console.log(`📸 Preview captured: ${stillPath} (frame ${midFrame})`);
+  const started = Date.now();
+  let lastReport = 0;
+  const rendered = await renderMedia(result.composition, {
+    baseDir: options.dir, output: mp4Path,
+    onProgress: ({ rendered, total }) => { if (rendered === total || Date.now() - lastReport > 1000) { lastReport = Date.now(); process.stdout.write(`   Rendered ${rendered}/${total} frames\r`); } },
+  });
+  console.log(`\n✨ Render complete in ${((Date.now() - started) / 1000).toFixed(1)}s!`);
+  console.log(`🎬 Video exported: ${rendered.output}`);
+  return 0;
+}
+
 export async function runAgentCli(argv: string[]): Promise<number> {
-  const args = argv.slice(2).filter(a => a !== 'agent');
-  const brief = args.find(arg => !arg.startsWith('--')) ?? option(argv, '--brief');
-  if (!brief) {
+  // index.ts passes the checked argument list: [command, ...args].
+  const args = agentArgs(argv);
+  if (!args.brief) {
     console.log(`Open Video Engine AI Agent: Autonomous Motion Graphics Director
 
 Usage:
@@ -27,6 +88,7 @@ Options:
   --duration <sec>   Length in seconds (default: 6)
   --fps <number>     Frames per second (default: 30)
   --no-render        Generate and compile React code only; skip MP4 rendering
+  --no-plan          skip the planner and always run the React agent loop
   --provider <name>  AI provider: nvidia, anthropic, groq (default: auto-detected)
   --model <id>       Model ID override
 
@@ -38,16 +100,13 @@ Examples:
     return 1;
   }
 
-  const dirArg = args.filter(arg => !arg.startsWith('--'))[1];
-  const targetDir = resolve(dirArg ?? `reel-${Date.now()}`);
-  const format: VideoFormat = flag(argv, '--landscape') ? 'landscape' : 'reel';
-  const duration = Number(option(argv, '--duration') ?? 6);
-  const fps = Number(option(argv, '--fps') ?? 30);
-  const shouldRender = !flag(argv, '--no-render');
+  const targetDir = resolve(args.dir ?? `reel-${Date.now()}`);
+  const format = args.format;
+  const duration = args.durationSeconds;
+  const fps = args.fps;
+  const shouldRender = args.shouldRender;
 
-  const providerName = option(argv, '--provider');
-  const model = option(argv, '--model');
-  const provider = createProvider(providerName ? { provider: providerName, model } : { model });
+  const provider = createProvider(args.providerName ? { provider: args.providerName, model: args.model } : { model: args.model });
 
   console.log(`\n🤖 Starting Open Video Engine Autonomous Agent`);
   console.log(`   Provider: ${provider.id} (${provider.model})`);
@@ -55,10 +114,25 @@ Examples:
   console.log(`   Duration: ${duration}s @ ${fps}fps`);
   console.log(`   Target:   ${targetDir}\n`);
 
+  // The shared planner decides the route first: a brief that suits a plain composition is produced there, and only a
+  // bespoke motion-graphics brief goes to the React loop. `--no-plan` keeps the React loop as before.
+  if (!args.noPlan) {
+    try {
+      const canvas = { width: format === 'reel' ? 1080 : 1920, height: format === 'reel' ? 1920 : 1080 };
+      const plan = await planBuild(provider, {
+        brief: args.brief, ...canvas, fps, durationSeconds: duration,
+        kind: format === 'reel' ? 'social reel' : 'landscape motion-graphics video', registry: await cliRegistry(), paths: ['json', 'react'], allowReact: true, maxAttempts: 2,
+        onProgress: message => console.log(message),
+      });
+      if (plan?.path === 'json') return runJsonAgent(provider, plan, { brief: args.brief, dir: targetDir, ...canvas, fps, durationSeconds: duration, shouldRender });
+      console.log('   Route: React motion code (the planner found no plain composition that fits)\n');
+    } catch { /* planning is optional; fall through to the React agent */ }
+  }
+
   const result = await runVideoAgent(
     provider,
     {
-      brief,
+      brief: args.brief,
       dir: targetDir,
       format,
       durationSeconds: duration,

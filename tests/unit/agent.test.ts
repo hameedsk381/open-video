@@ -4,6 +4,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runVideoAgent } from '@ove/ai';
 import type { AiProvider, ChatMessage } from '../../packages/ai/src/providers';
+import { agentArgs } from '../../packages/cli/src/agent-cli';
+
+describe('agent arguments', () => {
+  it('reads brief and directory positionals from the checked command arguments', () => {
+    // index.ts passes ["agent", ...], not the raw process.argv.
+    const args = agentArgs(['agent', 'A product intro', 'C:\\out\\reel', '--provider', 'mock', '--no-render']);
+    expect(args).toMatchObject({ brief: 'A product intro', dir: 'C:\\out\\reel', format: 'reel', durationSeconds: 6, fps: 30, shouldRender: false, noPlan: false });
+  });
+
+  it('supports the option forms and defaults', () => {
+    const args = agentArgs(['agent', '--brief', 'Launch video', '--landscape', '--duration', '9', '--no-plan']);
+    expect(args).toMatchObject({ brief: 'Launch video', dir: undefined, format: 'landscape', durationSeconds: 9, noPlan: true, shouldRender: true });
+  });
+});
 
 const validReactCode = `import { AbsoluteFill, useCurrentFrame } from '@ove/react';
 export const config = {
