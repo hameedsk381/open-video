@@ -31,7 +31,7 @@ export async function runServe(env: NodeJS.ProcessEnv = process.env): Promise<vo
   const app = createApp({
     mode: 'hosted', store, queue, validate: runner.validate, auth, quotas, library: studioLibrary, player: studioPlayer, app: studioApp,
     makeThumbnail: async () => { throw new Error('Thumbnails are drawn by the render workers'); },
-    providerState: () => ({ provider: { id: 'groq', model: env.AI_MODEL ?? 'openai/gpt-oss-120b', baseUrl: '', capabilities: { chat: true, speech: true, transcription: true, image: false } }, error: null }),
+    providerState: () => ({ provider: { id: 'freellmapi', model: env.FREELLMAPI_MODEL ?? env.AI_MODEL ?? 'auto', baseUrl: env.FREELLMAPI_BASE_URL ?? 'https://ai.hamathopc.in/v1', capabilities: { chat: true, speech: true, transcription: true, image: true } }, error: null }),
     // 127.0.0.1 and localhost are listed so a container health check can ask; they cannot be reached by a web page on another site.
     allowHosts: [publicHost, '127.0.0.1', 'localhost'], publicOrigin,
   });

@@ -141,6 +141,18 @@ export function Settings() {
               <b>System Status</b>
               <span>{status.provider ? 'All creative systems operational' : 'Engine offline'}</span>
             </div>
+            {status.provider ? (
+              <>
+                <div className="kv">
+                  <b>AI Provider</b>
+                  <span>{status.provider.id === 'freellmapi' ? 'FreeLLMAPI' : status.provider.id}</span>
+                </div>
+                <div className="kv">
+                  <b>Model</b>
+                  <span>{status.provider.model}</span>
+                </div>
+              </>
+            ) : null}
             <div className="kv">
               <b>Capabilities</b>
               <span>Autonomous Composition, Kinetic Scripting, Scene Layouts & Pacing</span>

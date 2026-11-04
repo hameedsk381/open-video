@@ -96,7 +96,7 @@ Options:
   --fps <number>     Frames per second (default: 30)
   --no-render        Generate and compile React code only; skip MP4 rendering
   --no-plan          skip the planner and always run the React agent loop
-  --provider <name>  AI provider: nvidia, anthropic, groq (default: auto-detected)
+  --provider <name>  AI provider: freellmapi, mock (default: auto-detected)
   --model <id>       Model ID override
 
 Examples:

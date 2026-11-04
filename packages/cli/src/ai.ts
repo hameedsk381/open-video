@@ -31,8 +31,8 @@ const usage = `Usage:
       [--duration 18] [--fps 30] [render options]
   ove ai studio [--port 3100] [--out ai-videos]   open a local page for the AI commands in a browser
 
-Provider options (all commands): --provider anthropic|groq|mock, --model name, --base-url URL
-Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, ANTHROPIC_API_KEY, and GROQ_API_KEY.
+Provider options (all commands): --provider freellmapi|mock, --model name, --base-url URL
+Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, FREELLMAPI_API_KEY, and FREELLMAPI_BASE_URL.
 Render options: --crf, --bitrate, --audio-bitrate, --scale, --loudness, --concurrency, --preset, --codec, --format`;
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -385,9 +385,9 @@ function doctorCommand(argv: string[]): number {
   console.log(`Endpoint     ${provider.baseUrl}`);
   console.log(`Capabilities ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`);
   console.log(`\n${describeProvider(provider)}`);
-  if (!capabilities.speech) console.log('  Narration needs speech: set GROQ_API_KEY as well (Claude writes the composition; Groq speaks).');
-  if (!capabilities.image) console.log('  Images need a provider with image; use --provider mock (Claude and Groq have no image model).');
-  console.log('\nSet ANTHROPIC_API_KEY for Claude motion graphics, GROQ_API_KEY for Groq (or speech), or pass --provider.');
+  if (!capabilities.speech) console.log('  Narration needs speech: FreeLLMAPI provides native speech synthesis.');
+  if (!capabilities.image) console.log('  Images need a provider with image; FreeLLMAPI provides native image generation.');
+  console.log('\nSet FREELLMAPI_API_KEY in .env, or pass --provider.');
   return 0;
 }
 

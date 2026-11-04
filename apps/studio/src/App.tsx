@@ -47,6 +47,29 @@ function ThemeToggle() {
   );
 }
 
+function ProviderBadge() {
+  const [provider, setProvider] = useState<{ id: string; model: string } | null>(null);
+  useEffect(() => {
+    fetch('/api/status').then(r => r.json()).then(s => {
+      if (s?.provider) setProvider(s.provider);
+    }).catch(() => {});
+  }, []);
+
+  if (!provider) return null;
+  const label = provider.id === 'freellmapi' ? 'FreeLLMAPI' : provider.id;
+  return (
+    <a
+      href="#/settings"
+      className="btn ghost sm"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.9 }}
+      title={`AI Provider: ${label} (${provider.model})`}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+      <span>{label}</span>
+    </a>
+  );
+}
+
 const nav = [
   ['projects', '#/', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Library', LayersIcon] as const,
@@ -112,6 +135,7 @@ export function App() {
             </div>
           ) : null}
 
+          <ProviderBadge />
           <ThemeToggle />
 
           {session.state === 'in' ? (

@@ -31,7 +31,7 @@ ove agent "<brief>" [dir] [options]
 | `--fps <number>` | Frames per second | `30` |
 | `--no-render` | Generate and compile React code only; skip MP4 rendering | Off |
 | `--no-plan` | Skip the route planner and always run the React agent loop | Off |
-| `--provider <name>` | AI provider: `nvidia`, `anthropic`, `groq` | Auto-detected |
+| `--provider <name>` | AI provider: `freellmapi`, `mock` | Auto-detected |
 | `--model <id>` | Model ID override (passed to the selected provider) | Provider default |
 
 ## Brand Pack API

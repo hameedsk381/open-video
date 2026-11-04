@@ -192,7 +192,7 @@ function confirmBox(text, ok) { var m = h('div', { class: 'modal' }, h('div', nu
 function updateStatusBadge() {
   api('/api/status').then(function (s) {
     var ptext = $('#pbadgetext'); if (!ptext) return;
-    if (s.provider) ptext.textContent = (s.provider.id === 'groq' ? '⚡ Groq · ' : s.provider.id === 'nvidia' ? '🟢 NVIDIA · ' : '✨ ' + s.provider.id + ' · ') + s.provider.model;
+    if (s.provider) ptext.textContent = (s.provider.id === 'freellmapi' ? '🚀 FreeLLMAPI · ' : '✨ ' + s.provider.id + ' · ') + s.provider.model;
     else ptext.textContent = '📋 Paste JSON mode';
   }, function () {});
 }
@@ -430,7 +430,7 @@ function create() {
   });
 
   contentPaste.append(
-    h('div', { class: 'box-info', text: 'Zero-key workflow: Copy the official schema prompt into ChatGPT, Claude or Groq chat, then paste the returned JSON below.' }),
+    h('div', { class: 'box-info', text: 'Zero-key workflow: Copy the official schema prompt into ChatGPT, Claude or FreeLLMAPI chat, then paste the returned JSON below.' }),
     h('h2', { style: 'margin-top:16px', text: 'Step 1: Get AI Chat Prompt' }),
     h('div', { class: 'two' }, [
       h('label', { class: 'f' }, [h('span', { text: 'Format' }), pasteKind]),
@@ -883,7 +883,7 @@ function settings() {
       page.appendChild(h('label', { class: 'f' }, [h('span', { text: r[0] }), h('input', { value: r[1], readonly: true })]));
     });
     if (s.error) {
-      page.appendChild(h('div', { class: 'err', text: s.error + String.fromCharCode(10) + 'Tip: Add GROQ_API_KEY=... or GEMINI_API_KEY=... in your .env file, or use the zero-key Paste JSON workflow!' }));
+      page.appendChild(h('div', { class: 'err', text: s.error + String.fromCharCode(10) + 'Tip: Add FREELLMAPI_API_KEY=... in your .env file, or use the zero-key Paste JSON workflow!' }));
     } else {
       page.appendChild(h('div', { class: 'note', text: 'Connected to ' + pinfo + '. AI generation and refinements will execute directly through this provider.' }));
     }
