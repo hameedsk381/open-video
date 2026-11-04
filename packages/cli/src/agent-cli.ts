@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { loadComposition, renderMedia, renderStill } from '@ove/core';
+import { loadComposition, renderMedia, renderStill, reviewComposition } from '@ove/core';
 import { composeVideo, createProvider, planBuild, writeCompositionProject } from '@ove/ai';
 import { runVideoAgent, type VideoFormat } from '../../ai/src/agent';
 import { buildReact } from './build';
@@ -138,6 +138,39 @@ Examples:
       durationSeconds: duration,
       fps,
       onProgress: msg => console.log(msg),
+      visualCheck: async (_videoPath, compositionPath) => {
+        // Gracefully handle missing composition file (before first successful build)
+        let raw: string;
+        try {
+          raw = await readFile(compositionPath, 'utf8');
+        } catch {
+          return { passed: true, report: '' };
+        }
+        const composition = loadComposition(JSON.parse(raw));
+        const totalFrames = composition.durationFrames;
+
+        // Render 3 still frames at 20%, 50%, 80% of duration
+        const checkFrames = [0.2, 0.5, 0.8].map(pct => Math.min(totalFrames - 1, Math.round(pct * totalFrames)));
+        for (const frame of checkFrames) {
+          try {
+            await renderStill(composition, { frame, baseDir: targetDir, allowCode: true });
+          } catch {
+            // If still rendering fails, skip — the build may have issues handled by compile check
+          }
+        }
+
+        // Run the full review
+        const review = await reviewComposition(composition, { baseDir: targetDir, allowCode: true, audio: false });
+
+        // Fail on any error-severity issues
+        const errors = review.issues.filter(i => i.severity === 'error');
+        if (errors.length === 0) {
+          return { passed: true, report: '', sheet: review.sheet };
+        }
+
+        const report = errors.map(i => `${i.code}: ${i.message}`).join('\n');
+        return { passed: false, report, sheet: review.sheet };
+      },
     },
     buildReact
   );

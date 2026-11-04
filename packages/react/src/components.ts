@@ -107,6 +107,8 @@ export function GlassCard({
   }, children);
 }
 
+export type WordTrigger = { word: string; frame: number };
+
 export type KineticTextProps = {
   text: string;
   delay?: number;
@@ -114,10 +116,13 @@ export type KineticTextProps = {
   preset?: SpringPreset;
   style?: CSSProperties;
   wordStyle?: CSSProperties;
+  // NEW: per-word frame triggers from narration timestamps
+  wordTriggers?: WordTrigger[];
 };
 
 /**
  * Staggered kinetic typography reveal with spring physics on every word.
+ * Supports optional per-word frame triggers (from narration timestamps) via `wordTriggers`.
  */
 export function KineticText({
   text,
@@ -126,6 +131,7 @@ export function KineticText({
   preset = 'bouncy',
   style,
   wordStyle,
+  wordTriggers,
 }: KineticTextProps): ReactElement {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -139,7 +145,15 @@ export function KineticText({
       ...style,
     },
   }, words.map((word, index) => {
-    const wordDelay = delay + index * staggerDelay;
+    // Determine delay: use wordTrigger frame if a matching trigger exists
+    let wordDelay = delay + index * staggerDelay;
+    if (wordTriggers && wordTriggers.length > 0) {
+      const stripped = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const trigger = wordTriggers.find(t => t.word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === stripped);
+      if (trigger !== undefined) {
+        wordDelay = trigger.frame;
+      }
+    }
     const progress = springValue({ frame, fps, delay: wordDelay, preset, from: 0, to: 1 });
     const y = (1 - progress) * 32;
     const opacity = Math.min(1, Math.max(0, progress * 1.5));
