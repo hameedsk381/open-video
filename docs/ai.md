@@ -205,6 +205,23 @@ the words over the whole video. The scene holds only the captions layer, because
 video. `--start` is the second at which that audio begins in the video, so the caption layer's `startFrame` matches
 it. Like narration, the scene is appended last so it draws over everything, and `durationFrames` grows if needed.
 
+### Editing a raw clip into a finished reel
+
+```sh
+ove ai edit ./raw/take.mp4 --out reel
+ove ai edit ./raw/take.mp4 --out reel --max-silence 0.3 --keep-fillers --no-captions
+```
+
+`ove ai edit` is the talking-head path: the clip's audio is extracted and transcribed with word timings, pauses
+longer than `--max-silence` seconds (default 0.5), filler words (um, uh, erm…) and immediate repeats become a cut
+list, and the edited reel is written as an ordinary project — one `video` layer per kept stretch (`trimStart`
+skips the removed source, the clip's own sound plays, hard jump cuts between stretches) plus a word-timed captions
+layer above the platform UI band. `--width`/`--height` set the canvas (default 1080×1920, the clip centre-cropped
+with `objectFit: cover`). The output is plain composition JSON: review it, delete or retune a `clip-N` scene by
+hand, then render. Transcription needs a provider with `transcribe` (`--provider groq` or an adapter); everything
+else is local, and the planning itself is pure (`planCuts`/`editComposition` in `@ove/ai` are unit-tested without
+a provider).
+
 ## Images
 
 ```sh

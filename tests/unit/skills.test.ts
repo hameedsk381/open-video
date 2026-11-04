@@ -6,7 +6,7 @@ import { commandSpecs } from '../../packages/cli/src/args';
 // The skills are what a coding agent reads to drive the CLI, so they must be well formed and name only commands that exist.
 const root = 'packages/cli/skills';
 const folders = readdirSync(root, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name);
-const aiCommands = ['capabilities', 'doctor', 'compose', 'refine', 'narrate', 'transcribe', 'image', 'batch', 'studio', 'history', 'restore'];
+const aiCommands = ['capabilities', 'doctor', 'compose', 'refine', 'narrate', 'transcribe', 'edit', 'image', 'batch', 'studio', 'history', 'restore'];
 
 describe('agent skills', () => {
   it('include the main guide and the task guides', () => {

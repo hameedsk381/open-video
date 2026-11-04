@@ -8,6 +8,7 @@ export * from './template';
 export { applyFixes, isFixReply, type Fix } from './patch';
 export * from './narrate';
 export * from './voiceover';
+export * from './edit';
 export * from './image';
 export * from './batch';
 export * from './project';

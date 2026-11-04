@@ -3,7 +3,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
-import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, fieldsFromRows, generateImage, narrate, planBatch, providerCapabilities,
+import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, planBatch, providerCapabilities,
   refineVideo, renderBatch, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, renderMedia, type Composition } from '@ove/core';
 import { composeSmart, narrateSmart } from './templates';
@@ -20,6 +20,9 @@ const usage = `Usage:
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
   ove ai narrate --brief "..." [--duration 20] [--composition video.json]
   ove ai transcribe <audio> [--composition video.json] [--out dir] [--language en] [--start 0]
+  ove ai edit <clip.mp4> --out reel-dir [--max-silence 0.5] [--keep-fillers] [--width 1080] [--height 1920]
+      [--fps 30] [--no-captions] [--language en] [--force]
+      transcribe the clip, cut silences and filler words, and write an edited reel project
   ove ai image "<prompt>" --out assets/bg.png [--size square|portrait|landscape|WxH] [--composition video.json --id bg]
   ove ai batch <rows.json> --brief "..." --output "out/{{id}}.mp4" [--template video.json] [--out-dir dir] [--limit n]
       [--duration 18] [--fps 30] [render options]
@@ -260,6 +263,28 @@ async function transcribeCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
+async function editCommand(argv: string[]): Promise<number> {
+  const clip = argv[2];
+  if (!clip || clip.startsWith('--')) throw new Error('Usage: ove ai edit <clip.mp4> --out reel-dir [--max-silence 0.5] [--keep-fillers] [--no-captions]');
+  const out = option(argv, '--out');
+  if (!out) throw new Error('ove ai edit needs --out <dir> for the project it writes');
+  const provider = providerFrom(argv);
+  const width = numberOption(argv, '--width', 1080), height = numberOption(argv, '--height', 1920);
+  const result = await editVideo(provider, {
+    clip: resolve(clip), outDir: resolve(out), width, height, fps: numberOption(argv, '--fps', 30),
+    maxSilence: numberOption(argv, '--max-silence', 0.5), keepFillers: flag(argv, '--keep-fillers'),
+    captions: !flag(argv, '--no-captions'), language: option(argv, '--language'), force: flag(argv, '--force'),
+    onProgress: message => console.log(message),
+  });
+  const saved = (result.sourceSeconds - result.durationSeconds);
+  console.log(`\n${result.segments} clips, ${result.fillers} filler words cut, ${saved.toFixed(1)} s shorter (${result.sourceSeconds.toFixed(1)} s → ${result.durationSeconds.toFixed(1)} s)`);
+  console.log(`Project: ${result.composition}`);
+  if (result.captions) console.log(`Captions: ${result.captions} (${result.words} words)`);
+  console.log(`Next: ove review ${result.composition} --output review.png, then ove render ${result.composition} --output out.mp4`);
+  if (flag(argv, '--json')) console.log(JSON.stringify(result, null, 2));
+  return 0;
+}
+
 async function imageCommand(argv: string[]): Promise<number> {
   const prompt = argv[2];
   if (!prompt || prompt.startsWith('--')) throw new Error('Usage: ove ai image "<prompt>" --out assets/background.png');
@@ -387,6 +412,7 @@ export async function runAi(argv: string[]): Promise<number> {
       case 'refine': return await refineCommand(argv);
       case 'narrate': return await narrateCommand(argv);
       case 'transcribe': return await transcribeCommand(argv);
+      case 'edit': return await editCommand(argv);
       case 'image': return await imageCommand(argv);
       case 'batch': return await batchCommand(argv);
       case 'studio': return await studioCommand(argv);

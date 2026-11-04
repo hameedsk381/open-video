@@ -30,7 +30,7 @@ export function formatCaptions(cues: CaptionCue[], format: 'srt' | 'vtt'): strin
   return (format === 'vtt' ? 'WEBVTT\n\n' : '') + body + '\n'; }
 // The lines a captions layer shows: lines from a file are used as they are; word timings are grouped by maxWords.
 // Filler words and stutters: dropped from word timings (and from plain cue text) when a captions layer has dropFillers.
-const fillers = new Set(['um','umm','uh','uhh','uhm','er','erm','ah','ahh','hmm','mm','mhm']); export const captionKey = (word: string) => word.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, '');
+const fillers = new Set(['um','umm','uh','uhh','uhm','er','erm','ah','ahh','hmm','mm','mhm']); export { fillers }; export const captionKey = (word: string) => word.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, '');
 export function dropFillerWords(cues: CaptionCue[]): CaptionCue[] { return cues.map(cue => { if (cue.words?.length) { const words = cue.words.filter((w, i, all) => { const k = captionKey(w.text); return k !== '' && !fillers.has(k) && !(i > 0 && captionKey(all[i-1]!.text) === k && !/[.,!?;:]$/.test(all[i-1]!.text)); });
     return { ...cue, words, text: words.map(w => w.text).join(' ') }; } return { ...cue, text: cue.text.split(/\s+/).filter(w => !fillers.has(captionKey(w))).join(' ') }; }).filter(cue => cue.text.trim() !== ''); }
 export const captionLines = (cues: CaptionCue[], maxWords: number): CaptionCue[] => cues.flatMap(cue => cue.words && cue.words.length > maxWords ? groupCaptionWords(cue.words, maxWords) : [cue]);

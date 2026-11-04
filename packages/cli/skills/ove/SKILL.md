@@ -17,6 +17,7 @@ Before composing anything, decide *how* this video gets made, in one step: run `
 - **JSON route (secondary)** — when no template fits the brief's kind and aspect: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name.
 - **React route (secondary)** — when the brief needs spring physics, interlocking layouts or generated visuals: load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition.
 - **Batch or narration** — many rows of fields → `ove-batch-videos`; voiceover or captions → `ove-voiceover-captions`.
+- **Raw footage** — a recorded clip to clean up (talking head, demo, vlog) → `ove ai edit` (below): transcribe, cut silences and fillers, caption, and write an edited project. No brief needed; the clip is the input.
 
 If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template` vs `json`) before generating, prefers a template whenever its kind and aspect fit the brief (length differences included), and falls back to templates when planning fails. `--no-plan` opts out.
 
@@ -233,6 +234,16 @@ Every audio and video asset is measured when a composition mentions `media`, so 
 - Filler words (um, uh, erm, ah, hmm…) and words said twice in a row are left out of captions by default (`dropFillers: false` keeps them), in the video and in exported subtitles.
 - `emphasis: ["agent", "goal"]` draws those words (any case, punctuation ignored) in `emphasisColor` (default `highlightColor`) once they are said: two or three key words per video, not one per line.
 - `ove captions composition.json --output captions.srt` (or `.vtt`) writes every captions layer as a subtitle file for uploads.
+
+## Editing raw footage
+
+```bash
+ove ai edit ./raw/take.mp4 --out reel --max-silence 0.5
+```
+
+- Turns a raw clip into an edited project: the clip's audio is transcribed with word timings, pauses longer than `--max-silence` seconds (default 0.5) and filler words (um, uh, erm…) plus immediate repeats become a cut list, and the project is written as `composition.json` + `composition.schema.json` + `assets/`. The result is one `video` layer per kept stretch (`trimStart` skips the removed source, the clip's own sound carried through, hard jump cuts between stretches) and a word-timed captions layer above the platform UI band.
+- `--width`/`--height` set the canvas (default 1080×1920, the clip centre-cropped with `objectFit: cover` — the standard landscape-talking-head-to-reel move); `--keep-fillers` leaves the ums in; `--no-captions` skips the captions layer; `--force` writes into a directory that already has files.
+- The output is an ordinary project: review it (`ove review reel/composition.json --output review.png`), tune it (the cut list is visible as the scene boundaries — delete a `clip-N` scene to restore a moment, or re-run with a different `--max-silence`), then render (`ove render reel/composition.json --output out.mp4`). Transcription needs a provider with `transcribe` (`--provider groq`, or any adapter that implements it); everything else is local.
 
 ## Media
 
