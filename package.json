@@ -18,7 +18,8 @@
     "build:studio": "pnpm --filter @ove/studio build",
     "dev:studio": "pnpm --filter @ove/studio dev",
     "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "eval:ai": "tsx scripts/eval-briefs.ts"
   },
   "devDependencies": {
     "@ove/ai": "workspace:*",

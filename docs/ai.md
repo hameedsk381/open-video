@@ -251,6 +251,7 @@ passed to every video.
 - Use a stronger model for composition and a cheaper one for scripts; `--model` overrides per run.
 - Groq provides chat, speech and word-timed transcription under a single key (`GROQ_API_KEY`).
 - Start with `--dry-run` and `--provider mock` to check plumbing, then spend tokens on a real model.
+- Measure instead of guessing: `pnpm eval:ai` runs a fixed set of briefs through the real router and scores composed, duration, resolution, copy readable and picture moves, with the engine's review findings listed per brief. Run it offline against the mock provider or with `--provider groq`; see the header of `scripts/eval-briefs.ts`.
 - `--schema` helps small or local models; large models usually need only the cheatsheet.
 - Retry cost is concentrated in validation errors. Fixing the prompt is cheaper than raising `--max-attempts`.
 - `--review` costs a render per round; use it for finished work, not drafts.

@@ -5,9 +5,22 @@ description: Create and edit videos with Open Video Engine (OVE) by writing a JS
 
 # Making videos with Open Video Engine
 
-Short task guides sit beside this one: `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Use the one that matches the request, and come back here for field details.
+This is the entry-point skill for OVE: start here, choose the route below, and load the short task guide that matches the request — `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Come back here for field details.
 
 An OVE video is one JSON file, `composition.json`. You never write rendering code: you edit data, check it, look at frames, and render. `composition.schema.json` next to it is the authoritative JSON Schema; read it when unsure about a field.
+
+## Choose the route first
+
+Before composing anything, decide *how* this video gets made, in one step: run `ove ai capabilities` (machine-readable with `--json`) and pick the route that fits the brief.
+
+- **Template route** — the brief matches one of the registered templates (promo, slideshow, product card, flash sale…), including its aspect and roughly its length. Cheapest and most consistent: `ove ai compose` fills its text variables from the brief, or `ove init --template <name>` starts an editable project.
+- **JSON route** — the default for anything bespoke: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name.
+- **React route** — when the brief needs spring physics, interlocking layouts or generated visuals: load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition.
+- **Batch or narration** — many rows of fields → `ove-batch-videos`; voiceover or captions → `ove-voiceover-captions`.
+
+If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template` vs `json`) before generating, and falls back to templates when planning fails. `--no-plan` opts out.
+
+The registry the planner reads is the same list you just saw: `ove ai capabilities --json` is the machine-readable menu of every template, theme, block, component, effect and sound, one entry per capability with its kind and name. Third-party agents and skills should compose *on* OVE — read that registry, write a `composition.json`, and use the validate → still → review loop here — rather than re-implementing rendering. Whatever generates the JSON (planner, model, or you), it stays outside the render path: the renderer only ever reads a validated schema-compliant composition.
 
 ## Loop
 
@@ -20,6 +33,8 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
 `ove review` samples a frame every half second and reports, with frame numbers and layer ids: text cut short with "…", running off the frame, under 2% of the frame's short side, overlapping other text or sitting under the captions (when that lasts a second or more); more than 40 words on screen; text on screen too briefly to read its words (about a quarter of a second a word, plus half a second); more than two headline-size texts competing (a headline set one word per line counts once); caption lines on screen under 0.7 s or faster than about 20 characters a second; sounds cut off mid-phrase by the end of their scene or `endFrame`; nearly equal font sizes or more than 8 steps of size; more than 5 text colours; 4 seconds or more where nothing moves; scenes all the same length; three or more transition styles; and sound quieter than -20 LUFS, louder than -11 LUFS or peaking above -1 dBTP. It exits with an error when it finds errors, `--json` prints the findings as JSON, `--every n` samples every n frames, `--sheet-frames n` sets how many frames the sheet shows. It is a check, not a verdict on taste: a clean review still needs your eye on the sheet.
 
 `ove inspect composition.json` prints duration, scene count, variables and assets. A person working alongside you can run `ove dev composition.json` for a live preview that reloads on every save. Its Studio can also edit `composition.json` (layer timing and properties), so re-read the file before changing it rather than relying on an earlier copy. `ove doctor` checks FFmpeg, its encoders and the browser when a render fails for setup reasons. `ove schema` prints the JSON Schema. Every command checks its options: a misspelt or misplaced option stops it with a suggestion, and `--name=value` works as well as `--name value`. Inside the OVE repository itself, run the CLI as `npm run ove -- <command>`; paths are then relative to the repository root.
+
+What you leave behind in the project folder, every time: the final `composition.json`, `out.mp4`, the contact sheet (`review.png`), and one still per scene or beat (`still-<frame>.png`). Another agent, a person, or a CI run must be able to audit the video from those files alone — validation output is ephemeral, the artifacts are not. `ove review`'s contact sheet doubles as the storyboard for a first rough build (see Planning a video).
 
 ## Time
 

@@ -130,7 +130,10 @@ older always-worked routing on both commands.
 
 The model's JSON is validated with the same schema as a hand-written composition; errors go back to the model until
 it is valid, and `--review` can add the renderer's design checks as feedback. `--provider mock` runs the whole
-pipeline offline. Groq covers chat (`openai/gpt-oss-120b`), speech synthesis (`canopylabs/orpheus-v1-english`) and word-timed transcription (`whisper-large-v3-turbo`); it has no image model.
+pipeline offline. To measure rather than judge the AI paths, `pnpm eval:ai` runs a fixed set of briefs through the real
+router and scores composed, duration, resolution, copy readable and picture moves (offline with the mock provider).
+Groq covers chat (`openai/gpt-oss-120b`), speech synthesis (`canopylabs/orpheus-v1-english`) and word-timed
+transcription (`whisper-large-v3-turbo`); it has no image model.
 `ove ai studio` serves the same commands as a local product around projects (a Projects home with thumbnails, a Create flow, an editor with live preview, text editing, Ask AI, looks, history and export); it binds to 127.0.0.1 and writes only inside `--out` (default `ai-videos`).
 See [docs/ai.md](docs/ai.md).
 
