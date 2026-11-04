@@ -29,7 +29,7 @@ export function imageSize(size?: string): string {
 
 /** Generates one picture, writes it, and optionally registers it as an asset in a composition. */
 export async function generateImage(provider: AiProvider, options: GenerateImageOptions): Promise<GenerateImageResult> {
-  if (!provider.image) throw new Error(`The ${provider.id} provider cannot generate images; use --provider mock (Groq has no image model; or add an image() adapter)`);
+  if (!provider.image) throw new Error(`The ${provider.id} provider cannot generate images (or add an image() adapter)`);
   const generated = await provider.image(options.prompt, { size: imageSize(options.size), signal: options.signal });
   const file = resolve(/\.(png|jpe?g|webp)$/i.test(options.out) ? options.out : `${options.out}.${generated.extension}`);
   await mkdir(dirname(file), { recursive: true });

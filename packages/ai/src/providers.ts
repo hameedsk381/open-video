@@ -535,6 +535,68 @@ export class FreeLlmApiProvider implements AiProvider {
     if (!text) throw new Error('FreeLLMAPI chat returned no text. Check active models and upstream keys in your FreeLLMAPI dashboard.');
     return text;
   }
+
+  async speak(text: string, options: SpeakOptions = {}): Promise<AudioResult> {
+    const response = await request(`${this.baseUrl}/audio/speech`, {
+      method: 'POST',
+      signal: timeoutSignal(options.signal),
+      headers: jsonHeaders(this.headers()),
+      body: JSON.stringify({
+        model: 'auto',
+        input: text,
+        voice: options.voice ?? 'alloy',
+      }),
+    }, 'FreeLLMAPI speech');
+    return { data: new Uint8Array(await response.arrayBuffer()), extension: 'mp3' };
+  }
+
+  async transcribe(audio: Uint8Array, filename: string, options: { language?: string; signal?: AbortSignal } = {}): Promise<Transcript> {
+    const form = new FormData();
+    form.append('file', new Blob([audio as any]), filename || 'audio.mp3');
+    form.append('model', 'auto');
+    form.append('response_format', 'verbose_json');
+    if (options.language) form.append('language', options.language);
+    const response = await request(`${this.baseUrl}/audio/transcriptions`, {
+      method: 'POST',
+      signal: timeoutSignal(options.signal),
+      headers: this.headers(),
+      body: form,
+    }, 'FreeLLMAPI transcription');
+    const data: any = await response.json();
+    return {
+      text: String(data?.text ?? ''),
+      words: Array.isArray(data?.words) ? data.words.map((w: any) => ({
+        text: String(w.word ?? w.text ?? ''),
+        start: Number(w.start) || 0,
+        end: Number(w.end) || 0,
+      })) : [],
+      cues: Array.isArray(data?.segments) ? data.segments.map((s: any) => ({
+        text: String(s.text ?? ''),
+        start: Number(s.start) || 0,
+        end: Number(s.end) || 0,
+      })) : [],
+    };
+  }
+
+  async image(prompt: string, options: ImageOptions = {}): Promise<ImageResult> {
+    const size = options.size ?? '1024x1024';
+    const response = await request(`${this.baseUrl}/images/generations`, {
+      method: 'POST',
+      signal: timeoutSignal(options.signal),
+      headers: jsonHeaders(this.headers()),
+      body: JSON.stringify({
+        model: 'auto',
+        prompt,
+        n: 1,
+        size,
+        response_format: 'b64_json',
+      }),
+    }, 'FreeLLMAPI image');
+    const data: any = await response.json();
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) throw new Error('FreeLLMAPI did not return image data');
+    return { data: Buffer.from(b64, 'base64'), extension: 'png' };
+  }
 }
 
 const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvider => {
@@ -623,20 +685,20 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
   const id = (
     config.provider ||
     process.env.OVE_AI_PROVIDER ||
-    (process.env.FREELLMAPI_BASE_URL ? 'freellmapi' : '') ||
-    (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')
+    (process.env.FREELLMAPI_BASE_URL || process.env.FREELLMAPI_API_KEY ? 'freellmapi' : '') ||
+    (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '') ||
+    'freellmapi'
   ).toLowerCase();
   switch (id) {
+    case 'mock': return new MockProvider();
     case 'freellmapi':
-    case 'openai': return attachGroqAudio(new FreeLlmApiProvider(config), config);
+    case 'openai': return new FreeLlmApiProvider(config);
+    case 'groq': return new GroqProvider(config);
     case 'nvidia':
     case 'nim': return attachGroqAudio(new NvidiaProvider(config), config);
     case 'anthropic':
     case 'claude': return attachGroqAudio(new AnthropicProvider(config), config);
-    case 'groq': return new GroqProvider(config);
-    case 'mock': return new MockProvider();
-    case '': throw new Error('No AI provider chosen: pass --provider freellmapi|nvidia|groq|anthropic|mock, or set FREELLMAPI_BASE_URL, NVIDIA_API_KEY, GROQ_API_KEY or ANTHROPIC_API_KEY');
-    default: throw new Error(`Unknown AI provider "${id}"; use freellmapi, nvidia, groq, anthropic or mock`);
+    default: return new FreeLlmApiProvider(config);
   }
 }
 

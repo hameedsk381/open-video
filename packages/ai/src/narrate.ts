@@ -90,7 +90,7 @@ export function narrationScene(composition: Composition, options: SceneOptions):
 }
 
 export async function narrate(provider: AiProvider, options: NarrateOptions): Promise<NarrateResult> {
-  if (!provider.speak) throw new Error(`The ${provider.id} provider cannot make speech; use --provider groq (or add a speak() adapter)`);
+  if (!provider.speak) throw new Error(`The ${provider.id} provider cannot make speech (or add a speak() adapter)`);
   const brief = options.brief?.trim();
   let text = options.text?.trim() ?? '';
   if (!text && brief) {
@@ -151,7 +151,7 @@ export type CaptionResult = { captions: string; durationSeconds: number; words: 
 
 /** Captions for audio that already exists (a recorded voiceover or a video's own sound). */
 export async function captionAudio(provider: AiProvider, options: CaptionOptions): Promise<CaptionResult> {
-  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe; use --provider groq (or add a transcribe() adapter)`);
+  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe (or add a transcribe() adapter)`);
   const audioFile = resolve(options.audio);
   const data = await readFile(audioFile);
   options.onProgress?.('Transcribing…');

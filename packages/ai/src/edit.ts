@@ -139,7 +139,7 @@ export type EditResult = {
 
 /** Transcribes a raw clip, cuts its fillers and silences, and writes the edited reel as a project. */
 export async function editVideo(provider: AiProvider, options: EditOptions): Promise<EditResult> {
-  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe; use --provider groq (or add a transcribe() adapter)`);
+  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe (or add a transcribe() adapter)`);
   const clip = resolve(options.clip);
   const outDir = resolve(options.outDir);
   const width = options.width ?? 1080, height = options.height ?? 1920, fps = options.fps ?? 30;

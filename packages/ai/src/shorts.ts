@@ -126,7 +126,7 @@ export type ShortsResult = { dir: string; sourceSeconds: number; shorts: ShortRe
 
 /** Transcribes a long recording once and writes the best `count` shorts as projects. */
 export async function shortsFrom(provider: AiProvider, options: ShortsOptions): Promise<ShortsResult> {
-  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe; use --provider groq (or add a transcribe() adapter)`);
+  if (!provider.transcribe) throw new Error(`The ${provider.id} provider cannot transcribe (or add a transcribe() adapter)`);
   const clip = resolve(options.clip);
   const outDir = resolve(options.outDir);
   const width = options.width ?? 1080, height = options.height ?? 1920, fps = options.fps ?? 30;

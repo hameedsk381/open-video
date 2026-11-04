@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnthropicProvider, concatWav, createProvider, GroqProvider, NvidiaProvider, splitSpeech, type AiProvider } from '@ove/ai';
 
 // A minimal 16-bit mono PCM WAV, the shape Groq's speech endpoint returns.
@@ -16,6 +16,11 @@ function wav(samples: number[], sampleRate = 24000): Uint8Array<ArrayBuffer> {
 }
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+
+beforeEach(() => {
+  vi.stubEnv('FREELLMAPI_BASE_URL', '');
+  vi.stubEnv('FREELLMAPI_API_KEY', '');
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
