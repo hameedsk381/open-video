@@ -10,6 +10,7 @@ export * from './narrate';
 export * from './voiceover';
 export * from './edit';
 export * from './shorts';
+export * from './retime';
 export * from './image';
 export * from './batch';
 export * from './project';

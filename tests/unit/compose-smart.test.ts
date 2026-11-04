@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { composeSmart } from '../../packages/cli/src/templates';
 import { buildRegistry, createProvider, type AiProvider, type ChatMessage, type Registry } from '@ove/ai';
+import { loadComposition } from '@ove/schema';
 
 // The smart composer routes a brief: the planner's answer picks the template or the full-composition path (with the beats
 // as the motion plan), and a refused or failed plan falls back to the routing that always worked.
@@ -59,5 +60,16 @@ describe('composeSmart routing', () => {
     // The mock fills a real template end to end: a template reply, a schema-checked composition, no free-form generation.
     expect(result.composition.version).toBe('1.0');
     expect(result.template).toBeTruthy();
+  });
+
+  it('retimes a filled template to the brief\'s duration and saves it as a plain composition', async () => {
+    const provider = createProvider({ provider: 'mock' });
+    const result = await composeSmart(provider, { ...base, durationSeconds: 4, maxAttempts: 2 }, { noPlan: true });
+    // The template the mock fills is longer than 4 s, so the resolved composition is stretched/trimmed to exactly 4 s.
+    expect(result.composition.durationFrames).toBe(120);
+    // Retimed timing is bespoke: no editable template source is returned, and the change is announced.
+    expect(result.source).toBeUndefined();
+    expect(result.warnings.some(warning => warning.includes('Retimed'))).toBe(true);
+    expect(() => loadComposition(structuredClone(result.composition))).not.toThrow();
   });
 });

@@ -144,7 +144,7 @@ async function composeCommand(argv: string[]): Promise<number> {
   const provider = providerFrom(argv);
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
-  const full = flag(argv, '--full') || argv.includes('--duration');
+  const full = flag(argv, '--full');
   const options: ComposeOptions = { ...canvasOptions, brief, maxAttempts: numberOption(argv, '--max-attempts', 3),
     review: flag(argv, '--review'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };

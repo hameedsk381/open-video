@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadComposition, variablesSchema } from '@ove/schema';
 import { listBlocks, listThemes } from './blocks';
-import { buildRegistry, composeFromTemplate, composeVideo, narrate, narrateScenes, planBuild, type BuildPlan, type NarrateOptions, type NarrateResult, type AiProvider, type ComposeOptions, type ComposeResult, type Registry, type TemplateChoice } from '@ove/ai';
+import { buildRegistry, composeFromTemplate, composeVideo, narrate, narrateScenes, planBuild, retimeComposition, type BuildPlan, type NarrateOptions, type NarrateResult, type AiProvider, type ComposeOptions, type ComposeResult, type Registry, type TemplateChoice } from '@ove/ai';
 
 export const templatesDir = fileURLToPath(new URL('../templates', import.meta.url));
 
@@ -144,7 +144,20 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
       const themes = plan?.theme ? (await listThemes()).filter(theme => theme.id === plan!.theme) : await listThemes();
       const filled = await composeFromTemplate(provider, picked.length ? picked : choices, { ...options, themes });
       if (filled) {
-        return { composition: filled.composition, source: filled.source, attempts: filled.attempts + (plan ? 1 : 0), issues: [], warnings: filled.warnings, template: filled.template };
+        // A template keeps its own length unless the brief asked for another: stretch or trim the resolved
+        // composition to fit. The saved source stays the untouched template only when no retiming happened —
+        // retimed timing is bespoke, so the plain composition is saved instead (it stays fully editable).
+        const wanted = options.durationSeconds;
+        const current = filled.composition.durationFrames / filled.composition.fps;
+        let composition = filled.composition, source: Record<string, unknown> | undefined = filled.source;
+        const warnings = [...filled.warnings];
+        if (wanted && Math.abs(wanted - current) > 0.25) {
+          composition = retimeComposition(filled.composition, wanted);
+          source = undefined;
+          warnings.push(`Retimed the ${filled.template} template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s; saved as a plain composition (the timing is now bespoke).`);
+          options.onProgress?.(`Retiming the template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s.`);
+        }
+        return { composition, source, attempts: filled.attempts + (plan ? 1 : 0), issues: [], warnings, template: filled.template };
       }
       options.onProgress?.('No template suits this brief; writing a full composition.');
     } catch (error) {
