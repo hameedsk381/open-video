@@ -78,10 +78,15 @@ export function narrationScene(composition: Composition, options: SceneOptions):
   const short = Math.min(width, height);
   const layers: any[] = [];
   if (options.audioSrc) layers.push({ id: 'narration-audio', type: 'audio', src: 'narration', startFrame: 0 });
-  if (options.captionsSrc) layers.push({ id: 'narration-captions-layer', type: 'captions', src: 'narration-captions', startFrame: options.captionStartFrame ?? 0,
-    x: Math.round(width / 2), y: Math.round(height - height * 0.12), textAlign: 'center',
-    maxWidth: Math.round(width * 0.82), fontSize: Math.round(short * 0.027), fontWeight: 700,
-    background: 'rgba(0,0,0,0.55)', padding: Math.round(short * 0.01), radius: Math.round(short * 0.008) });
+  // Captions draw downward from y (textBaseline top), so the block's top sits above the platform's bottom UI band
+  // (see review.ts safeZoneBands: the bottom 18% of a 9:16 player, landing lower on a letterboxed 4:5 canvas) with
+  // room for a second line, and its width stays clear of the right band of action buttons.
+  if (options.captionsSrc) { const tall = height > width, screen = width * 16 / 9, letterbox = tall ? Math.max(0, (screen - height) / 2) : 0;
+    const bottom = tall ? Math.max(0, 0.18 * screen - letterbox) / height + 0.05 : 0.12;
+    layers.push({ id: 'narration-captions-layer', type: 'captions', src: 'narration-captions', startFrame: options.captionStartFrame ?? 0,
+    x: Math.round(width / 2), y: Math.round(height - height * bottom), textAlign: 'center',
+    maxWidth: Math.round(width * (tall ? 0.76 : 0.82)), fontSize: Math.round(short * 0.027), fontWeight: 700,
+    background: 'rgba(0,0,0,0.55)', padding: Math.round(short * 0.01), radius: Math.round(short * 0.008) }); }
   next.scenes.push({ id: sceneId, name: sceneId === 'narration' ? 'Narration' : 'Captions', startFrame: 0, durationFrames,
     transitionIn: undefined, layers, metadata: {}, assetIds: [] } as any);
   validateTemplate(next);

@@ -147,6 +147,9 @@ describe('narration', () => {
       expect(last.id).toBe('narration');
       expect(last.durationFrames).toBe(57); // 0.9 s = 27 frames, plus a 1 s tail
       expect(result.composition!.assets.map(asset => asset.id)).toEqual(expect.arrayContaining(['narration', 'narration-captions']));
+      const captionsLayer = last.layers.find(layer => (layer as any).id === 'narration-captions-layer') as any;
+      expect(captionsLayer.y).toBe(1478); // above the bottom UI band (18% of 1920) with room for a second line
+      expect(captionsLayer.maxWidth).toBe(821); // clear of the right UI band (11% of 1080)
       expect(result.composition!.scenes.find(scene => scene.id === 'main')!.durationFrames).toBe(30);
       expect(() => loadComposition(result.composition)).not.toThrow();
     } finally { await rm(dir, { recursive: true, force: true }); }

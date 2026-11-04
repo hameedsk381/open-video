@@ -1333,7 +1333,7 @@
             }
           ],
           "x": "{{round(canvas.width * 0.06)}}",
-          "y": "{{round(canvas.height * 0.05)}}",
+          "y": "{{round(canvas.height * 0.09)}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
           "animations": [

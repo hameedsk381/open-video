@@ -1,16 +1,40 @@
 // `ove review`: renders sample frames of a composition and checks them for the mistakes that make a video look unfinished: text cut off,
-// off the frame, overlapping or too small; a busy frame; too many type sizes or text colours; long stretches where nothing moves;
-// scenes of identical length; mixed transition styles; text on screen too briefly to read; several headlines competing; caption lines
-// too fast to read; sounds cut off mid-phrase; and, when there is sound, loudness. It also makes a contact sheet.
-// The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
+// off the frame, overlapping or too small; text sitting where a platform's UI covers the picture; a busy frame; too many type sizes or text
+// colours; long stretches where nothing moves; scenes of identical length; mixed transition styles; text on screen too briefly to read;
+// several headlines competing; caption lines too fast to read; sounds cut off mid-phrase; and, when there is sound, loudness. It also makes a
+// contact sheet. The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
 import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness, sourceOf } from './audio'; import { captionTrack, measureSource } from './media'; import { layerWindows } from '@ove/timeline';
 export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string };
 export type ReviewResult = { issues: ReviewIssue[]; sheet: Buffer; sheetFrames: number[]; sampledFrames: number; loudness?: { integrated: number; truePeak: number } };
-export type ReviewOptions = { allowCode?: boolean; baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; onProgress?: (done: number, total: number) => void };
+export type SafeZone = { top?: number; bottom?: number; left?: number; right?: number };
+export type ReviewOptions = { allowCode?: boolean; baseDir?: string; every?: number; sheetFrames?: number; columns?: number; concurrency?: number; audio?: boolean; safeZone?: SafeZone; onProgress?: (done: number, total: number) => void };
 
 const area = (a: TextNote) => Math.max(0, a.x1 - a.x0) * Math.max(0, a.y1 - a.y0);
-const overlap = (a: TextNote, b: TextNote) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+type Rect = { x0: number; y0: number; x1: number; y1: number };
+const overlap = (a: Rect, b: Rect) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
 const seconds = (frame: number, fps: number) => `${(frame/fps).toFixed(1)} s`;
+
+export type SafeZoneBand = { name: string; hint: string; x0: number; y0: number; x1: number; y1: number };
+/**
+ * The rectangles where a platform's own UI covers the picture. The defaults assume the video plays in a 9:16 feed app —
+ * Instagram Reels, TikTok and YouTube Shorts draw the same chrome: caption, audio tag and action controls over the bottom
+ * of the screen, action buttons down the right edge, search and camera over the top. A tall canvas wider than 9:16 (4:5,
+ * square) is letterboxed in that player, so the chrome lands lower on the picture: the insets are where each screen band
+ * actually overlaps the video, and bands that land on the letterbox drop out. Insets are fractions of the frame; callers
+ * can override any of them (0 turns a band off). A landscape canvas has no app chrome, so there are no bands by default.
+ */
+export function safeZoneBands(width: number, height: number, override?: SafeZone): SafeZoneBand[] {
+  const screen = width * 16 / 9, letterbox = height >= width ? Math.max(0, (screen - height) / 2) : 0;
+  const inset = { ...(height >= width
+    ? { top: Math.max(0, 0.08 * screen - letterbox) / height, bottom: Math.max(0, 0.18 * screen - letterbox) / height, left: 0.02, right: 0.11 }
+    : {}), ...override };
+  const bands: SafeZoneBand[] = [];
+  if (inset.bottom) bands.push({ name: 'bottom UI band', hint: `Reels and TikTok draw their controls over the bottom ${Math.round(inset.bottom * height)} px: keep text above y ${Math.round(height - inset.bottom * height)}`, x0: 0, y0: height - inset.bottom * height, x1: width, y1: height });
+  if (inset.right) bands.push({ name: 'right UI band', hint: `the action buttons cover the right ${Math.round(inset.right * width)} px: keep text left of x ${Math.round(width - inset.right * width)}`, x0: width - inset.right * width, y0: 0, x1: width, y1: height });
+  if (inset.top) bands.push({ name: 'top UI band', hint: `search and the camera cover the top ${Math.round(inset.top * height)} px: keep text below y ${Math.round(inset.top * height)}`, x0: 0, y0: 0, x1: width, y1: inset.top * height });
+  if (inset.left) bands.push({ name: 'left UI band', hint: `keep text right of x ${Math.round(inset.left * width)}`, x0: 0, y0: 0, x1: inset.left * width, y1: height });
+  return bands;
+}
 
 export async function reviewComposition(composition: Composition, options: ReviewOptions = {}): Promise<ReviewResult> { const { fps, width, height, durationFrames }=composition, baseDir=options.baseDir ?? process.cwd();
   const every=Math.max(1, Math.round(options.every ?? fps/2)), frames: number[]=[]; for (let f=0; f < durationFrames; f+=every) frames.push(f); if (frames.at(-1) !== durationFrames-1) frames.push(durationFrames-1);
@@ -33,6 +57,12 @@ export async function reviewComposition(composition: Composition, options: Revie
   persistent('small-text', hold, t => visible(t) && t.size < smallest ? `"${t.text}" is ${Math.round(t.size)} px, too small to read on a phone (labels ${Math.ceil(smallest)}+ px, body ${Math.round(minSide*0.024)}+ px)` : undefined, 'warning');
   persistent('overlap', hold, (t, report) => { if (!visible(t)) return; const other=report.texts.find(o => o !== t && o.id !== t.id && visible(o) && overlap(t, o) > 0.15*Math.min(area(t), area(o)) && (t.kind === 'captions' || o.kind === 'captions' || t.id < o.id));
     return other ? (t.kind === 'captions' || other.kind === 'captions' ? `"${(t.kind === 'captions' ? other : t).text}" sits under the captions: keep content out of the captions band` : `"${t.text}" overlaps "${other.text}"`) : undefined; }, 'error');
+  // Platform UI bands: on a vertical canvas the app's own chrome covers the bottom and right of the frame, so text there is
+  // hidden behind the caption, audio tag and action buttons in the feed. Flagged as a warning — the text is still readable
+  // when the video is played full-screen, it just loses the fight with the app UI.
+  const bands=safeZoneBands(width, height, options.safeZone);
+  if (bands.length) persistent('safe-zone', hold, t => { if (!visible(t)) return; const band=bands.find(b => overlap(t, b) > 0.25*area(t));
+    return band ? `"${t.text}" sits in the ${band.name}: ${band.hint}` : undefined; }, 'warning');
   // A busy frame: more words on screen at once than anyone reads in a shot, for a second or more (not just while scenes cross-fade).
   const crowded=reports.map(r => r.texts.filter(t => visible(t) && t.kind === 'text').reduce((n, t) => n+t.words, 0) > 40), busy=crowded.findIndex((_, i) => i+hold <= crowded.length && crowded.slice(i, i+hold).every(Boolean)); if (busy >= 0) issues.push({ severity: 'warning', code: 'busy', message: `More than 40 words on screen at ${seconds(frames[busy]!, fps)}: split it across beats or cut words`, frame: frames[busy] });
   // Type system: distinct base sizes and solid text colours used across the video.

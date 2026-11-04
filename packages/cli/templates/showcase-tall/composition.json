@@ -448,7 +448,7 @@
           "x": "{{round(canvas.width * 0.08)}}",
           "y": "{{round(canvas.height * 0.35)}}",
           "width": "{{round(canvas.width * 0.84)}}",
-          "height": "{{round(canvas.height * 0.57)}}",
+          "height": "{{round(canvas.height * 0.45)}}",
           "layout": {
             "direction": "column",
             "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
@@ -1600,7 +1600,7 @@
             }
           ],
           "x": "{{round(canvas.width * 0.06)}}",
-          "y": "{{round(canvas.height * 0.05)}}",
+          "y": "{{round(canvas.height * 0.09)}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
           "animations": [
