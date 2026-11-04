@@ -9,8 +9,26 @@ const examples = ['Launch video for a budgeting app called Pocket, with three fe
 export function Create() {
   const [kind, setKind] = useState<string>('reel'), [brief, setBrief] = useState(''), [name, setName] = useState(''), [files, setFiles] = useState<File[]>([]);
   const [duration, setDuration] = useState(''), [aspect, setAspect] = useState(''), [voice, setVoice] = useState(false), [review, setReview] = useState(false), [full, setFull] = useState(false);
+  const [urlInput, setUrlInput] = useState(''), [scraping, setScraping] = useState(false), [scrapedBrand, setScrapedBrand] = useState<{ name?: string; colors?: Record<string, string>; logo?: string } | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [over, setOver] = useState(false), picker = useRef<HTMLInputElement>(null);
   const addFiles = (list: FileList | null) => { if (list) setFiles(current => [...current, ...Array.from(list)]); };
+
+  const handleScrapeUrl = async () => {
+    if (!urlInput.trim()) return;
+    setError('');
+    setScraping(true);
+    try {
+      const res = await api<{ scraped: any; brand: any; suggestedBrief: string }>('/api/brand/scrape', { url: urlInput.trim() });
+      setScrapedBrand(res.brand);
+      if (res.brand?.name && !name) setName(`${res.brand.name} Launch`);
+      if (res.suggestedBrief && (!brief || brief.length < 20)) setBrief(res.suggestedBrief);
+    } catch (e) {
+      setError(`Could not fetch brand from URL: ${(e as Error).message}`);
+    } finally {
+      setScraping(false);
+    }
+  };
+
   const submit = async () => {
     setError(''); if (!brief.trim()) { setError('Describe the video first'); return; }
     setBusy(true);
@@ -24,6 +42,36 @@ export function Create() {
     } catch (e) { setError((e as Error).message); setBusy(false); }
   };
   return <Page title="New video" subtitle="Describe it and the studio picks a design, writes the copy and builds the scenes." narrow>
+    {/* Website URL Ingestion */}
+    <Field label="Import from Website / Brand URL (optional)">
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          className="input"
+          placeholder="e.g. linear.app, supabase.com, or https://resend.com"
+          value={urlInput}
+          onChange={e => setUrlInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleScrapeUrl(); } }}
+        />
+        <Button variant="secondary" loading={scraping} onClick={handleScrapeUrl}>
+          {scraping ? 'Analyzing…' : 'Extract Brand'}
+        </Button>
+      </div>
+      {scrapedBrand ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+          {scrapedBrand.logo ? <img src={scrapedBrand.logo} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain' }} /> : null}
+          <div style={{ flex: 1, fontSize: 13 }}>
+            <b>{scrapedBrand.name || 'Brand'}</b>
+            <span style={{ color: 'var(--muted)', marginLeft: 8 }}>Colors detected:</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {scrapedBrand.colors?.primary ? <span title="Primary" style={{ width: 16, height: 16, borderRadius: '50%', background: scrapedBrand.colors.primary, border: '1px solid var(--border)' }} /> : null}
+            {scrapedBrand.colors?.accent ? <span title="Accent" style={{ width: 16, height: 16, borderRadius: '50%', background: scrapedBrand.colors.accent, border: '1px solid var(--border)' }} /> : null}
+            {scrapedBrand.colors?.secondary ? <span title="Secondary" style={{ width: 16, height: 16, borderRadius: '50%', background: scrapedBrand.colors.secondary, border: '1px solid var(--border)' }} /> : null}
+          </div>
+        </div>
+      ) : null}
+    </Field>
+
     <Field label="What kind of video?"><div className="tiles">{kinds.map(([id, title, hint]) => <button key={id} type="button" className={`tile ${kind === id ? 'on' : ''}`} onClick={() => setKind(id)}><b>{title}</b><span>{hint}</span></button>)}</div></Field>
     <Field label="Describe your video"><textarea className="input" style={{ minHeight: 130 }} placeholder="What is the video about? Who is it for? What should people do after watching?" value={brief} onChange={e => setBrief(e.target.value)} /></Field>
     <div className="chips" style={{ marginTop: -8 }}>{examples.map(example => <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>{example.length > 56 ? example.slice(0, 54) + '…' : example}</button>)}</div>

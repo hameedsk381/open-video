@@ -2,6 +2,7 @@ import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequ
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { measureMedia, loadComposition } from '@ove/core';
 import { resolveVariables, variablesSchema } from '@ove/schema';
+import { distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
 import type { RevisionMeta } from '@ove/storage';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from '../projects';
 import { readBytes } from '../http';
@@ -107,6 +108,12 @@ export function projectRoutes(): Route[] {
     { method: 'POST', path: '/api/restore', handle: async c => {
       const request = parseRequest(restoreRequest, await c.body()), id = await exists(c, request.file.split('/')[0]);
       c.json(200, { revision: await c.deps.store.restore(c.who, id, request.n) });
+    } },
+    { method: 'POST', path: '/api/brand/scrape', handle: async c => {
+      const body = await c.body(), url = textOf(body.url, 'url');
+      const scraped = await scrapeWebsiteBrand(url);
+      const distilled = await distillBrandPack(scraped);
+      c.json(200, { scraped, brand: distilled.brand, suggestedBrief: distilled.suggestedBrief });
     } },
   ];
 }
