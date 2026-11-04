@@ -1,0 +1,214 @@
+{
+  "id": "fx-broll-loop",
+  "name": "B-roll loop",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Seamless B-roll loop with continuous ambient motion, floating hero plate, and rhythmic camera choreography.",
+  "params": {
+    "footage": {
+      "type": "string",
+      "default": "",
+      "description": "Optional background video or picture asset"
+    },
+    "label": {
+      "type": "string",
+      "default": "LOOP ENGINEERING",
+      "description": "Top tag or kicker"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Continuous visual momentum",
+      "description": "Main takeaway or narration line"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "ambient-glow",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.45)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.85)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.16,
+      "blur": 100,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 0, "value": 1.0, "easing": "easeInOut" },
+            { "frame": 75, "value": 1.15, "easing": "easeInOut" },
+            { "frame": 150, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hero-card",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.72)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.72)}}",
+      "fill": "{{surface}}",
+      "radius": 16,
+      "stroke": "{{muted}}",
+      "strokeWidth": 2,
+      "shadow": {
+        "color": "rgba(0,0,0,0.22)",
+        "blur": 30,
+        "offsetX": 0,
+        "offsetY": 14
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
+            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
+            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            { "frame": 0, "value": -1.5, "easing": "easeInOut" },
+            { "frame": 75, "value": 1.5, "easing": "easeInOut" },
+            { "frame": 150, "value": -1.5 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{footage}}",
+      "id": "footage-layer",
+      "type": "video",
+      "src": "{{footage}}",
+      "objectFit": "cover",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.68)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.68)}}",
+      "radius": 12,
+      "loop": true,
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
+            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
+            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            { "frame": 0, "value": -1.5, "easing": "easeInOut" },
+            { "frame": 75, "value": 1.5, "easing": "easeInOut" },
+            { "frame": 150, "value": -1.5 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{!footage}}",
+      "id": "hero-badge",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.28)}}",
+      "fill": "{{accent}}",
+      "opacity": 0.9,
+      "shadow": {
+        "color": "rgba(0,0,0,0.18)",
+        "blur": 16,
+        "offsetX": 0,
+        "offsetY": 8
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
+            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
+            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 0, "value": 1.0, "easing": "easeInOut" },
+            { "frame": 75, "value": 1.08, "easing": "easeInOut" },
+            { "frame": 150, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "if": "{{!footage}}",
+      "id": "hero-icon",
+      "type": "text",
+      "content": "⚡",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
+      "color": "#111111",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}",
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}", "easing": "easeInOut" },
+            { "frame": 75, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01 - 16)}}", "easing": "easeInOut" },
+            { "frame": 150, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kicker-tag",
+      "type": "text",
+      "content": "{{label}}",
+      "fontFamily": "Inter",
+      "fontWeight": 800,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+      "color": "{{accent}}",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.22)}}",
+      "textAlign": "center"
+    },
+    {
+      "id": "headline-text",
+      "type": "text",
+      "content": "{{headline}}",
+      "fontFamily": "Inter",
+      "fontWeight": 700,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.046)}}",
+      "color": "{{text}}",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.78)}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.78)}}"
+    },
+    {
+      "id": "sfx-pad",
+      "type": "audio",
+      "src": "sfx:ambient-pad",
+      "startFrame": 0,
+      "volume": 0.4
+    }
+  ]
+}
+
