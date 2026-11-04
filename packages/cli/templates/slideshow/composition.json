@@ -139,7 +139,7 @@
               "content": "{{footer}}",
               "x": 160,
               "y": 970,
-              "fontSize": 24,
+              "fontSize": 22,
               "letterSpacing": 3,
               "color": "#64748b"
             },

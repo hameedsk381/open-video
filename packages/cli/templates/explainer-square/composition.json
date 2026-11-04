@@ -1040,7 +1040,7 @@
                           "id": "v-{{index}}",
                           "type": "text",
                           "content": "{{st.value}}",
-                          "fontSize": "{{round(min(min(canvas.width, canvas.height) * 0.08, (canvas.width * 0.84 / max(count, 1) - min(canvas.width, canvas.height) * 0.04) * 0.3))}}",
+                          "fontSize": "{{round(min(min(canvas.width, canvas.height) * 0.0575, (canvas.width * 0.84 / max(count, 1) - min(canvas.width, canvas.height) * 0.04) * 0.3))}}",
                           "color": "{{accent}}",
                           "fontWeight": 900,
                           "maxWidth": "{{round(canvas.width * 0.84 / max(count, 1) - min(canvas.width, canvas.height) * 0.04)}}",

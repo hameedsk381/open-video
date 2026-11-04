@@ -216,7 +216,7 @@
           "content": "{{detail}}",
           "x": 540,
           "y": 810,
-          "fontSize": 34,
+          "fontSize": 30,
           "lineHeight": 1.5,
           "textAlign": "center",
           "maxWidth": 760,
