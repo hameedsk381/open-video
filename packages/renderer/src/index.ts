@@ -25,11 +25,53 @@ const allLayers = (composition: Composition) => composition.scenes.flatMap(scene
 // GPU's output depends on its driver; canvas 2D drawing runs on the CPU either way.
 const browserArgs = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...(process.env.OVE_CHROMIUM_ARGS ?? '').split(/\s+/).filter(Boolean)]; // OVE_CHROMIUM_ARGS: extra flags set by whoever runs the process (the container image sets --no-sandbox, because the container is the sandbox)
 export const browserInstallHint = 'Install one with "ove browser install" (Playwright\'s Chromium, about 150 MB), install Google Chrome, or set OVE_CHROMIUM_EXECUTABLE to a Chromium-based browser.';
+let ensureChromiumPromise: Promise<void> | null = null;
+export async function ensureChromium(options?: { onProgress?: (msg: string) => void }): Promise<void> {
+  if (existsSync(chromium.executablePath())) return;
+  for (const channel of ['chrome', 'msedge']) {
+    try {
+      const b = await chromium.launch({ headless: true, channel, args: browserArgs });
+      await b.close();
+      return;
+    } catch {}
+  }
+  if (ensureChromiumPromise) return ensureChromiumPromise;
+  ensureChromiumPromise = (async () => {
+    const log = options?.onProgress ?? ((msg: string) => console.log(msg));
+    log('No Chrome, Edge, or Chromium browser detected.');
+    log('Downloading Playwright Chromium (one-time setup)...');
+    const { createRequire } = await import('node:module');
+    const { dirname, join } = await import('node:path');
+    const { spawn } = await import('node:child_process');
+    const req = createRequire(import.meta.url);
+    const cli = join(dirname(req.resolve('playwright/package.json')), 'cli.js');
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(process.execPath, [cli, 'install', 'chromium'], { stdio: 'inherit' });
+      child.on('close', code => {
+        if (code === 0) resolve();
+        else reject(new Error(`Chromium installation failed (exit code ${code})`));
+      });
+      child.on('error', reject);
+    });
+    log('✓ Playwright Chromium installed successfully.');
+  })();
+  try {
+    await ensureChromiumPromise;
+  } catch (err) {
+    ensureChromiumPromise = null;
+    throw err;
+  }
+}
 export async function launchBrowser(): Promise<Browser> { const explicit=process.env.OVE_CHROMIUM_EXECUTABLE;
   if (explicit) { if (!existsSync(explicit)) throw new Error(`OVE_CHROMIUM_EXECUTABLE points to ${explicit}, which does not exist.`); return chromium.launch({ headless: true, executablePath: explicit, args: browserArgs }); }
   if (existsSync(chromium.executablePath())) return chromium.launch({ headless: true, args: browserArgs });
   for (const channel of ['chrome', 'msedge']) { try { return await chromium.launch({ headless: true, channel, args: browserArgs }); } catch {} }
-  throw new Error(`No Chromium-based browser was found. ${browserInstallHint}`); }
+  try {
+    await ensureChromium();
+    return await chromium.launch({ headless: true, args: browserArgs });
+  } catch (error) {
+    throw new Error(`No Chromium-based browser was found and auto-install failed: ${(error as Error).message}. ${browserInstallHint}`);
+  } }
 // Which browser launchBrowser would use, for `ove doctor`.
 export async function describeBrowser(): Promise<string> { const browser=await launchBrowser(); try { return `${browser.browserType().name()} ${browser.version()}${process.env.OVE_CHROMIUM_EXECUTABLE ? ` (OVE_CHROMIUM_EXECUTABLE=${process.env.OVE_CHROMIUM_EXECUTABLE})` : existsSync(chromium.executablePath()) ? ' (Playwright Chromium)' : ' (installed Chrome/Edge)'}`; } finally { await browser.close(); } }
 // Past ~4 pages Chromium competes with FFmpeg's encoder for CPU and renders get slower, so the default stays small.
