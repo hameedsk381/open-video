@@ -4,8 +4,16 @@
 import { extractJson } from './json';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
-export type ChatMessage = { role: ChatRole; content: string };
-export type ChatOptions = { json?: boolean; temperature?: number; maxTokens?: number; signal?: AbortSignal };
+export type ChatMessage = { role: ChatRole; content: string | any[] };
+export type ChatTask = 'compose' | 'template' | 'heal' | 'brand' | 'batch' | 'vision' | 'fast';
+export type ChatOptions = {
+  json?: boolean;
+  temperature?: number;
+  maxTokens?: number;
+  signal?: AbortSignal;
+  task?: ChatTask;
+  model?: string;
+};
 export type ImageOptions = { size?: string; signal?: AbortSignal };
 export type ImageResult = { data: Uint8Array; extension: string };
 export type SpeakOptions = { voice?: string; signal?: AbortSignal };
@@ -380,6 +388,65 @@ export class NvidiaProvider implements AiProvider {
   }
 }
 
+export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
+  compose: ['llama-3.3-70b', 'gpt-oss-120b', 'qwen3.5-397b', 'nemotron-3-ultra-550b', 'auto'],
+  template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'qwen3.6-27b', 'auto'],
+  heal: ['nemotron-3-nano-30b-reasoning', 'nemotron-3-nano-omni-reasoning', 'llama-3.3-70b', 'auto'],
+  vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
+  brand: ['gemma-4-31b', 'qwen3.8-27b', 'llama-3.3-70b', 'auto'],
+  batch: ['kilo-auto', 'qwen3.6-27b', 'free-router', 'auto'],
+  fast: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'auto'],
+};
+
+let cachedFreeLlmModels: { models: Set<string>; expiresAt: number } | undefined;
+
+export async function getAvailableFreeLlmModels(baseUrl: string, headers: Record<string, string>, signal?: AbortSignal): Promise<Set<string>> {
+  const now = Date.now();
+  if (cachedFreeLlmModels && cachedFreeLlmModels.expiresAt > now) {
+    return cachedFreeLlmModels.models;
+  }
+  try {
+    const res = await request(`${baseUrl}/models`, { method: 'GET', signal, headers: jsonHeaders(headers) }, 'FreeLLMAPI models');
+    const data: any = await res.json();
+    const available = new Set<string>();
+    if (Array.isArray(data?.data)) {
+      for (const m of data.data) {
+        if (m.available !== false && typeof m.id === 'string') {
+          available.add(m.id.toLowerCase());
+        }
+      }
+    }
+    cachedFreeLlmModels = { models: available, expiresAt: now + 10 * 60 * 1000 };
+    return available;
+  } catch {
+    return new Set<string>(['auto']);
+  }
+}
+
+export function inferChatTask(messages: ChatMessage[], options?: ChatOptions): ChatTask {
+  if (options?.task) return options.task;
+  const hasImage = messages.some(m => Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url'));
+  if (hasImage) return 'vision';
+
+  const fullText = messages.map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n');
+  if (/design review found these issues|visual review|fix ONLY these design problems|repair message/i.test(fullText)) {
+    return 'heal';
+  }
+  if (/fill in ready-made video templates|fill a template|candidates\.find/i.test(fullText)) {
+    return 'template';
+  }
+  if (/production planner|Decide how the brief|planBuild/i.test(fullText)) {
+    return 'fast';
+  }
+  if (/Extract a clean BrandPack|Brand Identity & Design System|brand pack|brand-scraper/i.test(fullText)) {
+    return 'brand';
+  }
+  if (/planBatch|batch file/i.test(fullText)) {
+    return 'batch';
+  }
+  return 'compose';
+}
+
 export class FreeLlmApiProvider implements AiProvider {
   id = 'freellmapi';
   model: string;
@@ -388,7 +455,7 @@ export class FreeLlmApiProvider implements AiProvider {
 
   constructor(config: ProviderConfig = {}) {
     this.apiKey = config.apiKey ?? process.env.FREELLMAPI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.OVE_AI_API_KEY ?? '';
-    this.model = config.model ?? process.env.FREELLMAPI_MODEL ?? process.env.OVE_AI_MODEL ?? 'gpt-4o-mini';
+    this.model = config.model ?? process.env.FREELLMAPI_MODEL ?? process.env.OVE_AI_MODEL ?? 'auto';
     this.baseUrl = trimSlash(config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL ?? 'http://localhost:3001/v1');
   }
 
@@ -396,11 +463,28 @@ export class FreeLlmApiProvider implements AiProvider {
     return this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {};
   }
 
+  async resolveModel(task: ChatTask, explicitModel?: string, signal?: AbortSignal): Promise<string> {
+    if (explicitModel) return explicitModel;
+    if (this.model && this.model !== 'auto' && this.model !== 'smart') return this.model;
+
+    const available = await getAvailableFreeLlmModels(this.baseUrl, this.headers(), signal);
+    const preferences = TASK_MODEL_PREFERENCES[task] || ['auto'];
+    for (const candidate of preferences) {
+      if (candidate === 'auto' || available.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+    }
+    return 'auto';
+  }
+
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const body = (json: boolean) => JSON.stringify({
-      model: this.model,
+    const task = inferChatTask(messages, options);
+    const selectedModel = await this.resolveModel(task, options.model, options.signal);
+
+    const body = (modelToUse: string, json: boolean) => JSON.stringify({
+      model: modelToUse,
       messages,
-      temperature: options.temperature ?? 0.4,
+      temperature: options.temperature ?? (task === 'heal' ? 0.2 : 0.4),
       max_tokens: options.maxTokens ?? 4096,
       ...(json ? { response_format: { type: 'json_object' } } : {}),
     });
@@ -411,16 +495,35 @@ export class FreeLlmApiProvider implements AiProvider {
         method: 'POST',
         signal: timeoutSignal(options.signal),
         headers: jsonHeaders(this.headers()),
-        body: body(!!options.json),
-      }, 'FreeLLMAPI chat');
+        body: body(selectedModel, !!options.json),
+      }, `FreeLLMAPI chat (${selectedModel})`);
     } catch (error) {
-      if (!options.json) throw error;
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(false),
-      }, 'FreeLLMAPI chat');
+      if (selectedModel !== 'auto' && !/timeout/i.test(String(error))) {
+        try {
+          response = await request(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            signal: timeoutSignal(options.signal),
+            headers: jsonHeaders(this.headers()),
+            body: body('auto', !!options.json),
+          }, 'FreeLLMAPI chat (auto fallback)');
+        } catch {
+          if (!options.json) throw error;
+          response = await request(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            signal: timeoutSignal(options.signal),
+            headers: jsonHeaders(this.headers()),
+            body: body('auto', false),
+          }, 'FreeLLMAPI chat (no-json fallback)');
+        }
+      } else {
+        if (!options.json) throw error;
+        response = await request(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          signal: timeoutSignal(options.signal),
+          headers: jsonHeaders(this.headers()),
+          body: body(selectedModel, false),
+        }, 'FreeLLMAPI chat (no-json)');
+      }
     }
     const data: any = await response.json();
     const message = data?.choices?.[0]?.message;
@@ -539,5 +642,8 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
 
 export function describeProvider(provider: AiProvider): string {
   const capabilities = providerCapabilities(provider);
-  return `${provider.id} (${provider.model}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
+  const routerInfo = (provider.id === 'freellmapi' && (provider.model === 'auto' || provider.model === 'smart'))
+    ? ' [Autonomous Task-Aware Router: compose → llama-3.3-70b, fast → qwen3.8-27b, heal → nemotron-3-nano-30b-reasoning]'
+    : '';
+  return `${provider.id} (${provider.model}${routerInfo}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
 }

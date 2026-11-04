@@ -233,6 +233,7 @@ export async function runVideoAgent(
 
   let videoCode = '';
   let attempts = 0;
+  let currentTask: import('./providers').ChatTask = 'compose';
   const maxAttempts = 3;
   const videoPath = join(dir, 'video.tsx');
   const compositionPath = join(dir, 'composition.json');
@@ -240,9 +241,10 @@ export async function runVideoAgent(
 
   while (attempts < maxAttempts) {
     attempts++;
-    options.onProgress?.(`⚡ Generating React motion code with ${provider.id} (attempt ${attempts}/${maxAttempts})…`);
+    options.onProgress?.(`⚡ Generating React motion code with ${provider.id} (${currentTask}, attempt ${attempts}/${maxAttempts})…`);
     
     const reply = await provider.chat(messages, {
+      task: currentTask,
       temperature: attempts === 1 ? 0.4 : 0.2,
       signal: options.signal,
     });
@@ -270,6 +272,8 @@ export async function runVideoAgent(
           if (attempts >= maxAttempts) {
             throw new Error(`Video Agent could not produce a passing visual review after ${maxAttempts} attempts.\nLast report:\n${visualResult.report}`);
           }
+
+          currentTask = visualResult.sheet ? 'vision' : 'heal';
 
           // Build a repair message for visual issues
           const repairContent = `The video compiled but the design review found these issues:\n${visualResult.report}\n\nPlease fix ONLY these design problems. Output the full corrected video.tsx.`;

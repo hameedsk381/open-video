@@ -208,7 +208,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
   let previous: any;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     options.onProgress?.(`Asking ${provider.id} for a composition (attempt ${attempt}/${maxAttempts})…`);
-    const text = await provider.chat(messages, { json: true, temperature: attempt === 1 ? 0.5 : 0.2, signal: options.signal });
+    const text = await provider.chat(messages, { json: true, task: 'compose', temperature: attempt === 1 ? 0.5 : 0.2, signal: options.signal });
     let current: any;
     try {
       current = resolveReply(extractJson(text), previous);

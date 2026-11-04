@@ -111,7 +111,7 @@ export async function composeFromTemplate(provider: AiProvider, templates: Templ
   let lastError = 'no attempt was made';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     options.onProgress?.(`Asking ${provider.id} to fill a template (attempt ${attempt}/${maxAttempts})…`);
-    const text = await provider.chat(messages, { json: true, temperature: 0.4, maxTokens: 1500, signal: options.signal });
+    const text = await provider.chat(messages, { json: true, task: 'template', temperature: 0.4, maxTokens: 1500, signal: options.signal });
     try {
       const answer: any = extractJson(text);
       if (!answer || typeof answer !== 'object') throw new Error('The reply must be one JSON object');

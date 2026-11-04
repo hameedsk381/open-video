@@ -201,6 +201,21 @@ describe('FreeLlmApiProvider', () => {
       process.env.FREELLMAPI_BASE_URL = orig;
     }
   });
+
+  it('infers task accurately from message contents', async () => {
+    const { inferChatTask } = await import('@ove/ai');
+    expect(inferChatTask([{ role: 'user', content: 'You fill in ready-made video templates for our catalog' }])).toBe('template');
+    expect(inferChatTask([{ role: 'user', content: 'The video compiled but the design review found these issues' }])).toBe('heal');
+    expect(inferChatTask([{ role: 'user', content: 'You are the production planner for Open Video Engine.' }])).toBe('fast');
+    expect(inferChatTask([{ role: 'user', content: 'Extract a clean BrandPack JSON from this scraped website data' }])).toBe('brand');
+    expect(inferChatTask([{ role: 'user', content: 'planBatch jobs for export' }])).toBe('batch');
+    expect(inferChatTask([{ role: 'user', content: 'Write the complete video.tsx file now' }])).toBe('compose');
+  });
+
+  it('honors explicit model override over auto routing', async () => {
+    const provider = new FreeLlmApiProvider({ baseUrl: 'http://localhost:3001/v1', model: 'custom-model' });
+    expect(await provider.resolveModel('compose')).toBe('custom-model');
+  });
 });
 
 describe('images and batches', () => {

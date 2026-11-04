@@ -238,7 +238,7 @@ Respond with ONLY valid JSON with this shape:
 
     const reply = await provider.chat([
       { role: 'user', content: prompt }
-    ], { temperature: 0.1 });
+    ], { temperature: 0.1, json: true, task: 'brand' });
 
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { brand: fallbackBrand, suggestedBrief };
