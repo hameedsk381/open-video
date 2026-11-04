@@ -25,7 +25,7 @@ export type AiProvider = {
   transcribe?(audio: Uint8Array, filename: string, options?: { language?: string; signal?: AbortSignal }): Promise<Transcript>;
 };
 
-export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'nvidia' | 'nim' | 'mock';
+export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'nvidia' | 'nim' | 'freellmapi' | 'openai' | 'mock';
 
 export type ProviderConfig = {
   provider?: string;
@@ -380,6 +380,60 @@ export class NvidiaProvider implements AiProvider {
   }
 }
 
+export class FreeLlmApiProvider implements AiProvider {
+  id = 'freellmapi';
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+
+  constructor(config: ProviderConfig = {}) {
+    this.apiKey = config.apiKey ?? process.env.FREELLMAPI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.OVE_AI_API_KEY ?? '';
+    this.model = config.model ?? process.env.FREELLMAPI_MODEL ?? process.env.OVE_AI_MODEL ?? 'gpt-4o-mini';
+    this.baseUrl = trimSlash(config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL ?? 'http://localhost:3001/v1');
+  }
+
+  private headers(): Record<string, string> {
+    return this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {};
+  }
+
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const body = (json: boolean) => JSON.stringify({
+      model: this.model,
+      messages,
+      temperature: options.temperature ?? 0.4,
+      max_tokens: options.maxTokens ?? 4096,
+      ...(json ? { response_format: { type: 'json_object' } } : {}),
+    });
+
+    let response: Response;
+    try {
+      response = await request(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        signal: timeoutSignal(options.signal),
+        headers: jsonHeaders(this.headers()),
+        body: body(!!options.json),
+      }, 'FreeLLMAPI chat');
+    } catch (error) {
+      if (!options.json) throw error;
+      response = await request(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        signal: timeoutSignal(options.signal),
+        headers: jsonHeaders(this.headers()),
+        body: body(false),
+      }, 'FreeLLMAPI chat');
+    }
+    const data: any = await response.json();
+    const message = data?.choices?.[0]?.message;
+    const text = (typeof message?.content === 'string' && message.content.trim())
+      ? message.content
+      : (typeof message?.reasoning_content === 'string' && message.reasoning_content.trim())
+        ? message.reasoning_content
+        : '';
+    if (!text) throw new Error('FreeLLMAPI chat returned no text. Check active models and upstream keys in your FreeLLMAPI dashboard.');
+    return text;
+  }
+}
+
 const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvider => {
   if (provider.speak || provider.transcribe || !process.env.GROQ_API_KEY) return provider;
   try {
@@ -463,16 +517,23 @@ export class MockProvider implements AiProvider {
 }
 
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  const id = (config.provider || process.env.OVE_AI_PROVIDER || (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')).toLowerCase();
+  const id = (
+    config.provider ||
+    process.env.OVE_AI_PROVIDER ||
+    (process.env.FREELLMAPI_BASE_URL ? 'freellmapi' : '') ||
+    (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '')
+  ).toLowerCase();
   switch (id) {
+    case 'freellmapi':
+    case 'openai': return attachGroqAudio(new FreeLlmApiProvider(config), config);
     case 'nvidia':
     case 'nim': return attachGroqAudio(new NvidiaProvider(config), config);
     case 'anthropic':
     case 'claude': return attachGroqAudio(new AnthropicProvider(config), config);
     case 'groq': return new GroqProvider(config);
     case 'mock': return new MockProvider();
-    case '': throw new Error('No AI provider chosen: pass --provider nvidia|groq|anthropic|mock, or set NVIDIA_API_KEY, GROQ_API_KEY or ANTHROPIC_API_KEY');
-    default: throw new Error(`Unknown AI provider "${id}"; use nvidia, groq, anthropic or mock`);
+    case '': throw new Error('No AI provider chosen: pass --provider freellmapi|nvidia|groq|anthropic|mock, or set FREELLMAPI_BASE_URL, NVIDIA_API_KEY, GROQ_API_KEY or ANTHROPIC_API_KEY');
+    default: throw new Error(`Unknown AI provider "${id}"; use freellmapi, nvidia, groq, anthropic or mock`);
   }
 }
 

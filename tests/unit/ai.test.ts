@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { captionAudio, composeVideo, extractJson, fieldsFromRows, generateImage, narrate, planBatch, refineVideo, type AiProvider } from '@ove/ai';
+import { captionAudio, composeVideo, createProvider, extractJson, fieldsFromRows, FreeLlmApiProvider, generateImage, narrate, planBatch, refineVideo, type AiProvider } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
 
 const base = (content = 'Hello', durationFrames = 30) => ({
@@ -179,6 +179,27 @@ describe('narration', () => {
       expect(layer.startFrame).toBe(45); // 1.5 s × 30 fps
       expect(() => loadComposition(result.composition)).not.toThrow();
     } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+});
+
+describe('FreeLlmApiProvider', () => {
+  it('instantiates FreeLlmApiProvider with config or env fallback', () => {
+    const p = new FreeLlmApiProvider({ baseUrl: 'http://localhost:3001/v1', model: 'llama-3.3-70b' });
+    expect(p.id).toBe('freellmapi');
+    expect(p.model).toBe('llama-3.3-70b');
+    expect(p.baseUrl).toBe('http://localhost:3001/v1');
+  });
+
+  it('createProvider selects freellmapi when FREELLMAPI_BASE_URL is set', () => {
+    const orig = process.env.FREELLMAPI_BASE_URL;
+    try {
+      process.env.FREELLMAPI_BASE_URL = 'http://localhost:3001/v1';
+      const created = createProvider({ provider: 'freellmapi' });
+      expect(created.id).toBe('freellmapi');
+      expect(created.baseUrl).toBe('http://localhost:3001/v1');
+    } finally {
+      process.env.FREELLMAPI_BASE_URL = orig;
+    }
   });
 });
 
