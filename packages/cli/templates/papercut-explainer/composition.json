@@ -1,0 +1,370 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "papercut-explainer",
+  "name": "Papercut Explainer",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationFrames": 300,
+  "background": "#e2ded4",
+  "grain": 0.14,
+  "variables": {
+    "kicker": {
+      "type": "string",
+      "default": "THE PAPERCUT METHOD",
+      "description": "Tag or header label"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Tactile depth makes ideas stick",
+      "description": "Main explainer hook"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#f97316",
+      "description": "Primary cardstock accent color"
+    },
+    "accent2": {
+      "type": "color",
+      "default": "#38bdf8",
+      "description": "Secondary paper tape color"
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene-1-hook",
+      "name": "Hook",
+      "startFrame": 0,
+      "durationFrames": 150,
+      "camera": {
+        "zoom": 1.0,
+        "keyframes": [
+          { "frame": 0, "zoom": 1.0, "easing": "easeInOut" },
+          { "frame": 150, "zoom": 1.04, "easing": "drift" }
+        ]
+      },
+      "transitionOut": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "card-back",
+          "type": "rect",
+          "x": 540,
+          "y": 860,
+          "width": 840,
+          "height": 980,
+          "rotation": -3.5,
+          "fill": "#292524",
+          "radius": 14,
+          "shadow": {
+            "color": "rgba(0,0,0,0.28)",
+            "blur": 38,
+            "offsetX": 10,
+            "offsetY": 22
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                { "frame": 0, "value": 2200, "easing": "easeOutBack" },
+                { "frame": 18, "value": 860 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card-front",
+          "type": "rect",
+          "x": 540,
+          "y": 890,
+          "width": 780,
+          "height": 920,
+          "rotation": 2,
+          "fill": "#fcfbf7",
+          "radius": 10,
+          "shadow": {
+            "color": "rgba(0,0,0,0.18)",
+            "blur": 26,
+            "offsetX": 6,
+            "offsetY": 14
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                { "frame": 6, "value": 2200, "easing": "easeOutBack" },
+                { "frame": 24, "value": 890 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cutout-circle",
+          "type": "circle",
+          "x": 540,
+          "y": 810,
+          "width": 420,
+          "fill": "{{accent}}",
+          "shadow": {
+            "color": "rgba(0,0,0,0.22)",
+            "blur": 22,
+            "offsetX": 4,
+            "offsetY": 10
+          },
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                { "frame": 14, "value": 0.2, "easing": "easeOutBack" },
+                { "frame": 28, "value": 1.0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cutout-icon",
+          "type": "text",
+          "content": "💡",
+          "fontSize": 180,
+          "color": "#111111",
+          "x": 540,
+          "y": 790,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                { "frame": 16, "value": 0 },
+                { "frame": 30, "value": 1.0, "easing": "easeOutBack" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tape-top",
+          "type": "rect",
+          "x": 390,
+          "y": 420,
+          "width": 240,
+          "height": 60,
+          "rotation": -16,
+          "fill": "rgba(245, 235, 215, 0.88)",
+          "startFrame": 20,
+          "shadow": {
+            "color": "rgba(0,0,0,0.08)",
+            "blur": 4,
+            "offsetX": 1,
+            "offsetY": 2
+          }
+        },
+        {
+          "id": "kicker-label",
+          "type": "text",
+          "content": "{{kicker}}",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 40,
+          "color": "#111111",
+          "background": "{{accent2}}",
+          "padding": 16,
+          "rotation": -3,
+          "x": 540,
+          "y": 1220,
+          "startFrame": 26,
+          "shadow": {
+            "color": "rgba(0,0,0,0.18)",
+            "blur": 12,
+            "offsetX": 4,
+            "offsetY": 6
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                { "frame": 26, "value": 1340, "easing": "easeOutCubic" },
+                { "frame": 36, "value": 1220 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "headline-text",
+          "type": "text",
+          "content": "{{headline}}",
+          "fontFamily": "Inter",
+          "fontWeight": 800,
+          "fontSize": 54,
+          "lineHeight": 1.25,
+          "color": "#1c1917",
+          "maxWidth": 720,
+          "textAlign": "center",
+          "x": 540,
+          "y": 1360,
+          "startFrame": 32,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                { "frame": 32, "value": 0 },
+                { "frame": 44, "value": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-drop-1",
+          "type": "audio",
+          "src": "sfx:thump",
+          "startFrame": 14,
+          "volume": 0.8
+        },
+        {
+          "id": "sfx-pop-1",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": 24,
+          "volume": 0.65
+        }
+      ]
+    },
+    {
+      "id": "scene-2-insight",
+      "name": "Insight",
+      "startFrame": 150,
+      "durationFrames": 150,
+      "camera": {
+        "zoom": 1.0,
+        "keyframes": [
+          { "frame": 0, "zoom": 1.0, "easing": "easeInOut" },
+          { "frame": 150, "zoom": 1.04, "easing": "drift" }
+        ]
+      },
+      "transitionIn": { "type": "fade", "durationFrames": 12 },
+      "layers": [
+        {
+          "id": "backing-paper-2",
+          "type": "rect",
+          "x": 540,
+          "y": 860,
+          "width": 840,
+          "height": 980,
+          "rotation": 3,
+          "fill": "#0c4a6e",
+          "radius": 14,
+          "shadow": {
+            "color": "rgba(0,0,0,0.28)",
+            "blur": 36,
+            "offsetX": 8,
+            "offsetY": 20
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                { "frame": 0, "value": 2200, "easing": "easeOutBack" },
+                { "frame": 16, "value": 860 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "front-card-2",
+          "type": "rect",
+          "x": 540,
+          "y": 880,
+          "width": 780,
+          "height": 920,
+          "rotation": -1.5,
+          "fill": "#fcfbf7",
+          "radius": 10,
+          "shadow": {
+            "color": "rgba(0,0,0,0.18)",
+            "blur": 24,
+            "offsetX": 5,
+            "offsetY": 12
+          },
+          "animations": [
+            {
+              "property": "y",
+              "keyframes": [
+                { "frame": 6, "value": 2200, "easing": "easeOutBack" },
+                { "frame": 22, "value": 880 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "metric-badge",
+          "type": "text",
+          "content": "3X",
+          "fontFamily": "Inter",
+          "fontWeight": 900,
+          "fontSize": 160,
+          "color": "{{accent}}",
+          "x": 540,
+          "y": 800,
+          "animations": [
+            {
+              "property": "scale",
+              "keyframes": [
+                { "frame": 14, "value": 0.2, "easing": "easeOutBack" },
+                { "frame": 28, "value": 1.0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "metric-sub",
+          "type": "text",
+          "content": "HIGHER RETENTION",
+          "fontFamily": "Inter",
+          "fontWeight": 800,
+          "fontSize": 38,
+          "letterSpacing": 2,
+          "color": "#44403c",
+          "x": 540,
+          "y": 940,
+          "startFrame": 26
+        },
+        {
+          "id": "summary-text",
+          "type": "text",
+          "content": "Physical papercraft dioramas grab attention where flat motion graphics fail.",
+          "fontFamily": "Inter",
+          "fontWeight": 700,
+          "fontSize": 48,
+          "lineHeight": 1.3,
+          "color": "#1c1917",
+          "maxWidth": 720,
+          "textAlign": "center",
+          "x": 540,
+          "y": 1280,
+          "startFrame": 32,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                { "frame": 32, "value": 0 },
+                { "frame": 44, "value": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-drop-2",
+          "type": "audio",
+          "src": "sfx:thump",
+          "startFrame": 12,
+          "volume": 0.8
+        },
+        {
+          "id": "sfx-pop-2",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": 24,
+          "volume": 0.65
+        }
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,250 @@
+{
+  "id": "fx-papercut-explainer",
+  "name": "Papercut explainer",
+  "category": "effect",
+  "kind": "scene",
+  "durationFrames": 150,
+  "transition": {
+    "type": "fade",
+    "durationFrames": 12
+  },
+  "description": "Multi-layer 3D construction papercraft diorama with stacked depth layers, realistic cut-out drop shadows, and paper fold animations.",
+  "params": {
+    "kicker": {
+      "type": "string",
+      "default": "HOW IT WORKS",
+      "description": "Top paper tag label"
+    },
+    "headline": {
+      "type": "string",
+      "default": "Layered depth reveals the story",
+      "description": "Main explainer headline"
+    },
+    "caption": {
+      "type": "string",
+      "default": "Each concept builds on tactile paper foundations.",
+      "description": "Subordinate explainer text"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg-paper",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{canvas.width}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{bg}}"
+    },
+    {
+      "id": "paper-layer-back",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.44)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.82)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.88)}}",
+      "rotation": -4,
+      "fill": "{{muted}}",
+      "radius": 12,
+      "shadow": {
+        "color": "rgba(0,0,0,0.22)",
+        "blur": 32,
+        "offsetX": 8,
+        "offsetY": 18
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 0, "value": "{{canvas.height + 250}}", "easing": "easeOutBack" },
+            { "frame": 18, "value": "{{round(canvas.height * 0.44)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-layer-mid",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.46)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.74)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.82)}}",
+      "rotation": 2.5,
+      "fill": "{{surface}}",
+      "radius": 10,
+      "shadow": {
+        "color": "rgba(0,0,0,0.18)",
+        "blur": 24,
+        "offsetX": 5,
+        "offsetY": 12
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 8, "value": "{{canvas.height + 250}}", "easing": "easeOutBack" },
+            { "frame": 24, "value": "{{round(canvas.height * 0.46)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-cutout-hero",
+      "type": "circle",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.42)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.38)}}",
+      "fill": "{{accent}}",
+      "shadow": {
+        "color": "rgba(0,0,0,0.24)",
+        "blur": 20,
+        "offsetX": 4,
+        "offsetY": 10
+      },
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 16, "value": 0.2, "easing": "easeOutBack" },
+            { "frame": 30, "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "papercut-icon",
+      "type": "text",
+      "content": "✂",
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.16)}}",
+      "color": "#111111",
+      "rotation": -15,
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.405)}}",
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            { "frame": 18, "value": 0 },
+            { "frame": 32, "value": 1.0, "easing": "easeOutBack" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tape-pin",
+      "type": "rect",
+      "x": "{{round(canvas.width * 0.36)}}",
+      "y": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.41)}}",
+      "width": "{{round(min(canvas.width, canvas.height) * 0.22)}}",
+      "height": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+      "rotation": -18,
+      "fill": "rgba(245, 235, 215, 0.85)",
+      "startFrame": 22,
+      "shadow": {
+        "color": "rgba(0,0,0,0.1)",
+        "blur": 4,
+        "offsetX": 1,
+        "offsetY": 2
+      }
+    },
+    {
+      "id": "kicker-badge",
+      "type": "text",
+      "content": "{{kicker}}",
+      "fontFamily": "Inter",
+      "fontWeight": 900,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.038)}}",
+      "color": "#111111",
+      "background": "{{accent2}}",
+      "padding": "{{round(min(canvas.width, canvas.height) * 0.014)}}",
+      "rotation": -3,
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.64)}}",
+      "startFrame": 26,
+      "shadow": {
+        "color": "rgba(0,0,0,0.18)",
+        "blur": 10,
+        "offsetX": 3,
+        "offsetY": 5
+      },
+      "animations": [
+        {
+          "property": "y",
+          "keyframes": [
+            { "frame": 26, "value": "{{round(canvas.height * 0.70)}}", "easing": "easeOutCubic" },
+            { "frame": 36, "value": "{{round(canvas.height * 0.64)}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "headline-text",
+      "type": "text",
+      "content": "{{headline}}",
+      "fontFamily": "Inter",
+      "fontWeight": 800,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.052)}}",
+      "lineHeight": 1.25,
+      "color": "{{text}}",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.78)}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.76)}}",
+      "startFrame": 32,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 32, "value": 0 },
+            { "frame": 44, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caption-text",
+      "type": "text",
+      "content": "{{caption}}",
+      "fontFamily": "Inter",
+      "fontWeight": 500,
+      "fontSize": "{{round(min(canvas.width, canvas.height) * 0.034)}}",
+      "color": "{{muted}}",
+      "maxWidth": "{{round(min(canvas.width, canvas.height) * 0.74)}}",
+      "textAlign": "center",
+      "x": "{{round(canvas.width * 0.5)}}",
+      "y": "{{round(canvas.height * 0.86)}}",
+      "startFrame": 40,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "frame": 40, "value": 0 },
+            { "frame": 50, "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sfx-layer-thump",
+      "type": "audio",
+      "src": "sfx:thump",
+      "startFrame": 14,
+      "volume": 0.8
+    },
+    {
+      "id": "sfx-cutout-pop",
+      "type": "audio",
+      "src": "sfx:pop",
+      "startFrame": 24,
+      "volume": 0.65
+    },
+    {
+      "id": "sfx-tag-tick",
+      "type": "audio",
+      "src": "sfx:tick",
+      "startFrame": 32,
+      "volume": 0.5
+    }
+  ]
+}
+

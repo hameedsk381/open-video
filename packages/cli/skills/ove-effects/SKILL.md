@@ -51,6 +51,7 @@ Effects are blocks named `fx-*`. `ove blocks` lists them under "Effects". They a
 | 36 CTA end card | `fx-cta-card` | scene; footage in a rounded window, not a cut-out |
 | 37 Paper collage | `fx-paper-collage` | scene; editorial halftone cutout with cardstock backing and tape |
 | 38 B-roll loop | `fx-broll-loop` | scene; seamless floating hero card and pulsing ambient aura |
+| 39 Papercut explainer | `fx-papercut-explainer` | scene; 3D construction papercraft diorama with stacked depth shadows |
 
 ## Effects that need a matte
 
