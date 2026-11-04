@@ -149,7 +149,7 @@ export function describeCapabilities(registry: Registry, fit: { width: number; h
   for (const [kind, tag] of Object.entries(kindTag) as [CapabilityKind, string][]) {
     const items = registry.select(kind);
     if (!items.length) continue;
-    lines.push(`${tag}:`);
+    lines.push(kind === 'template' ? 'Templates (the primary path: prefer one whenever its kind and aspect fit the brief):' : `${tag}:`);
     for (const capability of items) {
       const shape = kind === 'template'
         ? ` (${capability.fit})`

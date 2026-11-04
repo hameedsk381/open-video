@@ -61,6 +61,7 @@ describe('describeCapabilities', () => {
 
   it('marks templates of another aspect so the planner does not pick them for this canvas', () => {
     const text = describeCapabilities(registry, { width: 1080, height: 1080 });
+    expect(text).toContain('Templates (the primary path');
     expect(text).toContain('  - intro-card: A square title card (1080x1080');
     expect(text).toContain('  - wide-intro: A square title card (1920x1080');
     expect(text).toContain('[other aspect]');

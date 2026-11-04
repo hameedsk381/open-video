@@ -123,10 +123,11 @@ pnpm ove agent "A viral launch reel for an open-source vector database"   # rout
 pnpm ove ai doctor
 ```
 
-A **planner** decides the route before anything is generated — fill a template for speed and consistency, write a plain
-composition for bespoke scenes, or React code for high-end motion graphics — and its answer is checked against the
-**capability registry** so the model can only point at capabilities that exist and fit the canvas. `--no-plan` keeps the
-older always-worked routing on both commands.
+A **planner** decides the route before anything is generated. Templates are the primary path — fill one for speed and
+consistency whenever its kind and aspect fit the brief; writing a plain composition (bespoke scenes) or React code
+(high-end motion graphics) is the secondary route for briefs no template fits. The planner's answer is checked against
+the **capability registry** so the model can only point at capabilities that exist and fit the canvas. `--no-plan` keeps
+the same template-first routing without asking the model.
 
 The model's JSON is validated with the same schema as a hand-written composition; errors go back to the model until
 it is valid, and `--review` can add the renderer's design checks as feedback. `--provider mock` runs the whole

@@ -47,7 +47,7 @@ Reply with ONE JSON object and nothing else:
   "beats": [{ "name": "Hook", "onScreen": "what is on screen, concretely", "seconds": 3, "motion": "how it moves in" }],
   "reasons": ["why this path suits this brief"]
 }
-Choose "template" when one listed template suits the brief's kind, aspect ratio and length: it is the fastest, cheapest and most consistent path. Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics. Choose "json" otherwise: a bespoke composition with scene layers, camera moves and kinetic type. Every beat needs a concrete picture, not a mood.
+Templates are the primary path: choose "template" whenever one listed template suits the brief's kind and aspect ratio, even when its length differs — a template's length is its own, and a length difference is not a reason to leave the template route. Choose "json" only when no template fits the kind and aspect: a bespoke composition with scene layers, camera moves and kinetic type. Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics. Every beat needs a concrete picture, not a mood.
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
 ${describeCapabilities(options.registry, options)}`;

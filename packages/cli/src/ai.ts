@@ -348,7 +348,7 @@ async function capabilitiesCommand(argv: string[]): Promise<number> {
   console.log(`Capability registry v${registry.version}: ${Object.values(counts).reduce((total, n) => total + n, 0)} capabilities (${Object.entries(counts).map(([kind, n]) => `${kind} ${n}`).join(', ')})`);
   const kindOf = (kind: string) => registry.capabilities.filter(capability => capability.kind === kind);
   for (const kind of ['template', 'theme', 'block', 'component', 'effect', 'sound'] as const) {
-    console.log(`\n${kind}:`);
+    console.log(`\n${kind === 'template' ? 'template (the primary path: prefer one whenever its kind and aspect fit the brief)' : kind}:`);
     for (const capability of kindOf(kind)) {
       console.log(`  ${capability.id}${capability.fit ? `  (${capability.fit})` : ''}${capability.paths.length && !capability.paths.every(path => path === 'json') ? `  [${capability.paths.join(', ')}]` : ''}`);
       if (capability.description) console.log(`    ${capability.description}`);

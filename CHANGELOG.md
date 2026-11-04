@@ -58,6 +58,7 @@ All notable changes to Open Video Engine. The published package is `open-video-e
 - Agent skill: design guide, planning (beats, look, storyboard), story and pacing, endings.
 
 ### Changed
+- **Templates are the primary AI path; compose and agent are secondary.** The planner prompt now prefers a template whenever its kind and aspect fit the brief — even when the length differs (a template keeps its own length) — so the JSON-composition and React routes trigger only for briefs no template fits. `ove ai capabilities` and the planner's capability list say so in the same words, and the docs and the `ove` skill present the template route as the default. The fallback routing was already template-first and is unchanged.
 - Encoder defaults: H.264 crf 20 and H.265 crf 24, with `aq-mode=3`, to avoid banding in dark gradients.
 - The drawing runtime and text layout are plain JavaScript files (`packages/graphics/runtime/`) read as text, instead of escaped template strings.
 - The renderer replaces a crashed or unresponsive page and retries the frame once; errors name the frame and the layer.

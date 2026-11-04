@@ -120,10 +120,11 @@ export async function cliRegistry(): Promise<Registry> {
 }
 
 /**
- * Compose by filling a ready-made template (a few hundred tokens), and write the whole composition only when that cannot
- * work: `full` was asked for, assets or batch fields were supplied (templates use neither), no template has the wanted shape,
- * or the model finds none that suits the brief. Before either path, the planner (plan.ts) decides the route and, for a
- * JSON video, supplies the beats the composition must follow. Planning failure or `--no-plan` keeps the old routing.
+ * Compose by filling a ready-made template — the primary path, chosen whenever a template's kind and aspect fit the
+ * brief — and write the whole composition only when that cannot work: `full` was asked for, assets or batch fields
+ * were supplied (templates use neither), no template has the wanted shape, or the model finds none that suits the
+ * brief. Before either path, the planner (plan.ts) decides the route and, for a JSON video, supplies the beats the
+ * composition must follow. Planning failure or `--no-plan` keeps the same template-first routing.
  */
 export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; registry?: Registry } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
   // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.

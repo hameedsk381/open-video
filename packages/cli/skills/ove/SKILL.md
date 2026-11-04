@@ -11,14 +11,14 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
 
 ## Choose the route first
 
-Before composing anything, decide *how* this video gets made, in one step: run `ove ai capabilities` (machine-readable with `--json`) and pick the route that fits the brief.
+Before composing anything, decide *how* this video gets made, in one step: run `ove ai capabilities` (machine-readable with `--json`) and pick the route that fits the brief. The template route is the primary path; the composed and agentic routes below it are secondary, for briefs no template fits.
 
-- **Template route** — the brief matches one of the registered templates (promo, slideshow, product card, flash sale…), including its aspect and roughly its length. Cheapest and most consistent: `ove ai compose` fills its text variables from the brief, or `ove init --template <name>` starts an editable project.
-- **JSON route** — the default for anything bespoke: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name.
-- **React route** — when the brief needs spring physics, interlocking layouts or generated visuals: load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition.
+- **Template route (primary)** — the brief matches one of the registered templates (promo, slideshow, product card, flash sale…) in kind and aspect. Fastest, cheapest and most consistent: `ove ai compose` fills its text variables from the brief, or `ove init --template <name>` starts an editable project. A template keeps its own length; a difference from the brief's length is not a reason to leave this route.
+- **JSON route (secondary)** — when no template fits the brief's kind and aspect: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name.
+- **React route (secondary)** — when the brief needs spring physics, interlocking layouts or generated visuals: load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition.
 - **Batch or narration** — many rows of fields → `ove-batch-videos`; voiceover or captions → `ove-voiceover-captions`.
 
-If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template` vs `json`) before generating, and falls back to templates when planning fails. `--no-plan` opts out.
+If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template` vs `json`) before generating, prefers a template whenever its kind and aspect fit the brief (length differences included), and falls back to templates when planning fails. `--no-plan` opts out.
 
 The registry the planner reads is the same list you just saw: `ove ai capabilities --json` is the machine-readable menu of every template, theme, block, component, effect and sound, one entry per capability with its kind and name. Third-party agents and skills should compose *on* OVE — read that registry, write a `composition.json`, and use the validate → still → review loop here — rather than re-implementing rendering. Whatever generates the JSON (planner, model, or you), it stays outside the render path: the renderer only ever reads a validated schema-compliant composition.
 

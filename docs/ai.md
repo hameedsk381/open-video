@@ -51,9 +51,9 @@ When a full composition has problems, the model is asked for a patch instead of 
 
 ## The planner decides the route first
 
-Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects and sounds that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. With a valid plan:
+Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. Templates are the primary path: the planner is told to prefer one whenever its kind and aspect fit the brief, even when the length differs (a template keeps its own length), so the composed and React routes are secondary, for briefs no template fits. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects and sounds that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. With a valid plan:
 
-- route **template** → that template id and theme are filled (the old template mode, now aimed by the planner);
+- route **template** → that template id and theme are filled (the primary path; the old template mode, now aimed by the planner);
 - route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
 - route **react** is produced by `ove agent` (below); `compose` never picks it.
 

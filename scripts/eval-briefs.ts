@@ -132,9 +132,9 @@ export function scoreRun(run: RunRecord, brief: Brief): Score {
   const time = (value: number | undefined) => value === undefined ? '—' : `${value.toFixed(1)} s`;
   check('composed', !run.error, run.error ?? `${run.route}${run.template ? ` (${run.template})` : ''}, ${run.attempts} attempt${run.attempts === 1 ? '' : 's'}, ${time(run.composeSeconds)}`);
   const durationSeconds = run.fileSeconds ?? (run.frames !== undefined ? seconds(run.frames, 30) : undefined);
-  // Templates have fixed, engine-owned lengths: a provider filling a template cannot change its duration, so the
-  // mismatch is informational there (the delta stays in the detail). The JSON route, where length is writable, is
-  // held to the brief; a duration-fitting route choice is a recorded planner item.
+  // Templates have fixed, engine-owned lengths: a provider filling a template cannot change its duration, and the
+  // planner is biased to keep the template route even when the length differs, so the mismatch is informational there
+  // (the delta stays in the detail). The JSON route, where length is writable, is held to the brief.
   const templateRoute = run.route === 'template' && run.fileSeconds === undefined;
   check('duration', templateRoute ? durationSeconds !== undefined : durationSeconds !== undefined && Math.abs(durationSeconds - brief.durationSeconds) <= 0.5,
     `${durationSeconds === undefined ? 'unknown' : durationSeconds} s vs ${brief.durationSeconds} s wanted${templateRoute ? ' (template route: length is the template\'s)' : run.fileSeconds ? ' (probed)' : ''}`);
