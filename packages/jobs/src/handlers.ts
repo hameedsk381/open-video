@@ -33,7 +33,9 @@ export function createHandlers(env: JobEnv) {
         includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(message),
       };
-      const result = await capabilities.composeSmart(ai, options, { full });
+      const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
+      const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
+      const result = await capabilities.composeSmart(ai, options, { full, theme, template });
       let composition = result.composition;
       let narration: Record<string, unknown> | undefined;
       if (options.narration) {

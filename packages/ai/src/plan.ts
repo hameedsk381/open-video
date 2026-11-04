@@ -37,17 +37,31 @@ export type PlanOptions = {
 const paths: GenerationPath[] = ['template', 'json', 'react'];
 const allowedPaths = (options: PlanOptions) => (options.paths ?? paths).filter(path => path !== 'react' || options.allowReact);
 
-const systemText = (options: PlanOptions) => `You are the production planner for Open Video Engine. Decide how the brief below should be produced, before anything is generated.
+const systemText = (options: PlanOptions) => `You are the creative production planner for Open Video Engine. Decide how the brief below should be produced, before anything is generated.
 Reply with ONE JSON object and nothing else:
 {
   "path": "template" | "json" | "react",
-  "template": "<template id>",            // only with "template": the one template that suits the brief
+  "template": "<template id>",            // only with "template": the one template that best suits the brief's structure and topic
   "theme": "<theme id>",                  // optional, only with a template that takes a theme
   "idea": "<what the video says, in one line>",
   "beats": [{ "name": "Hook", "onScreen": "what is on screen, concretely", "seconds": 3, "motion": "how it moves in" }],
   "reasons": ["why this path suits this brief"]
 }
-Templates are the primary path: choose "template" whenever one listed template suits the brief's kind and aspect ratio, even when its length differs — a template's length is its own, and a length difference is not a reason to leave the template route. Choose "json" only when no template fits the kind and aspect: a bespoke composition with scene layers, camera moves and kinetic type. Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics. Every beat needs a concrete picture, not a mood.
+Templates provide proven layouts, but pick the template that specifically fits the brief's narrative style:
+- Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "story-tall" or "quote-card".
+- Multi-feature tours, app UI cards, feature lists, and product showcases: choose "showcase-tall", "product-wide" or "product-card".
+- Quick tips, 3-step processes, how-to guides, and numbered reels: choose "social-reel".
+- Company keynotes, presentations, and product launch films: choose "keynote-wide", "launch-wide" or "case-study".
+- Choose "json" when the brief requires a bespoke kinetic video with custom motion graphics, camera moves, and scene architecture.
+- Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics.
+
+Themes: For templates that take a theme, ALWAYS choose the theme matching the tone and brand of the brief:
+- "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue).
+- "neon": gaming, nightlife, social apps, crypto, cutting-edge AI (dark violet, hot magenta, electric lime).
+- "espresso": artisan craft, food & beverage, coffee, lifestyle, podcasts, warmth (dark espresso, amber gold).
+- "paper": clean editorial, education, publishing, thought leadership (clean light aesthetic, deep ink).
+- "signal": high-impact, fitness, sports, breaking news, urgency (bold monochrome with alert red).
+Every beat needs a concrete picture, not a mood.
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
 ${describeCapabilities(options.registry, options)}`;

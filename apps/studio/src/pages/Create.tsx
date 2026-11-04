@@ -39,6 +39,7 @@ export function Create() {
   const [voice, setVoice] = useState(false);
   const [review, setReview] = useState(true);
   const [full, setFull] = useState(false);
+  const [theme, setTheme] = useState('');
 
   const [urlInput, setUrlInput] = useState('');
   const [scraping, setScraping] = useState(false);
@@ -90,6 +91,7 @@ export function Create() {
         review,
         full,
       };
+      if (theme) body.theme = theme;
       if (duration) body.duration = duration;
       if (aspect) body.aspect = aspect;
       const { job } = await api<{ job: Job }>('/api/compose', body);
@@ -214,6 +216,91 @@ export function Create() {
         ) : null}
       </Field>
 
+      {/* Creation Mode */}
+      <Field label="Creation Architecture">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+          <div
+            onClick={() => setFull(false)}
+            style={{
+              cursor: 'pointer',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius)',
+              border: !full ? '2px solid var(--accent)' : '1px solid var(--border)',
+              background: !full ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, color: !full ? 'var(--accent)' : 'inherit' }}>
+              <SparklesIcon size={14} /> Smart Layout (Fast)
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
+              Uses battle-tested motion templates styled with your selected visual theme.
+            </div>
+          </div>
+          <div
+            onClick={() => setFull(true)}
+            style={{
+              cursor: 'pointer',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius)',
+              border: full ? '2px solid var(--accent)' : '1px solid var(--border)',
+              background: full ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, color: full ? 'var(--accent)' : 'inherit' }}>
+              <WandIcon size={14} /> Bespoke Generative (Creative)
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
+              Synthesizes custom scene layouts, kinetic type, and camera moves from scratch.
+            </div>
+          </div>
+        </div>
+      </Field>
+
+      {/* Visual Theme & Style Palette */}
+      <Field label="Visual Theme & Mood Palette" hint="Sets background, typography styling, contrast, and accent hierarchy">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+          {[
+            { id: '', name: 'Auto (AI Decides)', desc: 'Prompt mood', colors: ['#6366f1', '#ec4899', '#06b6d4'] },
+            { id: 'midnight', name: 'Midnight Slate', desc: 'Tech & B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
+            { id: 'neon', name: 'Neon Cyber', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
+            { id: 'espresso', name: 'Warm Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
+            { id: 'paper', name: 'Clean Paper', desc: 'Light Editorial', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
+            { id: 'signal', name: 'High Signal', desc: 'Alerts & Sport', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
+          ].map(t => {
+            const active = theme === t.id;
+            return (
+              <div
+                key={t.id}
+                onClick={() => setTheme(t.id)}
+                style={{
+                  cursor: 'pointer',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius)',
+                  border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  background: active ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: active ? 'var(--accent)' : 'inherit' }}>{t.name}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {t.colors.map((c, idx) => (
+                    <span key={idx} style={{ width: 14, height: 14, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.1)' }} />
+                  ))}
+                  <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 4 }}>{t.desc}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Field>
+
       {/* Advanced Settings Accordion */}
       <details>
         <summary>Advanced Creative Settings</summary>
@@ -255,10 +342,6 @@ export function Create() {
         <label className="check">
           <input type="checkbox" checked={review} onChange={e => setReview(e.target.checked)} />
           <span>Autonomous visual design quality check (verifies readability & safe-zones)</span>
-        </label>
-        <label className="check">
-          <input type="checkbox" checked={full} onChange={e => setFull(e.target.checked)} />
-          <span>Bespoke scene design (synthesizes unique visual layouts from scratch)</span>
         </label>
       </details>
 

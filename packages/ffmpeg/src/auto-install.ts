@@ -150,3 +150,4 @@ export async function ensureFfmpeg(options?: { onProgress?: (msg: string) => voi
     throw err;
   }
 }
+

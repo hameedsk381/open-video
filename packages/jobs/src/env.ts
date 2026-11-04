@@ -25,7 +25,7 @@ export interface JobPaths {
 
 /** Work the job code does not own: picking a template and drawing a thumbnail depend on files that ship with the command line. */
 export type JobCapabilities = {
-  composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean }): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }>;
+  composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; theme?: string; template?: string }): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }>;
   narrateSmart(provider: AiProvider, composed: { template?: string }, options: NarrateOptions & { brief: string; composition: NonNullable<NarrateOptions['composition']> }): Promise<NarrateResult>;
   makeThumbnail(raw: any, values: Record<string, unknown>, baseDir: string, options: { frame?: number; title?: string; width?: number }): Promise<{ png: Buffer; frame: number; width: number; height: number }>;
 };

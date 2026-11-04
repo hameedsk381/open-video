@@ -12,16 +12,23 @@
     "from": [0, 0],
     "to": [1080, 1080],
     "stops": [
-      { "offset": 0, "color": "#0b1020" },
-      { "offset": 1, "color": "#211308" }
+      { "offset": 0, "color": "{{bg}}" },
+      { "offset": 1, "color": "{{surface}}" }
     ]
   },
   "variables": {
+    "bg": { "type": "color", "default": "#0b1020", "description": "Theme: bg" },
+    "surface": { "type": "color", "default": "#211308", "description": "Theme: surface" },
+    "text": { "type": "color", "default": "#ffffff", "description": "Theme: text" },
+    "muted": { "type": "color", "default": "#c4b5fd", "description": "Theme: muted" },
+    "accent": { "type": "color", "default": "#f97316", "description": "Theme: accent" },
+    "accent2": { "type": "color", "default": "#fbbf24", "description": "Theme: accent2" },
+    "radius": { "type": "number", "default": 24, "description": "Theme: radius" },
+    "headWeight": { "type": "number", "default": 800, "description": "Theme: headWeight" },
     "product": { "type": "string", "default": "Everyday Mug" },
     "price": { "type": "string", "default": "$18" },
     "badge": { "type": "string", "default": "NEW", "description": "Pill in the top-left corner" },
-    "caption": { "type": "string", "default": "Stoneware · 350 ml" },
-    "accent": { "type": "color", "default": "#f97316" }
+    "caption": { "type": "string", "default": "Stoneware · 350 ml" }
   },
   "scenes": [
     {

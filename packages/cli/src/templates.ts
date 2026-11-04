@@ -126,23 +126,26 @@ export async function cliRegistry(): Promise<Registry> {
  * brief. Before either path, the planner (plan.ts) decides the route and, for a JSON video, supplies the beats the
  * composition must follow. Planning failure or `--no-plan` keeps the same template-first routing.
  */
-export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; registry?: Registry } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
+export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; registry?: Registry; theme?: string; template?: string } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
   // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.
   const needsFull = mode.full || !!options.fields?.length || (options.assets ?? []).some(asset => asset.type !== 'image');
   let plan: BuildPlan | undefined;
-  if (!mode.noPlan) {
+  if (!mode.noPlan && !mode.full && !mode.template) {
     const registry = mode.registry ?? await cliRegistry();
     try { plan = await planBuild(provider, { ...options, registry, maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
     catch (error) { options.onProgress?.(`Planning skipped (${(error as Error).message.split('\n')[0]}); using the built-in routing.`); }
   }
   // A refusal to plan keeps the safest pre-planner behaviour: try the template catalogue first, else write from scratch.
-  const templatePath = plan ? plan.path === 'template' : !needsFull;
+  const templatePath = (plan ? plan.path === 'template' : !needsFull) || Boolean(mode.template);
   if (templatePath && !needsFull) {
     try {
       const choices = await templateChoices();
-      const picked = plan?.template ? choices.filter(choice => choice.id === plan.template) : choices;
-      const themes = plan?.theme ? (await listThemes()).filter(theme => theme.id === plan!.theme) : await listThemes();
-      const filled = await composeFromTemplate(provider, picked.length ? picked : choices, { ...options, themes });
+      const targetTemplateId = mode.template ?? plan?.template;
+      const picked = targetTemplateId ? choices.filter(choice => choice.id === targetTemplateId) : choices;
+      const targetThemeId = mode.theme ?? plan?.theme;
+      const allThemes = await listThemes();
+      const themes = targetThemeId ? allThemes.filter(theme => theme.id === targetThemeId) : allThemes;
+      const filled = await composeFromTemplate(provider, picked.length ? picked : choices, { ...options, themes: themes.length ? themes : allThemes });
       if (filled) {
         // A template keeps its own length unless the brief asked for another: stretch or trim the resolved
         // composition to fit. The saved source stays the untouched template only when no retiming happened —

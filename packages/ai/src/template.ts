@@ -45,6 +45,13 @@ function describe(template: TemplateChoice): string {
 }
 
 const systemText = `You fill in ready-made video templates. Reply with JSON only: {"template": "<id>", "theme": "<theme id, only for templates that take a theme>", "values": {"<variable>": <value>, ...}}.
+Choose the template that best matches the story structure and topic of the brief (stories and stats -> story-tall; features and cards -> showcase-tall; tips and steps -> social-reel).
+For templates that take a theme, ALWAYS choose the theme that best matches the mood, industry, and visual tone of the brief:
+- "midnight": modern tech, SaaS, B2B, cloud, finance
+- "neon": gaming, nightlife, social apps, crypto, cutting-edge AI
+- "espresso": artisan craft, food & beverage, coffee, lifestyle, podcasts, warmth
+- "paper": clean editorial, education, publishing, thought leadership, light minimalist
+- "signal": high-impact, fitness, sports, breaking news, urgency
 Picture variables (image, image2…) take the id of one supplied picture, or "" for none; never invent ids. Examples only show the length and kind of text wanted: never reuse their wording (including labels like INTRODUCING); use the brief's own names, numbers and details, and prefer a concrete line over a generic one such as "Ready to start?". Rules: write the words viewers will read, never a description of the video; do not invent dates, prices or claims that are not in the brief; use only the listed variable names; write real copy for the brief, about as long as each example (never much longer); "color" values are hex like "#f4d58d"; list values are arrays of objects with the listed fields.
 If no template suits the brief, reply {"template": "none"}.`;
 
