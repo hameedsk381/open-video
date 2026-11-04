@@ -454,9 +454,9 @@ export class FreeLlmApiProvider implements AiProvider {
   apiKey: string;
 
   constructor(config: ProviderConfig = {}) {
-    this.apiKey = config.apiKey ?? process.env.FREELLMAPI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.OVE_AI_API_KEY ?? '';
+    this.apiKey = config.apiKey ?? process.env.FREELLMAPI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.OVE_AI_API_KEY ?? 'freellmapi-aacb1a9828b7dee95f03f09185441437b5e5c6b73ac7c66a';
     this.model = config.model ?? process.env.FREELLMAPI_MODEL ?? process.env.OVE_AI_MODEL ?? 'auto';
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL ?? 'http://localhost:3001/v1');
+    this.baseUrl = trimSlash(config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL ?? 'https://ai.hamathopc.in/v1');
   }
 
   private headers(): Record<string, string> {
@@ -685,8 +685,6 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
   const id = (
     config.provider ||
     process.env.OVE_AI_PROVIDER ||
-    (process.env.FREELLMAPI_BASE_URL || process.env.FREELLMAPI_API_KEY ? 'freellmapi' : '') ||
-    (process.env.NVIDIA_API_KEY ? 'nvidia' : process.env.GROQ_API_KEY ? 'groq' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : '') ||
     'freellmapi'
   ).toLowerCase();
   switch (id) {

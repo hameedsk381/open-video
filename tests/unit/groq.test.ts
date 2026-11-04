@@ -121,8 +121,8 @@ describe('Groq provider', () => {
     expect(provider.transcribe).toBeTypeOf('function');
   });
 
-  it('is selected automatically when GROQ_API_KEY is the only key', () => {
-    for (const name of ['OVE_AI_PROVIDER', 'ANTHROPIC_API_KEY']) vi.stubEnv(name, '');
+  it('is selected explicitly or via OVE_AI_PROVIDER', () => {
+    vi.stubEnv('OVE_AI_PROVIDER', 'groq');
     vi.stubEnv('GROQ_API_KEY', 'test-key');
     expect(createProvider().id).toBe('groq');
   });
@@ -147,8 +147,8 @@ describe('Anthropic provider', () => {
     expect(body.max_tokens).toBe(16384);
   });
 
-  it('is selected automatically when ANTHROPIC_API_KEY is set and GROQ_API_KEY is not', () => {
-    for (const name of ['OVE_AI_PROVIDER', 'GROQ_API_KEY']) vi.stubEnv(name, '');
+  it('is selected explicitly or via OVE_AI_PROVIDER', () => {
+    vi.stubEnv('OVE_AI_PROVIDER', 'anthropic');
     vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-test');
     const provider = createProvider();
     expect(provider.id).toBe('anthropic');
@@ -182,14 +182,15 @@ describe('NVIDIA provider', () => {
     expect(body.response_format).toEqual({ type: 'json_object' });
   });
 
-  it('is selected automatically when NVIDIA_API_KEY is set', () => {
-    for (const name of ['OVE_AI_PROVIDER']) vi.stubEnv(name, '');
+  it('is selected explicitly or via OVE_AI_PROVIDER', () => {
+    vi.stubEnv('OVE_AI_PROVIDER', 'nvidia');
     vi.stubEnv('NVIDIA_API_KEY', 'nvapi-test');
     const provider = createProvider();
     expect(provider.id).toBe('nvidia');
   });
 
   it('attaches Groq audio for voiceover when GROQ_API_KEY is also present', () => {
+    vi.stubEnv('OVE_AI_PROVIDER', 'nvidia');
     vi.stubEnv('NVIDIA_API_KEY', 'nvapi-test');
     vi.stubEnv('GROQ_API_KEY', 'gsk-test');
     const provider = createProvider();
