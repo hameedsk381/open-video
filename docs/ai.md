@@ -222,6 +222,21 @@ hand, then render. Transcription needs a provider with `transcribe` (`--provider
 else is local, and the planning itself is pure (`planCuts`/`editComposition` in `@ove/ai` are unit-tested without
 a provider).
 
+### Splitting a long recording into shorts
+
+```sh
+ove ai shorts ./raw/podcast.mp4 --out shorts --count 5 --min 15 --max 60
+```
+
+`ove ai shorts` transcribes the recording **once**, splits it into sentence runs (punctuation or a pause over
+`--max-silence` seconds ends one), and scores every window of whole sentences with a transparent rubric — a clean
+ending (2), a hook in the first sentence (2), speech density (0–1) and a length near the 25–45 s sweet spot
+(0–1). The best `--count` non-overlapping windows are written as `shorts/short-01/`, `short-02/`, … each a full
+project with the same edited-reel shape as `ove ai edit` (silences and fillers tightened, word-timed captions,
+1080×1920 centre-cropped); `--no-cut` keeps each short one continuous stretch. The summary prints each short's
+time range, score and opening line. The planner is pure (`planShorts`/`shortsCandidatePlan` in `@ove/ai`), so the
+rubric is unit-testable without a provider.
+
 ## Images
 
 ```sh

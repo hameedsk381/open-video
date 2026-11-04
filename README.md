@@ -228,6 +228,7 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 | `ove ai narrate <script\|--brief>` | Write/speak a voiceover and add word-timed captions to a video |
 | `ove ai transcribe <audio>` | Write captions for existing audio (and optionally add them to a video) |
 | `ove ai edit <clip> --out dir` | Turn a raw clip into an edited reel: transcribe, cut silences and filler words, word-timed captions |
+| `ove ai shorts <long.mp4> --out dir --count 5` | Split a long recording into the best-scored vertical shorts, each a full project |
 | `ove ai image "<prompt>" --out file.png` | Generate a picture and optionally register it as an asset |
 | `ove ai batch <rows.json> --brief "…" --output "dir/{{id}}.mp4"` | Generate one template, then render one video per row |
 | `ove ai studio [--port 3100] [--out ai-videos]` | Local web app for the AI commands: projects, create, live editor, history, export; writes only inside `--out` |

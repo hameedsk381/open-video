@@ -17,7 +17,7 @@ Before composing anything, decide *how* this video gets made, in one step: run `
 - **JSON route (secondary)** — when no template fits the brief's kind and aspect: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name.
 - **React route (secondary)** — when the brief needs spring physics, interlocking layouts or generated visuals: load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition.
 - **Batch or narration** — many rows of fields → `ove-batch-videos`; voiceover or captions → `ove-voiceover-captions`.
-- **Raw footage** — a recorded clip to clean up (talking head, demo, vlog) → `ove ai edit` (below): transcribe, cut silences and fillers, caption, and write an edited project. No brief needed; the clip is the input.
+- **Raw footage** — a recorded clip to clean up (talking head, demo, vlog) → `ove ai edit` (below): transcribe, cut silences and fillers, caption, and write an edited project. A long recording to split up (podcast, stream, webinar) → `ove ai shorts` (below): one transcription, the strongest runs scored and written as separate vertical reel projects. No brief needed; the clip is the input.
 
 If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template` vs `json`) before generating, prefers a template whenever its kind and aspect fit the brief (length differences included), and falls back to templates when planning fails. `--no-plan` opts out.
 
@@ -244,6 +244,16 @@ ove ai edit ./raw/take.mp4 --out reel --max-silence 0.5
 - Turns a raw clip into an edited project: the clip's audio is transcribed with word timings, pauses longer than `--max-silence` seconds (default 0.5) and filler words (um, uh, erm…) plus immediate repeats become a cut list, and the project is written as `composition.json` + `composition.schema.json` + `assets/`. The result is one `video` layer per kept stretch (`trimStart` skips the removed source, the clip's own sound carried through, hard jump cuts between stretches) and a word-timed captions layer above the platform UI band.
 - `--width`/`--height` set the canvas (default 1080×1920, the clip centre-cropped with `objectFit: cover` — the standard landscape-talking-head-to-reel move); `--keep-fillers` leaves the ums in; `--no-captions` skips the captions layer; `--force` writes into a directory that already has files.
 - The output is an ordinary project: review it (`ove review reel/composition.json --output review.png`), tune it (the cut list is visible as the scene boundaries — delete a `clip-N` scene to restore a moment, or re-run with a different `--max-silence`), then render (`ove render reel/composition.json --output out.mp4`). Transcription needs a provider with `transcribe` (`--provider groq`, or any adapter that implements it); everything else is local.
+
+## Splitting a long recording into shorts
+
+```bash
+ove ai shorts ./raw/podcast.mp4 --out shorts --count 5 --min 15 --max 60
+```
+
+- Transcribes the recording **once**, splits it into sentence runs (punctuation or a pause over `--max-silence` seconds ends one), and scores every window of whole sentences with a transparent rubric: a clean ending (2), a hook in the first sentence — question, direct address, number, or words like *best/never/secret/mistake* (2), speech density near 2.5 words a second (0–1), and a length near the 25–45 s sweet spot (0–1). The best `--count` non-overlapping windows are written as `shorts/short-01/`, `short-02/`, … each a full project.
+- Each short gets the same edited-reel shape as `ove ai edit` (silences and fillers tightened inside it, word-timed captions above the platform UI band, 1080×1920 centre-cropped). `--no-cut` keeps each short one continuous stretch; `--no-captions`, `--width/--height/--fps` work as there.
+- The rubric is a lead, not a verdict: the summary prints each short's time range, score and opening line — swap a weak pick by editing its `composition.json`, or re-run with different `--min/--max`. Very long recordings may exceed the transcription provider's upload limit; trim or split the source first.
 
 ## Media
 

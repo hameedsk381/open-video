@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
 import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, planBatch, providerCapabilities,
-  refineVideo, renderBatch, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
+  refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, renderMedia, type Composition } from '@ove/core';
 import { composeSmart, narrateSmart } from './templates';
 
@@ -23,6 +23,9 @@ const usage = `Usage:
   ove ai edit <clip.mp4> --out reel-dir [--max-silence 0.5] [--keep-fillers] [--width 1080] [--height 1920]
       [--fps 30] [--no-captions] [--language en] [--force]
       transcribe the clip, cut silences and filler words, and write an edited reel project
+  ove ai shorts <long.mp4> --out dir [--count 3] [--min 15] [--max 60] [--no-cut] [--no-captions]
+      [--width 1080] [--height 1920] [--fps 30] [--language en]
+      transcribe once, score candidate clips, and write the best ones as vertical reel projects
   ove ai image "<prompt>" --out assets/bg.png [--size square|portrait|landscape|WxH] [--composition video.json --id bg]
   ove ai batch <rows.json> --brief "..." --output "out/{{id}}.mp4" [--template video.json] [--out-dir dir] [--limit n]
       [--duration 18] [--fps 30] [render options]
@@ -285,6 +288,30 @@ async function editCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
+async function shortsCommand(argv: string[]): Promise<number> {
+  const clip = argv[2];
+  if (!clip || clip.startsWith('--')) throw new Error('Usage: ove ai shorts <long.mp4> --out shorts-dir [--count 3] [--min 15] [--max 60] [--no-cut]');
+  const out = option(argv, '--out');
+  if (!out) throw new Error('ove ai shorts needs --out <dir> for the projects it writes');
+  const provider = providerFrom(argv);
+  const min = numberOption(argv, '--min', 15), max = numberOption(argv, '--max', 60);
+  if (min >= max) throw new Error('--min must be smaller than --max');
+  const result = await shortsFrom(provider, {
+    clip: resolve(clip), outDir: resolve(out), count: numberOption(argv, '--count', 3), minSeconds: min, maxSeconds: max,
+    width: numberOption(argv, '--width', 1080), height: numberOption(argv, '--height', 1920), fps: numberOption(argv, '--fps', 30),
+    cut: !flag(argv, '--no-cut'), maxSilence: numberOption(argv, '--max-silence', 0.5), keepFillers: flag(argv, '--keep-fillers'),
+    captions: !flag(argv, '--no-captions'), language: option(argv, '--language'), onProgress: message => console.log(message),
+  });
+  console.log(`\n${result.shorts.length} shorts from a ${result.sourceSeconds.toFixed(0)} s recording:`);
+  for (const short of result.shorts) {
+    console.log(`  ${short.composition}  (${short.from.toFixed(0)}–${short.to.toFixed(0)} s, score ${short.score.toFixed(1)}, ${short.durationSeconds.toFixed(1)} s)`);
+    console.log(`    "${short.text.slice(0, 90)}${short.text.length > 90 ? '…' : ''}"`);
+  }
+  console.log('Next: review each one (ove review short-01/composition.json --output review.png), then render.');
+  if (flag(argv, '--json')) console.log(JSON.stringify(result, null, 2));
+  return 0;
+}
+
 async function imageCommand(argv: string[]): Promise<number> {
   const prompt = argv[2];
   if (!prompt || prompt.startsWith('--')) throw new Error('Usage: ove ai image "<prompt>" --out assets/background.png');
@@ -413,6 +440,7 @@ export async function runAi(argv: string[]): Promise<number> {
       case 'narrate': return await narrateCommand(argv);
       case 'transcribe': return await transcribeCommand(argv);
       case 'edit': return await editCommand(argv);
+      case 'shorts': return await shortsCommand(argv);
       case 'image': return await imageCommand(argv);
       case 'batch': return await batchCommand(argv);
       case 'studio': return await studioCommand(argv);
