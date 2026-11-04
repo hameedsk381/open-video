@@ -120,7 +120,7 @@ export function Settings() {
   return (
     <Page
       title="Studio Settings"
-      subtitle="Workspace storage location, video output directory, and AI connection status."
+      subtitle="Workspace storage preferences and video generation engine status."
       narrow
     >
       {error ? <Notice tone="error" title="Settings error">{error}</Notice> : null}
@@ -129,41 +129,40 @@ export function Settings() {
         <>
           <div className="card" style={{ padding: 20, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <b>AI Engine Status</b>
+              <b>Creative Generation Engine</b>
               {status.provider ? (
-                <Badge tone="green" dot>Operational</Badge>
+                <Badge tone="green" dot>Active & Ready</Badge>
               ) : (
-                <Badge tone="red" dot>Not Connected</Badge>
+                <Badge tone="amber" dot>Offline</Badge>
               )}
             </div>
 
             <div className="kv" style={{ borderTop: '1px solid var(--border)' }}>
-              <b>Provider</b>
-              <span style={{ textTransform: 'capitalize' }}>{status.provider?.id || 'None'}</span>
+              <b>System Status</b>
+              <span>{status.provider ? 'All creative systems operational' : 'Engine offline'}</span>
             </div>
             <div className="kv">
-              <b>Model</b>
-              <code>{status.provider?.model || 'None'}</code>
+              <b>Capabilities</b>
+              <span>Autonomous Composition, Kinetic Scripting, Scene Layouts & Pacing</span>
             </div>
             <div className="kv" style={{ borderBottom: 0 }}>
-              <b>Video Workspace</b>
+              <b>Workspace Storage</b>
               <code>{status.outDir}</code>
             </div>
           </div>
 
           {status.error ? (
-            <Notice tone="error" title="AI Provider Setup Required">
+            <Notice tone="warn" title="Creative Engine Notice">
               {status.error}
-              {'\n'}Set your AI provider key or FreeLLMAPI instance in your .env configuration.
             </Notice>
           ) : (
-            <Notice tone="success" title="Ready to Create">
-              Your AI provider is connected and ready. Automated video composition, kinetic script generation, and creative direction are active.
+            <Notice tone="success" title="Studio Ready">
+              The creative motion engine is active and ready to produce videos.
             </Notice>
           )}
 
           <p className="sub" style={{ marginTop: 24, fontSize: 13 }}>
-            Exported videos and project assets are safely stored in your local workspace.
+            Exported videos, project files, and uploaded brand assets are safely saved inside your workspace directory.
           </p>
         </>
       ) : null}
