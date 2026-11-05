@@ -2,6 +2,13 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.8 (2026-11-05)
+
+### Fixed
+- **Player Code Layer Execution.** Allowed code layers (`allowCode: true`) in the Studio preview player, thumbnail generator, and background render/review jobs so custom canvas animations and React video layers preview and export seamlessly.
+- **Template React Bundles & Auto-Healing.** Rebuilt `video.bundle.js` for `kinetic-reel` and `saas-launch` templates into self-contained React IIFE bundles (439 KB) and added auto-healing to the `/files/*` route to copy missing template assets into project workspaces automatically.
+- **Prompt Motion Token-Driven Design.** Implemented the full token-driven UI design system across the website, including Geist typography scales, obsidian dark palette, accessible focus rings, category filter counters, and `⌘K` global search shortcuts.
+
 ## 0.3.7 (2026-11-05)
 
 ### Added

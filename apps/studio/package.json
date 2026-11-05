@@ -2,7 +2,7 @@
   "name": "@ove/studio",
   "private": true,
   "type": "module",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "The AI Studio web app (React + Vite), served by `ove ai studio`. `pnpm build:studio` builds it into packages/cli/studio.",
   "scripts": {
     "dev": "vite",
