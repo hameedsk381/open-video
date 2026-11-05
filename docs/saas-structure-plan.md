@@ -60,7 +60,7 @@ Every storage and queue call takes a `Principal`, even in local mode (a fixed on
 
 ## Risks and how they are handled
 
-- **Published package.** `open-video-engine` bundles the CLI with esbuild, so new workspace packages are bundled in automatically; the package-build script and the `packed tarball` smoke test (install, `ove ai studio`, compose, render) guard it. Run it after steps 3 and 4.
+- **Published package.** `motionrender` bundles the CLI with esbuild, so new workspace packages are bundled in automatically; the package-build script and the `packed tarball` smoke test (install, `ove ai studio`, compose, render) guard it. Run it after steps 3 and 4.
 - **Behaviour drift.** Steps 1-5 are pure moves behind interfaces; the 8 studio integration tests plus the existing 310 unit and 83 integration tests are the safety net. No step changes a response shape except step 1, which only names it.
 - **Windows paths.** `FsProjectStore` keeps today's `within()` logic and test cases (`..`, absolute paths, drive letters).
 - **Scope creep.** No database, Redis, or login ships in steps 1-5. Those are adapters added after the seams exist.

@@ -78,11 +78,11 @@ const agentSystemPrompt = (format: VideoFormat, width: number, height: number, d
   const reelNote = reelSafeZone ? `\n## Safe Zone Rules (REQUIRED for Vertical Reel)\nThis is a 9:16 vertical reel. You MUST respect these safe zones at all times:\n- Top safe zone: keep all content below the top 8% of the frame\n- Bottom safe zone: keep all content above the bottom 18% of the frame (platform UI overlays)\n- Right safe zone: keep all content left of the right 11% of the frame (action buttons)\nYou MUST use BentoGrid, KineticText, GlassCard, and AmbientGlow in this composition.\n` : '';
   const brandNote = brand ? brandPromptSection(brand) : '';
 
-  return `You are the lead Motion Graphics Director and React Animation Engineer for Open Video Engine.
+  return `You are the lead Motion Graphics Director and React Animation Engineer for MotionRender.
 Your task is to write a complete, standalone, production-ready React video component file (\`video.tsx\`) based on the user's brief.
 ${reelNote}
 You MUST follow these strict technical and design rules:
-1. Framework: Use \`@ove/react\` (also importable as \`open-video-engine/react\`).
+1. Framework: Use \`@ove/react\` (also importable as \`motionrender/react\`).
    Available exports:
    - Primitives: \`AbsoluteFill\`, \`Sequence\`, \`Series\`, \`useCurrentFrame\`, \`useVideoConfig\`, \`interpolate\`, \`spring\`
    - Motion Helpers: \`springValue({ frame, fps, delay, preset, from, to })\`, \`stagger(index, framesPerItem, startDelay)\`

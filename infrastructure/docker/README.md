@@ -1,6 +1,6 @@
 # Docker
 
-The root `Dockerfile` builds the `open-video-engine` package from this repository (`pnpm build:package`), installs the resulting tarball in a slim Node 22 image with ffmpeg and Playwright's Chromium, and runs `ove ai studio` as the non-root `node` user. `docker-compose.yml` adds the hardening (no capabilities, read-only root, memory, CPU and process limits) and publishes the port to `127.0.0.1` only.
+The root `Dockerfile` builds the `motionrender` package from this repository (`pnpm build:package`), installs the resulting tarball in a slim Node 22 image with ffmpeg and Playwright's Chromium, and runs `ove ai studio` as the non-root `node` user. `docker-compose.yml` adds the hardening (no capabilities, read-only root, memory, CPU and process limits) and publishes the port to `127.0.0.1` only.
 
 ```sh
 docker compose up --build        # http://127.0.0.1:3100/ ; projects live in the ove-data volume

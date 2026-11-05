@@ -1,9 +1,9 @@
 ---
 name: ove
-description: Create and edit videos with Open Video Engine (OVE) by writing a JSON composition, then validating, previewing stills and rendering MP4. Use whenever the user asks to make, change, animate or render a video in a project that has an OVE composition.json.
+description: Create and edit videos with MotionRender (mr/ove) by writing a JSON composition, then validating, previewing stills and rendering MP4. Use whenever the user asks to make, change, animate or render a video in a project that has an OVE composition.json.
 ---
 
-# Making videos with Open Video Engine
+# Making videos with MotionRender
 
 This is the entry-point skill for OVE: start here, choose the route below, and load the short task guide that matches the request — `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Come back here for field details.
 

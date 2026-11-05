@@ -1,6 +1,6 @@
 ---
 name: ove-code-video
-description: Write an Open Video Engine video as TypeScript, JavaScript or React components (loops, functions, springs, generated scenes, JSX), and draw custom visuals with a code layer. Use when the video needs logic JSON cannot express: generated layouts, data-driven scenes, physics, particles, charts or custom canvas drawing.
+description: Write an MotionRender video as TypeScript, JavaScript or React components (loops, functions, springs, generated scenes, JSX), and draw custom visuals with a code layer. Use when the video needs logic JSON cannot express: generated layouts, data-driven scenes, physics, particles, charts or custom canvas drawing.
 ---
 
 # Video as code
@@ -10,7 +10,7 @@ Three tools, from safest to most powerful. The main `ove` skill has every layer 
 ## 1. The builder: code that generates the JSON (safe)
 
 ```js
-import { createVideo, text, rect, group, sfx, sample, spring, riseIn, keyframes, tween, fadeIn } from 'open-video-engine/builder';
+import { createVideo, text, rect, group, sfx, sample, spring, riseIn, keyframes, tween, fadeIn } from 'motionrender/builder';
 
 const v = createVideo({ id: 'launch', width: 1920, height: 1080, fps: 30, background: '#0b1020', motionBlur: true });
 v.export({ loudness: -16 });
@@ -35,7 +35,7 @@ export default v;
 For Remotion-style videos: components that are pure functions of the frame with spring physics, glassmorphism, and kinetic typography.
 
 ```tsx
-import { AbsoluteFill, Sequence, KineticText, GlassCard, AmbientGlow, Audio, useCurrentFrame, useVideoConfig } from 'open-video-engine/react';
+import { AbsoluteFill, Sequence, KineticText, GlassCard, AmbientGlow, Audio, useCurrentFrame, useVideoConfig } from 'motionrender/react';
 export const config = { id: 'promo', width: 1920, height: 1080, fps: 30, durationInFrames: 270, background: '#0b1020', props: { title: 'Hello' } };
 export default function Promo({ title }) {
   const frame = useCurrentFrame();

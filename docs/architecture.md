@@ -42,10 +42,10 @@ Audio is mixed by FFmpeg in the same process that encodes the video. `audioWindo
 - `ove dev` live preview (server-rendered frames, reload on save, variables panel) — implemented.
 - Drawing primitives (paths with line drawing, outlines, dashes, gradients, shadows, blur and CSS filters, blend modes, rounded media, clip-path masks) — implemented.
 - Lists, expressions, `repeat`, `if` and components for templates — implemented.
-- Output formats (MP4 H.264/H.265, WebM VP9 with alpha, MOV ProRes, GIF, PNG frames), transparency, frame ranges, the Node API in `@ove/core` and the bundled `open-video-engine` package — implemented.
+- Output formats (MP4 H.264/H.265, WebM VP9 with alpha, MOV ProRes, GIF, PNG frames), transparency, frame ranges, the Node API in `@ove/core` and the bundled `motionrender` package — implemented.
 - Browser discovery (Playwright Chromium, then installed Chrome/Edge on any OS), `ove doctor`, `ove browser install`, integration tests and a CI workflow for Linux, macOS and Windows — implemented; CI written but not yet run (the project has no repository host yet).
 - Distributed rendering (`ove worker`, chunked renders joined without re-encoding, retries) — implemented.
-- The browser Player (`open-video-engine/player`) and live playback with sound in `ove dev` — implemented.
+- The browser Player (`motionrender/player`) and live playback with sound in `ove dev` — implemented.
 - The Studio in `ove dev` (layer timeline with drag and resize, property editing saved to the file, undo) — implemented.
 - Media-driven timing (measured media in expressions, automatic scene placement, "auto" length) and captions (SRT/VTT/JSON, word highlighting, subtitle export) — implemented.
 - Animated volume and ducking, rich text spans, and output quality settings (CRF, bitrate, audio bitrate, draft scale) — implemented.
@@ -85,7 +85,7 @@ A composition may declare typed `variables` (string, number, boolean, color) and
 
 `renderMedia` in `@ove/core` is the one render path; the CLI only parses flags around it. The output format comes from an explicit option, else the output file's extension, else `export.format`, and the merged export settings are re-validated (transparency only for webm/mov/png, `codec` only for mp4). `createEncoder` in `@ove/ffmpeg` maps each format to codecs: libx264/libx265 + AAC with `+faststart`, libvpx-vp9 (`yuva420p` when transparent) + Opus, ProRes 4444/HQ + PCM, and GIF through `palettegen`/`paletteuse` in one pass over the piped frames. PNG output skips FFmpeg and writes the renderer's frames directly. A frame range renders `[first, last]` and offsets the audio mix to match. When `export.transparent` is set the renderer skips the background fill, and the canvas alpha travels through the PNG frames into the encoder.
 
-`scripts/build-package.mjs` produces `packages/ove` (npm name `open-video-engine`): esbuild bundles `@ove/core` and the CLI into two ES modules with playwright and zod external, `tsc` emits declarations whose `@ove/*` imports are rewritten to relative paths, and the starter template and agent skill are copied beside `dist` where `ove init` expects them. The package was verified by installing the packed tarball into an empty project and using the CLI, the API and the types from there.
+`scripts/build-package.mjs` produces `packages/ove` (npm name `motionrender`): esbuild bundles `@ove/core` and the CLI into two ES modules with playwright and zod external, `tsc` emits declarations whose `@ove/*` imports are rewritten to relative paths, and the starter template and agent skill are copied beside `dist` where `ove init` expects them. The package was verified by installing the packed tarball into an empty project and using the CLI, the API and the types from there.
 
 ## HTML layers
 

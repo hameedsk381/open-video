@@ -1,6 +1,6 @@
 ---
 name: ove-papercut
-description: Create layered 3D construction papercraft explainer reels, tactile paper cutouts, stop-motion card flips, and paper diorama videos in MotionRender (openvideo). Inspired by 0xS4N4TG/papercut-explainer.
+description: Create layered 3D construction papercraft explainer reels, tactile paper cutouts, stop-motion card flips, and paper diorama videos in MotionRender (motionrender). Inspired by 0xS4N4TG/papercut-explainer.
 ---
 
 # Layered Papercut Explainer Reels

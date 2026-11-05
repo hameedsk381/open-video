@@ -1,6 +1,6 @@
 ---
 name: ove-ai-compose
-description: Generate or change an Open Video Engine video from a brief with the ove ai commands (compose, refine, history, restore, studio), and keep every AI change reversible. Use when the user wants AI to draft a video, rewrite it, or undo an AI change.
+description: Generate or change an MotionRender video from a brief with the ove ai commands (compose, refine, history, restore, studio), and keep every AI change reversible. Use when the user wants AI to draft a video, rewrite it, or undo an AI change.
 ---
 
 # AI compose, refine, history

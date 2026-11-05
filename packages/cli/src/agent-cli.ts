@@ -82,7 +82,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
   // index.ts passes the checked argument list: [command, ...args].
   const args = agentArgs(argv);
   if (!args.brief && !args.url) {
-    console.log(`Open Video Engine AI Agent: Autonomous Motion Graphics Director
+    console.log(`MotionRender AI Agent: Autonomous Motion Graphics Director
 
 Usage:
   ove agent "<brief>" [dir] [options]
@@ -116,7 +116,7 @@ Examples:
 
   const provider = createProvider(args.providerName ? { provider: args.providerName, model: args.model } : { model: args.model });
 
-  console.log(`\n🤖 Starting Open Video Engine Autonomous Agent`);
+  console.log(`\n🤖 Starting MotionRender Autonomous Agent`);
   console.log(`   Provider: ${provider.id} (${provider.model})`);
   if (args.url) console.log(`   Source:   ${args.url}`);
   console.log(`   Format:   ${format === 'reel' ? '9:16 Vertical Reel' : '16:9 Landscape'}`);

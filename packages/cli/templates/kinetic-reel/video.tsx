@@ -31,7 +31,7 @@ export const config = {
     metricLabel: 'Higher Audience Retention',
     codeSnippet: 'const reel = await ove.render();',
     ctaText: 'Start Building in React',
-    handle: '@openvideo.dev',
+    handle: '@motionrender.dev',
   },
 };
 
@@ -223,7 +223,7 @@ export default function KineticReel({
             textAlign: 'center',
           }}
         >
-          <DeviceFrame url="openvideo.dev/reels" delay={4} style={{ width: '100%', height: 480 }}>
+          <DeviceFrame url="motionrender.dev/reels" delay={4} style={{ width: '100%', height: 480 }}>
             <div
               style={{
                 width: '100%',

@@ -1,7 +1,7 @@
-// `ove build video.ts`: runs a file that describes a video in code (see open-video-engine/builder) and writes the composition JSON it
+// `mr build video.ts`: runs a file that describes a video in code (see motionrender/builder) and writes the composition JSON it
 // produces, checked with the real schema. The JSON is what everything else in OVE reads, so validate, review, render and the Studio
 // work on it as usual. A .ts file runs through Node's own type stripping (Node 22.18 or newer) or any loader you start Node with.
-// A .tsx or .jsx file is a React video (see open-video-engine/react): its component is bundled with esbuild into a file the renderer draws
+// A .tsx or .jsx file is a React video (see motionrender/react): its component is bundled with esbuild into a file the renderer draws
 // every frame, and the composition holds one `react` layer pointing at it.
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -31,7 +31,7 @@ export async function buildReact(source: string, output: string): Promise<void> 
       '@remotion/core': reactEntry,
       '@remotion/media': reactEntry,
       '@ove/react': reactEntry,
-      'open-video-engine/react': reactEntry,
+      'motionrender/react': reactEntry,
     },
     loader: { '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl', '.otf': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.jpeg': 'dataurl', '.gif': 'dataurl', '.webp': 'dataurl', '.svg': 'dataurl' } as Record<string, 'dataurl'>,
   };

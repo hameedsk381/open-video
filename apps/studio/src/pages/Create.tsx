@@ -404,7 +404,7 @@ export function Create({ initialTemplate, initialKind }: { initialTemplate?: str
             <input
               className="input"
               style={{ flex: 1 }}
-              placeholder="e.g. openvideo.dev"
+              placeholder="e.g. motionrender.dev"
               value={ctaSubline}
               onChange={e => setCtaSubline(e.target.value)}
             />

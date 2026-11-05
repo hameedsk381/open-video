@@ -34,7 +34,7 @@ pnpm mr still my-video/composition.json --frame 45 --output still.png
 pnpm mr render my-video/composition.json --output my-video/out.mp4
 ```
 
-Text uses Inter by default, an open-licence font built into OVE, so videos look the same on every machine with no fonts installed. Compositions can set a gradient `background` and `grain` (moving film grain). Text can animate word by word, letter by letter or line by line (`split`, with presets such as `rise`, `pop`, `blur` and `typewriter`), and `export.loudness` (or `--loudness -14`) makes the sound a set loudness. An `html` layer draws HTML and CSS (flexbox, grid, rich text, inline SVG) as part of the frame, with no scripts and nothing fetched from the web; CSS variables and `@keyframes` animate it frame-exactly ([examples/html-card](examples/html-card/composition.json)). Lottie animations play frame-exactly, GLSL shaders (Shadertoy code included) fill boxes with animated textures, and groups can lay their children out in rows and columns ([examples/expressive](examples/expressive/composition.json)). A scene `camera` pans, zooms, turns and shakes the whole scene (layers marked `fixed`, such as captions, stay put), and `motionBlur` blurs fast motion like a film camera. Paths can morph from one shape into another, transitions include iris, push, dip and blur, `sfx:whoosh` and six other built-in sound effects need no files, a `tempo` gives expressions `beat()`, `bar()` and `beats()` so cuts land on the music, and captions drop filler words and can emphasise key words.
+Text uses Inter by default, an open-licence font built into MotionRender, so videos look the same on every machine with no fonts installed. Compositions can set a gradient `background` and `grain` (moving film grain). Text can animate word by word, letter by letter or line by line (`split`, with presets such as `rise`, `pop`, `blur` and `typewriter`), and `export.loudness` (or `--loudness -14`) makes the sound a set loudness. An `html` layer draws HTML and CSS (flexbox, grid, rich text, inline SVG) as part of the frame, with no scripts and nothing fetched from the web; CSS variables and `@keyframes` animate it frame-exactly ([examples/html-card](examples/html-card/composition.json)). Lottie animations play frame-exactly, GLSL shaders (Shadertoy code included) fill boxes with animated textures, and groups can lay their children out in rows and columns ([examples/expressive](examples/expressive/composition.json)). A scene `camera` pans, zooms, turns and shakes the whole scene (layers marked `fixed`, such as captions, stay put), and `motionBlur` blurs fast motion like a film camera. Paths can morph from one shape into another, transitions include iris, push, dip and blur, `sfx:whoosh` and six other built-in sound effects need no files, a `tempo` gives expressions `beat()`, `bar()` and `beats()` so cuts land on the music, and captions drop filler words and can emphasise key words.
 
 `init` creates a 1920×1080, five-second starter that renders as-is:
 
@@ -64,7 +64,7 @@ Opens a local preview at `http://127.0.0.1:3000/` (the next free port if that on
 The Player plays a composition in any web page, with sound, using the renderer's own drawing code:
 
 ```js
-import { createPlayer } from 'open-video-engine/player';
+import { createPlayer } from 'motionrender/player';
 const player = await createPlayer(document.querySelector('#video'), { composition, assetBase: '/videos/promo/', controls: true, loop: true });
 player.on('ended', () => console.log('done'));
 ```
@@ -147,7 +147,7 @@ See [docs/ai.md](docs/ai.md).
 Write a video in TypeScript or JavaScript when logic is easier than JSON: loops, functions, data, springs and noise.
 
 ```js
-import { createVideo, text, rect, sample, spring, riseIn, code, sfx } from 'open-video-engine/builder';
+import { createVideo, text, rect, sample, spring, riseIn, code, sfx } from 'motionrender/builder';
 
 const v = createVideo({ id: 'launch', width: 1920, height: 1080, background: '#0b1020' });
 v.scene('intro', { seconds: 4 }, scene => {
@@ -175,7 +175,7 @@ ove add fx-stats-split video/composition.json --set footage=clip.mp4 --at 300 --
 ### Video as React components
 
 ```tsx
-import { AbsoluteFill, Series, interpolate, spring, useCurrentFrame, useVideoConfig } from 'open-video-engine/react';
+import { AbsoluteFill, Series, interpolate, spring, useCurrentFrame, useVideoConfig } from 'motionrender/react';
 
 export const config = { id: 'promo', width: 1920, height: 1080, fps: 30, durationInFrames: 270, background: '#0b1020' };
 
@@ -241,6 +241,6 @@ Run them as `pnpm ove <command>` from this repository. Paths are relative to the
 
 ## Node API and the npm package
 
-`@ove/core` is the API the CLI is built on: `loadCompositionFile`, `renderMedia` (any format, frame range, progress callback, `AbortSignal`) and `renderStill`. `pnpm build:package` bundles it with the CLI into [packages/ove](packages/ove/README.md), the publishable `open-video-engine` package (plain JavaScript, type declarations, the starter template and the agent skill). Publishing it is a separate step: `npm publish` from `packages/ove` after a build.
+`@ove/core` is the API the CLI is built on: `loadCompositionFile`, `renderMedia` (any format, frame range, progress callback, `AbortSignal`) and `renderStill`. `pnpm build:package` bundles it with the CLI into [packages/ove](packages/ove/README.md), the publishable `motionrender` package (plain JavaScript, type declarations, the starter template and the agent skill). Publishing it is a separate step: `npm publish` from `packages/ove` after a build.
 
 See [architecture](docs/architecture.md) for package boundaries and milestone status.

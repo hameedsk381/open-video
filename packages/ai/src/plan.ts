@@ -37,7 +37,7 @@ export type PlanOptions = {
 const paths: GenerationPath[] = ['template', 'json', 'react'];
 const allowedPaths = (options: PlanOptions) => (options.paths ?? paths).filter(path => path !== 'react' || options.allowReact);
 
-const systemText = (options: PlanOptions) => `You are the creative production planner for Open Video Engine. Decide how the brief below should be produced, before anything is generated.
+const systemText = (options: PlanOptions) => `You are the creative production planner for MotionRender. Decide how the brief below should be produced, before anything is generated.
 Reply with ONE JSON object and nothing else:
 {
   "path": "template" | "json" | "react",

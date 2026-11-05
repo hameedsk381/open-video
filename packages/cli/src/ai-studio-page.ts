@@ -2,7 +2,7 @@
 // the Player and edits its own composition file. Self-contained (no build step, no framework, no remote assets). The script uses no
 // backticks, ${} or backslashes, so the whole page can live inside this template string.
 export const aiStudioPage = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MotionRender | OVE AI studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MotionRender Studio</title>
 <style>
 :root{
   --bg:#07090e;

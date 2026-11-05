@@ -43,6 +43,6 @@ describe('refine a large composition', () => {
   it('still shows a small composition in full and accepts a complete one back', async () => {
     const provider = scripted(small);
     await refineVideo(provider, small, { instruction: 'no change', maxAttempts: 1 });
-    expect(String(provider.seen[0]![1]!.content)).toContain('Here is an existing valid OVE composition JSON');
+    expect(String(provider.seen[0]![1]!.content)).toContain('Here is an existing valid MotionRender composition JSON');
   });
 });

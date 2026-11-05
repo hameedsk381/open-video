@@ -28,7 +28,7 @@ export const config = {
     subtitle: 'Frame-accurate motion graphics, spring physics, and headless render speed.',
     metric: 10,
     metricLabel: 'Faster Video Rendering',
-    url: 'openvideo.dev/engine',
+    url: 'motionrender.dev/engine',
   },
 };
 
@@ -202,7 +202,7 @@ export default function SaasLaunchVideo({
             >
               <Badge dotColor="#10b981">LIVE NOW</Badge>
               <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.02em' }}>
-                Open Video Engine
+                MotionRender
               </div>
               <div style={{ fontSize: 16, color: '#64748b' }}>
                 Build, preview, and render in milliseconds

@@ -1,5 +1,5 @@
 // A video written as React components. `ove build examples/react-video/video.tsx` bundles it next to this file; render it with --allow-code
-// (it is your JavaScript running while rendering). In your own project import from 'open-video-engine/react' instead of '@ove/react'.
+// (it is your JavaScript running while rendering). In your own project import from 'motionrender/react' instead of '@ove/react'.
 import { AbsoluteFill, Easing, Series, interpolate, random, spring, useCurrentFrame, useVideoConfig } from '@ove/react';
 
 export const config = { id: 'react-video', name: 'A video written in React', width: 1920, height: 1080, fps: 30, durationInFrames: 270, background: '#0b1020', export: { loudness: -16 }, props: { title: 'Components, frame by frame', accent: '#22d3ee' } };

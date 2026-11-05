@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Open Video Engine. The published package is `open-video-engine` (built from `packages/ove`).
+All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
 ## Unreleased
 

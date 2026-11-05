@@ -444,7 +444,7 @@ async function studioCommand(argv: string[]): Promise<number> {
   const rawPublic = option(argv, '--public-port'), publicPort = rawPublic === undefined ? undefined : Number(rawPublic);
   if (publicPort !== undefined && !(Number.isInteger(publicPort) && publicPort > 0 && publicPort < 65536)) throw new Error('--public-port must be a port number');
   const studio = await startAiStudio({ host, allowHosts, publicPort, port, outDir, provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') });
-  console.log(`OVE AI studio\n  ${studio.url}\nProjects and videos are written under ${resolve(outDir ?? 'ai-videos')}.\nPress Ctrl+C to stop.`);
+  console.log(`MotionRender AI Studio\n  ${studio.url}\nProjects and videos are written under ${resolve(outDir ?? 'ai-videos')}.\nPress Ctrl+C to stop.`);
   const stop = () => { studio.close().finally(() => process.exit(0)); };
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   return 0;

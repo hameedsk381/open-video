@@ -1,6 +1,6 @@
 ---
 name: ove-batch-videos
-description: Make many Open Video Engine videos from one template and a list of rows (one per product, customer, city or language). Use when the user wants personalised or localised versions of the same video.
+description: Make many MotionRender videos from one template and a list of rows (one per product, customer, city or language). Use when the user wants personalised or localised versions of the same video.
 ---
 
 # One template, many videos

@@ -50,7 +50,7 @@ describe('AI studio server', () => {
     const page = await send('GET', '/');
     expect(page.status).toBe(200);
     expect(page.headers['content-type']).toMatch(/text\/html/);
-    expect(page.body.toString('utf8')).toContain('OVE AI studio');
+    expect(page.body.toString('utf8')).toContain('MotionRender Studio');
 
     const status = json(await send('GET', '/api/status'));
     expect(status.outDir.replace(/\\/g, '/')).toBe(root.replace(/\\/g, '/'));
@@ -138,14 +138,14 @@ describe('AI studio server', () => {
     const reply = await post('/api/prompt', { brief: 'A clean coffee promo', aspect: '9:16', duration: 15 });
     expect(reply.status).toBe(200);
     const body = json(reply);
-    expect(body.prompt).toContain('# OVE composition format');
+    expect(body.prompt).toContain('# MotionRender composition format');
     expect(body.prompt).toContain('A clean coffee promo');
     expect(body.prompt).toContain('WIDTH=1080 HEIGHT=1920');
   });
 
   it('imports external AI markdown/JSON through /api/import without an API key', async () => {
     const simulatedChatGptResponse = `
-Here is the OVE composition JSON for your coffee promo:
+Here is the MotionRender composition JSON for your coffee promo:
 
 \`\`\`json
 {

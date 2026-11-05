@@ -622,7 +622,7 @@ export class MockProvider implements AiProvider {
   baseUrl = 'mock://';
   async chat(messages: ChatMessage[]): Promise<string> {
     const prompt = messages.map(message => message.content).join('\n');
-    if (prompt.includes('Here is an existing valid OVE composition JSON:')) {
+    if (prompt.includes('Here is an existing valid MotionRender composition JSON:') || prompt.includes('Here is an existing valid OVE composition JSON:')) {
       const match = /```json\s*([\s\S]*?)\s*```/.exec(prompt);
       if (match) {
         try {

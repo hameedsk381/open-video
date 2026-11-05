@@ -8,7 +8,7 @@ import { interpolate, spring as builderSpring } from '@ove/builder';
 export { interpolate };
 
 /**
- * Calculates spring physics animation value. Fully compatible with both Remotion and Open Video Engine options.
+ * Calculates spring physics animation value. Fully compatible with both Remotion and MotionRender options.
  */
 export function spring(options: {
   frame: number;
@@ -45,13 +45,13 @@ const shared = ((globalThis as any).__oveReact ??= { frame: createContext<number
 /** The frame being drawn, counted from 0 (inside a Sequence: from the start of the sequence). */
 export function useCurrentFrame(): number {
   const frame = useContext(shared.frame);
-  if (frame === null) throw new Error('useCurrentFrame() only works inside a component rendered by OVE (ove build)');
+  if (frame === null) throw new Error('useCurrentFrame() only works inside a component rendered by MotionRender (motionrender build)');
   return frame;
 }
 /** The video's width, height, fps and length in frames. */
 export function useVideoConfig(): VideoConfig {
   const config = useContext(shared.config);
-  if (!config) throw new Error('useVideoConfig() only works inside a component rendered by OVE (ove build)');
+  if (!config) throw new Error('useVideoConfig() only works inside a component rendered by MotionRender (motionrender build)');
   return config;
 }
 

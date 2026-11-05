@@ -5,7 +5,7 @@ description: Design and build high-end motion graphics videos using React, TypeS
 
 # Designing Videos with React (`@ove/react`)
 
-Open Video Engine lets you build complete, broadcast-quality motion graphics videos as pure React components. 
+MotionRender lets you build complete, broadcast-quality motion graphics videos as pure React components. 
 Instead of computing manual pixel coordinates in JSON, you write modern **TSX with Flexbox, CSS Grid, spring physics, glassmorphism, and live media**.
 
 ---
@@ -27,7 +27,7 @@ import {
   NumberTicker,
   AmbientGlow,
   Audio
-} from 'open-video-engine/react';
+} from 'motionrender/react';
 
 export const config = {
   id: 'saas-launch',
@@ -117,7 +117,7 @@ export default function Video({ title, stat }: typeof config.props) {
 
 ## 3. Motion Components Kit Reference
 
-Import directly from `open-video-engine/react` (or `@ove/react`):
+Import directly from `motionrender/react` (or `@ove/react`):
 
 ### `<AmbientGlow orbs={[...]} blur={100} />`
 Creates floating, organic gradient light orbs with continuous sine-wave drift in the background.
@@ -208,5 +208,5 @@ Use `<Video />` to place video clips under or over your components:
    * Kicker / Badge: 14-16px, uppercase, letterSpacing: `0.05em`.
    * Headline: 64-96px, fontWeight: `800` or `900`, letterSpacing: `-0.04em`.
    * Body / Caption: 18-24px, color: `#94a3b8`, lineHeight: `1.6`.
-4. **Pure Function Rule**: Every render MUST be a pure deterministic function of `frame`. Do NOT use `useState`, `setTimeout`, or `Math.random()`. Use `random('seed')` from `open-video-engine/react` for repeatable randomness.
+4. **Pure Function Rule**: Every render MUST be a pure deterministic function of `frame`. Do NOT use `useState`, `setTimeout`, or `Math.random()`. Use `random('seed')` from `motionrender/react` for repeatable randomness.
 

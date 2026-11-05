@@ -36,6 +36,6 @@ describe('Studio page', () => {
     expect(script.length).toBeGreaterThan(5000);
     expect(() => new Function(script)).not.toThrow();
     for (const name of ["'/api/projects'", "'/api/compose'", "'/api/refine'", "'/api/variables'", "'/api/text'", "'/api/theme'", "'/api/add-block'", "'/api/restore'", "'/api/render'", '/player.js', '/api/upload']) expect(script, name).toContain(name);
-    expect(aiStudioPage).toContain('OVE AI studio');
+    expect(aiStudioPage).toContain('MotionRender Studio');
   });
 });

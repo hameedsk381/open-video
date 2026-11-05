@@ -1,6 +1,6 @@
 ---
 name: ove-effects
-description: Put motion-graphics effects (glass cards, kinetic titles, icon orbit, dashboards, checklists, timelines, grades, transitions, end cards) on top of footage with the fx-* blocks of Open Video Engine. Use when the user has a video, usually a talking head, and wants it dressed with designed effects.
+description: Put motion-graphics effects (glass cards, kinetic titles, icon orbit, dashboards, checklists, timelines, grades, transitions, end cards) on top of footage with the fx-* blocks of MotionRender. Use when the user has a video, usually a talking head, and wants it dressed with designed effects.
 ---
 
 # Effects over footage

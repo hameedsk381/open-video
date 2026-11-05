@@ -1,6 +1,6 @@
 ---
 name: ove-voiceover-captions
-description: Add a voiceover and word-timed captions to an Open Video Engine video, or caption existing audio, with scenes cut to the speech. Use when the user wants narration, subtitles or captions, or a video timed to its audio.
+description: Add a voiceover and word-timed captions to an MotionRender video, or caption existing audio, with scenes cut to the speech. Use when the user wants narration, subtitles or captions, or a video timed to its audio.
 ---
 
 # Voiceover and captions

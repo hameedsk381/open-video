@@ -1,6 +1,6 @@
 ---
 name: ove-paper-collage
-description: Create editorial halftone paper-collage B-roll videos, stop-motion cutouts, torn-paper backgrounds, masking tape strips, and visual metaphors in MotionRender (openvideo). Use when the user wants editorial collage explainers, video essay b-roll, or Vox / Johnny Harris style visual cutouts.
+description: Create editorial halftone paper-collage B-roll videos, stop-motion cutouts, torn-paper backgrounds, masking tape strips, and visual metaphors in MotionRender (motionrender). Use when the user wants editorial collage explainers, video essay b-roll, or Vox / Johnny Harris style visual cutouts.
 ---
 
 # Editorial Halftone Paper Collage B-roll

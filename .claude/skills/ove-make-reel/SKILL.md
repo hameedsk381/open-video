@@ -1,6 +1,6 @@
 ---
 name: ove-make-reel
-description: Make a short social video (reel, story, promo, product or explainer clip) with Open Video Engine from ready-made blocks and themes, then check, preview and render it. Use when the user wants a vertical or square social video quickly and a custom layout is not needed.
+description: Make a short social video (reel, story, promo, product or explainer clip) with MotionRender from ready-made blocks and themes, then check, preview and render it. Use when the user wants a vertical or square social video quickly and a custom layout is not needed.
 ---
 
 # Make a short social video from blocks

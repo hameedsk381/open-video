@@ -1,8 +1,8 @@
-// Builds packages/ove, the publishable `open-video-engine` package, from the workspace sources:
+// Builds packages/ove, the publishable `motionrender` package, from the workspace sources:
 //   dist/index.js   the Node API (@ove/core and what it uses), bundled into one ES module
 //   dist/cli.js     the `ove` command
 //   dist/index.d.ts type declarations, emitted by tsc and re-pointed from @ove/* workspace names to relative files
-//   dist/player.js  the browser Player (open-video-engine/player), minified, with its own declarations
+//   dist/player.js  the browser Player (motionrender/player), minified, with its own declarations
 //   templates/, skills/  copied next to dist so `ove init` finds them the same way it does in the workspace
 // playwright and zod stay external: they are the package's dependencies. Run with tsx (pnpm build:package) since it imports TypeScript.
 import { bundlePlayer } from '../packages/player/src/bundle.ts';

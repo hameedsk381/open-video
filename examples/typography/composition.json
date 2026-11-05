@@ -66,7 +66,7 @@
         { "id": "progress", "type": "rect", "fixed": true, "x": 100, "y": 1760, "height": 4, "radius": 2,
           "fill": { "type": "linear", "from": [0, 0], "to": [880, 0], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] },
           "animations": [{ "property": "width", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 299, "value": 880 }] }] },
-        { "id": "credit", "type": "text", "fixed": true, "x": 100, "y": 1788, "textAlign": "left", "fontSize": 28, "fontWeight": 500, "color": "#5f6780", "content": "Made with Open Video Engine",
+        { "id": "credit", "type": "text", "fixed": true, "x": 100, "y": 1788, "textAlign": "left", "fontSize": 28, "fontWeight": 500, "color": "#5f6780", "content": "Made with MotionRender",
           "animations": [{ "property": "opacity", "keyframes": [{ "frame": 90, "value": 0 }, { "frame": 110, "value": 1 }] }] }
       ]
     }

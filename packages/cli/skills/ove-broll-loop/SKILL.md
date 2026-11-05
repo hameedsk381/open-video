@@ -1,6 +1,6 @@
 ---
 name: ove-broll-loop
-description: B-roll loop engineering, SRT speech-to-visual choreography, seamless ambient loops, and Shotcraft camera motion in MotionRender (openvideo). Use when engineering infinite looping background b-roll, synchronizing video clips to spoken subtitle tracks, or implementing erduo-broll-loop workflows.
+description: B-roll loop engineering, SRT speech-to-visual choreography, seamless ambient loops, and Shotcraft camera motion in MotionRender (motionrender). Use when engineering infinite looping background b-roll, synchronizing video clips to spoken subtitle tracks, or implementing erduo-broll-loop workflows.
 ---
 
 # B-Roll Loop Engineering & Speech Choreography

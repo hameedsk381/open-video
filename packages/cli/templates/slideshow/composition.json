@@ -32,7 +32,7 @@
       ]
     },
     "kicker": { "type": "string", "default": "HOW IT WORKS" },
-    "footer": { "type": "string", "default": "Open Video Engine" },
+    "footer": { "type": "string", "default": "MotionRender" },
     "accent": { "type": "color", "default": "#38bdf8", "description": "Number, rule and glow colour" }
   },
   "scenes": [

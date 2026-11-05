@@ -1,5 +1,5 @@
-// A video written as code (open-video-engine/builder). `ove build examples/code-video/video.mjs` writes composition.json beside it; the
-// particle field is a code layer, so render with --allow-code. In your own project: import from 'open-video-engine/builder'.
+// A video written as code (motionrender/builder). `ove build examples/code-video/video.mjs` writes composition.json beside it; the
+// particle field is a code layer, so render with --allow-code. In your own project: import from 'motionrender/builder'.
 import { createVideo, text, rect, circle, group, code, sfx, sample, spring, tween, keyframes, riseIn, fadeIn } from '../../packages/builder/src/index.ts';
 
 const v = createVideo({ id: 'code-video', name: 'A video written as code', width: 1920, height: 1080, fps: 30, background: '#0b1020', motionBlur: true });

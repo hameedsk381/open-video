@@ -12,7 +12,7 @@
     },
     "who": {
       "type": "string",
-      "default": "— Open Video Engine"
+      "default": "— MotionRender"
     }
   },
   "layers": [

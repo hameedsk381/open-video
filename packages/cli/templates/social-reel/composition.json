@@ -31,8 +31,8 @@
     "footer": { "type": "string", "default": "Generated from a brief. Rendered deterministically.", "description": "Small line at the bottom" },
     "kicker": { "type": "string", "default": "MAKE IT MOVE", "description": "Small label above the headline" },
     "title": { "type": "string", "default": "One brief.\nOne video.", "description": "Headline; a line break starts a new line" },
-    "detail": { "type": "string", "default": "Describe the video. OVE writes a composition, checks it against the same schema as a hand-written one, and renders every frame the same way, every time." },
-    "cta": { "type": "string", "default": "Try OVE" }
+    "detail": { "type": "string", "default": "Describe the video. MotionRender writes a composition, checks it against the same schema as a hand-written one, and renders every frame the same way, every time." },
+    "cta": { "type": "string", "default": "Try MotionRender" }
   },
   "scenes": [
     {

@@ -5,7 +5,7 @@ description: Create viral modern motion graphics, bento grids, kinetic typograph
 
 # Modern Motion Graphics Guide (`@ove/react`)
 
-Open Video Engine provides a motion design toolkit matching top-tier Claude-style motion graphic reels and product release videos.
+MotionRender provides a motion design toolkit matching top-tier Claude-style motion graphic reels and product release videos.
 
 ---
 

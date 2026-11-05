@@ -44,7 +44,7 @@ const Probe = () => createElement('span', null, `frame ${useCurrentFrame()} of $
 describe('@ove/react', () => {
   it('gives components the frame and the video config, and refuses to run outside a render', () => {
     expect(at(12, createElement(Probe))).toBe('<span>frame 12 of 90 at 30</span>');
-    expect(() => renderToStaticMarkup(createElement(Probe))).toThrow(/only works inside a component rendered by OVE/);
+    expect(() => renderToStaticMarkup(createElement(Probe))).toThrow(/only works inside a component rendered by MotionRender/);
   });
 
   it('shows a Sequence from its first frame, counted from there', () => {

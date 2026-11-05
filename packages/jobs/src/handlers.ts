@@ -112,7 +112,7 @@ export function createHandlers(env: JobEnv) {
   const importJson = (input: Input): JobSpec => {
     const rawText = textOf(input.json, 'JSON content');
     return { kind: 'import', run: async progress => {
-      progress('Extracting JSON and validating against OVE schema…');
+      progress('Extracting JSON and validating against MotionRender schema…');
       const composition = loadComposition(sanitizeCompositionJson(extractJson(rawText)));
       // Nothing is supplied with pasted JSON, so it may only use built-in sounds and files that stay inside its own project folder.
       const problems = assetProblems(composition, { assets: new Map(), relativeInside: true });

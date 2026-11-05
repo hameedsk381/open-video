@@ -5817,7 +5817,7 @@
             "src": {
               "type": "string",
               "minLength": 1,
-              "description": "An audio asset id, a file relative to the composition, or a built-in sound: sfx:click, sfx:tick, sfx:pop, sfx:whoosh, sfx:thump, sfx:ding, sfx:riser"
+              "description": "An audio asset id, a file relative to the composition, or a built-in sound: sfx:click, sfx:tick, sfx:pop, sfx:whoosh, sfx:thump, sfx:ding, sfx:riser, sfx:shimmer, sfx:sparkle, sfx:impact, sfx:ambient-pad"
             },
             "volume": {
               "default": 1,

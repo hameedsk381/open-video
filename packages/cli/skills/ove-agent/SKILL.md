@@ -128,7 +128,7 @@ ove build ./saas-demo/video.tsx --output ./saas-demo/video.bundle.js
 
 ## Valid `ove` Commands Reference
 
-The following commands are available in the Open Video Engine CLI:
+The following commands are available in the MotionRender CLI:
 
 - `ove agent` — Autonomous AI video agent (this skill)
 - `ove render` — Render a composition to MP4/WebM/GIF

@@ -31,7 +31,7 @@
             "metricLabel": "Higher Audience Retention",
             "codeSnippet": "const reel = await ove.render();",
             "ctaText": "Start Building in React",
-            "handle": "@openvideo.dev"
+            "handle": "@motionrender.dev"
           }
         },
         {

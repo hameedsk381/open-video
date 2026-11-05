@@ -1,11 +1,11 @@
 ---
 name: ove-remotion
-description: Run and build Remotion compositions directly with Open Video Engine. Use when migrating from Remotion, adapting Claude video skills, or building video components with Remotion compatibility.
+description: Run and build Remotion compositions directly with MotionRender. Use when migrating from Remotion, adapting Claude video skills, or building video components with Remotion compatibility.
 ---
 
-# Remotion Compatibility in Open Video Engine
+# Remotion Compatibility in MotionRender
 
-Open Video Engine natively supports Remotion video syntax, allowing you to run, build, and render compositions created for Remotion or Claude Remotion skills without changing imports or rewriting code.
+MotionRender natively supports Remotion video syntax, allowing you to run, build, and render compositions created for Remotion or Claude Remotion skills without changing imports or rewriting code.
 
 ---
 
@@ -33,13 +33,13 @@ import {
 } from 'remotion';
 ```
 
-Open Video Engine automatically aliases `remotion`, `@remotion/core`, and `@remotion/media` to `@ove/react` during `ove build` and `ove render`.
+MotionRender automatically aliases `remotion`, `@remotion/core`, and `@remotion/media` to `@ove/react` during `ove build` and `ove render`.
 
 ---
 
 ## 2. Supported Patterns
 
-### Pattern A: Modern Open Video Engine Export
+### Pattern A: Modern MotionRender Export
 ```tsx
 export const config = {
   id: 'my-video',

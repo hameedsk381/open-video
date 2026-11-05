@@ -284,7 +284,7 @@
           "children": [
             { "id": "credit-mark", "type": "rect", "x": -196, "y": -2, "width": 36, "height": 36, "radius": 10, "fill": { "type": "linear", "from": [0, 0], "to": [36, 36], "stops": [{ "offset": 0, "color": "{{accent}}" }, { "offset": 1, "color": "{{accent2}}" }] } },
             { "id": "credit-play", "type": "path", "x": -178, "y": 16, "d": "M-5 -8 L8 0 L-5 8 Z", "fill": "#ffffff" },
-            { "id": "credit-text", "type": "text", "x": -144, "textAlign": "left", "fontSize": 28, "fontWeight": 500, "color": "{{muted}}", "content": "Made with Open Video Engine" }
+            { "id": "credit-text", "type": "text", "x": -144, "textAlign": "left", "fontSize": 28, "fontWeight": 500, "color": "{{muted}}", "content": "Made with MotionRender" }
           ] }
       ]
     }

@@ -24,13 +24,13 @@ await add('fx-command-bridge', { scene: 'footage-a', at: 0, frames: 60, set: { c
 await add('fx-glass-cards', { scene: 'footage-a', at: 60, frames: 60 });
 await add('fx-duo-title', { scene: 'footage-a', at: 120, frames: 90, set: { line1: 'ONE VIDEO.', line2: '36 EFFECTS.', line3: 'POWERED BY OVE.' } });
 await add('fx-icon-orbit', { scene: 'footage-a', at: 210, frames: 90 });
-await add('fx-stats-split', { id: 'stats', at: 300, frames: 90, set: { footage: clipName, heading: 'MOTION GRAPHICS', sub: 'Powered by Open Video Engine', note: 'DEMO DATA' } });
+await add('fx-stats-split', { id: 'stats', at: 300, frames: 90, set: { footage: clipName, heading: 'MOTION GRAPHICS', sub: 'Powered by MotionRender', note: 'DEMO DATA' } });
 await add('fx-spotlight', { id: 'spotlight', at: 390, frames: 120, set: { footage: clipName } });
 await add('footage', { id: 'footage-b', at: 510, frames: 180, set: { src: clipName, trim: 300 } });
 await add('fx-checklist', { scene: 'footage-b', at: 0, frames: 90 });
 await add('fx-timeline', { scene: 'footage-b', at: 90, frames: 90, set: { heading: 'ONE COMPOSITION. COMPLETE CONTROL.' } });
 await add('fx-gallery', { id: 'gallery', at: 690, frames: 90 });
-await add('fx-cta-card', { id: 'cta', at: 780, frames: 120, set: { footage: clipName, line1: 'CREATE WITHOUT LIMITS.', line2: 'POWERED BY OPEN VIDEO ENGINE.', line3: 'BUILD. COMPOSE. RENDER.' } });
+await add('fx-cta-card', { id: 'cta', at: 780, frames: 120, set: { footage: clipName, line1: 'CREATE WITHOUT LIMITS.', line2: 'POWERED BY MOTIONRENDER.', line3: 'BUILD. COMPOSE. RENDER.' } });
 
 raw.durationFrames = 900;
 const composition = loadComposition(raw); // throws with the location of anything the schema rejects

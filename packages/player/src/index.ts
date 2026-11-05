@@ -7,7 +7,7 @@ import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 export type PlayerOptions = {
   /** A composition as JSON (variables are resolved with `values`) or an already loaded one. */ composition: unknown; values?: Record<string, unknown>;
-  /** Measured audio and video for compositions that time scenes from their media ({{media[...]}}), from measureMedia in open-video-engine. */ media?: Record<string, MediaInfo>;
+  /** Measured audio and video for compositions that time scenes from their media ({{media[...]}}), from measureMedia in motionrender. */ media?: Record<string, MediaInfo>;
   /** Where relative media paths in the composition are resolved from, usually the composition file's URL. Defaults to the page URL. */ assetBase?: string | URL;
   /** Where the built-in Inter font files are served from. Defaults to the `fonts` folder next to the Player script (the package ships it in `dist/fonts`). */ fontBase?: string | URL;
   /** Where the built-in sound effects (sfx:…) are served from. Defaults to the `sfx` folder next to the Player script. */ sfxBase?: string | URL;

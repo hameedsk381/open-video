@@ -112,7 +112,7 @@ export function App() {
           <a className="brand" href="#/">
             <StudioBrandLogo size={24} />
             <div className="brand-title">
-              <span>Open Video</span>
+              <span>MotionRender</span>
               <span className="brand-badge">Studio</span>
             </div>
           </a>

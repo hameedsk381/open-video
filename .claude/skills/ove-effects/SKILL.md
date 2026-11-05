@@ -1,6 +1,6 @@
 ---
 name: ove-effects
-description: Put motion-graphics effects (glass cards, kinetic titles, icon orbit, dashboards, checklists, timelines, grades, transitions, end cards) on top of footage with the fx-* blocks of Open Video Engine. Use when the user has a video, usually a talking head, and wants it dressed with designed effects.
+description: Put motion-graphics effects (glass cards, kinetic titles, icon orbit, dashboards, checklists, timelines, grades, transitions, end cards) on top of footage with the fx-* blocks of MotionRender. Use when the user has a video, usually a talking head, and wants it dressed with designed effects.
 ---
 
 # Effects over footage
@@ -49,6 +49,11 @@ Effects are blocks named `fx-*`. `ove blocks` lists them under "Effects". They a
 | 34 Split reveal | `fx-split-reveal` | overlay |
 | 35 Gallery | `fx-gallery` | scene |
 | 36 CTA end card | `fx-cta-card` | scene; footage in a rounded window, not a cut-out |
+| 37 Paper collage | `fx-paper-collage` | scene; editorial halftone cutout with cardstock backing and tape |
+| 38 B-roll loop | `fx-broll-loop` | scene; seamless floating hero card and pulsing ambient aura |
+| 39 Papercut explainer | `fx-papercut-explainer` | scene; 3D construction papercraft diorama with stacked depth shadows |
+| 40 Logo reveal | `fx-logo-reveal` | scene; orbital halo, SVG stroke, and brand bumper reveal |
+| 41 One-take flow | `fx-onetake-flow` | scene; continuous spatial push without slide cuts |
 
 ## Effects that need a matte
 

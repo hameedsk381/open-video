@@ -9,7 +9,7 @@
   "durationFrames": 150,
   "background": { "type": "linear", "from": [0, 0], "to": [1920, 1080], "stops": [{ "offset": 0, "color": "#080b18" }, { "offset": 1, "color": "#111634" }] },
   "variables": {
-    "title": { "type": "string", "default": "Hello,\nOpen Video Engine", "description": "Headline; a line break in the value starts a new line" },
+    "title": { "type": "string", "default": "Hello,\nMotionRender", "description": "Headline; a line break in the value starts a new line" },
     "tagline": { "type": "string", "default": "Edit composition.json to begin" },
     "accent": { "type": "color", "default": "#6366f1", "description": "Colour of the glow and the line beside the tagline" }
   },

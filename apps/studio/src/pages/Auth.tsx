@@ -37,7 +37,7 @@ export function AuthPage({ onSignedIn, signups }: { onSignedIn: (user: Me) => vo
     }
   };
 
-  const title = mode === 'signup' ? 'Create your Studio account' : mode === 'forgot' ? 'Reset your password' : 'Sign in to Open Video Studio';
+  const title = mode === 'signup' ? 'Create your Studio account' : mode === 'forgot' ? 'Reset your password' : 'Sign in to MotionRender Studio';
 
   return (
     <div className="center" style={{ maxWidth: 420 }}>
@@ -96,7 +96,7 @@ export function AuthPage({ onSignedIn, signups }: { onSignedIn: (user: Me) => vo
           <>
             {signups ? (
               <>
-                New to Open Video? <a className="link" onClick={() => setMode('signup')}>Create an account</a> ·{' '}
+                New to MotionRender? <a className="link" onClick={() => setMode('signup')}>Create an account</a> ·{' '}
               </>
             ) : null}
             <a className="link" onClick={() => setMode('forgot')}>Forgot your password?</a>

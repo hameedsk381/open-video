@@ -21,7 +21,7 @@
     },
     "sub": {
       "type": "string",
-      "default": "Powered by Open Video Engine"
+      "default": "Powered by MotionRender"
     },
     "value": {
       "type": "number",

@@ -23,7 +23,7 @@ export function isMotionPlan(raw: unknown): raw is MotionPlan {
   return Array.isArray(value.beats) && value.beats.length > 0 && !Array.isArray(value.scenes);
 }
 
-const CHEATSHEET = `# OVE composition format (version 1.0)
+const CHEATSHEET = `# MotionRender composition format (version 1.0)
 
 Return ONE JSON object. No markdown fences, no commentary, no trailing commas.
 
@@ -135,13 +135,13 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Finish on a clean hold; do not fade the whole frame to black at the end unless asked.`;
 
 export function systemPrompt(options: Partial<PromptOptions> = {}): string {
-  const parts = ['You write Open Video Engine (OVE) motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET, movesGlossary];
+  const parts = ['You write MotionRender motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET, movesGlossary];
   if (options.includeSchema) parts.push('# Exact JSON Schema (authoritative)\n' + JSON.stringify(compositionJsonSchema));
   return parts.join('\n\n');
 }
 
 export function planSystemPrompt(): string {
-  return `You plan motion-graphics videos for Open Video Engine. Do not write a composition, scenes or layers yet.
+  return `You plan motion-graphics videos for MotionRender. Do not write a composition, scenes or layers yet.
 Reply with JSON only:
 {"idea":"<one sentence the viewer should remember>","look":{"background":"dark gradient description","ink":"#f5f7fb","muted":"#97a0b6","accent":"#hex"},"transition":"push|fade|dip","beats":[{"name":"kebab-id","takeaway":"one idea","onScreen":"exact words on screen","seconds":4,"motion":"how it enters; what is carried into the next beat"}]}
 Rules: one idea per beat; lengths must differ; open with the subject in the first second; end on the idea, not a credit fade; onScreen is real copy, not a description of the shot; do not invent facts, prices or claims that are not in the brief.`;
@@ -206,7 +206,7 @@ export function userPrompt(brief: string, options: PromptOptions): string {
 
 export function refineUserPrompt(composition: any, instruction: string): string {
   return [
-    'Here is an existing valid OVE composition JSON:',
+    'Here is an existing valid MotionRender composition JSON:',
     '```json',
     JSON.stringify(composition, null, 2),
     '```',
@@ -217,7 +217,7 @@ export function refineUserPrompt(composition: any, instruction: string): string 
     'Instructions for the modification:',
     '- Apply the requested changes accurately.',
     '- Preserve existing canvas dimensions, scenes, layers, timing, transitions, and variables unless explicitly asked to modify them.',
-    '- Maintain valid OVE composition schema rules.',
+    '- Maintain valid MotionRender composition schema rules.',
     '- Return the complete updated composition JSON object only.'
   ].join('\n');
 }
@@ -258,7 +258,7 @@ export function compositionOutline(composition: any, maxLines = 400): string {
 /** For a large composition: the outline, and a request for fixes by path instead of the whole composition back. */
 export function refineOutlinePrompt(composition: any, instruction: string): string {
   return [
-    'This is the outline of an existing valid OVE composition (one line per layer, with its path):',
+    'This is the outline of an existing valid MotionRender composition (one line per layer, with its path):',
     '',
     compositionOutline(composition),
     '',
