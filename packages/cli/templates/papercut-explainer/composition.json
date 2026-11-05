@@ -318,11 +318,11 @@
           "content": "HIGHER RETENTION",
           "fontFamily": "Inter",
           "fontWeight": 800,
-          "fontSize": 38,
+          "fontSize": 34,
           "letterSpacing": 2,
           "color": "#44403c",
           "x": 540,
-          "y": 940,
+          "y": 990,
           "startFrame": 26
         },
         {

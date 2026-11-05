@@ -138,7 +138,7 @@
           "content": "{{label}}",
           "fontFamily": "Inter",
           "fontWeight": 900,
-          "fontSize": 44,
+          "fontSize": 40,
           "color": "#111111",
           "background": "{{accent}}",
           "padding": 16,

@@ -61,16 +61,16 @@
           "content": "01",
           "fontFamily": "Inter",
           "fontWeight": 900,
-          "fontSize": 560,
+          "fontSize": 380,
           "color": "#161b26",
           "x": 960,
-          "y": 540,
+          "y": 700,
           "animations": [
             {
               "property": "x",
               "keyframes": [
-                { "frame": 0, "value": 1040 },
-                { "frame": 150, "value": 880, "easing": "drift" }
+                { "frame": 0, "value": 1440 },
+                { "frame": 150, "value": 1405, "easing": "drift" }
               ]
             }
           ]
@@ -175,16 +175,16 @@
           "content": "02",
           "fontFamily": "Inter",
           "fontWeight": 900,
-          "fontSize": 560,
+          "fontSize": 380,
           "color": "#161b26",
           "x": 960,
-          "y": 540,
+          "y": 700,
           "animations": [
             {
               "property": "x",
               "keyframes": [
-                { "frame": 0, "value": 1040 },
-                { "frame": 150, "value": 880, "easing": "drift" }
+                { "frame": 0, "value": 1440 },
+                { "frame": 150, "value": 1405, "easing": "drift" }
               ]
             }
           ]
