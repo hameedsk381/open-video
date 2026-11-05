@@ -10,11 +10,12 @@ import { build } from 'esbuild'; import { execFileSync } from 'node:child_proces
 const root=resolve(dirname(fileURLToPath(import.meta.url)), '..'), out=join(root, 'packages', 'ove'), dist=join(out, 'dist');
 await rm(dist, { recursive: true, force: true }); await rm(join(out, 'templates'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'studio'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
 // esbuild is external too: the CLI only reaches it to bundle the Player when running from source, never from this package, which ships player.js.
-const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', external: ['playwright', 'zod', 'pg', 'bullmq', 'esbuild'], logLevel: 'warning', legalComments: 'none' };
+const nodeBanner = "import { createRequire as __createRequire } from 'node:module'; var require = __createRequire(import.meta.url);";
+const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: nodeBanner }, external: ['playwright', 'zod', 'pg', 'bullmq', 'esbuild'], logLevel: 'warning', legalComments: 'none' };
 await build({ ...common, entryPoints: [join(root, 'packages/core/src/index.ts')], outfile: join(dist, 'index.js') });
 await build({ ...common, entryPoints: [join(root, 'packages/cli/src/index.ts')], outfile: join(dist, 'cli.js') });
-await build({ ...common, platform: 'neutral', entryPoints: [join(root, 'packages/builder/src/index.ts')], outfile: join(dist, 'builder.js') });
-await build({ ...common, platform: 'neutral', external: ['react'], entryPoints: [join(root, 'packages/react/src/index.ts')], outfile: join(dist, 'react.js') }); // components for React videos; React itself is the project's // the code-as-video API: plain JavaScript, no dependencies // keeps the source's #! line
+await build({ ...common, platform: 'neutral', banner: undefined, entryPoints: [join(root, 'packages/builder/src/index.ts')], outfile: join(dist, 'builder.js') });
+await build({ ...common, platform: 'neutral', banner: undefined, external: ['react'], entryPoints: [join(root, 'packages/react/src/index.ts')], outfile: join(dist, 'react.js') }); // components for React videos; React itself is the project's // the code-as-video API: plain JavaScript, no dependencies // keeps the source's #! line
 // Declarations: emit for every workspace package, then rewrite '@ove/x' to the relative path of x's emitted index, and give
 // extensionless relative imports a .js extension so NodeNext consumers resolve them.
 const types=join(dist, 'types'); const tsc=join(root, 'node_modules', 'typescript', 'bin', 'tsc');

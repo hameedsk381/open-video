@@ -2,6 +2,11 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.12 (2026-11-06)
+
+### Fixed
+- **ESM Node Banner & Dynamic Require Fix.** Added `createRequire` module banner to esbuild for `platform: 'node', format: 'esm'`. This resolves the `Dynamic require of "path" is not supported` runtime error thrown by bundled CommonJS dependencies (such as `@vercel/oidc` under the Vercel AI SDK gateway) when executing in strict Node ESM environments like Docker.
+
 ## 0.3.11 (2026-11-06)
 
 ### Added
