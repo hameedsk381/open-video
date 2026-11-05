@@ -1,5 +1,6 @@
 import type { BrandPack } from './agent';
 import type { AiProvider } from './providers';
+import { classifyRoles, mineCss, type ColorSighting, type CssEvidence } from './brand-css';
 
 export type ScrapedWebsite = {
   url: string;
@@ -12,7 +13,43 @@ export type ScrapedWebsite = {
   headings: string[];
   paragraphs: string[];
   suggestedBrief?: string;
+  /** Font families the site actually loads or declares, most used first; empty when the site gives no evidence. */
+  fonts?: string[];
+  /** Stylesheets linked from the page (the deep crawl mines these for tokens). */
+  stylesheets?: string[];
+  /** Same-origin links on the page, resolved; the deep crawl picks brand pages from these. */
+  links?: string[];
+  /** Colour sightings with their counts and where they came from — variables in :root outrank stray inline hex. */
+  colorCounts?: ColorSighting[];
+  /** The BrandPack roles as the evidence itself suggests them (dominant dark = background, and so on). */
+  roles?: { primary?: string; secondary?: string; accent?: string; background?: string; text?: string };
+  /** The extra brand pages crawled beyond the homepage. */
+  pages?: string[];
 };
+
+/** Routes that carry the most brand signal, matched on any path segment (locales like `/in/pricing` still match). */
+const brandRoute = /^(pricing|about|product|products|features|solutions|platform|customers|stories|why-us|contact|careers|blog|docs|changelog)$/i;
+const brandRouteFirstTier = /^(pricing|product|products|features|solutions|platform|about|why-us|stories)$/i;
+
+/**
+ * Picks the high-value brand pages from a homepage's links: pricing, product and about pages say more about a brand
+ * than a blog index, so first-tier routes come first. Same origin only, deduplicated by path, capped.
+ */
+export function pickBrandRoutes(links: string[], origin: string, cap = 2): string[] {
+  const seen = new Set<string>(), picked: { href: string; tier: number; order: number }[] = [];
+  for (const [order, link] of links.entries()) {
+    try {
+      const url = new URL(link);
+      if (url.origin !== origin || seen.has(url.pathname)) continue;
+      const segments = url.pathname.split('/').filter(Boolean);
+      const matched = segments.filter(segment => brandRoute.test(segment));
+      if (!matched.length) continue;
+      seen.add(url.pathname);
+      picked.push({ href: url.href, tier: matched.some(segment => brandRouteFirstTier.test(segment)) ? 0 : 1, order });
+    } catch {}
+  }
+  return picked.sort((a, b) => a.tier - b.tier || a.order - b.order).slice(0, cap).map(pick => pick.href);
+}
 
 /**
  * Normalizes a URL so that 'linear.app' becomes 'https://linear.app'.
@@ -97,27 +134,50 @@ export function parseWebsiteHtml(html: string, baseUrl: string): ScrapedWebsite 
     } catch {}
   }
 
-  // 4. Color extractions from CSS variables & inline hex colors (#xxxxxx)
-  const hexMatches = html.match(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g) || [];
-  const colorCounts = new Map<string, number>();
-  for (const hex of hexMatches) {
+  // 4. Deep colour and font evidence: inline <style> blocks carry the same tokens as stylesheets, so mine them the
+  // same way; raw hex in the markup is the weakest evidence and is counted, but ranked below the CSS.
+  const evidence: CssEvidence = mineCss([...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(match => match[1]!).join('\n'));
+  const inlineHtml = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  const colorCounts = new Map<string, ColorSighting>();
+  for (const sighting of evidence.colors) colorCounts.set(sighting.color, { ...sighting });
+  for (const hex of inlineHtml.match(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g) || []) {
     const norm = hex.toLowerCase();
-    // Exclude generic pure black and white from being considered the "accent/brand" color
     if (norm === '#ffffff' || norm === '#fff' || norm === '#000000' || norm === '#000') continue;
-    colorCounts.set(norm, (colorCounts.get(norm) ?? 0) + 1);
+    const seen = colorCounts.get(norm) ?? { color: norm, count: 0, source: 'html' as const };
+    seen.count += 1;
+    colorCounts.set(norm, seen);
   }
-
-  // Sort hex colors by occurrence frequency
-  const sortedColors = [...colorCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([color]) => color);
-
+  const ranked = [...colorCounts.values()].sort((a, b) => b.count - a.count);
+  result.colorCounts = ranked.slice(0, 12);
+  result.colors = ranked.slice(0, 5).map(sighting => sighting.color);
   if (result.themeColor) {
-    result.colors.push(result.themeColor);
+    const theme = result.themeColor.toLowerCase();
+    result.colors = [result.themeColor, ...result.colors.filter(color => color !== theme)];
+    const seen = colorCounts.get(theme);
+    if (seen) seen.count += 4;
+    result.colorCounts = [...colorCounts.values()].sort((a, b) => b.count - a.count).slice(0, 12);
   }
-  for (const c of sortedColors.slice(0, 5)) {
-    if (!result.colors.includes(c)) result.colors.push(c);
+  result.roles = classifyRoles(result.colorCounts ?? []);
+
+  // 4b. Fonts: families from the style blocks, plus Google Fonts links, which name the faces outright.
+  const fontCounts = new Map<string, number>();
+  for (const { family, count } of evidence.fontFamilies) fontCounts.set(family, (fontCounts.get(family) ?? 0) + count);
+  for (const match of html.matchAll(/fonts\.googleapis\.com\/css2?\?[^"']*family=([a-zA-Z+0-9]+)/g)) {
+    const family = match[1]!.replace(/\+/g, ' ');
+    fontCounts.set(family, (fontCounts.get(family) ?? 0) + 3);
   }
+  for (const { family } of evidence.fontFaces) fontCounts.set(family, (fontCounts.get(family) ?? 0) + 2);
+  result.fonts = [...fontCounts.entries()].sort((a, b) => b[1] - a[1]).map(([family]) => family).slice(0, 6);
+
+  // 4c. Stylesheets worth mining in the deep crawl: data: and // protocol-relative resolved, then deduplicated.
+  result.stylesheets = [...new Set([...html.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi)]
+    .map(match => resolveUrl(match[0].match(/href=["']([^"']+)["']/i)?.[1]))
+    .filter((href): href is string => !!href))].slice(0, 8);
+
+  // 4d. Same-origin links for the deep crawl's route discovery.
+  const origin = (() => { try { return new URL(baseUrl).origin; } catch { return undefined; } })();
+  result.links = origin ? [...new Set([...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["']/gi)].map(match => resolveUrl(match[1]!))
+    .filter((href): href is string => !!href && href.startsWith(origin))).values()].slice(0, 80) : [];
 
   // 5. Headings (h1, h2)
   for (const h of html.matchAll(/<h[12]\b[^>]*>([\s\S]*?)<\/h[12]>/gi)) {
@@ -146,33 +206,97 @@ export function parseWebsiteHtml(html: string, baseUrl: string): ScrapedWebsite 
   return result;
 }
 
-/**
- * Fetches the website HTML and extracts brand assets, colors, and value proposition.
- */
-export async function scrapeWebsiteBrand(urlInput: string, timeoutMs = 8000): Promise<ScrapedWebsite> {
-  const url = normalizeUrl(urlInput);
+/** Fetches `url` with a timeout, returning the body text or undefined on any failure (the deep crawl degrades gracefully). */
+async function fetchText(url: string, timeoutMs: number): Promise<string | undefined> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 OpenVideoBrandScraper/1.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml,text/css,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText} when fetching ${url}`);
-    }
-
-    const html = await response.text();
-    return parseWebsiteHtml(html, url);
+    return response.ok ? await response.text() : undefined;
+  } catch {
+    return undefined;
   } finally {
     clearTimeout(timer);
   }
+}
+
+const sourcePriority = { 'css-variable': 3, stylesheet: 2, html: 1 } as const;
+
+/** Sums colour sightings from several sources; a colour keeps the strongest source that saw it. */
+export function mergeColorCounts(...lists: ColorSighting[][]): ColorSighting[] {
+  const merged = new Map<string, ColorSighting>();
+  for (const list of lists) for (const sighting of list) {
+    const seen = merged.get(sighting.color);
+    if (!seen) merged.set(sighting.color, { ...sighting });
+    else {
+      seen.count += sighting.count;
+      if (sourcePriority[sighting.source] > sourcePriority[seen.source]) seen.source = sighting.source;
+    }
+  }
+  return [...merged.values()].sort((a, b) => b.count - a.count);
+}
+
+/** Unions ranked font-family lists in first-seen order, home page first. */
+export function mergeFonts(...lists: string[][]): string[] {
+  return [...new Set(lists.flat())].slice(0, 6);
+}
+
+/**
+ * Fetches the website HTML and extracts brand assets, colors, and value proposition — then goes deeper the way a
+ * design-system extraction would: it mines the site's own stylesheets for custom properties, colours and font
+ * faces, and crawls the two highest-signal brand pages (pricing, product, about) to confirm the palette. Every
+ * extra request is best-effort: a failure shrinks the evidence, never the result.
+ */
+export async function scrapeWebsiteBrand(urlInput: string, timeoutMs = 8000): Promise<ScrapedWebsite> {
+  const url = normalizeUrl(urlInput);
+  const html = await fetchText(url, timeoutMs);
+  if (html === undefined) throw new Error(`Could not fetch ${url} (timeout or network error after ${timeoutMs} ms)`);
+  const scraped = parseWebsiteHtml(html, url);
+  const origin = new URL(url).origin;
+  const colors: ColorSighting[] = [...(scraped.colorCounts ?? [])];
+  const fontLists: string[][] = [scraped.fonts ?? []];
+
+  // Stylesheets: the densest token evidence on most sites — CDN hosts (static.linear.app, b.stripecdn.com) are
+  // explicitly linked by the page, so cross-origin is fine. Five files, in parallel, best-effort.
+  const stylesheets = (scraped.stylesheets ?? []).slice(0, 5);
+  const sheets = await Promise.all(stylesheets.map(href => fetchText(href, Math.min(timeoutMs, 6000)).catch(() => undefined)));
+  for (const sheet of sheets) {
+    if (!sheet) continue;
+    const evidence = mineCss(sheet);
+    colors.push(...evidence.colors);
+    fontLists.push(evidence.fontFamilies.map(({ family }) => family));
+    for (const face of evidence.fontFaces) fontLists.push([face.family]);
+  }
+
+  // Brand pages: pricing and product pages restate the palette with real UI, unlike the marketing homepage.
+  const routes = pickBrandRoutes(scraped.links ?? [], origin, 2);
+  const pages = await Promise.all(routes.map(route => fetchText(route, Math.min(timeoutMs, 6000)).catch(() => undefined)));
+  const extras: ScrapedWebsite[] = [];
+  for (const [i, page] of pages.entries()) {
+    if (!page) continue;
+    const route = routes[i]!;
+    extras.push(parseWebsiteHtml(page, route));
+  }
+  for (const extra of extras) {
+    colors.push(...(extra.colorCounts ?? []));
+    fontLists.push(extra.fonts ?? []);
+  }
+
+  const merged = mergeColorCounts(colors);
+  scraped.colorCounts = merged.slice(0, 14);
+  scraped.colors = merged.slice(0, 5).map(sighting => sighting.color);
+  if (scraped.themeColor) scraped.colors = [scraped.themeColor, ...scraped.colors.filter(color => color !== scraped.themeColor!.toLowerCase())];
+  scraped.fonts = mergeFonts(...fontLists);
+  scraped.roles = classifyRoles(scraped.colorCounts ?? []);
+  scraped.pages = routes;
+  return scraped;
 }
 
 /**
@@ -183,19 +307,22 @@ export async function distillBrandPack(
   scraped: ScrapedWebsite,
   provider?: AiProvider
 ): Promise<{ brand: BrandPack; suggestedBrief: string }> {
-  // Deterministic fallback BrandPack
+  // Deterministic fallback BrandPack: when the site's own evidence classifies roles (dominant dark = background and
+  // so on) those win; otherwise the top colours fill primary/secondary/accent in frequency order.
+  const roles = scraped.roles ?? {};
+  const headingFont = scraped.fonts?.[0], bodyFont = scraped.fonts?.[1] ?? headingFont;
   const fallbackBrand: BrandPack = {
     name: scraped.siteName || (scraped.title ? scraped.title.split(/[-|–•]/)[0]?.trim() : 'Brand'),
     colors: {
-      primary: scraped.colors[0] || '#6366f1',
-      secondary: scraped.colors[1] || '#1f2438',
-      accent: scraped.colors[2] || '#ec4899',
-      background: '#090d16',
-      text: '#f8fafc',
+      primary: roles.primary || scraped.colors[0] || '#6366f1',
+      secondary: roles.secondary || scraped.colors[1] || '#1f2438',
+      accent: roles.accent || scraped.colors[2] || '#ec4899',
+      background: roles.background || '#090d16',
+      text: roles.text || '#f8fafc',
     },
     fonts: {
-      heading: 'Inter, system-ui, sans-serif',
-      body: 'Inter, system-ui, sans-serif',
+      heading: headingFont ? `${headingFont}, Inter, system-ui, sans-serif` : 'Inter, system-ui, sans-serif',
+      body: bodyFont ? `${bodyFont}, Inter, system-ui, sans-serif` : 'Inter, system-ui, sans-serif',
     },
     logo: scraped.logo,
     style: `${scraped.description ? `${scraped.description.slice(0, 100)}. ` : ''}Modern, crisp motion design.`,
@@ -209,12 +336,17 @@ export async function distillBrandPack(
 
   try {
     const prompt = `You are a Brand Identity & Design System Specialist.
-Extract a clean BrandPack JSON from this scraped website data:
+Extract a clean BrandPack JSON from this scraped website data. The colours were mined from the site's stylesheets,
+custom properties and markup with use counts, and the roles below are what the evidence itself suggests (dominant
+dark colour = background, near-white = text, saturated mid-tones = brand colours) — trust them unless the copy says otherwise.
 URL: ${scraped.url}
 Title: ${scraped.title ?? 'N/A'}
 Site Name: ${scraped.siteName ?? 'N/A'}
 Description: ${scraped.description ?? 'N/A'}
-Extracted Colors: ${scraped.colors.join(', ') || 'None found'}
+Pages crawled: ${scraped.pages?.length ? scraped.pages.join(', ') : 'homepage only'}
+Colours (value, uses, source): ${(scraped.colorCounts ?? []).map(sighting => `${sighting.color}×${sighting.count} (${sighting.source})`).join(', ') || 'None found'}
+Suggested roles: ${JSON.stringify(roles)}
+Fonts seen in CSS: ${scraped.fonts?.join(', ') || 'None found'}
 Headings: ${scraped.headings.slice(0, 4).join(' | ') || 'N/A'}
 Paragraphs: ${scraped.paragraphs.slice(0, 3).join(' | ') || 'N/A'}
 
@@ -225,15 +357,15 @@ Respond with ONLY valid JSON with this shape:
     "primary": "#hex",
     "secondary": "#hex",
     "accent": "#hex",
-    "background": "#070a12",
-    "text": "#ffffff"
+    "background": "#hex",
+    "text": "#hex"
   },
   "fonts": {
     "heading": "Font Name or Inter",
     "body": "Font Name or Inter"
   },
-  "style": "2-4 words defining the brand visual vibe (e.g. minimalist dark tech, sleek luxury, playful gradient)",
-  "suggestedBrief": "A punchy 1-2 sentence video brief for a high-converting launch reel"
+  "style": "3-6 words defining the brand's visual and verbal vibe (e.g. minimalist dark tech, warm playful craft)",
+  "suggestedBrief": "A punchy 1-2 sentence video brief for a high-converting launch reel, grounded in what the site actually says"
 }`;
 
     const reply = await provider.chat([

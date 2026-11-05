@@ -16,6 +16,7 @@ export * from './batch';
 export * from './project';
 export * from './agent';
 export * from './brand-scraper';
+export * from './brand-css';
 export * from './registry';
 export * from './plan';
 export { extractJson, sanitizeCompositionJson } from './json';
