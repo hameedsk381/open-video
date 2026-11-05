@@ -144,3 +144,5 @@ export class FsProjectStore implements ProjectStore {
   restore(who: Principal, id: string, n: number) { return restoreRevision(this.file(who, id), n); }
   async workdir(who: Principal, id: string) { return { dir: this.projectDir(who, id), commit: async () => {} }; }
 }
+
+export { S3Client, loadS3ConfigFromEnv, type S3Config, type S3UploadResult } from './s3';

@@ -5,6 +5,7 @@ import { Queue, QueueEvents, type ConnectionOptions, type Job as BullJob } from 
 import type { Job } from '@ove/contracts';
 import type { Principal } from '@ove/storage';
 import { jobClass, type JobClass, type JobQueue, type JobRequest } from './queue';
+import { createJobWebhookPayload, dispatchWebhook } from './webhook';
 
 export const queueName = (cls: JobClass) => `ove-${cls}`;
 const classes: JobClass[] = ['render', 'ai'];
@@ -22,6 +23,7 @@ export class RedisQueue implements JobQueue {
   }
 
   async enqueue(request: JobRequest): Promise<Job> {
+    this.listen();
     const cls = jobClass(request.kind), id = `${cls === 'render' ? 'r' : 'a'}-${randomUUID()}`;
     const job = await this.queues[cls].add(request.kind, request, { jobId: id, attempts: 1, removeOnComplete: { age: 3600, count: 1000 }, removeOnFail: { age: 86_400, count: 1000 } });
     return this.toJob(job, 'queued');
@@ -53,6 +55,14 @@ export class RedisQueue implements JobQueue {
           const job = await this.queues[cls].getJob(jobId); if (!job) return;
           const view = await this.toJob(job);
           for (const item of [...this.listeners]) if (item.tenant === job.data.who.tenantId) { try { item.listener(view); } catch { this.listeners.delete(item); } }
+          if (view.status === 'done' || view.status === 'error') {
+            const webhookUrl = (job.data.input?.webhookUrl as string | undefined) || process.env.WEBHOOK_URL;
+            if (webhookUrl) {
+              const secret = (job.data.input?.webhookSecret as string | undefined) || process.env.WEBHOOK_SECRET;
+              const payload = createJobWebhookPayload(view);
+              void dispatchWebhook({ url: webhookUrl, secret, payload }).catch(() => {});
+            }
+          }
         } catch { /* the job went away between the event and the lookup */ }
       };
       for (const name of ['waiting', 'active', 'progress', 'completed', 'failed'] as const) events.on(name as any, tell);

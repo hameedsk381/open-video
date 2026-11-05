@@ -3,6 +3,7 @@ import type { Job, JobKind } from '@ove/contracts';
 import type { Principal } from '@ove/storage';
 import type { JobEnv } from './env';
 import { createHandlers } from './handlers';
+import { createJobWebhookPayload, dispatchWebhook } from './webhook';
 
 /** What a handler gives back: the kind of job and the work to do, reporting progress as it goes. */
 export type JobSpec = { kind: JobKind; run: (progress: (message: string) => void) => Promise<unknown> };
@@ -84,7 +85,14 @@ export class InProcessQueue implements JobQueue {
       job.error = this.redact(describeError(error));
       job.status = 'error';
     } finally {
-      job.endedAt = Date.now(); this.running = false; this.emit(entry); void this.pump();
+      job.endedAt = Date.now(); this.running = false; this.emit(entry);
+      const webhookUrl = (entry.request.input?.webhookUrl as string | undefined) || process.env.WEBHOOK_URL;
+      if (webhookUrl) {
+        const secret = (entry.request.input?.webhookSecret as string | undefined) || process.env.WEBHOOK_SECRET;
+        const payload = createJobWebhookPayload(job);
+        void dispatchWebhook({ url: webhookUrl, secret, payload }).catch(() => {});
+      }
+      void this.pump();
     }
   }
 }

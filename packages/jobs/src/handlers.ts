@@ -7,6 +7,7 @@ import {
   sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
 } from '@ove/ai';
 import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
+import { S3Client, loadS3ConfigFromEnv, type S3Config } from '@ove/storage';
 import { boolOf, canvasFor, folderName, integerIn, optionalNumber, optionalText, renderSettings, textOf } from './input';
 import type { JobEnv } from './env';
 import type { JobSpec } from './queue';
@@ -161,7 +162,36 @@ export function createHandlers(env: JobEnv) {
       let last = 0;
       const result = await renderMedia(composition, { ...settings, baseDir, output,
         onProgress: ({ rendered, total }) => { if (rendered === total || Date.now() - last > 1000) { last = Date.now(); progress(`Rendered ${rendered}/${total} frames`); } } });
-      return { ...resultFile(result.output), frames: result.frames, seconds: result.durationSeconds, format: result.format };
+      const baseResult = { ...resultFile(result.output), frames: result.frames, seconds: result.durationSeconds, format: result.format };
+
+      // Optional S3 / Cloudflare R2 / MinIO Direct Upload
+      const s3Conf = (input.s3Config as S3Config | undefined) ?? loadS3ConfigFromEnv();
+      if (s3Conf && (input.uploadS3 !== false)) {
+        try {
+          progress('Uploading rendered video to object storage (S3/R2)…');
+          const s3Client = new S3Client(s3Conf);
+          const videoBytes = await readFile(result.output);
+          const ext = result.format;
+          const contentType = ext === 'mp4' ? 'video/mp4' : ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : ext === 'gif' ? 'image/gif' : 'application/octet-stream';
+          const filename = result.output.split(/[\\/]/).pop() || `out.${ext}`;
+          const s3Key = optionalText(input.s3Key) ?? `renders/${paths.idOf(baseDir)}/${Date.now()}-${filename}`;
+          const s3Upload = await s3Client.putObject(s3Key, videoBytes, contentType);
+          const presignedUrl = s3Client.getSignedDownloadUrl(s3Key, 86400);
+          return {
+            ...baseResult,
+            s3: {
+              bucket: s3Upload.bucket,
+              key: s3Upload.key,
+              url: s3Upload.url,
+              publicUrl: s3Upload.publicUrl ?? presignedUrl,
+            },
+          };
+        } catch (uploadErr) {
+          progress(`Warning: S3 upload failed: ${(uploadErr as Error).message}`);
+        }
+      }
+
+      return baseResult;
     } };
   };
 

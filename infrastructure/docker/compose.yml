@@ -59,23 +59,73 @@ services:
       TRUST_PROXY: "${TRUST_PROXY:-1}"
       SIGNUPS: "${SIGNUPS:-1}"
       REQUIRE_VERIFIED: "${REQUIRE_VERIFIED:-0}"
+      WEBHOOK_URL: "${WEBHOOK_URL:-}"
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     volumes: ["data:/data"]
     networks: [internal, edge]
     depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
 
   worker-render:
     <<: *worker
-    environment: { JOB_LANE: render, REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379", DATA_DIR: /data, JOB_TIMEOUT_SECONDS: "${RENDER_TIMEOUT_SECONDS:-900}" }
-    networks: [internal]           # no route out
+    environment:
+      JOB_LANE: render
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      DATA_DIR: /data
+      JOB_TIMEOUT_SECONDS: "${RENDER_TIMEOUT_SECONDS:-900}"
+      WORKER_CONCURRENCY: "${WORKER_CONCURRENCY:-1}"
+      S3_ENDPOINT: "${S3_ENDPOINT:-}"
+      S3_BUCKET: "${S3_BUCKET:-}"
+      S3_REGION: "${S3_REGION:-us-east-1}"
+      S3_ACCESS_KEY_ID: "${S3_ACCESS_KEY_ID:-}"
+      S3_SECRET_ACCESS_KEY: "${S3_SECRET_ACCESS_KEY:-}"
+      S3_PUBLIC_URL: "${S3_PUBLIC_URL:-}"
+      S3_FORCE_PATH_STYLE: "${S3_FORCE_PATH_STYLE:-}"
+      WEBHOOK_URL: "${WEBHOOK_URL:-}"
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
+    networks: [internal, edge]     # edge reaches S3/R2 object storage for direct CDN uploads
     mem_limit: 3g
     cpus: 2
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   worker-ai:
     <<: *worker
-    environment: { JOB_LANE: ai, REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379", DATA_DIR: /data, JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}", GROQ_API_KEY: "${GROQ_API_KEY:-}" }
+    environment:
+      JOB_LANE: ai
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      DATA_DIR: /data
+      JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}"
+      WORKER_CONCURRENCY: "${AI_CONCURRENCY:-1}"
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      FREELLMAPI_KEY: "${FREELLMAPI_KEY:-}"
+      WEBHOOK_URL: "${WEBHOOK_URL:-}"
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     networks: [internal, edge]     # calls the AI provider
     mem_limit: 2g
     cpus: 1
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-28Z
+    profiles: [s3]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: "${S3_ACCESS_KEY_ID:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${S3_SECRET_ACCESS_KEY:-minioadmin}"
+    volumes: ["s3data:/data"]
+    networks: [internal, edge]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
 
 networks:
   internal: { internal: true }
@@ -85,3 +135,4 @@ volumes:
   data:
   pgdata:
   redisdata:
+  s3data:

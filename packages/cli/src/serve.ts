@@ -52,8 +52,9 @@ export async function runJobWorker(env: NodeJS.ProcessEnv = process.env): Promis
   const providerInfo = () => ({ provider: provider?.id, model: provider?.model });
   const runner = createJobRunner(jobEnvFor(store, lane === 'ai' ? requireProvider : () => { throw new Error('This worker does not run AI jobs'); }, providerInfo, false));
   const timeoutSeconds = Number(env.JOB_TIMEOUT_SECONDS ?? (lane === 'render' ? 900 : 300));
-  const { close } = runWorker({ connection: redisConnection(need(env, 'REDIS_URL')), lane, runner: runner.run, timeoutSeconds, redact: hideStorage(root), concurrency: 1 });
-  console.log(`OVE job worker: ${lane} lane, one job at a time, ${timeoutSeconds}s limit per job, storage ${root}`);
+  const concurrency = Math.max(1, Number(env.WORKER_CONCURRENCY ?? 1));
+  const { close } = runWorker({ connection: redisConnection(need(env, 'REDIS_URL')), lane, runner: runner.run, timeoutSeconds, redact: hideStorage(root), concurrency });
+  console.log(`MotionRender job worker: ${lane} lane, concurrency: ${concurrency}, ${timeoutSeconds}s limit per job, storage ${root}`);
   const stop = () => { void close().finally(() => process.exit(0)); };
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
 }
