@@ -4,10 +4,11 @@ import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
 import { Library, Settings } from './pages/Library';
 import { Projects } from './pages/Projects';
+import { Showcase } from './pages/Showcase';
 import { AuthPage, TokenPage, type Me } from './pages/Auth';
 import { api } from './api';
 import { useRoute } from './router';
-import { FilmIcon, LayersIcon, MoonIcon, PlusIcon, SlidersIcon, Spinner, StudioBrandLogo, SunIcon, UiProvider } from './ui';
+import { FilmIcon, LayersIcon, MoonIcon, PlusIcon, SlidersIcon, SparklesIcon, Spinner, StudioBrandLogo, SunIcon, UiProvider } from './ui';
 
 type Mode = 'dark' | 'light' | 'system';
 const modes: Mode[] = ['dark', 'light', 'system'];
@@ -71,6 +72,7 @@ function ProviderBadge() {
 }
 
 const nav = [
+  ['showcase', '#/showcase', 'Inspiration', SparklesIcon] as const,
   ['projects', '#/', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Library', LayersIcon] as const,
   ['settings', '#/settings', 'Settings', SlidersIcon] as const,
@@ -161,8 +163,10 @@ export function App() {
             <TokenPage kind={route.name} token={route.token} />
           ) : session.state === 'out' ? (
             <AuthPage signups={session.signups} onSignedIn={user => setSession({ state: 'in', user })} />
+          ) : route.name === 'showcase' ? (
+            <Showcase />
           ) : route.name === 'new' ? (
-            <Create initialTemplate={route.template} initialKind={route.kind} />
+            <Create initialTemplate={route.template} initialKind={route.kind} initialPrompt={route.prompt} />
           ) : route.name === 'making' ? (
             <Making id={route.id} job={route.job} />
           ) : route.name === 'editor' ? (

@@ -36,9 +36,9 @@ const examples = [
   'High-impact SaaS product update announcing realtime collaboration and AI workflows',
 ];
 
-export function Create({ initialTemplate, initialKind }: { initialTemplate?: string; initialKind?: string } = {}) {
+export function Create({ initialTemplate, initialKind, initialPrompt }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string } = {}) {
   const [kind, setKind] = useState<string>(initialKind || 'reel');
-  const [brief, setBrief] = useState('');
+  const [brief, setBrief] = useState(initialPrompt || '');
   const [name, setName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [duration, setDuration] = useState('');

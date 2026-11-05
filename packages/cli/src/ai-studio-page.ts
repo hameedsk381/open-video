@@ -64,10 +64,10 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--accent);box
 input[type=color]{padding:2px;height:36px;width:64px;border-radius:6px}input[type=checkbox]{width:auto}
 label.f{display:block;margin:0 0 16px}label.f>span{display:block;color:var(--muted);font-size:12.5px;font-weight:500;margin-bottom:6px}
 .bar{display:flex;align-items:center;gap:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
-.card{background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:all .2s ease;box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.04)}
-.card:hover{border-color:rgba(45,212,191,0.35);transform:translateY(-3px);box-shadow:0 12px 28px -6px rgba(0,0,0,0.6),0 0 0 1px rgba(45,212,191,0.25)}
-.thumb{aspect-ratio:16/10;background:#030508;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
+.card{background:#111216;border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:9px;overflow:hidden;display:flex;flex-direction:column;transition:all .25s ease;box-shadow:0 16px 36px -12px rgba(0,0,0,0.6)}
+.card:hover{border-color:rgba(255,255,255,0.22);transform:translateY(-3px);box-shadow:0 24px 48px -12px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.08)}
+.thumb{aspect-ratio:16/10;background:#090a0f;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative;border:1px solid rgba(255,255,255,0.04)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}
 .card:hover .thumb img{transform:scale(1.03)}
 .thumb .ph{color:var(--dim);font-size:12px;display:flex;align-items:center;gap:6px}
@@ -155,11 +155,31 @@ details summary:hover{color:var(--text)}
 .toast.bad{background:#2a1117;border-color:#5c1d29;color:#fecdd3}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .modal{position:fixed;inset:0;background:rgba(2,4,8,0.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80}.modal>div{background:var(--panel-solid);border:1px solid var(--line);border-radius:14px;padding:24px;width:min(460px,92vw);box-shadow:0 20px 40px rgba(0,0,0,0.8)}
+.pills{display:flex;gap:8px;overflow-x:auto;padding:14px 0;margin:16px 0 24px;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06)}
+.pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;transition:all .15s}
+.pill:hover{color:#fff;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18)}
+.pill.on{background:#fff;color:#09090b;border-color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(255,255,255,0.25)}
+.pill .cnt{font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px;background:rgba(255,255,255,0.12)}
+.pill.on .cnt{background:rgba(0,0,0,0.12);color:#09090b}
+.bcard{background:#111216;border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:10px;display:flex;flex-direction:column;transition:all .25s ease;cursor:pointer;position:relative;box-shadow:0 16px 36px -12px rgba(0,0,0,0.6)}
+.bcard:hover{border-color:rgba(255,255,255,0.22);transform:translateY(-4px);box-shadow:0 24px 48px -12px rgba(0,0,0,0.8)}
+.bmedia{border-radius:16px;aspect-ratio:16/10;overflow:hidden;position:relative;background:#090a0f;display:flex;align-items:center;justify-content:center}
+.bprompt{background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,0.55);line-height:1.45;font-style:italic;margin-top:6px}
+.bacts{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05)}
+.bcopy{flex:1;background:rgba(255,255,255,0.05);color:var(--text);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.bcopy:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
+.brender{flex:1;background:#fff;color:#09090b;border:1px solid #fff;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.brender:hover{opacity:.9;transform:translateY(-1px)}
+.smodal{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;z-index:90;padding:20px;overflow-y:auto}
+.sdialog{background:#111216;border:1px solid rgba(255,255,255,0.12);border-radius:26px;width:min(820px,94vw);max-height:90vh;overflow-y:auto;padding:26px;display:flex;flex-direction:column;gap:18px;position:relative}
+.sclose{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sclose:hover{background:rgba(255,255,255,0.12);color:#fff}
+.sprompt{background:#090a0f;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;font:13px/1.6 ui-monospace,Consolas,monospace;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
 @media (max-width:960px){.editor{grid-template-columns:1fr;height:auto}.side{border-left:0;border-top:1px solid var(--line)}header.top{gap:10px;padding:0 12px}.busy{display:none!important}}
 </style></head><body>
 <header class="top">
 <a class="brand" href="#/"><span class="mark">MR</span> MotionRender <span class="vpill">AI Studio</span></a>
-<nav class="main"><a href="#/" data-nav="home">Projects</a><a href="#/library" data-nav="library">Library</a><a href="#/settings" data-nav="settings">Settings</a></nav>
+<nav class="main"><a href="#/showcase" data-nav="showcase">Inspiration</a><a href="#/" data-nav="home">Projects</a><a href="#/library" data-nav="library">Library</a><a href="#/settings" data-nav="settings">Settings</a></nav>
 <div class="grow"></div>
 <a class="pbadge" id="pbadge" href="#/settings"><span class="pdot"></span><span id="pbadgetext">AI Ready</span></a>
 <div class="busy" id="busy"><div class="spin"></div><span id="busytext"></span></div>
@@ -226,7 +246,7 @@ function route() {
   var hash = location.hash.replace('#', '') || '/', parts = hash.split('/').filter(Boolean), view = parts[0] || 'home';
   document.querySelectorAll('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-nav') === (view === 'new' || view === 'p' ? 'home' : view)); });
   app.innerHTML = ''; app.scrollTop = 0;
-  var go = { home: home, new: create, library: library, settings: settings }[view];
+  var go = { home: home, new: create, library: library, settings: settings, showcase: showcase }[view];
   if (view === 'p' && parts[1]) return editor(decodeURIComponent(parts[1]), parts[2]);
   if (view === 'making' && parts[1]) return making(decodeURIComponent(parts[1]), parts[2]);
   (go || home)();
@@ -280,6 +300,187 @@ function card(p) {
   ]);
 }
 
+/* inspiration & prompt showcase (prompt-motion style) */
+var showcaseItems = [
+  { id: 'ui-morph', title: 'Shape Morphing Through UI States', cat: 'Product UI', aspect: '16:9', dur: '12s', fps: 60, author: '@twoclipping', av: 'TC', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#090d16 0%,#1e1b4b 50%,#0f172a 100%)', color: '#818cf8', prompt: 'Make an ultra-clean 12-second SaaS UI animation demonstrating shape morphing across three states: idle state with glowing status indicator, active state where cards expand fluidly with spring physics, and success celebration with kinetic particle pop. Use sleek dark glassmorphism, crisp Inter typography, and subframe motion blur.', summary: 'Fluid state transitions with spring physics, glass cards, and status pill transitions.' },
+  { id: 'kinetic-showreel', title: 'Bold Kinetic Typography Showreel', cat: 'Kinetic Type', aspect: '9:16', dur: '15s', fps: 60, author: '@shneural', av: 'SN', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#18181b 0%,#09090b 50%,#27272a 100%)', color: '#2dd4bf', prompt: 'A bold, high-energy 15-second kinetic typography reel. Start with rapid rhythmic cuts on single impactful words, transition into an elastic word cascade, dynamic highlighter swipe on the punchline, and finish with an extruded neon title reveal. Strict 9:16 vertical safe-zones with Edge Neural TTS speech timing.', summary: 'Rhythmic typography cascade with word-level kinetic emphasis and social safe-zone alignment.' },
+  { id: 'glass-bento', title: '3D Floating Glass Bento Grid', cat: '3D & WebGL', aspect: '16:9', dur: '10s', fps: 60, author: '@stephanlivera', av: 'SL', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#030712 0%,#111827 50%,#1f2937 100%)', color: '#38bdf8', prompt: 'Create a cinematic 10-second product film featuring an isometric bento grid floating in 3D space with subtle camera push and depth of field. Each glass tile reveals a core feature with frosted glass refraction, glowing border outline, and soft ambient drop shadows.', summary: 'Isometric bento layout with depth-of-field camera push and frosted glass reflections.' },
+  { id: 'social-reel', title: 'Viral Social Reel Hook & Captions', cat: 'Social Reels', aspect: '9:16', dur: '15s', fps: 30, author: '@notdwd', av: 'ND', model: 'FreeLLMAPI & Edge TTS', grad: 'linear-gradient(135deg,#09090b 0%,#1c1917 50%,#292524 100%)', color: '#f97316', prompt: 'Generate an irresistible 15-second vertical video designed for TikTok and Instagram Reels. Top third features an attention-grabbing hook badge with animated siren glow, middle has dynamic animated cards, and bottom displays synchronized word-by-word highlighted captions timed exactly to the voiceover.', summary: 'High-retention vertical layout with animated headline hook and synced word captions.' },
+  { id: 'analytics-dash', title: 'SaaS Analytics Counter Reveal', cat: 'Product UI', aspect: '16:9', dur: '10s', fps: 60, author: '@motionrender', av: 'MR', model: 'MotionRender Engine', grad: 'linear-gradient(135deg,#052e16 0%,#064e3b 50%,#022c22 100%)', color: '#10b981', prompt: 'Create a polished product feature video showcasing real-time analytics. Numbers rapidly count up with spring easing from 0 to 4.2M users, accompanied by an animated glowing SVG sparkline that draws across the canvas, followed by badge status pills turning green.', summary: 'Spring-eased number counter animations with live animated trendline graph.' },
+  { id: 'phone-scroll', title: '3D Phone Mockup Scroll Showcase', cat: '3D & WebGL', aspect: '9:16', dur: '12s', fps: 60, author: '@twoclipping', av: 'TC', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#0a0a0a 0%,#171717 50%,#262626 100%)', color: '#a855f7', prompt: 'A sleek 3D smartphone mockup that tilts toward the camera. The screen displays an interactive mobile app onboarding sequence that scrolls smoothly through 3 cards with subtle parallax, ending with a dynamic download call-to-action card.', summary: 'Parallax device mockup with smooth screen interaction and CTA card entrance.' },
+  { id: 'stats-split', title: 'Dual Metric Growth Split-Screen', cat: 'Charts & Data', aspect: '16:9', dur: '8s', fps: 60, author: '@linearuncle', av: 'LU', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#1e1b4b 0%,#31104b 50%,#0f172a 100%)', color: '#f43f5e', prompt: 'A bold data comparison video split down the center. Left column reveals 10x Faster Deployment with an animated circular progress ring; right column shows +320% Revenue with rising bar charts and celebration particles. Crisp monospace data labels.', summary: 'Split-screen data comparison with synchronized progress rings and bar meters.' },
+  { id: 'cinematic-logo', title: 'Cinematic Dark Mode Logo Reveal', cat: 'Brand Promos', aspect: '16:9', dur: '6s', fps: 60, author: '@lexnlin', av: 'LL', model: 'Claude Opus 5.5 & MotionRender', grad: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#1e293b 100%)', color: '#60a5fa', prompt: 'A 6-second broadcast-grade logo intro on deep obsidian black. An ethereal spotlight sweeps across an embossed metallic logo with light leaks and chromatic aberration, followed by a crisp brand tagline fading in with letter-spacing drift and an impact bass hit.', summary: 'Spotlight sweep, chromatic aberration, light leak reflections, and typography fade.' },
+  { id: 'quote-reveal', title: 'Distilbook Kinetic Quote Reveal', cat: 'Kinetic Type', aspect: '1:1', dur: '8s', fps: 60, author: '@ajith_io', av: 'AI', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#1c1917 0%,#292524 50%,#0c0a09 100%)', color: '#eab308', prompt: 'Create an editorial 1:1 square animated quote video. Large serif typography renders with typewriter reveal, followed by a warm yellow marker highlighter stroke wiping across the primary concept, ending with an elegant author signature card.', summary: 'Editorial typography styling with marker highlighter wipe and author attribution.' },
+  { id: 'product-spotlight', title: 'Minimalist Hardware Product Card', cat: 'Product UI', aspect: '1:1', dur: '10s', fps: 60, author: '@gabrielbuzziv', av: 'GB', model: 'MotionRender Engine', grad: 'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%)', color: '#38bdf8', prompt: 'A clean 10-second square product video for a modern hardware device. Smooth slow-motion scale-in of the product photograph with drop shadow, animated badge chips showing technical specs, and animated price tag.', summary: 'Subtle product zoom, specs pills entry, and dynamic CTA price banner.' },
+  { id: 'roadmap-timeline', title: 'Interactive Product Roadmap Timeline', cat: 'Charts & Data', aspect: '16:9', dur: '12s', fps: 30, author: '@gabrielbuzziv', av: 'GB', model: 'Claude Opus 5.5', grad: 'linear-gradient(135deg,#030712 0%,#0f172a 50%,#111827 100%)', color: '#34d399', prompt: 'A timeline progression animation tracking quarterly product milestones. A glowing neon cursor travels across an SVG path, activating step cards one by one with subtle scale pulse and checkmark reveals. Clean date tags and dark mode palette.', summary: 'Animated milestone journey tracking quarterly releases along an animated path.' },
+  { id: 'keynote-opener', title: 'Agency Launch Keynote Opener', cat: 'Brand Promos', aspect: '16:9', dur: '14s', fps: 60, author: '@himanshutwtxs', av: 'HT', model: 'Claude Opus 5.5 & MotionRender', grad: 'linear-gradient(135deg,#1c1917 0%,#451a03 50%,#0c0a09 100%)', color: '#fb923c', prompt: 'A high-impact 14-second conference keynote opening video. Cinematic Ken Burns zoom across architectural backdrop imagery, overlaid with huge condensed headline typography, dual-color gradients, and rhythmic camera shake impacts on beat drops.', summary: 'Cinematic keynote sequence with Ken Burns camera moves and high-contrast typography.' }
+];
+
+function showcase() {
+  var page = h('div', { class: 'page', style: 'max-width:1400px;padding-bottom:80px' }); app.appendChild(page);
+  var selCat = 'All', searchVal = '';
+
+  var hero = h('div', { class: 'hero', style: 'margin-bottom:14px' }, [
+    h('div', null, [
+      h('div', { style: 'display:flex;align-items:center;gap:10px;margin-bottom:12px' }, [
+        h('span', { class: 'tag', style: 'color:#fff;background:rgba(255,255,255,0.06);padding:3px 10px', text: '✨ Prompt Motion Showcase' }),
+        h('span', { class: 'tag ok', text: '● 12 Curated Prompts' })
+      ]),
+      h('h1', { text: 'Motion Graphics Prompt Library', style: 'font-size:32px;letter-spacing:-0.03em' }),
+      h('p', { class: 'lead', style: 'max-width:780px', text: 'Curated motion designs made with Claude Opus 5.5 and MotionRender. Copy prompts directly or render them in your studio.' })
+    ]),
+    h('div', { class: 'bar' }, [h('a', { class: 'btn', href: '#/new', text: '+ New video' })])
+  ]);
+  page.appendChild(hero);
+
+  var searchBox = h('input', { placeholder: 'Search prompts, motion styles, UI state animations, or creators…', style: 'max-width:540px;margin-bottom:4px' });
+  page.appendChild(searchBox);
+
+  var pillsContainer = h('div', { class: 'pills' });
+  page.appendChild(pillsContainer);
+
+  var grid = h('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px' });
+  page.appendChild(grid);
+
+  var cats = ['All', 'Product UI', 'Kinetic Type', '3D & WebGL', 'Social Reels', 'Charts & Data', 'Brand Promos'];
+
+  function drawPills() {
+    pillsContainer.innerHTML = '';
+    cats.forEach(function (c) {
+      var count = c === 'All' ? showcaseItems.length : showcaseItems.filter(function (it) { return it.cat === c; }).length;
+      var btn = h('button', { class: 'pill' + (selCat === c ? ' on' : ''), onclick: function () { selCat = c; draw(); } }, [
+        h('span', { text: c }),
+        h('span', { class: 'cnt', text: String(count) })
+      ]);
+      pillsContainer.appendChild(btn);
+    });
+  }
+
+  function draw() {
+    drawPills();
+    grid.innerHTML = '';
+    var q = searchVal.toLowerCase().trim();
+    var list = showcaseItems.filter(function (it) {
+      var matchCat = selCat === 'All' || it.cat === selCat;
+      var matchQ = !q || it.title.toLowerCase().indexOf(q) !== -1 || it.prompt.toLowerCase().indexOf(q) !== -1 || it.author.toLowerCase().indexOf(q) !== -1 || it.cat.toLowerCase().indexOf(q) !== -1;
+      return matchCat && matchQ;
+    });
+
+    if (!list.length) {
+      grid.appendChild(h('div', { class: 'empty', style: 'grid-column:1/-1' }, [
+        h('h2', { text: 'No matching prompts found' }),
+        h('p', { class: 'lead', text: 'Try selecting a different category or clearing search.' })
+      ]));
+      return;
+    }
+
+    list.forEach(function (it) {
+      grid.appendChild(bcard(it));
+    });
+  }
+
+  searchBox.addEventListener('input', function (e) {
+    searchVal = e.target.value;
+    draw();
+  });
+
+  draw();
+}
+
+function bcard(it) {
+  var openModal = function () { smodal(it); };
+  var card = h('div', { class: 'bcard', onclick: openModal });
+
+  var media = h('div', { class: 'bmedia', style: 'background:' + it.grad }, [
+    h('div', { style: 'position:absolute;width:120px;height:120px;border-radius:50%;filter:blur(40px);opacity:0.35;background:' + it.color }),
+    h('div', { style: 'position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px' }, [
+      h('span', { style: 'font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35)', text: it.cat }),
+      h('div', { style: 'width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px', text: '▶' })
+    ]),
+    h('span', { class: 'abadge', text: it.cat + ' · ' + it.aspect }),
+    h('span', { class: 'tbadge', text: it.dur + ' · ' + it.fps + 'fps' })
+  ]);
+
+  var copyBtn = h('button', { class: 'bcopy', text: '📋 Copy Prompt', onclick: function (e) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(it.prompt).then(function () {
+      toast('Prompt copied to clipboard!');
+      copyBtn.textContent = '✓ Copied!';
+      setTimeout(function () { copyBtn.textContent = '📋 Copy Prompt'; }, 2000);
+    });
+  } });
+
+  var renderBtn = h('button', { class: 'brender', text: '✨ Render Video', onclick: function (e) {
+    e.stopPropagation();
+    location.hash = '#/new?prompt=' + encodeURIComponent(it.prompt);
+  } });
+
+  var body = h('div', { style: 'padding:14px 6px 4px;display:flex;flex-direction:column;gap:7px;flex:1' }, [
+    h('div', { style: 'display:flex;align-items:center;gap:7px;font-size:12px' }, [
+      h('span', { style: 'width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center', text: it.av }),
+      h('span', { style: 'color:var(--muted);font-weight:500', text: it.author }),
+      h('span', { style: 'margin-left:auto;font-size:10.5px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.04);padding:2px 7px;border-radius:4px', text: it.model.split(' ')[0] })
+    ]),
+    h('b', { style: 'font-size:15px;color:#fff;line-height:1.35;margin-top:2px', text: it.title }),
+    h('p', { style: 'font-size:12.5px;color:var(--muted);line-height:1.45;margin:0', text: it.summary }),
+    h('div', { class: 'bprompt' }, [h('p', { style: 'margin:0', text: '"' + it.prompt.slice(0, 110) + '…"' })]),
+    h('div', { class: 'bacts' }, [copyBtn, renderBtn])
+  ]);
+
+  card.append(media, body);
+  return card;
+}
+
+function smodal(it) {
+  var m = h('div', { class: 'smodal', onclick: function () { m.remove(); } });
+  var dlg = h('div', { class: 'sdialog', onclick: function (e) { e.stopPropagation(); } });
+
+  var close = h('button', { class: 'sclose', text: '✕', onclick: function () { m.remove(); } });
+
+  var head = h('div', null, [
+    h('div', { style: 'display:flex;align-items:center;gap:10px;margin-bottom:8px' }, [
+      h('span', { style: 'width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center', text: it.av }),
+      h('div', null, [h('b', { style: 'color:#fff;font-size:14px', text: it.author }), h('div', { style: 'font-size:12px;color:var(--muted)', text: 'Created with ' + it.model })]),
+      h('span', { class: 'tag ok', style: 'margin-left:auto', text: it.cat }),
+      h('span', { class: 'tag', text: it.aspect })
+    ]),
+    h('h2', { style: 'font-size:22px;color:#fff;margin:6px 0 0', text: it.title })
+  ]);
+
+  var player = h('div', { style: 'border-radius:18px;aspect-ratio:16/9;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:' + it.grad }, [
+    h('div', { style: 'position:absolute;width:240px;height:240px;border-radius:50%;filter:blur(54px);opacity:0.35;background:' + it.color }),
+    h('div', { style: 'position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center' }, [
+      h('div', { style: 'width:56px;height:56px;border-radius:50%;background:#fff;color:#09090b;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.5)', text: '▶' }),
+      h('b', { style: 'color:#fff;font-size:15px', text: 'Motion Canvas Preview' }),
+      h('span', { style: 'font-size:12px;color:rgba(255,255,255,0.6)', text: it.dur + ' · ' + it.fps + ' FPS · Subframe Motion Blur' })
+    ])
+  ]);
+
+  var promptSec = h('div', null, [
+    h('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px' }, [
+      h('b', { style: 'color:#fff;font-size:13.5px', text: 'Prompt & Motion Recipe' }),
+      h('button', { class: 'btn sec sm', text: 'Copy Prompt', onclick: function () {
+        navigator.clipboard.writeText(it.prompt).then(function () { toast('Prompt copied!'); });
+      } })
+    ]),
+    h('div', { class: 'sprompt', text: it.prompt })
+  ]);
+
+  var foot = h('div', { style: 'display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08)' }, [
+    h('span', { style: 'font-size:12.5px;color:var(--muted)', text: 'Audio: Edge Neural TTS with WordBoundary Subtitles' }),
+    h('div', { class: 'bar' }, [
+      h('button', { class: 'btn sec', text: 'Close', onclick: function () { m.remove(); } }),
+      h('button', { class: 'btn', text: '✨ Render in Studio', onclick: function () {
+        m.remove(); location.hash = '#/new?prompt=' + encodeURIComponent(it.prompt);
+      } })
+    ])
+  ]);
+
+  dlg.append(close, head, player, promptSec, foot);
+  m.appendChild(dlg);
+  document.body.appendChild(m);
+}
+
 /* create screen with dual mode */
 var kinds = [
   ['reel', '📱 Social Reel', 'Vertical 9:16, ~20s. For TikTok, Shorts, Reels'],
@@ -296,7 +497,10 @@ var examples = [
 
 function create() {
   var activeMode = 'ai'; // 'ai' or 'paste'
-  var kind = 'reel', files = [], page = h('div', { class: 'page narrow' }); app.appendChild(page);
+  var qParam = (location.hash.split('?')[1] || '');
+  var qPrompt = new URLSearchParams(qParam).get('prompt');
+  var qKind = new URLSearchParams(qParam).get('kind');
+  var kind = qKind || 'reel', files = [], page = h('div', { class: 'page narrow' }); app.appendChild(page);
 
   var modeSwitch = h('div', { class: 'mode-switch' });
   var btnAi = h('button', { class: 'on', text: '✨ Generate with AI' });
@@ -319,6 +523,7 @@ function create() {
 
   /* Tab 1: AI Generation */
   var brief = h('textarea', { placeholder: 'What is your video about? Who is it for? Key points or message?', style: 'min-height:120px' });
+  if (qPrompt) brief.value = decodeURIComponent(qPrompt);
   var name = h('input', { placeholder: 'Optional. Auto-generated from your brief if left empty' });
   var tiles = h('div', { class: 'tiles' }), fileList = h('div', { class: 'files' }), errBox = h('div');
   var drawTiles = function () {
