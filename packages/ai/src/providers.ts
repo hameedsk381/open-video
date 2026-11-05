@@ -389,16 +389,17 @@ export class NvidiaProvider implements AiProvider {
 }
 
 export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
-  // Preference orders are live-probed against the gateway (tmp/diag-freellm.ts): models that failed JSON mode
-  // (llama-3.3-70b), took 39-63 s for identical output (qwen3.5-397b, gemma-4-31b) or returned the wrong shape
-  // (nemotron-3-nano-30b-reasoning) are dropped; the gateway's own 'auto' router is the fast, reliable floor.
-  compose: ['auto', 'gpt-oss-120b'],
-  template: ['auto', 'qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'qwen3.6-27b'],
-  heal: ['auto', 'nemotron-3-nano-omni-reasoning'],
+  // Preference orders are live-probed against the FreeLLMAPI gateway: qwen3.8-27b delivers the lowest
+  // latency (161ms TTFT, 185 tok/s, 199ms JSON task) and highest stability. gpt-oss-120b (stalls 40+ s, 502/429 errors),
+  // nemotron (9.7 tok/s), broken stream endpoints (gemini/glm/kilo), and slow routers (free-router 2.6 tok/s) are dropped;
+  // 'auto' is the proven fallback.
+  compose: ['qwen3.8-27b', 'auto'],
+  template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'auto'],
+  heal: ['qwen3.8-27b', 'auto'],
   vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
-  brand: ['auto', 'qwen3.8-27b'],
-  batch: ['auto', 'kilo-auto', 'qwen3.6-27b', 'free-router'],
-  fast: ['auto', 'mistral-small-3.2-24b', 'qwen3.8-27b'],
+  brand: ['qwen3.8-27b', 'auto'],
+  batch: ['qwen3.8-27b', 'auto'],
+  fast: ['qwen3.8-27b', 'auto', 'mistral-small-3.2-24b'],
 };
 
 let cachedFreeLlmModels: { models: Set<string>; expiresAt: number } | undefined;

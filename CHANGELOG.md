@@ -2,6 +2,11 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.3 (2026-11-05)
+
+### Performance
+- **FreeLLMAPI task model routing optimization.** Prioritized high-throughput, low-latency models (`qwen3.8-27b` at 185 tok/s, 161ms TTFT) across all generation tasks (`compose`, `template`, `heal`, `brand`, `batch`, `fast`). Dropped slow models (`gpt-oss-120b` stalling 40+ s, `nemotron` at 9.7 tok/s), broken stream endpoints (`gemini-*`, `glm-*`, `kilo-auto` throwing HTTP 502/503), and slow routers (`free-router` at 2.6 tok/s), retaining `auto` as reliable fallback.
+
 ## 0.3.2 (2026-11-05)
 
 ### Added
