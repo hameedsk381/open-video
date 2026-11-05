@@ -2,6 +2,14 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.9 (2026-11-06)
+
+### Changed
+- **WCAG 2.2 AA Contrast Compliance.** Elevated dark muted text (`--color-text-muted: #82828a`) to achieve 4.82:1 contrast against elevated bento surfaces and 5.42:1 against the obsidian canvas, satisfying WCAG 2.2 Level AA requirements for normal text. Elevated light theme muted text to `#767676` (4.54:1) and tuned green text indicators to `#047857` (4.55:1).
+- **Design System Semantic Hardening.** Replaced hardcoded inline hex values in button states, bento cards, category pills, and modal triggers with semantic tokens (`--color-surface-muted`, `--color-surface-base`, `--color-surface-elevated`).
+- **Scrubber Brand Accent Harmonization.** Aligned timeline scrubber playhead, scrub handle, and played audio bar highlights with `var(--color-accent-brand, #3b82f6)`.
+- **Design Theme & Color Palette Audit.** Added comprehensive token audit documentation in `docs/design-theme-color-palette-audit.md` covering Studio UI tokens, video render engine themes, AI scene contracts, and OKLab color space transduction.
+
 ## 0.3.8 (2026-11-05)
 
 ### Fixed
