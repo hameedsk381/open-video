@@ -109,6 +109,8 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Every scene must have layers; every layer must have a unique id; every text layer must have non-empty content.
 - Text at least 24px; body 28-36px; headings 64-96px; titles 140-200px at 1920 wide.
 - Keep content inside a 6% margin; keep the bottom 12% clear when captions may sit there.
+- Social Safe Zones for vertical 9:16 canvases (reels/shorts): keep the bottom 18% clear of text (covered by platform caption/audio UI) and right 11% clear of text (covered by action buttons).
+- Group layouts: prefer a "group" with "layout": { "direction": "column"|"row", "gap": 24, "align": "center", "justify": "center" } for stacking cards, badges, and headline+body text instead of calculating manual y offsets. This prevents text overlap across aspect ratios.
 - Do not use opacity 0 as a way to hide a layer for the whole video: omit it or fade it in.
 - Give every rect/circle a width and height (circle: width). A rect without width and height draws nothing.
 - Use "land" for entrances, "move" for repositioning, "exit" for exits, "drift" for slow continuous motion.

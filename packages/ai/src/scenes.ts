@@ -171,7 +171,7 @@ Layer shapes (x and y are the layer's CENTRE in pixels):
 House rules:
 - Use ONLY the palette colours: background ${contract.background}, text ${contract.text}, primary ${contract.primary}, accent ${contract.accent}, secondary ${contract.secondary}.
 - Fonts: headings in ${contract.fonts.heading}, supporting text in ${contract.fonts.body}.
-- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}.
+- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}. On vertical 9:16 canvases, keep text above y ${Math.round(options.height * 0.82)} (bottom 18% is covered by platform UI) and left of x ${Math.round(options.width * 0.89)} (right 11% is covered by buttons).
 - The scene's headline (largest text) MUST carry "split": { "by": "words", "stagger": 4, "preset": "rise" }.
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.

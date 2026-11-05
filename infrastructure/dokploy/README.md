@@ -85,3 +85,4 @@ To scale render workers horizontally in Dokploy:
   docker compose -f infrastructure/dokploy/compose.yml up --scale worker-render=4 -d
   ```
 - Workers automatically distribute rendering tasks from BullMQ in parallel.
+

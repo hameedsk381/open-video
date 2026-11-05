@@ -76,6 +76,25 @@ export async function launchBrowser(): Promise<Browser> { const explicit=process
 export async function describeBrowser(): Promise<string> { const browser=await launchBrowser(); try { return `${browser.browserType().name()} ${browser.version()}${process.env.OVE_CHROMIUM_EXECUTABLE ? ` (OVE_CHROMIUM_EXECUTABLE=${process.env.OVE_CHROMIUM_EXECUTABLE})` : existsSync(chromium.executablePath()) ? ' (Playwright Chromium)' : ' (installed Chrome/Edge)'}`; } finally { await browser.close(); } }
 // Past ~4 pages Chromium competes with FFmpeg's encoder for CPU and renders get slower, so the default stays small.
 export const defaultConcurrency = () => Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
+function operationsEqual(a: DrawOperation[], b: DrawOperation[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const opA = a[i]!, opB = b[i]!;
+    if (opA.kind !== opB.kind || opA.mediaTime !== opB.mediaTime || opA.frameKey !== opB.frameKey) return false;
+    const lA = opA.layer, lB = opB.layer;
+    if (lA.id !== lB.id || lA.x !== lB.x || lA.y !== lB.y || lA.opacity !== lB.opacity ||
+        lA.rotation !== lB.rotation || lA.scale !== lB.scale || lA.width !== lB.width ||
+        lA.height !== lB.height || lA.fill !== lB.fill || lA.color !== lB.color ||
+        lA.stroke !== lB.stroke || lA.strokeWidth !== lB.strokeWidth) {
+      return false;
+    }
+    if (opA.children || opB.children) {
+      if (!opA.children || !opB.children || !operationsEqual(opA.children, opB.children)) return false;
+    }
+  }
+  return true;
+}
+
 // Each page lives in its own browser context so Chromium gives it a separate renderer process; frames are independent, so any page can draw any frame.
 export async function createRenderer(composition: Composition, options: RendererOptions = {}): Promise<Renderer> { const baseDir=options.baseDir ?? process.cwd();
   if (hasCodeLayers(composition.scenes.flatMap(s => s.layers)) && !options.allowCode) throw new Error('This composition has code layers, which run JavaScript while rendering. Render it only if you trust it, with --allow-code (or allowCode: true).'); const concurrency=Math.max(1, Math.floor(options.concurrency ?? 1)); const output=scaledSize(composition, options.scale ?? composition.export.scale); const videos=await prepareVideos(composition, baseDir); const sources=Object.fromEntries(await Promise.all(collectImageSources(allLayers(composition)).map(async src => [src, await toDataUrl(resolveAssetSource(composition, src, baseDir))] as const))); const fonts=[...await builtinFonts(), ...await Promise.all(composition.assets.filter(a => a.type === 'font').map(async a => ({ family: a.family ?? a.id, src: a.src, weight: a.weight ?? 400, style: a.style ?? 'normal', url: await toDataUrl(resolveAssetSource(composition, a.src, baseDir)) })))]; const reactImages=hasReactLayers(allLayers(composition)) ? Object.fromEntries(await Promise.all(composition.assets.filter(a => a.type === 'image').flatMap(a => [a.id, a.src]).map(async key => [key, await toDataUrl(resolveAssetSource(composition, key, baseDir))] as const))) : {}; const codes=Object.fromEntries(await Promise.all(collectCodeSources(allLayers(composition)).map(async src => { const file=resolveAssetSource(composition, src, baseDir); try { return [src, { text: await readFile(file, 'utf8') }] as const; } catch (error) { throw new Error(`Code ${src} could not be read from ${file}: ${(error as Error).message}`); } }))); const lotties=Object.fromEntries(await Promise.all(collectLottieSources(allLayers(composition)).map(async src => { const file=resolveAssetSource(composition, src, baseDir); try { return [src, JSON.parse(await readFile(file, 'utf8'))] as const; } catch (error) { throw new Error(`Lottie ${src} could not be read from ${file}: ${(error as Error).message}`); } })));
@@ -88,7 +107,20 @@ export async function createRenderer(composition: Composition, options: Renderer
   // so a hard cut does not blend with the scene before it).
   const blur=options.motionBlur === false ? undefined : composition.motionBlur;
   const payload=async (frame: number, sharp=false) => { const operations=prepareOperations(toDrawOperations(evaluateFrame(composition,frame)), composition.fps); const videoFrames=await attachVideoFrames(operations);
-    let subframes: { operations: DrawOperation[] }[] | undefined; if (blur && !sharp) { subframes=[]; for (let i=0; i<blur.samples; i++) { const t=Math.min(composition.durationFrames-1e-6, frame+i/blur.samples*blur.shutter/360); const ops=i === 0 ? operations : prepareOperations(toDrawOperations(evaluateFrame(composition,t)), composition.fps); if (i > 0) Object.assign(videoFrames, await attachVideoFrames(ops)); subframes.push({ operations: ops }); } }
+    let subframes: { operations: DrawOperation[] }[] | undefined;
+    if (blur && !sharp && blur.samples > 1) {
+      const tEnd = Math.min(composition.durationFrames-1e-6, frame + (blur.samples - 1) / blur.samples * blur.shutter / 360);
+      const endOps = tEnd > frame ? prepareOperations(toDrawOperations(evaluateFrame(composition, tEnd)), composition.fps) : operations;
+      if (!operationsEqual(operations, endOps)) {
+        subframes=[];
+        for (let i=0; i<blur.samples; i++) {
+          const t=Math.min(composition.durationFrames-1e-6, frame+i/blur.samples*blur.shutter/360);
+          const ops=i === 0 ? operations : (t === tEnd ? endOps : prepareOperations(toDrawOperations(evaluateFrame(composition,t)), composition.fps));
+          if (i > 0) Object.assign(videoFrames, await attachVideoFrames(ops));
+          subframes.push({ operations: ops });
+        }
+      }
+    }
     return {width:output.width,height:output.height,scaleX:output.width/composition.width,scaleY:output.height/composition.height,background:composition.background,transparent:composition.export.transparent,grain:composition.grain,frame,operations,videoFrames,subframes}; };
   const renderFrame=async (frame: number) => { const p=await payload(frame); const png=await pool.run(`Frame ${frame}`, page => page.evaluate(p => (window as any).OVE.draw(p), p) as Promise<string>); return Buffer.from(png,'base64'); };
   // Draws a frame without encoding it and returns where its text landed and a small thumbnail (for `ove review`).

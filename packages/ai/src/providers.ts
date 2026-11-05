@@ -2,6 +2,7 @@
 // Groq is the provider for chat, speech synthesis and transcription (it has no image model). An offline MockProvider is included for tests and development.
 // An offline MockProvider is included for offline tests and development.
 import { extractJson } from './json';
+import { attachEdgeAudio } from './edge-tts';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 export type ChatMessage = { role: ChatRole; content: string | any[] };
@@ -694,13 +695,13 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
   switch (id) {
     case 'mock': return new MockProvider();
     case 'freellmapi':
-    case 'openai': return new FreeLlmApiProvider(config);
-    case 'groq': return new GroqProvider(config);
+    case 'openai': return attachEdgeAudio(new FreeLlmApiProvider(config));
+    case 'groq': return attachEdgeAudio(new GroqProvider(config));
     case 'nvidia':
-    case 'nim': return attachGroqAudio(new NvidiaProvider(config), config);
+    case 'nim': return attachEdgeAudio(new NvidiaProvider(config));
     case 'anthropic':
-    case 'claude': return attachGroqAudio(new AnthropicProvider(config), config);
-    default: return new FreeLlmApiProvider(config);
+    case 'claude': return attachEdgeAudio(new AnthropicProvider(config));
+    default: return attachEdgeAudio(new FreeLlmApiProvider(config));
   }
 }
 

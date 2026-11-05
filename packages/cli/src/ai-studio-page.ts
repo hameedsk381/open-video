@@ -343,7 +343,103 @@ function create() {
 
   var duration = h('input', { type: 'number', min: '3', placeholder: 'Default for kind' });
   var aspect = h('select', null, [['', 'Default for format'], ['9:16', 'Vertical 9:16 (Shorts/Reels)'], ['1:1', 'Square 1:1 (Feed)'], ['16:9', 'Wide 16:9 (Landscape)'], ['4:5', 'Portrait 4:5']].map(function (a) { return h('option', { value: a[0], text: a[1] }); }));
-  var voice = h('input', { type: 'checkbox' }), review = h('input', { type: 'checkbox' }), full = h('input', { type: 'checkbox' }), go = h('button', { class: 'btn', text: '✨ Generate Video' });
+  var voice = h('input', { type: 'checkbox' }); voice.checked = true;
+  var review = h('input', { type: 'checkbox' }), full = h('input', { type: 'checkbox' }), go = h('button', { class: 'btn', text: '✨ Generate Video' });
+
+  var langSelect = h('select', null, [
+    ['en-US', 'English (US)'],
+    ['en-GB', 'English (UK)'],
+    ['en-IN', 'English (India)'],
+    ['es-ES', 'Spanish (Spain)'],
+    ['es-MX', 'Spanish (Mexico)'],
+    ['fr-FR', 'French'],
+    ['de-DE', 'German'],
+    ['hi-IN', 'Hindi'],
+    ['ja-JP', 'Japanese'],
+    ['zh-CN', 'Chinese (Mandarin)'],
+    ['pt-BR', 'Portuguese (Brazil)'],
+    ['it-IT', 'Italian'],
+    ['ar-SA', 'Arabic']
+  ].map(function (l) { return h('option', { value: l[0], text: l[1] }); }));
+
+  var voiceMap = {
+    'en-US': [
+      ['en-US-AvaNeural', 'Ava (Expressive, Natural) — Female'],
+      ['en-US-AndrewNeural', 'Andrew (Warm, Professional) — Male'],
+      ['en-US-JennyNeural', 'Jenny (Conversational) — Female'],
+      ['en-US-GuyNeural', 'Guy (Clear, Confident) — Male'],
+      ['en-US-EmmaNeural', 'Emma (Bright, Engaging) — Female'],
+      ['en-US-BrianNeural', 'Brian (Deep, Authoritative) — Male']
+    ],
+    'en-GB': [
+      ['en-GB-RyanNeural', 'Ryan (Dynamic, British) — Male'],
+      ['en-GB-SoniaNeural', 'Sonia (Warm, British) — Female']
+    ],
+    'en-IN': [
+      ['en-IN-NeerjaNeural', 'Neerja (Professional, Indian) — Female'],
+      ['en-IN-PrabhatNeural', 'Prabhat (Clear, Indian) — Male']
+    ],
+    'es-ES': [
+      ['es-ES-AlvaroNeural', 'Alvaro (Spanish) — Male'],
+      ['es-ES-ElviraNeural', 'Elvira (Spanish) — Female']
+    ],
+    'es-MX': [
+      ['es-MX-DaliaNeural', 'Dalia (Mexican Spanish) — Female'],
+      ['es-MX-JorgeNeural', 'Jorge (Mexican Spanish) — Male']
+    ],
+    'fr-FR': [
+      ['fr-FR-DeniseNeural', 'Denise (French) — Female'],
+      ['fr-FR-HenriNeural', 'Henri (French) — Male']
+    ],
+    'de-DE': [
+      ['de-DE-ConradNeural', 'Conrad (German) — Male'],
+      ['de-DE-KatjaNeural', 'Katja (German) — Female']
+    ],
+    'hi-IN': [
+      ['hi-IN-SwaraNeural', 'Swara (Hindi) — Female'],
+      ['hi-IN-MadhurNeural', 'Madhur (Hindi) — Male']
+    ],
+    'ja-JP': [
+      ['ja-JP-NanamiNeural', 'Nanami (Japanese) — Female'],
+      ['ja-JP-KeitaNeural', 'Keita (Japanese) — Male']
+    ],
+    'zh-CN': [
+      ['zh-CN-XiaoxiaoNeural', 'Xiaoxiao (Chinese) — Female'],
+      ['zh-CN-YunjianNeural', 'Yunjian (Chinese) — Male']
+    ],
+    'pt-BR': [
+      ['pt-BR-FranciscaNeural', 'Francisca (Portuguese) — Female'],
+      ['pt-BR-AntonioNeural', 'Antonio (Portuguese) — Male']
+    ],
+    'it-IT': [
+      ['it-IT-ElsaNeural', 'Elsa (Italian) — Female'],
+      ['it-IT-DiegoNeural', 'Diego (Italian) — Male']
+    ],
+    'ar-SA': [
+      ['ar-SA-ZariyahNeural', 'Zariyah (Arabic) — Female'],
+      ['ar-SA-HamedNeural', 'Hamed (Arabic) — Male']
+    ]
+  };
+
+  var voiceSelect = h('select');
+  function updateVoices() {
+    voiceSelect.innerHTML = '';
+    var list = voiceMap[langSelect.value] || voiceMap['en-US'];
+    list.forEach(function (v) {
+      voiceSelect.appendChild(h('option', { value: v[0], text: v[1] }));
+    });
+  }
+  langSelect.addEventListener('change', updateVoices);
+  updateVoices();
+
+  var voiceBlock = h('div', { class: 'two', style: 'margin:8px 0 12px' }, [
+    h('label', { class: 'f' }, [h('span', { text: 'Narration Language' }), langSelect]),
+    h('label', { class: 'f' }, [h('span', { text: 'Voice Actor (Edge Neural)' }), voiceSelect])
+  ]);
+  voice.addEventListener('change', function () {
+    voiceBlock.style.display = voice.checked ? '' : 'none';
+  });
+
   var chips = h('div', { class: 'chips' }, examples.map(function (t) {
     return h('button', { class: 'chip', text: t.length > 56 ? t.slice(0, 54) + '…' : t, title: t, onclick: function () { brief.value = t; } });
   }));
@@ -358,7 +454,8 @@ function create() {
       h('div', { style: 'margin-top:14px' }, [
         h('label', { class: 'f' }, [h('span', { text: 'Project Name' }), name]),
         h('div', { class: 'two' }, [h('label', { class: 'f' }, [h('span', { text: 'Duration in seconds' }), duration]), h('label', { class: 'f' }, [h('span', { text: 'Aspect Ratio Override' }), aspect])]),
-        h('label', { class: 'f' }, [voice, ' Add voiceover narration and captions']),
+        h('label', { class: 'f' }, [voice, ' Add voiceover narration and captions (Edge Neural Voice, Free)']),
+        voiceBlock,
         h('label', { class: 'f' }, [review, ' Automatic review and self-correction pass']),
         h('label', { class: 'f' }, [full, ' Write every layer from scratch (experimental, without templates)'])
       ])
@@ -377,7 +474,16 @@ function create() {
           return fetch('/api/upload?project=' + encodeURIComponent(made.id) + '&name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: f }).then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'Upload failed'); }); });
         });
       }, Promise.resolve()).then(function () {
-        var body = { brief: text, kind: kind, folder: made.id, narration: voice.checked, review: review.checked, full: full.checked };
+        var body = {
+          brief: text,
+          kind: kind,
+          folder: made.id,
+          narration: voice.checked,
+          voice: voice.checked ? voiceSelect.value : undefined,
+          language: voice.checked ? langSelect.value : undefined,
+          review: review.checked,
+          full: full.checked
+        };
         if (duration.value) body.duration = duration.value;
         if (aspect.value) body.aspect = aspect.value;
         return api('/api/compose', body);

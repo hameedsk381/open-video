@@ -2,6 +2,15 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.5 (2026-11-05)
+
+### Added
+- **Microsoft Edge TTS as Primary & Default Voice Engine.** Integrated `msedge-tts` natively across all AI video providers (`freellmapi`, `groq`, `anthropic`, `nvidia`), providing 320+ natural neural voices across dozens of languages with zero API key or credit requirements.
+- **Direct WordBoundary Subtitle Alignment.** Captures millisecond word-boundary metadata directly from Edge TTS WebSocket streams during speech synthesis, eliminating the Whisper transcription pass and delivering zero-latency word-level captions.
+- **AI Studio Voice & Language Selector.** Added dynamic Narration Language (English, Spanish, French, German, Hindi, Japanese, Mandarin, etc.) and Neural Voice Actor selectors in the Studio Create workflow, with voiceover narration enabled by default.
+- **Adaptive Motion Blur Subsampling.** Detects motion-vector deltas between shutter frames to bypass 8-pass frame accumulation and multi-megabyte `getImageData` readbacks on static/held frames, substantially accelerating rendering of text holds and cards.
+- **Social Safe-Zone & Intrinsic Layout Directives.** Injected 9:16 vertical safe-zone boundaries (bottom 18%, right 11%) and `group` layout container guidance (`direction`, `gap`, `align`, `justify`) directly into AI prompts to prevent text truncation, clipping, and collisions across aspect ratios.
+
 ## 0.3.3 (2026-11-05)
 
 ### Performance

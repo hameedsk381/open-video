@@ -178,8 +178,11 @@ async function composeCommand(argv: string[]): Promise<number> {
   let composition = result.composition;
   const narrationFiles: string[] = [];
   if (narration) {
+    const voice = option(argv, '--voice');
+    const language = option(argv, '--language') ?? option(argv, '--lang');
     const produced = await narrateSmart(provider, result, { brief, outDir: resolve(dir, 'assets'), durationSeconds: canvasOptions.durationSeconds,
       composition, compositionPath: resolve(dir, 'composition.json'), tailSeconds: numberOption(argv, '--tail', 0.8),
+      voice, language,
       onProgress: message => console.log(message) });
     composition = produced.composition ?? composition;
     narrationFiles.push(produced.audio, ...(produced.captions ? [produced.captions] : []));

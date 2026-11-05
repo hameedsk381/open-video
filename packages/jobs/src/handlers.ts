@@ -92,9 +92,12 @@ export function createHandlers(env: JobEnv) {
       }
       let narration: Record<string, unknown> | undefined;
       if (options.narration) {
+        const voice = typeof input.voice === 'string' && input.voice.trim() ? input.voice.trim() : undefined;
+        const language = typeof input.language === 'string' && input.language.trim() ? input.language.trim() : undefined;
         const produced = await capabilities.narrateSmart(ai, result, {
           brief, outDir: resolve(dir, 'assets'), durationSeconds: canvas.durationSeconds, composition,
           compositionPath: resolve(dir, 'composition.json'), tailSeconds: 0.8, onProgress: message => progress(cleanProgressMessage(message)),
+          voice, language,
         });
         composition = produced.composition ?? composition;
         narration = {
