@@ -1,1 +1,1 @@
-{"name":"@ove/ai","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/core":"workspace:*","@ove/schema":"workspace:*","@ove/ffmpeg":"workspace:*","@ove/graphics":"workspace:*"}}
+{"name":"@ove/ai","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/core":"workspace:*","@ove/ffmpeg":"workspace:*","@ove/graphics":"workspace:*","@ove/schema":"workspace:*","msedge-tts":"^2.1.1"}}

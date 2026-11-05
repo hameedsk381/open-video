@@ -6,8 +6,19 @@
   "width": 1080,
   "height": 1920,
   "fps": 30,
-  "durationFrames": 360,
+  "durationFrames": 400,
   "background": "#fafafa",
+  "export": {
+    "format": "mp4",
+    "codec": "h264",
+    "loudness": -16
+  },
+  "assets": [
+    { "id": "vo-s1", "type": "audio", "src": "assets/vo-s1.mp3" },
+    { "id": "vo-s2", "type": "audio", "src": "assets/vo-s2.mp3" },
+    { "id": "vo-s3", "type": "audio", "src": "assets/vo-s3.mp3" },
+    { "id": "vo-s4", "type": "audio", "src": "assets/vo-s4.mp3" }
+  ],
   "variables": {
     "handle": {
       "type": "string",
@@ -50,14 +61,14 @@
       "id": "scene-1-hook",
       "name": "Hook & Timeline",
       "startFrame": 0,
-      "durationFrames": 70,
+      "durationFrames": 90,
       "camera": {
         "animations": [
           {
             "property": "zoom",
             "keyframes": [
               { "frame": 0, "value": 1.0 },
-              { "frame": 70, "value": 1.05, "easing": "drift" }
+              { "frame": 90, "value": 1.05, "easing": "drift" }
             ]
           }
         ]
@@ -276,8 +287,15 @@
           "height": 150,
           "fill": "#ef4444",
           "animations": [
-            { "property": "x", "keyframes": [{ "frame": 24, "value": 210 }, { "frame": 68, "value": 820 }] }
+            { "property": "x", "keyframes": [{ "frame": 24, "value": 210 }, { "frame": 84, "value": 820 }] }
           ]
+        },
+        {
+          "id": "s1-vo",
+          "type": "audio",
+          "src": "vo-s1",
+          "startFrame": 4,
+          "volume": 0.85
         },
         {
           "id": "s1-whoosh",
@@ -298,7 +316,7 @@
     {
       "id": "scene-2-social-proof",
       "name": "Social Proof & Stamp",
-      "startFrame": 70,
+      "startFrame": 90,
       "durationFrames": 105,
       "camera": {
         "animations": [
@@ -529,6 +547,13 @@
           ]
         },
         {
+          "id": "s2-vo",
+          "type": "audio",
+          "src": "vo-s2",
+          "startFrame": 4,
+          "volume": 0.85
+        },
+        {
           "id": "s2-whoosh",
           "type": "audio",
           "src": "sfx:whoosh",
@@ -554,15 +579,15 @@
     {
       "id": "scene-3-setup",
       "name": "The Automated Setup",
-      "startFrame": 175,
-      "durationFrames": 75,
+      "startFrame": 195,
+      "durationFrames": 90,
       "camera": {
         "animations": [
           {
             "property": "zoom",
             "keyframes": [
               { "frame": 0, "value": 1.0 },
-              { "frame": 75, "value": 1.05, "easing": "drift" }
+              { "frame": 90, "value": 1.05, "easing": "drift" }
             ]
           }
         ]
@@ -829,6 +854,13 @@
           "textAlign": "center"
         },
         {
+          "id": "s3-vo",
+          "type": "audio",
+          "src": "vo-s3",
+          "startFrame": 4,
+          "volume": 0.85
+        },
+        {
           "id": "s3-whoosh",
           "type": "audio",
           "src": "sfx:whoosh",
@@ -861,15 +893,15 @@
     {
       "id": "scene-4-cta",
       "name": "Call to Action",
-      "startFrame": 250,
-      "durationFrames": 110,
+      "startFrame": 285,
+      "durationFrames": 115,
       "camera": {
         "animations": [
           {
             "property": "zoom",
             "keyframes": [
               { "frame": 0, "value": 1.0 },
-              { "frame": 110, "value": 1.05, "easing": "drift" }
+              { "frame": 115, "value": 1.05, "easing": "drift" }
             ]
           }
         ]
@@ -1032,6 +1064,13 @@
             { "property": "y", "keyframes": [{ "frame": 20, "value": 1300 }, { "frame": 38, "value": 1090, "easing": "land" }] },
             { "property": "scale", "keyframes": [{ "frame": 38, "value": 1.0 }, { "frame": 40, "value": 0.8 }, { "frame": 44, "value": 1.0, "easing": "pop" }] }
           ]
+        },
+        {
+          "id": "s4-vo",
+          "type": "audio",
+          "src": "vo-s4",
+          "startFrame": 4,
+          "volume": 0.85
         },
         {
           "id": "s4-whoosh",
