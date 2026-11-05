@@ -2,6 +2,10 @@
 export function extractJson(text: string): unknown {
   let cleaned = text.trim().replace(/^\uFEFF/, '');
 
+  // Strip <think>...</think> reasoning blocks from modern reasoning models (DeepSeek, Qwen, Nemotron)
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  cleaned = cleaned.replace(/^<think>[\s\S]*?(?=\{)/i, '').trim();
+
   // 1. Unescape common HTML entities if copied from formatted web chat or rich text
   if (cleaned.includes('&#') || cleaned.includes('&quot;') || cleaned.includes('&amp;')) {
     cleaned = cleaned

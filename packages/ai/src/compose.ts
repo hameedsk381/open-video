@@ -54,10 +54,12 @@ function normalize(raw: any, options: ComposeOptions): any {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('The response must be one JSON object');
   raw.version = '1.0';
   raw.$schema = './composition.schema.json';
-  raw.width = options.width;
-  raw.height = options.height;
-  raw.fps = options.fps;
-  raw.durationFrames = Math.max(1, Math.round(options.durationSeconds * options.fps));
+  raw.width = options.width ?? (typeof raw.width === 'number' && raw.width > 0 ? raw.width : 1080);
+  raw.height = options.height ?? (typeof raw.height === 'number' && raw.height > 0 ? raw.height : 1920);
+  raw.fps = options.fps ?? (typeof raw.fps === 'number' && raw.fps > 0 ? raw.fps : 30);
+  const fps = raw.fps;
+  const durationSeconds = options.durationSeconds ?? (typeof raw.durationFrames === 'number' && raw.durationFrames > 0 ? raw.durationFrames / fps : 15);
+  raw.durationFrames = Math.max(1, Math.round(durationSeconds * fps));
   if (typeof raw.id !== 'string' || !raw.id.trim()) raw.id = 'ai-video';
   if (typeof raw.name !== 'string' || !raw.name.trim()) raw.name = 'AI video';
   if (options.plan) {

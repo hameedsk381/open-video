@@ -148,11 +148,15 @@ Rules: one idea per beat; lengths must differ; open with the subject in the firs
 }
 
 export function planUserPrompt(brief: string, options: PromptOptions): string {
-  const durationFrames = Math.max(1, Math.round(options.durationSeconds * options.fps));
+  const fps = options.fps ?? 30;
+  const durationSeconds = options.durationSeconds ?? 15;
+  const width = options.width ?? 1080;
+  const height = options.height ?? 1920;
+  const durationFrames = Math.max(1, Math.round(durationSeconds * fps));
   return [
     `Plan a ${options.kind ?? 'short'} motion-graphics video.`,
-    `Canvas: WIDTH=${options.width} HEIGHT=${options.height} FPS=${options.fps} DURATION_SECONDS=${options.durationSeconds} DURATION_FRAMES=${durationFrames}.`,
-    `Aspect ratio: ${ratioName(options.width, options.height)}.`,
+    `Canvas: WIDTH=${width} HEIGHT=${height} FPS=${fps} DURATION_SECONDS=${durationSeconds} DURATION_FRAMES=${durationFrames}.`,
+    `Aspect ratio: ${ratioName(width, height)}.`,
     '',
     'Brief:',
     brief.trim(),
@@ -164,11 +168,14 @@ export function planUserPrompt(brief: string, options: PromptOptions): string {
 // The markers (WIDTH=, HEIGHT=, FPS=, DURATION_FRAMES=) are also read by the offline mock provider, so a dry run
 // with --provider mock exercises the same path as a real model without a key or a network.
 export function userPrompt(brief: string, options: PromptOptions): string {
-  const { width, height, fps } = options;
-  const durationFrames = Math.max(1, Math.round(options.durationSeconds * fps));
+  const fps = options.fps ?? 30;
+  const durationSeconds = options.durationSeconds ?? 15;
+  const width = options.width ?? 1080;
+  const height = options.height ?? 1920;
+  const durationFrames = Math.max(1, Math.round(durationSeconds * fps));
   const lines = [
     `Make a ${options.kind ?? 'short'} motion-graphics video (designed frames and motion, not slides).`,
-    `Canvas: WIDTH=${width} HEIGHT=${height} FPS=${fps} DURATION_SECONDS=${options.durationSeconds} DURATION_FRAMES=${durationFrames}.`,
+    `Canvas: WIDTH=${width} HEIGHT=${height} FPS=${fps} DURATION_SECONDS=${durationSeconds} DURATION_FRAMES=${durationFrames}.`,
     `Aspect ratio: ${ratioName(width, height)}.`,
     '',
     'Brief:',

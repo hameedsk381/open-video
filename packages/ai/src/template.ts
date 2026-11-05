@@ -128,8 +128,14 @@ export async function composeFromTemplate(provider: AiProvider, templates: Templ
       // Some replies put the values beside "template" instead of inside "values"; take them from there.
       const rawValues = answer.values && typeof answer.values === 'object' ? answer.values : Object.fromEntries(Object.entries(answer).filter(([key]) => template.variables.some(variable => variable.name === key)));
       const problems = check(template, rawValues, (options.assets ?? []).filter(asset => asset.type === 'image').map(asset => asset.id));
-      const theme = template.themed && answer.theme ? options.themes?.find(candidate => candidate.id === answer.theme) : undefined;
-      if (template.themed && answer.theme && !theme) problems.push(`"theme" must be one of ${(options.themes ?? []).map(candidate => candidate.id).join(', ')}`);
+      let theme = template.themed && answer.theme ? options.themes?.find(candidate => candidate.id === answer.theme) : undefined;
+      if (template.themed && !theme && options.themes?.length) {
+        if (options.themes.length === 1) {
+          theme = options.themes[0];
+        } else if (answer.theme) {
+          problems.push(`"theme" must be one of ${options.themes.map(candidate => candidate.id).join(', ')}`);
+        }
+      }
       if (problems.length) throw new Error(problems.join('\n'));
       const values = Object.fromEntries(Object.entries(rawValues as Record<string, unknown>).filter(([key]) => filled(template, key)));
       const source = fillTemplateSource(template, values, theme, options.assets);
