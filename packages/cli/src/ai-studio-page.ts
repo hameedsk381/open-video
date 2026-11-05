@@ -553,6 +553,13 @@ function create() {
   var duration = h('input', { type: 'number', min: '3', placeholder: 'Default for kind' });
   var aspect = h('select', null, [['', 'Default for format'], ['9:16', 'Vertical 9:16 (Shorts/Reels)'], ['1:1', 'Square 1:1 (Feed)'], ['16:9', 'Wide 16:9 (Landscape)'], ['4:5', 'Portrait 4:5']].map(function (a) { return h('option', { value: a[0], text: a[1] }); }));
   var voice = h('input', { type: 'checkbox' }); voice.checked = true;
+  var modelSelect = h('select', null, [
+    ['', 'Auto Router (Managed Default)'],
+    ['claude-3-7-sonnet', 'Claude 3.7 Sonnet (Anthropic - Elite Quality)'],
+    ['deepseek-r1', 'DeepSeek-R1 (Deep Reasoning)'],
+    ['qwen2.5-72b', 'Qwen 2.5 72B (Groq - Sub-Second Fast)'],
+    ['gpt-4o', 'OpenAI GPT-4o (Multimodal Vision)']
+  ].map(function (m) { return h('option', { value: m[0], text: m[1] }); }));
   var review = h('input', { type: 'checkbox' }), full = h('input', { type: 'checkbox' }), go = h('button', { class: 'btn', text: '✨ Generate Video' });
 
   var langSelect = h('select', null, [
@@ -661,7 +668,10 @@ function create() {
     h('details', null, [
       h('summary', { text: 'Advanced Settings' }),
       h('div', { style: 'margin-top:14px' }, [
-        h('label', { class: 'f' }, [h('span', { text: 'Project Name' }), name]),
+        h('div', { class: 'two' }, [
+          h('label', { class: 'f' }, [h('span', { text: 'Creative AI Model' }), modelSelect]),
+          h('label', { class: 'f' }, [h('span', { text: 'Project Name' }), name])
+        ]),
         h('div', { class: 'two' }, [h('label', { class: 'f' }, [h('span', { text: 'Duration in seconds' }), duration]), h('label', { class: 'f' }, [h('span', { text: 'Aspect Ratio Override' }), aspect])]),
         h('label', { class: 'f' }, [voice, ' Add voiceover narration and captions (Edge Neural Voice, Free)']),
         voiceBlock,
@@ -693,6 +703,7 @@ function create() {
           review: review.checked,
           full: full.checked
         };
+        if (modelSelect.value) body.model = modelSelect.value;
         if (duration.value) body.duration = duration.value;
         if (aspect.value) body.aspect = aspect.value;
         return api('/api/compose', body);

@@ -77,6 +77,20 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
   const [brandBg, setBrandBg] = useState('#0b0f19');
   const [brandText, setBrandText] = useState('#ffffff');
 
+  // AI Creative Engine & Custom BYOK Gateway
+  const [modelPreset, setModelPreset] = useState<string>(() => {
+    try { return localStorage.getItem('ove-model-preset') || 'auto'; } catch { return 'auto'; }
+  });
+  const [customModel, setCustomModel] = useState<string>(() => {
+    try { return localStorage.getItem('ove-custom-model') || ''; } catch { return ''; }
+  });
+  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
+    try { return localStorage.getItem('ove-custom-base-url') || ''; } catch { return ''; }
+  });
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    try { return localStorage.getItem('ove-custom-api-key') || ''; } catch { return ''; }
+  });
+
   // Brand scraping
   const [urlInput, setUrlInput] = useState('');
   const [scraping, setScraping] = useState(false);
@@ -182,6 +196,22 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
       } else if (theme) {
         body.theme = theme;
       }
+
+      // Model & Custom Gateway Config
+      if (modelPreset === 'custom') {
+        if (customModel.trim()) body.model = customModel.trim();
+        if (customBaseUrl.trim()) body.baseUrl = customBaseUrl.trim();
+        if (customApiKey.trim()) body.apiKey = customApiKey.trim();
+      } else if (modelPreset !== 'auto') {
+        body.model = modelPreset;
+      }
+
+      try {
+        localStorage.setItem('ove-model-preset', modelPreset);
+        if (customModel) localStorage.setItem('ove-custom-model', customModel);
+        if (customBaseUrl) localStorage.setItem('ove-custom-base-url', customBaseUrl);
+        if (customApiKey) localStorage.setItem('ove-custom-api-key', customApiKey);
+      } catch {}
 
       const { job } = await api<{ job: Job }>('/api/compose', body);
       go(`#/making/${encodeURIComponent(made.id)}/${job.id}`);
@@ -530,6 +560,92 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
                     ))}
                     <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 4 }}>{t.desc}</span>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Field>
+
+      {/* Creative Engine & AI Model (BYOK & Model Picker) */}
+      <Field
+        label={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <span><SparklesIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Creative Engine & AI Model</span>
+            <label className="check" style={{ margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
+              <input
+                type="checkbox"
+                checked={modelPreset === 'custom'}
+                onChange={e => setModelPreset(e.target.checked ? 'custom' : 'auto')}
+              />
+              <span style={{ fontSize: 12 }}>Custom Gateway / BYOK</span>
+            </label>
+          </div>
+        }
+        hint={modelPreset === 'custom' ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, RunAPI, Together, Ollama, etc.)' : 'Choose a specialized model or connect your own API gateway'}
+      >
+        {modelPreset === 'custom' ? (
+          <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</span>
+              <input
+                className="input"
+                placeholder="https://openrouter.ai/api/v1 (or local Ollama)"
+                value={customBaseUrl}
+                onChange={e => setCustomBaseUrl(e.target.value)}
+              />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Model Name / ID</span>
+              <input
+                className="input"
+                placeholder="anthropic/claude-3.7-sonnet (or any model)"
+                value={customModel}
+                onChange={e => setCustomModel(e.target.value)}
+              />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key (stored securely in browser)</span>
+              <input
+                className="input"
+                type="password"
+                placeholder="sk-..."
+                value={customApiKey}
+                onChange={e => setCustomApiKey(e.target.value)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 8 }}>
+            {[
+              { id: 'auto', name: 'Auto Router', desc: 'Managed Fast & Smart', badge: 'Default' },
+              { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic — Elite Design', badge: 'Best Quality' },
+              { id: 'deepseek-r1', name: 'DeepSeek-R1', desc: 'Deep Reasoning & Pacing', badge: 'Reasoning' },
+              { id: 'qwen2.5-72b', name: 'Qwen 2.5 72B', desc: 'Groq — Sub-Second Speed', badge: 'Instant' },
+              { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'Multimodal Vision & Code', badge: 'OpenAI' },
+            ].map(m => {
+              const active = modelPreset === m.id;
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => setModelPreset(m.id)}
+                  style={{
+                    cursor: 'pointer',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius)',
+                    border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    background: active ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface)',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: active ? 'var(--accent)' : 'inherit' }}>{m.name}</span>
+                    <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: active ? 'var(--accent)' : 'var(--surface-2)', color: active ? '#fff' : 'var(--muted)' }}>{m.badge}</span>
+                  </div>
+                  <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.desc}</span>
                 </div>
               );
             })}

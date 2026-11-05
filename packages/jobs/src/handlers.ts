@@ -3,7 +3,7 @@
 import { cp, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
-  assetIdFromPath, assetProblems, captionAudio, composeVideo, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
+  assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
   sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
 } from '@ove/ai';
 import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
@@ -41,12 +41,27 @@ export function createHandlers(env: JobEnv) {
   const { resultFile, urlFor, relative, readJson, loadForRender, writeComposition } = paths;
   const needLocal = (what: string) => { if (!env.local) throw new Error(`${what} is only available when the studio runs on your own machine`); return env.local; };
 
+  const resolveProvider = (input: Input) => {
+    const hasCustom = typeof input.provider === 'string' || typeof input.model === 'string' || typeof input.baseUrl === 'string' || typeof input.apiKey === 'string';
+    if (!hasCustom) return env.provider();
+    try {
+      return createProvider({
+        provider: typeof input.provider === 'string' && input.provider.trim() ? input.provider.trim() : undefined,
+        model: typeof input.model === 'string' && input.model.trim() ? input.model.trim() : undefined,
+        baseUrl: typeof input.baseUrl === 'string' && input.baseUrl.trim() ? input.baseUrl.trim() : undefined,
+        apiKey: typeof input.apiKey === 'string' && input.apiKey.trim() ? input.apiKey.trim() : undefined,
+      });
+    } catch {
+      return env.provider();
+    }
+  };
+
   const compose = (input: Input): JobSpec => {
     const brief = textOf(input.brief, 'brief');
     const canvas = canvasFor(input);
     const dir = paths.projectDir(input.folder, brief);
     return { kind: 'compose', run: async progress => {
-      const ai = env.provider();
+      const ai = resolveProvider(input);
       const pictures = (await env.assets(paths.idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
       const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
       const full = boolOf(input.full);
@@ -143,7 +158,7 @@ export function createHandlers(env: JobEnv) {
     const review = boolOf(input.review);
     return { kind: 'refine', run: async progress => {
       const current = await readJson(file) as Composition;
-      const result = await refineVideo(env.provider(), current, { instruction, review, baseDir: dirname(file), onProgress: message => progress(cleanProgressMessage(message)) });
+      const result = await refineVideo(resolveProvider(input), current, { instruction, review, baseDir: dirname(file), onProgress: message => progress(cleanProgressMessage(message)) });
       await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
       return {
         ...resultFile(file), frames: result.composition.durationFrames, seconds: result.composition.durationFrames / result.composition.fps, scenes: result.composition.scenes.length,

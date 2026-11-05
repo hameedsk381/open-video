@@ -162,20 +162,130 @@ export function Library() {
 }
 
 export function Settings() {
+  const { toast } = useUi();
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
+
+  // BYOK Gateway Preferences
+  const [modelPreset, setModelPreset] = useState(() => {
+    try { return localStorage.getItem('ove-model-preset') || 'auto'; } catch { return 'auto'; }
+  });
+  const [customModel, setCustomModel] = useState(() => {
+    try { return localStorage.getItem('ove-custom-model') || ''; } catch { return ''; }
+  });
+  const [customBaseUrl, setCustomBaseUrl] = useState(() => {
+    try { return localStorage.getItem('ove-custom-base-url') || ''; } catch { return ''; }
+  });
+  const [customApiKey, setCustomApiKey] = useState(() => {
+    try { return localStorage.getItem('ove-custom-api-key') || ''; } catch { return ''; }
+  });
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     api<Status>('/api/status').then(setStatus, e => setError(e.message));
   }, []);
 
+  const saveSettings = () => {
+    try {
+      localStorage.setItem('ove-model-preset', modelPreset);
+      if (customModel) localStorage.setItem('ove-custom-model', customModel);
+      else localStorage.removeItem('ove-custom-model');
+      if (customBaseUrl) localStorage.setItem('ove-custom-base-url', customBaseUrl);
+      else localStorage.removeItem('ove-custom-base-url');
+      if (customApiKey) localStorage.setItem('ove-custom-api-key', customApiKey);
+      else localStorage.removeItem('ove-custom-api-key');
+      setSaved(true);
+      toast('AI Engine & Gateway preferences saved!', 'success');
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      toast('Failed to save preferences to browser storage', 'error');
+    }
+  };
+
   return (
     <Page
       title="Studio Settings"
-      subtitle="Workspace storage preferences and video generation engine status."
+      subtitle="Workspace storage preferences, custom AI models, and gateway configuration."
       narrow
     >
       {error ? <Notice tone="error" title="Settings error">{error}</Notice> : null}
+
+      {/* Custom BYOK Gateway & Model Card */}
+      <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <b>Creative Engine & Custom Gateway (BYOK)</b>
+          <Badge tone={modelPreset === 'custom' ? 'green' : 'blue'}>
+            {modelPreset === 'custom' ? 'Custom BYOK Active' : 'Managed Presets'}
+          </Badge>
+        </div>
+
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--muted)' }}>
+          Configure your preferred LLM provider. Bring your own API key to connect OpenRouter, RunAPI, Together, or a local Ollama instance.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>Model Selection</label>
+            <select
+              className="input"
+              value={modelPreset}
+              onChange={e => setModelPreset(e.target.value)}
+            >
+              <option value="auto">Auto Router (Smart Managed Gateway: Qwen 2.5 / DeepSeek / Llama 3.3)</option>
+              <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Anthropic — Elite Design & Spatial Layouts)</option>
+              <option value="deepseek-r1">DeepSeek-R1 (Deep Reasoning, Pacing & Self-Healing)</option>
+              <option value="qwen2.5-72b">Qwen 2.5 72B (Groq — Sub-Second Realtime Generation)</option>
+              <option value="gpt-4o">OpenAI GPT-4o (Multimodal Vision & Layout)</option>
+              <option value="custom">Custom OpenAI-Compatible Gateway / BYOK</option>
+            </select>
+          </div>
+
+          {modelPreset === 'custom' ? (
+            <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</label>
+                <input
+                  className="input"
+                  placeholder="https://openrouter.ai/api/v1 (or http://localhost:11434/v1 for Ollama)"
+                  value={customBaseUrl}
+                  onChange={e => setCustomBaseUrl(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Custom Model Identifier</label>
+                <input
+                  className="input"
+                  placeholder="anthropic/claude-3.7-sonnet, deepseek/deepseek-r1, or any model ID"
+                  value={customModel}
+                  onChange={e => setCustomModel(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key</label>
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="sk-..."
+                  value={customApiKey}
+                  onChange={e => setCustomApiKey(e.target.value)}
+                />
+                <span style={{ fontSize: 11, color: 'var(--faint)', display: 'block', marginTop: 4 }}>
+                  Stored only in your local browser storage. Never sent to any third party.
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <Button variant="primary" onClick={saveSettings}>
+              {saved ? '✓ Preferences Saved' : 'Save AI Preferences'}
+            </Button>
+            {saved ? <Badge tone="green">Active</Badge> : null}
+          </div>
+        </div>
+      </div>
 
       {status ? (
         <>
