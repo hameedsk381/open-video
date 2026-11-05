@@ -4,9 +4,14 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.97",
+    "@ai-sdk/google": "^4.0.112",
+    "@ai-sdk/groq": "^4.0.77",
+    "@ai-sdk/openai": "^4.0.109",
     "@ove/core": "workspace:*",
     "@ove/ffmpeg": "workspace:*",
     "@ove/graphics": "workspace:*",
-    "@ove/schema": "workspace:*"
+    "@ove/schema": "workspace:*",
+    "ai": "^7.0.163"
   }
 }

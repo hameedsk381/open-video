@@ -3,6 +3,11 @@
 // An offline MockProvider is included for offline tests and development.
 import { extractJson } from './json';
 import { attachEdgeAudio } from './edge-tts';
+import { generateText, type ModelMessage } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 export type ChatMessage = { role: ChatRole; content: string | any[] };
@@ -34,7 +39,7 @@ export type AiProvider = {
   transcribe?(audio: Uint8Array, filename: string, options?: { language?: string; signal?: AbortSignal }): Promise<Transcript>;
 };
 
-export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'nvidia' | 'nim' | 'freellmapi' | 'openai' | 'mock';
+export type ProviderId = 'anthropic' | 'claude' | 'groq' | 'nvidia' | 'nim' | 'freellmapi' | 'openai' | 'google' | 'gemini' | 'openrouter' | 'litellm' | 'vercel' | 'custom' | 'mock';
 
 export type ProviderConfig = {
   provider?: string;
@@ -45,6 +50,7 @@ export type ProviderConfig = {
   imageModel?: string;
   speechModel?: string;
   transcriptionModel?: string;
+  engine?: 'native' | 'vercel';
 };
 
 export const providerCapabilities = (provider: AiProvider) => ({
@@ -614,6 +620,133 @@ const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvid
   return provider;
 };
 
+export class VercelAiProvider implements AiProvider {
+  id: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  driver: 'openai' | 'anthropic' | 'google' | 'groq';
+
+  constructor(config: ProviderConfig = {}) {
+    const rawId = (config.provider || process.env.OVE_AI_PROVIDER || 'openai').toLowerCase();
+    this.id = rawId;
+    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? '');
+
+    if (rawId === 'anthropic' || rawId === 'claude') {
+      this.driver = 'anthropic';
+      this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.ANTHROPIC_API_KEY || '';
+      this.model = config.model || process.env.OVE_AI_MODEL || 'claude-3-7-sonnet-20250219';
+      if (!this.baseUrl) this.baseUrl = 'https://api.anthropic.com/v1';
+    } else if (rawId === 'google' || rawId === 'gemini') {
+      this.driver = 'google';
+      this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
+      this.model = config.model || process.env.OVE_AI_MODEL || 'gemini-2.0-flash';
+    } else if (rawId === 'groq') {
+      this.driver = 'groq';
+      this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.GROQ_API_KEY || '';
+      this.model = config.model || process.env.OVE_AI_MODEL || 'llama-3.3-70b-versatile';
+      if (!this.baseUrl) this.baseUrl = 'https://api.groq.com/openai/v1';
+    } else {
+      // openai, openrouter, litellm, vercel, custom, or any OpenAI-compatible gateway
+      this.driver = 'openai';
+      this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.OPENAI_API_KEY || '';
+      if (rawId === 'openrouter') {
+        this.apiKey = this.apiKey || process.env.OPENROUTER_API_KEY || '';
+        this.baseUrl = this.baseUrl || 'https://openrouter.ai/api/v1';
+        this.model = config.model || process.env.OVE_AI_MODEL || 'anthropic/claude-3.7-sonnet';
+      } else if (rawId === 'litellm') {
+        this.baseUrl = this.baseUrl || process.env.LITELLM_BASE_URL || 'http://localhost:4000/v1';
+        this.model = config.model || process.env.OVE_AI_MODEL || 'claude-3-7-sonnet';
+      } else {
+        this.model = config.model || process.env.OVE_AI_MODEL || 'gpt-4o';
+        if (!this.baseUrl) this.baseUrl = 'https://api.openai.com/v1';
+      }
+    }
+  }
+
+  private resolveModelInstance(explicitModel?: string) {
+    const targetModel = explicitModel || this.model;
+    switch (this.driver) {
+      case 'anthropic': {
+        const anthropic = createAnthropic({
+          apiKey: this.apiKey,
+          baseURL: this.baseUrl,
+        });
+        return anthropic(targetModel);
+      }
+      case 'google': {
+        const google = createGoogleGenerativeAI({
+          apiKey: this.apiKey,
+          baseURL: this.baseUrl || undefined,
+        });
+        return google(targetModel);
+      }
+      case 'groq': {
+        const groq = createGroq({
+          apiKey: this.apiKey,
+          baseURL: this.baseUrl,
+        });
+        return groq(targetModel);
+      }
+      case 'openai':
+      default: {
+        const openai = createOpenAI({
+          apiKey: this.apiKey || 'dummy-key',
+          baseURL: this.baseUrl,
+        });
+        return openai.chat(targetModel);
+      }
+    }
+  }
+
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const system = messages.filter(m => m.role === 'system').map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n\n');
+    const turns = messages.filter(m => m.role !== 'system');
+
+    const coreMessages: ModelMessage[] = turns.map(m => {
+      if (m.role === 'assistant') {
+        return {
+          role: 'assistant',
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+        };
+      }
+      if (typeof m.content === 'string') {
+        return { role: 'user', content: m.content };
+      }
+      if (Array.isArray(m.content)) {
+        const parts: any[] = m.content.map((p: any) => {
+          if (p.type === 'text') return { type: 'text', text: p.text || '' };
+          if (p.type === 'image_url') {
+            const url = p.image_url?.url || p.image_url;
+            return { type: 'image', image: url };
+          }
+          return { type: 'text', text: JSON.stringify(p) };
+        });
+        return { role: 'user', content: parts };
+      }
+      return { role: 'user', content: String(m.content) };
+    });
+
+    if (coreMessages.length === 0) {
+      coreMessages.push({ role: 'user', content: 'Generate the JSON now.' });
+    }
+
+    const modelInstance = this.resolveModelInstance(options.model);
+    const result = await generateText({
+      model: modelInstance,
+      system: system || undefined,
+      messages: coreMessages,
+      temperature: options.temperature ?? 0.4,
+      maxOutputTokens: options.maxTokens,
+      abortSignal: timeoutSignal(options.signal),
+    });
+
+    const text = result.text.trim();
+    if (!text) throw new Error(`${this.id} via Vercel AI SDK returned no text`);
+    return text;
+  }
+}
+
 const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 // An offline stand-in so the whole pipeline (compose, validate, write, render) can be exercised with no key and
@@ -687,21 +820,54 @@ export class MockProvider implements AiProvider {
 }
 
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  const id = (
+  let id = (
     config.provider ||
     process.env.OVE_AI_PROVIDER ||
-    'freellmapi'
+    ''
   ).toLowerCase();
+
+  if (!id) {
+    if (config.baseUrl) {
+      if (config.baseUrl.includes('openrouter.ai')) id = 'openrouter';
+      else if (config.baseUrl.includes('4000') || config.baseUrl.includes('litellm')) id = 'litellm';
+      else id = 'custom';
+    } else if (config.model && config.model !== 'auto' && config.model !== 'smart') {
+      if (/^gemini|^google\//i.test(config.model)) id = 'gemini';
+      else if (/^claude|^anthropic\//i.test(config.model)) id = 'anthropic';
+      else if (/^gpt-|^o1|^o3|^openai\//i.test(config.model)) id = 'openai';
+      else if (/^llama|^qwen|^mixtral/i.test(config.model) && !process.env.FREELLMAPI_BASE_URL) id = 'groq';
+      else id = 'freellmapi';
+    } else {
+      id = 'freellmapi';
+    }
+  }
+  const effectiveConfig = { ...config, provider: id };
   switch (id) {
     case 'mock': return new MockProvider();
-    case 'freellmapi':
-    case 'openai': return attachEdgeAudio(new FreeLlmApiProvider(config));
-    case 'groq': return attachEdgeAudio(new GroqProvider(config));
+    case 'freellmapi': return attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
+    case 'groq':
+      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
+        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
+        : attachEdgeAudio(new GroqProvider(effectiveConfig));
     case 'nvidia':
-    case 'nim': return attachEdgeAudio(new NvidiaProvider(config));
+    case 'nim': return attachEdgeAudio(new NvidiaProvider(effectiveConfig));
     case 'anthropic':
-    case 'claude': return attachEdgeAudio(new AnthropicProvider(config));
-    default: return attachEdgeAudio(new FreeLlmApiProvider(config));
+    case 'claude':
+      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
+        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
+        : attachEdgeAudio(new AnthropicProvider(effectiveConfig));
+    case 'google':
+    case 'gemini':
+    case 'openrouter':
+    case 'litellm':
+    case 'vercel':
+    case 'custom':
+      return attachEdgeAudio(new VercelAiProvider(effectiveConfig));
+    case 'openai':
+      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
+        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
+        : attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
+    default: return attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
   }
 }
 
@@ -710,5 +876,6 @@ export function describeProvider(provider: AiProvider): string {
   const routerInfo = (provider.id === 'freellmapi' && (provider.model === 'auto' || provider.model === 'smart'))
     ? ' [Autonomous Task-Aware Router: compose → llama-3.3-70b, fast → qwen3.8-27b, heal → nemotron-3-nano-30b-reasoning]'
     : '';
-  return `${provider.id} (${provider.model}${routerInfo}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
+  const sdkInfo = provider instanceof VercelAiProvider ? ' [Vercel AI SDK]' : '';
+  return `${provider.id}${sdkInfo} (${provider.model}${routerInfo}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
 }

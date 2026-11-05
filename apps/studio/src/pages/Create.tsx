@@ -585,34 +585,65 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         hint={modelPreset === 'custom' ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, RunAPI, Together, Ollama, etc.)' : 'Choose a specialized model or connect your own API gateway'}
       >
         {modelPreset === 'custom' ? (
-          <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</span>
-              <input
-                className="input"
-                placeholder="https://openrouter.ai/api/v1 (or local Ollama)"
-                value={customBaseUrl}
-                onChange={e => setCustomBaseUrl(e.target.value)}
-              />
+          <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginRight: 4 }}>Quick Gateway:</span>
+              {[
+                { label: 'LiteLLM Proxy', url: 'http://localhost:4000/v1', model: 'claude-3-7-sonnet' },
+                { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-3.7-sonnet' },
+                { label: 'Ollama (Local)', url: 'http://localhost:11434/v1', model: 'llama3.3' },
+                { label: 'OpenAI Direct', url: 'https://api.openai.com/v1', model: 'gpt-4o' },
+              ].map(gw => (
+                <button
+                  key={gw.label}
+                  type="button"
+                  onClick={() => {
+                    setCustomBaseUrl(gw.url);
+                    if (!customModel) setCustomModel(gw.model);
+                  }}
+                  style={{
+                    fontSize: 11,
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: customBaseUrl === gw.url ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface-2)',
+                    color: customBaseUrl === gw.url ? 'var(--accent)' : 'var(--muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {gw.label}
+                </button>
+              ))}
             </div>
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Model Name / ID</span>
-              <input
-                className="input"
-                placeholder="anthropic/claude-3.7-sonnet (or any model)"
-                value={customModel}
-                onChange={e => setCustomModel(e.target.value)}
-              />
-            </div>
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key (stored securely in browser)</span>
-              <input
-                className="input"
-                type="password"
-                placeholder="sk-..."
-                value={customApiKey}
-                onChange={e => setCustomApiKey(e.target.value)}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</span>
+                <input
+                  className="input"
+                  placeholder="https://openrouter.ai/api/v1 (or LiteLLM :4000)"
+                  value={customBaseUrl}
+                  onChange={e => setCustomBaseUrl(e.target.value)}
+                />
+              </div>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Model Name / ID</span>
+                <input
+                  className="input"
+                  placeholder="anthropic/claude-3.7-sonnet (or any 400+ model)"
+                  value={customModel}
+                  onChange={e => setCustomModel(e.target.value)}
+                />
+              </div>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key (stored securely in browser)</span>
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="sk-..."
+                  value={customApiKey}
+                  onChange={e => setCustomApiKey(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         ) : (
@@ -620,6 +651,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
             {[
               { id: 'auto', name: 'Auto Router', desc: 'Managed Fast & Smart', badge: 'Default' },
               { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic — Elite Design', badge: 'Best Quality' },
+              { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Google — Fast Multimodal', badge: 'Google' },
               { id: 'deepseek-r1', name: 'DeepSeek-R1', desc: 'Deep Reasoning & Pacing', badge: 'Reasoning' },
               { id: 'qwen2.5-72b', name: 'Qwen 2.5 72B', desc: 'Groq — Sub-Second Speed', badge: 'Instant' },
               { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'Multimodal Vision & Code', badge: 'OpenAI' },

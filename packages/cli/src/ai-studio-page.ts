@@ -556,6 +556,7 @@ function create() {
   var modelSelect = h('select', null, [
     ['', 'Auto Router (Managed Default)'],
     ['claude-3-7-sonnet', 'Claude 3.7 Sonnet (Anthropic - Elite Quality)'],
+    ['gemini-2.0-flash', 'Gemini 2.0 Flash (Google - Fast Multimodal)'],
     ['deepseek-r1', 'DeepSeek-R1 (Deep Reasoning)'],
     ['qwen2.5-72b', 'Qwen 2.5 72B (Groq - Sub-Second Fast)'],
     ['gpt-4o', 'OpenAI GPT-4o (Multimodal Vision)']

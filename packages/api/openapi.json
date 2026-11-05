@@ -3,7 +3,7 @@
   "info": {
     "title": "MotionRender Video Generation API",
     "description": "JSON-first, frame-deterministic motion graphics video engine. Generate, inspect, edit, and render broadcast-grade motion videos from natural language briefs.",
-    "version": "0.3.10"
+    "version": "0.3.11"
   },
   "servers": [
     {

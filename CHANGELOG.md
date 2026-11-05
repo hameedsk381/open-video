@@ -2,6 +2,14 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.11 (2026-11-06)
+
+### Added
+- **Vercel AI SDK Universal Provider Integration.** Upgraded `@ove/ai` with the Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `@ai-sdk/groq`), introducing `VercelAiProvider` to give users access to 400+ commercial and open-weight models without Python runtime overhead.
+- **First-Class LiteLLM & OpenRouter Gateway Support.** Added automated gateway detection and direct model passthrough for LiteLLM proxies (`http://localhost:4000/v1`), OpenRouter (`https://openrouter.ai/api/v1`), local Ollama (`http://localhost:11434/v1`), and custom OpenAI-compatible enterprise gateways.
+- **Smart Model & Gateway Auto-Inference.** Automatically infers driver and gateway targets from user-specified model strings (e.g. `gemini-2.0-flash`, `anthropic/claude-3.7-sonnet`, `deepseek-r1`) or endpoint URLs with zero manual setup.
+- **Studio Quick Gateway Presets.** Added instant one-click shortcut buttons for LiteLLM, OpenRouter, Ollama, and OpenAI Direct inside Studio's Creative Engine model picker.
+
 ## 0.3.10 (2026-11-06)
 
 ### Fixed
