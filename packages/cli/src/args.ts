@@ -17,6 +17,7 @@ export const commandSpecs: Record<string, Spec> = {
   thumbnail: { values: ['--frame', '--title', '--width', '--output', ...variables], flags: ['--allow-code'], positionals: 1 },
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
   theme: { flags: ['--json'], positionals: 2 },
+  figma: { values: ['--token', '--out', '--output-comp', '--fps', '--duration'], positionals: 1 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
   mcp: {},
   serve: {},

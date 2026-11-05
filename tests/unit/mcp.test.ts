@@ -40,9 +40,10 @@ describe('mcp server (Model Context Protocol)', () => {
     });
 
     expect(responses).toHaveLength(5);
+    const byId = new Map(responses.map((r: any) => [r.id, r]));
 
     // 1. initialize
-    expect(responses[0]).toMatchObject({
+    expect(byId.get(1)).toMatchObject({
       jsonrpc: '2.0',
       id: 1,
       result: {
@@ -53,7 +54,7 @@ describe('mcp server (Model Context Protocol)', () => {
     });
 
     // 2. tools/list
-    const tools = responses[1]?.result?.tools;
+    const tools = byId.get(2)?.result?.tools;
     expect(Array.isArray(tools)).toBe(true);
     const names = tools.map((t: any) => t.name);
     expect(names).toContain('motionrender_create_video');
@@ -64,20 +65,27 @@ describe('mcp server (Model Context Protocol)', () => {
     expect(names).toContain('motionrender_inspect');
     expect(names).toContain('motionrender_list_templates');
     expect(names).toContain('motionrender_refine_video');
+    expect(names).toContain('motionrender_adapt_aspect');
+    expect(names).toContain('motionrender_batch_render');
+    expect(names).toContain('motionrender_transcribe_audio');
+    expect(names).toContain('motionrender_import_figma');
 
     // 3. validate
-    expect(responses[2]?.result?.isError).toBe(false);
-    expect(responses[2]?.result?.content[0]?.text).toContain('Valid MotionRender composition');
+    const valResp = byId.get(3);
+    expect(valResp?.result?.isError).toBe(false);
+    expect(valResp?.result?.content[0]?.text).toContain('Valid MotionRender composition');
 
     // 4. inspect
-    expect(responses[3]?.result?.isError).toBe(false);
-    const inspectJson = JSON.parse(responses[3]?.result?.content[0]?.text);
+    const insResp = byId.get(4);
+    expect(insResp?.result?.isError).toBe(false);
+    const inspectJson = JSON.parse(insResp?.result?.content[0]?.text);
     expect(inspectJson.id).toBe('future-promo');
     expect(inspectJson.scenes).toHaveLength(1);
 
     // 5. list templates
-    expect(responses[4]?.result?.isError).toBe(false);
-    const tmplJson = JSON.parse(responses[4]?.result?.content[0]?.text);
+    const tmplResp = byId.get(5);
+    expect(tmplResp?.result?.isError).toBe(false);
+    const tmplJson = JSON.parse(tmplResp?.result?.content[0]?.text);
     expect(tmplJson.templates.some((t: any) => t.id === 'social-reel')).toBe(true);
     expect(tmplJson.themes.some((th: any) => th.id === 'neon')).toBe(true);
   }, 20000);

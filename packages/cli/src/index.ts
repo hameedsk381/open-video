@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
-import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, ensureFfmpeg, adaptCompositionAspect, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
+import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, loadComposition, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, ensureFfmpeg, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; import { createRequire } from 'node:module';
 const usage = `MotionRender: JSON-first, frame-deterministic motion graphics video engine.
 
 Usage:
@@ -135,6 +135,28 @@ Press Ctrl+C to stop.`);
   else if (command === 'add') await (await import('./blocks-cli')).runAdd(argv);
   else if (command === 'theme') await (await import('./blocks-cli')).runTheme(argv);
   else if (command === 'agent') await (await import('./agent-cli')).runAgentCli(argv);
+  else if (command === 'figma') {
+    if (!file || file.startsWith('--')) throw new Error('Usage: mr figma <tokens.json|fileKey> [--token FIGMA_TOKEN] [--out theme.json] [--output-comp composition.json]');
+    let data: any;
+    const token = option('--token') ?? process.env.FIGMA_ACCESS_TOKEN ?? process.env.FIGMA_TOKEN;
+    if (token && !file.endsWith('.json')) {
+      console.log(`Fetching Figma file ${file} from Figma API...`);
+      data = await fetchFigmaFile(file, token);
+    } else {
+      data = await readJson(file);
+    }
+    const theme = importFigmaTokens(data, option('--name') ?? 'Figma Theme');
+    const outTheme = resolve(option('--out') ?? 'theme.json');
+    await writeFile(outTheme, JSON.stringify(theme, null, 2) + '\n');
+    console.log(`Wrote extracted Figma theme to ${outTheme}`);
+    if (option('--output-comp')) {
+      const firstFrame = data?.document?.children?.[0]?.children?.find((c: any) => c.type === 'FRAME') ?? data?.document?.children?.[0] ?? data;
+      const comp = importFigmaFrame(firstFrame, { fps: Number(option('--fps')) || 30, durationFrames: Number(option('--duration')) || 90 });
+      const outComp = resolve(option('--output-comp')!);
+      await writeFile(outComp, JSON.stringify(comp, null, 2) + '\n');
+      console.log(`Wrote imported Figma composition to ${outComp}`);
+    }
+  }
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);

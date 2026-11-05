@@ -4,8 +4,8 @@
 import readline from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
-import { createProvider, refineVideo, writeCompositionProject, type ComposeOptions } from '@ove/ai';
-import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, type Composition } from '@ove/core';
+import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, type ComposeOptions } from '@ove/ai';
+import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition } from '@ove/core';
 import { composeSmart, templateChoices } from './templates';
 import { listThemes, listBlocks } from './blocks';
 
@@ -68,6 +68,61 @@ const TOOLS = [
         aspect: { type: 'string', description: 'Optional aspect ratio to adapt review checks to (e.g. "9:16", "16:9")' }
       },
       required: ['file']
+    }
+  },
+  {
+    name: 'motionrender_adapt_aspect',
+    description: 'Dynamically adapt an existing composition from one aspect ratio (e.g. 16:9 widescreen) to another (e.g. 9:16 vertical reel or 1:1 square) and write the adapted composition.json.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Path to source composition.json' },
+        aspect: { type: 'string', description: 'Target aspect ratio: "9:16", "16:9", "1:1", "4:5", "3:4", or "WIDTHxHEIGHT"' },
+        output: { type: 'string', description: 'Destination path for adapted composition.json (defaults to overwriting input)' }
+      },
+      required: ['file', 'aspect']
+    }
+  },
+  {
+    name: 'motionrender_batch_render',
+    description: 'Render an entire dataset of personalized videos from a template and a JSON array of variable values.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Path to template composition.json' },
+        data: { description: 'JSON array of rows or path to rows.json file' },
+        outputPattern: { type: 'string', description: 'Output filename pattern with {{variables}}, e.g. "out/{{name}}.mp4"' },
+        limit: { type: 'number', description: 'Maximum number of rows to render' },
+        scale: { type: 'number', description: 'Render scale: 0.5 for fast draft, 1 for full 1080p' }
+      },
+      required: ['file', 'data', 'outputPattern']
+    }
+  },
+  {
+    name: 'motionrender_transcribe_audio',
+    description: 'Transcribe an audio file to extract word-level timestamps and subtitle cues for kinetic captions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        audio: { type: 'string', description: 'Path to audio file (.mp3, .wav, .m4a)' },
+        output: { type: 'string', description: 'Path to write captions.json' },
+        language: { type: 'string', description: 'Language code (e.g. "en")' }
+      },
+      required: ['audio']
+    }
+  },
+  {
+    name: 'motionrender_import_figma',
+    description: 'Import design tokens (colors, typography, radii) and scene layers from Figma files or exported design tokens JSON.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        input: { type: 'string', description: 'Path to Figma tokens/file JSON or Figma fileKey' },
+        token: { type: 'string', description: 'Figma personal access token (optional if input is a local file)' },
+        outputTheme: { type: 'string', description: 'Path to write theme.json (defaults to theme.json)' },
+        outputComp: { type: 'string', description: 'Optional path to write imported composition.json' }
+      },
+      required: ['input']
     }
   },
   {
@@ -439,6 +494,111 @@ ${result.issues.length ? '\nIssues found:\n' + result.issues.map(i => `[${i.seve
 - Updated file: ${file}
 - Attempts: ${result.attempts}
 ${result.warnings?.length ? `Warnings: ${result.warnings.join(', ')}` : ''}`
+        }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_adapt_aspect': {
+      const file = resolve(String(args.file || ''));
+      const raw = JSON.parse(await readFile(file, 'utf8'));
+      const current = loadComposition(raw);
+      const aspect = String(args.aspect || '').trim();
+      if (!aspect) throw new Error('aspect is required');
+      const adapted = adaptCompositionAspect(current, aspect);
+      const output = resolve(String(args.output || file));
+      await writeFile(output, JSON.stringify(adapted, null, 2) + '\n');
+      return {
+        content: [{
+          type: 'text',
+          text: `Adapted composition from ${current.width}x${current.height} to ${adapted.width}x${adapted.height} (${aspect})!
+- Output written to: ${output}
+- Scenes: ${adapted.scenes.length}`
+        }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_batch_render': {
+      const file = resolve(String(args.file || ''));
+      const raw = JSON.parse(await readFile(file, 'utf8'));
+      const baseDir = dirname(file);
+      const composition = loadComposition(raw);
+      let rows: any[] = [];
+      if (Array.isArray(args.data)) {
+        rows = args.data;
+      } else if (typeof args.data === 'string') {
+        rows = JSON.parse(await readFile(resolve(args.data), 'utf8'));
+      }
+      if (!Array.isArray(rows) || rows.length === 0) throw new Error('data must be an array of variable objects');
+      const pattern = String(args.outputPattern || '').trim();
+      if (!pattern) throw new Error('outputPattern is required, e.g. "out/{{name}}.mp4"');
+      const plan = await planBatch(composition, rows, pattern, baseDir);
+      const res = await renderBatch(plan, baseDir, { scale: Number(args.scale) || 1 }, { limit: Number(args.limit) || undefined });
+      return {
+        content: [{
+          type: 'text',
+          text: `Batch render completed for ${res.outputs.length} videos!
+${res.outputs.map((out, idx) => `[${idx + 1}] ${out}`).join('\n')}`
+        }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_transcribe_audio': {
+      const audio = resolve(String(args.audio || ''));
+      const provider = createProvider({});
+      const outDir = dirname(audio);
+      const res = await captionAudio(provider, {
+        audio,
+        outDir,
+        language: args.language,
+      });
+      const output = resolve(String(args.output || res.captions));
+      if (output !== res.captions) {
+        await writeFile(output, await readFile(res.captions, 'utf8'));
+      }
+      return {
+        content: [{
+          type: 'text',
+          text: `Transcribed audio (${res.durationSeconds.toFixed(1)}s):
+- Captions file: ${output}
+- Words recognized: ${res.words}
+- Cues generated: ${res.cues}`
+        }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_import_figma': {
+      const input = String(args.input || '').trim();
+      let data: any;
+      const token = String(args.token || process.env.FIGMA_ACCESS_TOKEN || process.env.FIGMA_TOKEN || '').trim();
+      if (token && !input.endsWith('.json') && !input.includes('{')) {
+        data = await fetchFigmaFile(input, token);
+      } else if (input.startsWith('{')) {
+        data = JSON.parse(input);
+      } else {
+        data = JSON.parse(await readFile(resolve(input), 'utf8'));
+      }
+      const theme = importFigmaTokens(data, 'Figma Brand');
+      const outTheme = resolve(String(args.outputTheme || 'theme.json'));
+      await writeFile(outTheme, JSON.stringify(theme, null, 2) + '\n');
+
+      let outComp: string | undefined;
+      if (args.outputComp) {
+        const firstFrame = data?.document?.children?.[0]?.children?.find((c: any) => c.type === 'FRAME') ?? data?.document?.children?.[0] ?? data;
+        const comp = importFigmaFrame(firstFrame);
+        outComp = resolve(String(args.outputComp));
+        await writeFile(outComp, JSON.stringify(comp, null, 2) + '\n');
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Successfully imported Figma design tokens!
+- Theme saved: ${outTheme} (${Object.keys(theme.variables).length} tokens: ${Object.keys(theme.variables).join(', ')})
+${outComp ? `- Composition saved: ${outComp}` : ''}`
         }],
         isError: false
       };
