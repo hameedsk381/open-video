@@ -1,8 +1,8 @@
 // `ove review`: renders sample frames of a composition and checks them for the mistakes that make a video look unfinished: text cut off,
 // off the frame, overlapping or too small; text sitting where a platform's UI covers the picture; a busy frame; too many type sizes or text
-// colours; long stretches where nothing moves; scenes of identical length; mixed transition styles; text on screen too briefly to read;
-// several headlines competing; caption lines too fast to read; sounds cut off mid-phrase; and, when there is sound, loudness. It also makes a
-// contact sheet. The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
+// colours; long stretches where nothing moves; scenes of identical length; mixed transition styles; shared text teleporting across a hard
+// cut; text on screen too briefly to read; several headlines competing; caption lines too fast to read; sounds cut off mid-phrase; and, when
+// there is sound, loudness. It also makes a contact sheet. The checks are leads for a person or agent looking at the sheet, not a verdict on taste.
 import type { Composition } from '@ove/schema'; import { createRenderer, defaultConcurrency } from '@ove/renderer'; import type { FrameReport, TextNote } from '@ove/graphics'; import { measureLoudness, sourceOf } from './audio'; import { captionTrack, measureSource } from './media'; import { layerWindows } from '@ove/timeline';
 export type ReviewIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; frame?: number; layer?: string; suggestion?: Record<string, unknown> };
 export type ReviewResult = { issues: ReviewIssue[]; sheet: Buffer; sheetFrames: number[]; sampledFrames: number; loudness?: { integrated: number; truePeak: number } };
@@ -13,6 +13,7 @@ const area = (a: TextNote) => Math.max(0, a.x1 - a.x0) * Math.max(0, a.y1 - a.y0
 type Rect = { x0: number; y0: number; x1: number; y1: number };
 const overlap = (a: Rect, b: Rect) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
 const seconds = (frame: number, fps: number) => `${(frame/fps).toFixed(1)} s`;
+const visible = (t: TextNote) => t.alpha >= 0.95;
 
 export type SafeZoneBand = { name: string; hint: string; x0: number; y0: number; x1: number; y1: number };
 /**
@@ -44,7 +45,7 @@ export async function reviewComposition(composition: Composition, options: Revie
   const renderer=await createRenderer(composition, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: Math.min(1, 1280/Math.max(width, height)), allowCode: options.allowCode });
   let reports: FrameReport[]=[], sheet: Buffer; try { let done=0; reports=await Promise.all(frames.map(f => renderer.inspectFrame(f).then(r => { options.onProgress?.(++done, frames.length); return r; })));
     sheet=await renderer.contactSheet(sheetFrames, { columns: options.columns ?? (width >= height ? 4 : 6), safeBands }); } finally { await renderer.close(); }
-  const issues: ReviewIssue[]=[], minSide=Math.min(width, height), visible=(t: TextNote) => t.alpha >= 0.95;
+  const issues: ReviewIssue[]=[], minSide=Math.min(width, height);
   // Problems that last: a layer reported once per kind, at the first sampled frame, and only when it holds for at least `hold` samples
   // in a row (so things sliding in from off-frame, or crossing during a transition, are not flagged).
   const persistent=(code: string, hold: number, test: (t: TextNote, report: FrameReport) => string | undefined, severity: ReviewIssue['severity']) => { const runs=new Map<string, { start: number; count: number; message: string }>(), reported=new Set<string>();
@@ -85,6 +86,8 @@ export async function reviewComposition(composition: Composition, options: Revie
   if (lengths.length >= 4 && lengths.every(l => Math.abs(l-mean) <= 0.1*mean)) issues.push({ severity: 'warning', code: 'uniform-scenes', message: `All ${lengths.length} scenes are about ${seconds(Math.round(mean), fps)} long: vary their length so the video has a rhythm` });
   const transitions=[...new Set(composition.scenes.flatMap(s => [s.transitionIn?.type, s.transitionOut?.type]).filter(Boolean))];
   if (transitions.length >= 3) issues.push({ severity: 'info', code: 'mixed-transitions', message: `${transitions.length} transition styles (${transitions.join(', ')}): one style through a video usually reads as more deliberate` });
+  // Continuity across hard cuts: an element that survives a cut should keep its place.
+  issues.push(...continuityIssues(composition, reports, frames, fps));
   const loudness=options.audio === false ? undefined : await measureLoudness(composition, baseDir);
   if (loudness) { if (loudness.integrated < -20) issues.push({ severity: 'warning', code: 'quiet', message: `Sound is quiet (${loudness.integrated.toFixed(1)} LUFS): set export.loudness (-14 for social video, -16 for explainers) or raise volumes` });
     else if (loudness.integrated > -11) issues.push({ severity: 'warning', code: 'loud', message: `Sound is loud (${loudness.integrated.toFixed(1)} LUFS): set export.loudness (-14 for social video, -16 for explainers) or lower volumes` });
@@ -111,4 +114,37 @@ export async function reviewComposition(composition: Composition, options: Revie
     if (cut && endFrame < durationFrames) issues.push({ severity: 'warning', code: 'sound-cut', message: `"${l.id}" (${l.src}) is cut off mid-sound at ${seconds(endFrame, fps)}, ${(cut[1]-until).toFixed(1)} s before its phrase ends: lengthen its scene or end it at a pause`, frame: endFrame, layer: l.id }); }
   const order={ error: 0, warning: 1, info: 2 }; issues.sort((a, b) => order[a.severity]-order[b.severity] || (a.frame ?? -1)-(b.frame ?? -1));
   return { issues, sheet: sheet!, sheetFrames, sampledFrames: frames.length, loudness }; }
+
+/**
+ * Continuity across hard cuts: text that survives a cut should keep its place. For each scene, a text's resting spot is
+ * the cluster of sampled centres it holds most often (entrances and exits sample off-rest, so the mode skips them; a
+ * text needs at least two samples in the scene to be judged). The same content sitting somewhere else across a cut with
+ * no transition reads as a teleport; scenes joined by a transition are skipped, because the transition moves everything.
+ */
+export function continuityIssues(composition: Composition, reports: FrameReport[], frames: number[], fps: number): ReviewIssue[] {
+  const minSide=Math.min(composition.width, composition.height), grid=Math.max(8, Math.round(0.02*minSide)), jumpLimit=0.08*minSide;
+  const restOf=(scene: Composition['scenes'][number]) => {
+    const cells=new Map<string, Map<string, { x: number; y: number; size: number; id: string; n: number }>>();
+    reports.forEach((report, i) => { const frame=frames[i]!;
+      if (frame < scene.startFrame || frame >= scene.startFrame+scene.durationFrames) return;
+      for (const t of report.texts) { if (!visible(t) || t.kind !== 'text') continue;
+        const key=`${Math.round((t.x0+t.x1)/2/grid)},${Math.round((t.y0+t.y1)/2/grid)}`, byCell=cells.get(t.text) ?? new Map();
+        const cell=byCell.get(key) ?? { x: 0, y: 0, size: 0, id: t.id, n: 0 };
+        cell.x+=(t.x0+t.x1)/2; cell.y+=(t.y0+t.y1)/2; cell.size+=t.size; cell.id=t.id; cell.n++; byCell.set(key, cell); cells.set(t.text, byCell); } });
+    const rest=new Map<string, { x: number; y: number; size: number; id: string; n: number }>();
+    for (const [text, byCell] of cells) { const best=[...byCell.values()].sort((a, b) => b.n-a.n)[0]!;
+      rest.set(text, { x: best.x/best.n, y: best.y/best.n, size: best.size/best.n, id: best.id, n: best.n }); }
+    return rest; };
+  const issues: ReviewIssue[]=[];
+  for (let i=1; i < composition.scenes.length; i++) {
+    const incoming=composition.scenes[i]!, previous=composition.scenes[i-1]!;
+    if (incoming.transitionIn) continue;
+    const before=restOf(previous), after=restOf(incoming);
+    for (const [text, was] of before) { const now=after.get(text);
+      if (!now || was.n < 2 || now.n < 2) continue;
+      const distance=Math.hypot(now.x-was.x, now.y-was.y);
+      if (distance > jumpLimit) issues.push({ severity: 'warning', code: 'continuity',
+        message: `"${text}" jumps about ${Math.round(distance)} px across the cut at ${seconds(incoming.startFrame, fps)}: keep shared elements in one place across the cut, or join the scenes with a transition`,
+        frame: incoming.startFrame, layer: now.id }); } }
+  return issues; }
 

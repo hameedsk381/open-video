@@ -63,6 +63,7 @@
           "fontWeight": 900,
           "fontSize": 380,
           "color": "#161b26",
+          "fixed": true,
           "x": 960,
           "y": 700,
           "animations": [
@@ -177,6 +178,7 @@
           "fontWeight": 900,
           "fontSize": 380,
           "color": "#161b26",
+          "fixed": true,
           "x": 960,
           "y": 700,
           "animations": [
