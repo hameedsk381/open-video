@@ -2,6 +2,11 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.10 (2026-11-06)
+
+### Fixed
+- **Docker Image Build & Playwright Pinning.** Pinned `playwright` dependency strictly to exact `1.64.1` (removing semver caret `^`) across `packages/ove`, `packages/renderer`, and workspace dependencies. This prevents `npm install -g /tmp/app.tgz` in Docker builds from resolving to uncoordinated/broken upstream registry releases (such as `playwright@1.65.0` referencing unavailable `playwright-core@1.65.0` with `ETARGET`), guaranteeing deterministic container image builds matching the pre-cached Chromium runtime.
+
 ## 0.3.9 (2026-11-06)
 
 ### Changed

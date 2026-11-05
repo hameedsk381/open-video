@@ -2,7 +2,7 @@
   "name": "motionrender",
   "private": true,
   "type": "module",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "workspaces": [
     "packages/*"
   ],
@@ -42,7 +42,7 @@
     "@types/react": "19",
     "@types/react-dom": "19",
     "esbuild": "^0.28.2",
-    "playwright": "^1.64.1",
+    "playwright": "1.64.1",
     "react": "19",
     "react-dom": "19",
     "three": "0.170.0",
