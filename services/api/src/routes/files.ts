@@ -1,8 +1,25 @@
-import { readFile, stat } from 'node:fs/promises';
-import { extname, resolve } from 'node:path';
+import { copyFile, mkdir, readFile, stat } from 'node:fs/promises';
+import { dirname, extname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { within } from '@ove/storage';
 import { mediaTypes, serveFile } from '../http';
 import type { Ctx, Route } from '../types';
+
+function findTemplatesDir(appDir?: string): string | undefined {
+  const candidates = [
+    appDir ? resolve(appDir, '../templates') : '',
+    appDir ? resolve(appDir, '../../templates') : '',
+    resolve(process.cwd(), 'packages/cli/templates'),
+    resolve(process.cwd(), 'templates'),
+    fileURLToPath(new URL('../../../cli/templates', import.meta.url)),
+    fileURLToPath(new URL('../templates', import.meta.url)),
+  ].filter(Boolean);
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return undefined;
+}
 
 /** The person's own files (uploads, renders, thumbnails), served from their space only. */
 export function fileRoutes(): Route[] {
@@ -11,6 +28,41 @@ export function fileRoutes(): Route[] {
     if (!within(space, target)) return c.send(403, 'text/plain', 'That file is not yours to open');
     // Housekeeping folders are not for download.
     if (/[\\/](history|\.studio|\.trash)([\\/]|$)/.test(target.slice(space.length))) return c.send(404, 'text/plain', 'Not found');
+
+    let exists = false;
+    try { exists = (await stat(target)).isFile(); } catch {}
+    if (!exists) {
+      const rel = decodeURIComponent(c.url.pathname.slice('/files/'.length));
+      const parts = rel.split(/[\\/]/);
+      const projectId = parts[0];
+      const filename = parts.slice(1).join('/');
+      if (projectId && filename) {
+        const projectDir = resolve(space, projectId);
+        let templateId: string | undefined;
+        try {
+          const compJson = JSON.parse(await readFile(resolve(projectDir, 'composition.json'), 'utf8'));
+          templateId = compJson.template || compJson.id;
+        } catch {}
+        const tDir = findTemplatesDir(c.deps.app?.dir);
+        if (tDir) {
+          const candidates = [
+            templateId ? resolve(tDir, templateId, filename) : undefined,
+            resolve(tDir, 'kinetic-reel', filename),
+            resolve(tDir, 'saas-launch', filename),
+          ].filter(Boolean) as string[];
+          for (const cand of candidates) {
+            try {
+              if ((await stat(cand)).isFile()) {
+                await mkdir(dirname(target), { recursive: true });
+                await copyFile(cand, target);
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
     await serveFile(c.req, c.res, target);
   } }];
 }

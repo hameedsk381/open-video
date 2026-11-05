@@ -1,7 +1,7 @@
 // Reusable composition templates shipped with the CLI. Each folder holds a normal project (composition.json plus any
 // assets) and a template.json describing how to show it. `ove init --template` copies one; `ove ai studio` previews it,
 // fills its variables and writes a project. Template ids are folder names, so they never contain a path separator.
-import { readdir, readFile } from 'node:fs/promises';
+import { cp, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadComposition, variablesSchema } from '@ove/schema';
@@ -159,6 +159,17 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
           source = undefined;
           warnings.push(`Retimed the ${filled.template} template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s; saved as a plain composition (the timing is now bespoke).`);
           options.onProgress?.(`Retiming the template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s.`);
+        }
+        if (options.baseDir && filled.template) {
+          try {
+            const templateDir = join(templatesDir, filled.template);
+            const entries = await readdir(templateDir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.name !== 'template.json' && entry.name !== 'composition.json' && entry.name !== 'composition.schema.json') {
+                await cp(join(templateDir, entry.name), join(options.baseDir, entry.name), { recursive: true, force: true });
+              }
+            }
+          } catch {}
         }
         return { composition, source, attempts: filled.attempts + (plan ? 1 : 0), issues: [], warnings, template: filled.template };
       }

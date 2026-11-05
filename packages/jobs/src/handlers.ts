@@ -1,6 +1,6 @@
 // The studio's jobs. Each handler checks its request straight away (so a bad request is refused before it is queued) and gives back the
 // work to run. They know nothing about HTTP: the files they touch come through JobPaths, the AI through the provider, and the rest is injected.
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
@@ -109,6 +109,25 @@ export function createHandlers(env: JobEnv) {
       await ensureBaseline(resolve(dir, 'composition.json'));
       const source = result.source ? (options.narration ? mergeNarration(result.source, composition) : result.source) : undefined;
       const files = await writeCompositionProject(dir, composition, { force: true, source });
+      if (result.template) {
+        try {
+          const candidates = [
+            resolve(process.cwd(), 'packages/cli/templates', result.template),
+            resolve(process.cwd(), 'templates', result.template),
+          ];
+          for (const tDir of candidates) {
+            try {
+              const entries = await readdir(tDir, { withFileTypes: true });
+              for (const entry of entries) {
+                if (entry.name !== 'template.json' && entry.name !== 'composition.json' && entry.name !== 'composition.schema.json') {
+                  await cp(resolve(tDir, entry.name), resolve(dir, entry.name), { recursive: true, force: true });
+                }
+              }
+              break;
+            } catch {}
+          }
+        } catch {}
+      }
       await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: ai.id, model: ai.model, template: result.template, attempts: result.attempts });
       return {
         dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps,
