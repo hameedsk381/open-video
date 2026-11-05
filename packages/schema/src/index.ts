@@ -181,7 +181,24 @@ export function expandMattes(input: unknown): unknown {
   };
   return { ...raw, scenes: raw.scenes.map((scene: any) => scene && Array.isArray(scene.layers) ? { ...scene, layers: scene.layers.map(wrap) } : scene) };
 }
-export function parseComposition(input: unknown): Composition { return compositionSchema.parse(expandMattes(expandSceneGrades(input))); }
+// Older compositions (and several templates) write the scene camera's motion as `keyframes: [{ "frame": 0, "zoom": 1.06, "easing": "drift" }]`,
+// naming the property inside each keyframe, while the schema wants one animation per property. Rewrite the shorthand before
+// parsing: without it the keyframes are unknown to the schema, are dropped, and the camera silently never moves.
+export function expandCameraKeyframes(input: unknown): unknown {
+  const raw = input as any; if (!raw || typeof raw !== 'object' || !Array.isArray(raw.scenes)) return input;
+  const camera = (cam: any) => {
+    if (!cam || typeof cam !== 'object' || !Array.isArray(cam.keyframes)) return cam;
+    const { keyframes, ...rest } = cam;
+    const animations = (['zoom', 'x', 'y', 'rotation', 'shake'] as const).flatMap(property => {
+      const frames = keyframes.filter((keyframe: any) => keyframe && typeof keyframe === 'object' && typeof keyframe.frame === 'number' && keyframe[property] !== undefined)
+        .map((keyframe: any) => ({ frame: keyframe.frame, value: keyframe[property], ...(keyframe.easing !== undefined ? { easing: keyframe.easing } : {}) }));
+      return frames.length ? [{ property, keyframes: frames }] : [];
+    });
+    return animations.length ? { ...rest, animations } : rest;
+  };
+  return { ...raw, scenes: raw.scenes.map((scene: any) => scene && typeof scene === 'object' && scene.camera && typeof scene.camera === 'object' ? { ...scene, camera: camera(scene.camera) } : scene) };
+}
+export function parseComposition(input: unknown): Composition { return compositionSchema.parse(expandMattes(expandSceneGrades(expandCameraKeyframes(input)))); }
 // Measured media, by asset id, for expressions such as {{media['vo-intro'].frames}}: the length, and the stretches of sound between
 // pauses (segments), in seconds and in frames at the composition's fps. Measured in Node by @ove/core (measureMedia).
 export type MediaSegment = { start: number; end: number; startFrame: number; endFrame: number };

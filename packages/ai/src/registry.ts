@@ -5,7 +5,7 @@
 import { sfxNames } from '@ove/schema';
 
 export type GenerationPath = 'template' | 'json' | 'react';
-export type CapabilityKind = 'template' | 'theme' | 'block' | 'component' | 'effect' | 'sound';
+export type CapabilityKind = 'template' | 'theme' | 'block' | 'component' | 'effect' | 'sound' | 'move';
 
 export type Param = { name: string; type: string; description?: string };
 
@@ -47,7 +47,10 @@ export type RegistryInput = {
   blocks?: BlockEntry[];
 };
 
-export const registryVersion = '1';
+export const registryVersion = '2';
+
+/** A named motion move: a reusable animation pattern with a hint terse enough for a prompt glossary. */
+export type Move = Capability & { hint: string };
 
 const components: Capability[] = [
   { id: 'react-primitives', kind: 'component', name: 'React primitives', paths: ['react'], version: registryVersion, params: [],
@@ -93,6 +96,85 @@ const effects: Capability[] = [
     description: `Built-in sound effects usable in audio layers: ${sfxNames.map(name => `sfx:${name}`).join(', ')}.` },
 ];
 
+// Named motion moves: the reusable vocabulary of motion design, each mapped to what a composition can actually express.
+// The planner names them in a beat's "motion" field; the JSON composer knows each recipe from the prompt glossary built
+// from this list (movesGlossary). Every example is a valid fragment of the composition format.
+const moves: Move[] = [
+  { id: 'ken-burns', kind: 'move', name: 'Ken Burns', paths: ['json'], version: registryVersion,
+    params: [{ name: 'zoomTo', type: 'number', description: 'final zoom, about 1.08' }],
+    description: 'A slow continuous camera zoom over a full-frame image or scene, the standard way to keep still imagery alive.',
+    hint: 'slow camera zoom (drift easing) over still imagery',
+    example: '"camera": { "animations": [{ "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 150, "value": 1.08, "easing": "drift" }] }] }' },
+  { id: 'drift', kind: 'move', name: 'Drift', paths: ['json'], version: registryVersion,
+    params: [{ name: 'pixels', type: 'number', description: 'how far it wanders, 20-80' }],
+    description: 'Slow continuous movement for the whole shot with the drift easing, so glows, backgrounds and held shots never sit still.',
+    hint: 'slow continuous layer movement (drift easing)',
+    example: '{ "property": "x", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 150, "value": 40, "easing": "drift" }] }' },
+  { id: 'rise-in', kind: 'move', name: 'Rise in', paths: ['json'], version: registryVersion,
+    params: [{ name: 'pixels', type: 'number', description: 'how far below it starts, about 6% of the height' }],
+    description: 'Enters from just below its place and settles with the land easing while fading in; the standard entrance for text and cards.',
+    hint: 'enter from below and settle (land easing) while fading in',
+    example: '[{ "property": "y", "keyframes": [{ "frame": 0, "value": 46, "easing": "land" }, { "frame": 18, "value": 0 }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 10, "value": 1 }] }]' },
+  { id: 'pop-in', kind: 'move', name: 'Pop in', paths: ['json'], version: registryVersion,
+    params: [],
+    description: 'Grows in with a small overshoot (the pop easing) while fading in, for badges, icons and anything that should feel bouncy.',
+    hint: 'grow in with overshoot (pop easing)',
+    example: '[{ "property": "scale", "keyframes": [{ "frame": 0, "value": 0.7, "easing": "pop" }, { "frame": 14, "value": 1 }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 6, "value": 1 }] }]' },
+  { id: 'blur-in', kind: 'move', name: 'Blur in', paths: ['json'], version: registryVersion,
+    params: [{ name: 'blur', type: 'number', description: 'starting blur in px, about 18' }],
+    description: 'Comes into focus: blur falls to 0 as the layer fades in; a premium entrance for headlines over imagery.',
+    hint: 'come into focus (blur to 0 while fading in)',
+    example: '[{ "property": "blur", "keyframes": [{ "frame": 0, "value": 18, "easing": "easeOut" }, { "frame": 16, "value": 0 }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 8, "value": 1 }] }]' },
+  { id: 'slide-in', kind: 'move', name: 'Slide in', paths: ['json'], version: registryVersion,
+    params: [{ name: 'pixels', type: 'number', description: 'how far off it starts; keep under a quarter of the frame' }],
+    description: 'Enters from a side and glides to rest; keep the travel short so it reads as motion, not a new shot.',
+    hint: 'enter from a side and glide to rest',
+    example: '[{ "property": "x", "keyframes": [{ "frame": 0, "value": 420, "easing": "glide" }, { "frame": 22, "value": 0 }] }, { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 8, "value": 1 }] }]' },
+  { id: 'fade-out', kind: 'move', name: 'Fade out', paths: ['json'], version: registryVersion,
+    params: [],
+    description: 'Leaves with a short fade using the exit easing; exits are quicker than entrances, 8-14 frames.',
+    hint: 'short exit fade (exit easing, 8-14 frames)',
+    example: '{ "property": "opacity", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 12, "value": 0, "easing": "exit" }] }' },
+  { id: 'word-cascade', kind: 'move', name: 'Word cascade', paths: ['json'], version: registryVersion,
+    params: [{ name: 'stagger', type: 'number', description: 'frames between words, about 4' }],
+    description: 'A headline that arrives word by word, each rising into place; the standard kinetic headline.',
+    hint: 'kinetic headline: split by words, stagger 4, preset rise',
+    example: '"split": { "by": "words", "stagger": 4, "preset": "rise", "duration": 18 }' },
+  { id: 'typewriter', kind: 'move', name: 'Typewriter', paths: ['json'], version: registryVersion,
+    params: [],
+    description: 'Types on letter by letter; for terminal, chat and voiceover-echo looks.',
+    hint: 'type on letter by letter (split preset typewriter)',
+    example: '"split": { "by": "letters", "preset": "typewriter", "duration": 2 }' },
+  { id: 'pulse', kind: 'move', name: 'Pulse', paths: ['json'], version: registryVersion,
+    params: [{ name: 'scaleTo', type: 'number', description: 'the larger scale, about 1.05' }],
+    description: 'Breathes between two scales on a loop (repeat with easeInOut), for live badges, dots and beats.',
+    hint: 'breathe between two scales on a loop (repeat)',
+    example: '{ "property": "scale", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 15, "value": 1.05, "easing": "easeInOut" }, { "frame": 30, "value": 1 }], "repeat": 99 }' },
+  { id: 'wipe-reveal', kind: 'move', name: 'Wipe reveal', paths: ['json'], version: registryVersion,
+    params: [],
+    description: 'Draws a path on (trimEnd 0 to 1): underlines, rings and icon strokes write themselves in.',
+    hint: 'draw a stroke on (path trimEnd 0 to 1)',
+    example: '{ "property": "trimEnd", "keyframes": [{ "frame": 0, "value": 0, "easing": "easeInOut" }, { "frame": 20, "value": 1 }] }' },
+  { id: 'parallax', kind: 'move', name: 'Parallax', paths: ['json'], version: registryVersion,
+    params: [],
+    description: 'Background and foreground drift at different rates so the frame has depth; the background moves less.',
+    hint: 'two layers drift at different rates for depth',
+    example: 'background drifts to y -24 while the foreground drifts to y -60, both easing "drift" over the scene' },
+  { id: 'camera-shake', kind: 'move', name: 'Camera shake', paths: ['json'], version: registryVersion,
+    params: [{ name: 'pixels', type: 'number', description: 'wobble amplitude, about 10' }],
+    description: 'A short deterministic wobble on an impact: shake falls to 0 over about 12 frames; pair with sfx:thump.',
+    hint: 'short impact wobble (camera shake falling to 0)',
+    example: '"camera": { "animations": [{ "property": "shake", "keyframes": [{ "frame": 0, "value": 10 }, { "frame": 12, "value": 0, "easing": "easeOut" }] }] }' },
+  { id: 'count-up', kind: 'move', name: 'Count up', paths: ['react'], version: registryVersion,
+    params: [{ name: 'value', type: 'number' }, { name: 'suffix', type: 'string' }],
+    description: 'A number that counts up to its value on a spring (the NumberTicker component); every statistic should move.',
+    hint: 'number counts up on a spring (React NumberTicker)',
+    example: '<NumberTicker value={87} suffix="%" />' },
+];
+
+/** One line per move for the JSON composer's prompt, so a plan that names a move meets a composer that knows its recipe. */
+export const movesGlossary = `Named motion moves (a plan may name these; here is each recipe): ${moves.map(move => `${move.id} (${move.hint})`).join('; ')}.`;
+
 export function buildRegistry(input: RegistryInput = {}): Registry {
   const capabilities: Capability[] = [];
   const push = (capability: Capability) => {
@@ -122,6 +204,7 @@ export function buildRegistry(input: RegistryInput = {}): Registry {
   }
   for (const component of components) push(component);
   for (const entry of [...transitions, ...effects]) push(entry);
+  for (const move of moves) push(move);
   for (const name of sfxNames) {
     push({ id: `sfx:${name}`, kind: 'sound', name: name, description: `Built-in sound effect playable in an audio layer as sfx:${name}.`, paths: ['json', 'react'], version: registryVersion, params: [] });
   }
@@ -131,7 +214,7 @@ export function buildRegistry(input: RegistryInput = {}): Registry {
     capabilities,
     select,
     find: (kind, id) => capabilities.find(capability => capability.kind === kind && capability.id === id),
-    counts: () => ({ template: select('template').length, theme: select('theme').length, block: select('block').length, component: select('component').length, effect: select('effect').length, sound: select('sound').length }),
+    counts: () => ({ template: select('template').length, theme: select('theme').length, block: select('block').length, component: select('component').length, effect: select('effect').length, sound: select('sound').length, move: select('move').length }),
   };
 }
 
@@ -141,7 +224,7 @@ export function sameShape(a: { width?: number; height?: number }, b: { width: nu
   return Math.abs(a.width / a.height - b.width / b.height) < 0.02;
 }
 
-const kindTag: Record<CapabilityKind, string> = { template: 'Templates', theme: 'Themes', block: 'Blocks', component: 'React components', effect: 'Effects', sound: 'Sounds' };
+const kindTag: Record<CapabilityKind, string> = { template: 'Templates', theme: 'Themes', block: 'Blocks', component: 'React components', effect: 'Effects', sound: 'Sounds', move: 'Motion moves' };
 
 /** The registry as compact text for the planner prompt, grouped by kind. */
 export function describeCapabilities(registry: Registry, fit: { width: number; height: number; allowReact?: boolean }): string {

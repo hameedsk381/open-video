@@ -13,4 +13,17 @@ describe('scene camera', () => {
     expect(a).toEqual(b); expect(a.x).not.toBe(c.x); expect(Math.abs(a.x-100)).toBeLessThanOrEqual(8); expect(Math.abs(a.y-50)).toBeLessThanOrEqual(8); });
   it('evaluates fractional frames for motion blur, and checks its settings', () => { const c = comp(undefined, { motionBlur: {} }); expect(c.motionBlur).toEqual({ samples: 8, shutter: 180 }); expect(evaluateFrame(c, 2.5).map(l => l.id)).toEqual(['a', 'hud']); expect(evaluateFrame(c, 60)).toEqual([]);
     expect(() => comp(undefined, { motionBlur: { samples: 1 } })).toThrow(); expect(() => comp({ animations: [{ property: 'opacity', keyframes: [{ frame: 0, value: 1 }] }] })).toThrow(); });
+  it('accepts the older camera shorthand that names the property in each keyframe', () => {
+    // Some templates and older compositions write `keyframes: [{ frame, zoom, easing }]`; it must become real
+    // camera animations, not be dropped as an unknown field (which left the camera still).
+    const legacy = comp({ zoom: 1, keyframes: [{ frame: 0, zoom: 1, easing: 'easeInOut' }, { frame: 60, zoom: 1.08, easing: 'drift' }] });
+    expect(legacy.scenes[0]!.camera!.animations).toEqual([{ property: 'zoom', keyframes: [{ frame: 0, value: 1, easing: 'easeInOut' }, { frame: 60, value: 1.08, easing: 'drift' }] }]);
+    expect(cameraState(legacy.scenes[0]!.camera!, 60, 200, 100).zoom).toBe(1.08);
+    // Several properties interleaved in one keyframe list become one animation each.
+    const mixed = comp({ keyframes: [{ frame: 0, zoom: 1, x: 100 }, { frame: 30, zoom: 1.05, x: 120, rotation: 2 }] });
+    expect(mixed.scenes[0]!.camera!.animations.map(a => a.property)).toEqual(['zoom', 'x', 'rotation']);
+    // The canonical form passes through untouched, and a keyframe list naming no known property is just dropped.
+    expect(comp({ zoom: 1.05, animations: [{ property: 'zoom', keyframes: [{ frame: 0, value: 1 }] }] }).scenes[0]!.camera!.animations).toHaveLength(1);
+    expect(comp({ zoom: 1, keyframes: [{ frame: 0, opacity: 0.5 }] }).scenes[0]!.camera!.animations).toEqual([]);
+  });
 });

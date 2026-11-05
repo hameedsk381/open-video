@@ -61,7 +61,7 @@ Themes: For templates that take a theme, ALWAYS choose the theme matching the to
 - "espresso": artisan craft, food & beverage, coffee, lifestyle, podcasts, warmth (dark espresso, amber gold).
 - "paper": clean editorial, education, publishing, thought leadership (clean light aesthetic, deep ink).
 - "signal": high-impact, fitness, sports, breaking news, urgency (bold monochrome with alert red).
-Every beat needs a concrete picture, not a mood.
+Every beat needs a concrete picture, not a mood. In "motion", name the move — use a motion move from the capability list below (such as "word-cascade" or "ken-burns") and say what carries into the next beat.
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
 ${describeCapabilities(options.registry, options)}`;

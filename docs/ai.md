@@ -51,7 +51,7 @@ When a full composition has problems, the model is asked for a patch instead of 
 
 ## The planner decides the route first
 
-Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. Templates are the primary path: the planner is told to prefer one whenever its kind and aspect fit the brief, even when the length differs (`--duration` retimes the filled template), so the composed and React routes are secondary, for briefs no template fits. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects and sounds that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. With a valid plan:
+Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. Templates are the primary path: the planner is told to prefer one whenever its kind and aspect fit the brief, even when the length differs (`--duration` retimes the filled template), so the composed and React routes are secondary, for briefs no template fits. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects, sounds and **motion moves** that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. The moves are the named vocabulary of motion (`ken-burns`, `word-cascade`, `rise-in`, `pop-in`, `blur-in`, `slide-in`, `pulse`, `wipe-reveal`, `parallax`, `camera-shake`, …): the planner names them in a beat's `motion` field, and the composition prompt carries a one-line recipe for each, so a named move always meets the knowledge of how to build it. With a valid plan:
 
 - route **template** → that template id and theme are filled (the primary path; the old template mode, now aimed by the planner);
 - route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
@@ -64,7 +64,7 @@ ove ai capabilities            # list every registered capability the AI may use
 ove ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
 ```
 
-The registry (registry v1, about 110 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects and the React component kit. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
+The registry (registry v2, about 140 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
 
 ## `ove agent`: the planner routes into React code
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRegistry, describeCapabilities, registryVersion, sameShape } from '@ove/ai';
+import { buildRegistry, describeCapabilities, movesGlossary, registryVersion, sameShape } from '@ove/ai';
 
 // The capability registry: pure metadata assembled from caller catalogues plus the built-in effects, sounds and React
 // kit. It must reject duplicate and malformed ids, and let the planner look capabilities back up by kind and id.
@@ -38,6 +38,27 @@ describe('buildRegistry', () => {
     expect(registry.find('sound', 'sfx:ding')!.paths).toEqual(['json', 'react']);
     expect(registry.find('effect', 'transition-slide')).toBeDefined();
     expect(registry.find('effect', 'transition-fade')!.params.map(p => p.name)).toContain('durationFrames');
+  });
+
+  it('registers the named motion moves with a recipe each', () => {
+    expect(registry.counts().move).toBeGreaterThanOrEqual(12);
+    const kenBurns = registry.find('move', 'ken-burns')!;
+    expect(kenBurns.paths).toEqual(['json']);
+    expect(kenBurns.example).toContain('"camera"');
+    expect(registry.find('move', 'count-up')!.paths).toEqual(['react']);
+    // Every move carries the two things consumers need: a prompt glossary hint and a valid-JSON example.
+    for (const move of registry.select('move')) {
+      expect(move.example, `${move.id} example`).toBeTruthy();
+      expect((move as any).hint, `${move.id} hint`).toBeTruthy();
+    }
+  });
+
+  it('describes the moves to the planner under their own heading', () => {
+    const text = describeCapabilities(registry, { width: 1080, height: 1080 });
+    expect(text).toContain('Motion moves:');
+    expect(text).toContain('  - ken-burns: ');
+    expect(movesGlossary).toContain('ken-burns (');
+    expect(movesGlossary).toContain('word-cascade (');
   });
 
   it('refuses duplicate and malformed ids at build time, not at plan time', () => {

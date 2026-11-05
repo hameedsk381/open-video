@@ -1,6 +1,7 @@
 // The prompt is the product here: a compact, accurate description of the composition format is what makes an LLM
 // emit JSON that validates on the first or second try. The exact JSON Schema can be appended for hard cases (--schema).
 import { compositionJsonSchema } from '@ove/schema';
+import { movesGlossary } from './registry';
 
 export type PromptOptions = {
   width: number; height: number; fps: number; durationSeconds: number;
@@ -134,7 +135,7 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Finish on a clean hold; do not fade the whole frame to black at the end unless asked.`;
 
 export function systemPrompt(options: Partial<PromptOptions> = {}): string {
-  const parts = ['You write Open Video Engine (OVE) motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET];
+  const parts = ['You write Open Video Engine (OVE) motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET, movesGlossary];
   if (options.includeSchema) parts.push('# Exact JSON Schema (authoritative)\n' + JSON.stringify(compositionJsonSchema));
   return parts.join('\n\n');
 }
