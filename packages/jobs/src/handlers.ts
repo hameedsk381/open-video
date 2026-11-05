@@ -163,7 +163,7 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'render', run: async progress => {
       const { composition } = await loadForRender(file);
       let last = 0;
-      const result = await renderMedia(composition, { ...settings, baseDir, output,
+      const result = await renderMedia(composition, { ...settings, baseDir, output, allowCode: true,
         onProgress: ({ rendered, total }) => { if (rendered === total || Date.now() - last > 1000) { last = Date.now(); progress(`Rendered ${rendered}/${total} frames`); } } });
       const baseResult = { ...resultFile(result.output), frames: result.frames, seconds: result.durationSeconds, format: result.format };
 
@@ -216,7 +216,7 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'review', run: async progress => {
       const { composition, baseDir } = await loadForRender(file);
       let last = 0;
-      const result = await reviewComposition(composition, { baseDir,
+      const result = await reviewComposition(composition, { baseDir, allowCode: true,
         onProgress: (done, total) => { if (done === total || done - last >= 10) { last = done; progress(`Checked ${done}/${total} frames`); } } });
       await writeFile(output, result.sheet);
       return { ...resultFile(output), issues: result.issues, loudness: result.loudness, sampledFrames: result.sampledFrames, sheetFrames: result.sheetFrames };

@@ -858,7 +858,7 @@ function editor(id, tabHint) {
         composition: d.source.raw,
         media: d.source.media,
         assetBase: location.origin + d.source.base,
-        allowCode: false,
+        allowCode: true,
         controls: false
       });
     }).then(function (p) {

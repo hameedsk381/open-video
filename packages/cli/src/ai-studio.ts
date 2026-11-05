@@ -75,7 +75,7 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
   const queue = new InProcessQueue(runner.run);
   const app = createApp({
     mode: 'local', store, queue, validate: runner.validate, auth: loopbackAuth, library: studioLibrary, player: studioPlayer, app: studioApp,
-    makeThumbnail: (raw, values, baseDir, thumbnailOptions) => makeThumbnail(raw, values, baseDir, thumbnailOptions),
+    makeThumbnail: (raw, values, baseDir, thumbnailOptions) => makeThumbnail(raw, values, baseDir, { ...thumbnailOptions, allowCode: true }),
     providerState: () => provider
       ? { provider: { id: provider.id, model: provider.model, baseUrl: provider.baseUrl, capabilities: providerCapabilities(provider) }, error: null }
       : { provider: null, error: providerError ?? 'No AI provider is configured' },

@@ -57,7 +57,7 @@ export const PlayerView = forwardRef<PlayerHandle, { detail: Detail; startFrame:
           composition: detail.source.raw,
           media: detail.source.media,
           assetBase: location.origin + detail.source.base,
-          allowCode: false,
+          allowCode: true,
           controls: false,
         })
       )
