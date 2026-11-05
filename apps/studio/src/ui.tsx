@@ -101,6 +101,20 @@ export const PauseIcon = ({ size = 16, ...p }: IconProps) => (
   </svg>
 );
 
+export const StepBackIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...p}>
+    <rect x="4" y="4" width="3" height="16" rx="0.5" />
+    <polygon points="20 4 8 12 20 20 20 4" />
+  </svg>
+);
+
+export const StepForwardIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...p}>
+    <polygon points="4 4 16 12 4 20 4 4" />
+    <rect x="17" y="4" width="3" height="16" rx="0.5" />
+  </svg>
+);
+
 export const WandIcon = ({ size = 16, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="m15 4-2 2" /><path d="m15 9-2-2" /><path d="M19 6h.01" /><path d="m9 15-5 5" /><path d="M19.7 13.7 10.3 4.3a2 2 0 0 0-2.8 0L2.3 9.5a2 2 0 0 0 0 2.8l9.4 9.4a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8Z" />

@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react';
 import { dur, type Detail } from './api';
-import { Button, PauseIcon, PlayIcon, ShieldIcon } from './ui';
+import { TimelineScrubber } from './TimelineScrubber';
 
 type LivePlayer = {
   readonly frame: number;
@@ -90,23 +90,42 @@ export const PlayerView = forwardRef<PlayerHandle, { detail: Detail; startFrame:
     };
   }, [detail.source]);
 
-  useEffect(() => {
-    const key = (event: KeyboardEvent) => {
-      if (event.key === ' ' && event.target === document.body) {
-        event.preventDefault();
-        toggle();
-      }
-    };
-    document.addEventListener('keydown', key);
-    return () => document.removeEventListener('keydown', key);
-  });
-
-  const toggle = () => {
+  const toggle = useCallback(() => {
     const p = player.current;
     if (!p) return;
     if (p.playing) p.pause();
     else void p.play();
-  };
+  }, []);
+
+  const seekTo = useCallback((f: number) => {
+    const p = player.current;
+    if (p?.playing) p.pause();
+    void p?.seek(f);
+    setFrame(f);
+  }, []);
+
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        const delta = event.shiftKey ? 10 : 1;
+        seekTo(Math.max(0, (player.current?.frame ?? frame) - delta));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        const delta = event.shiftKey ? 10 : 1;
+        seekTo(Math.min(total - 1, (player.current?.frame ?? frame) + delta));
+      }
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [toggle, seekTo, frame, total]);
 
   return (
     <>
@@ -191,48 +210,16 @@ export const PlayerView = forwardRef<PlayerHandle, { detail: Detail; startFrame:
         {error ? <div className="notice error" style={{ margin: 16 }}>{error}</div> : null}
       </div>
 
-      <div className="xport">
-        <Button
-          size="sm"
-          variant="primary"
-          style={{ minWidth: 72 }}
-          icon={playing ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
-          onClick={toggle}
-        >
-          {playing ? 'Pause' : 'Play'}
-        </Button>
-
-        <input
-          type="range"
-          min={0}
-          max={Math.max(1, total - 1)}
-          step={1}
-          value={Math.min(frame, total - 1)}
-          onChange={e => {
-            const f = Number(e.target.value);
-            const p = player.current;
-            if (p?.playing) p.pause();
-            void p?.seek(f);
-            setFrame(f);
-          }}
-        />
-
-        <span className="time">
-          {dur(frame / detail.fps)} / {dur(total / detail.fps)}
-        </span>
-
-        {isVertical ? (
-          <Button
-            size="sm"
-            variant={showSafeZone ? 'secondary' : 'ghost'}
-            icon={<ShieldIcon size={13} />}
-            onClick={() => setShowSafeZone(v => !v)}
-            title="Toggle Social Media 9:16 safe-zone guide"
-          >
-            {showSafeZone ? 'Hide Safe-Zone' : 'Safe-Zone'}
-          </Button>
-        ) : null}
-      </div>
+      <TimelineScrubber
+        detail={detail}
+        currentFrame={frame}
+        playing={playing}
+        isVertical={isVertical}
+        showSafeZone={showSafeZone}
+        onTogglePlay={toggle}
+        onSeek={seekTo}
+        onToggleSafeZone={() => setShowSafeZone(v => !v)}
+      />
     </>
   );
 });
