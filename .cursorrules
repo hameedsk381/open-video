@@ -26,3 +26,4 @@ When MCP is connected, call the tools directly:
 - `motionrender_validate`: Schema verification
 - `motionrender_inspect`: Structural inspect
 - `motionrender_refine_video`: Natural language edits
+

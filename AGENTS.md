@@ -106,3 +106,4 @@ Generate / Edit composition.json
        ↓
 `mr render composition.json --output out.mp4`
 ```
+
