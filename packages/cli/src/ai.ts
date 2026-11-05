@@ -14,7 +14,8 @@ const usage = `Usage:
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
   ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
-      [--narration] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
+      [--template id] [--theme id] [--typography style] [--motion-pacing snappy|dynamic|smooth] [--audio-mood mood] [--sfx]
+      [--narration] [--voice-tone tone] [--cta "headline|link"] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
       [--no-plan]   skip the planner: template-first routing, then a straight composition
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
@@ -145,12 +146,32 @@ async function composeCommand(argv: string[]): Promise<number> {
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
   const full = flag(argv, '--full');
-  const options: ComposeOptions = { ...canvasOptions, brief, maxAttempts: numberOption(argv, '--max-attempts', 3),
+  const template = option(argv, '--template');
+  const theme = option(argv, '--theme');
+
+  const directions: string[] = [];
+  const typography = option(argv, '--typography');
+  if (typography) directions.push(`Typography: ${typography}`);
+  const motionPacing = option(argv, '--motion-pacing') ?? option(argv, '--pacing');
+  if (motionPacing) directions.push(`Motion Pacing: ${motionPacing}`);
+  const audioMood = option(argv, '--audio-mood') ?? option(argv, '--mood');
+  if (audioMood) directions.push(`Audio Mood: ${audioMood}`);
+  const sfxOpt = option(argv, '--sfx');
+  if (sfxOpt) directions.push(`Sound Effects: ${sfxOpt}`);
+  else if (flag(argv, '--sfx')) directions.push(`Sound Effects: Enabled procedural transitions & reveals`);
+  const voiceTone = option(argv, '--voice-tone');
+  if (voiceTone) directions.push(`Voiceover Tone: ${voiceTone}`);
+  const cta = option(argv, '--cta');
+  if (cta) directions.push(`Call-To-Action: "${cta}"`);
+
+  const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
+
+  const options: ComposeOptions = { ...canvasOptions, brief: effectiveBrief, maxAttempts: numberOption(argv, '--max-attempts', 3),
     review: flag(argv, '--review'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan') });
+    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan'), theme, template });
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }

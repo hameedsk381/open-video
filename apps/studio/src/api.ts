@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type { Asset, Block, Detail, Job, Library, Project, Revision, Scene, Status, TextLayer, Theme, Variable } from '@ove/contracts';
+export type { Asset, Block, Detail, Job, Library, Project, Revision, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
 import type { Job } from '@ove/contracts';
 
 export async function api<T = any>(path: string, body?: unknown): Promise<T> {

@@ -111,7 +111,8 @@ describe('AI studio server', () => {
     expect(refined.relative).toBe(composed.relative);
     const composition = JSON.parse(await readFile(join(root, refined.relative), 'utf8'));
     expect(composition.name).toContain('(refined)');
-    expect(composition.scenes[0].layers[0].content).toContain('[refined]');
+    const textLayer = composition.scenes[0].layers.find((l: any) => l.type === 'text');
+    expect(textLayer?.content).toContain('[refined]');
   });
 
   it('keeps every compose and refine as a revision and can restore one', async () => {

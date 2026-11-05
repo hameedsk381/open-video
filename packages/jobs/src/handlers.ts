@@ -27,16 +27,48 @@ export function createHandlers(env: JobEnv) {
       const ai = env.provider();
       const pictures = (await env.assets(paths.idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
       const customLength = input.duration !== undefined && input.duration !== null && input.duration !== '';
-      const full = boolOf(input.full) || customLength;
+      const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
+      const full = boolOf(input.full) || (customLength && !template);
+
+      // Enrich creative direction from user customization
+      const directions: string[] = [];
+      if (typeof input.typography === 'string' && input.typography.trim()) directions.push(`Typography: ${input.typography.trim()}`);
+      if (typeof input.motionPacing === 'string' && input.motionPacing.trim()) directions.push(`Motion Pacing: ${input.motionPacing.trim()}`);
+      if (typeof input.audioMood === 'string' && input.audioMood.trim() && input.audioMood.trim() !== 'none') directions.push(`Audio Mood: ${input.audioMood.trim()}`);
+      if (typeof input.sfx === 'string' && input.sfx.trim()) directions.push(`Sound Effects: ${input.sfx.trim()}`);
+      else if (input.sfx === true) directions.push(`Sound Effects: Enabled procedural transitions & reveals`);
+      if (typeof input.voiceTone === 'string' && input.voiceTone.trim()) directions.push(`Voiceover Tone: ${input.voiceTone.trim()}`);
+      if (typeof input.ctaHeadline === 'string' && input.ctaHeadline.trim()) {
+        const sub = typeof input.ctaSubline === 'string' && input.ctaSubline.trim() ? ` (${input.ctaSubline.trim()})` : '';
+        directions.push(`Call-To-Action: "${input.ctaHeadline.trim()}"${sub}`);
+      }
+      if (typeof input.sceneCount === 'number' && input.sceneCount > 0) directions.push(`Target Scene Count: Exactly ${input.sceneCount} scenes`);
+
+      const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
+
       const options: ComposeOptions = {
-        ...canvas, brief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
+        ...canvas, brief: effectiveBrief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
         includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(message),
       };
       const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
-      const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
       const result = await capabilities.composeSmart(ai, options, { full, theme, template });
       let composition = result.composition;
+
+      if (input.customColors && typeof input.customColors === 'object') {
+        const colors = input.customColors as Record<string, string>;
+        const applyCustom = (target: any) => {
+          if (!target || typeof target !== 'object') return;
+          target.variables = { ...(target.variables ?? {}) };
+          for (const [key, val] of Object.entries(colors)) {
+            if (typeof val === 'string' && val.trim()) {
+              target.variables[key] = { type: 'color', default: val.trim(), description: `Brand color: ${key}` };
+            }
+          }
+        };
+        applyCustom(composition);
+        if (result.source) applyCustom(result.source);
+      }
       let narration: Record<string, unknown> | undefined;
       if (options.narration) {
         const produced = await capabilities.narrateSmart(ai, result, {

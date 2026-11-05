@@ -21,7 +21,7 @@ export interface Quotas {
 export type ApiLibrary = {
   listBlocks(): Promise<any[]>;
   listThemes(): Promise<any[]>;
-  listTemplates(): Promise<{ id: string; name: string; description: string }[]>;
+  listTemplates(): Promise<{ id: string; name: string; description: string; tags?: string[]; width?: number; height?: number; fps?: number; durationFrames?: number; durationSeconds?: number; previewFrame?: number }[]>;
   readBlock(id: string): Promise<any>;
   readTheme(id: string): Promise<any>;
   addBlock(raw: any, block: any, options: { at?: number; frames?: number; scene?: string; set?: Record<string, unknown> }): { composition: any; placed: string; where: string };

@@ -39,7 +39,7 @@ export { canvasFor, folderName, within };
 /** What ships with this command and the API shows: blocks, themes, templates. */
 export const studioLibrary: ApiLibrary = {
   listBlocks, listThemes, readBlock, readTheme, addBlock, applyTheme, emptyComposition, themeTokens,
-  listTemplates: async () => (await listTemplates()).map(template => ({ id: template.id, name: template.name, description: template.description })),
+  listTemplates: async () => (await listTemplates()).map(t => ({ id: t.id, name: t.name, description: t.description, tags: t.tags, width: t.width, height: t.height, fps: t.fps, durationFrames: t.durationFrames, durationSeconds: t.durationSeconds, previewFrame: t.previewFrame })),
 };
 /** The Player and what it loads beside itself (the same files `ove dev` serves). */
 export const studioPlayer: PlayerFiles = {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, dur, type Block, type Library as Lib, type Project, type Status } from '../api';
 import { editorPath, go } from '../router';
-import { Badge, Button, LayersIcon, Notice, Page, PaletteIcon, PlusIcon, SparklesIcon, useUi } from '../ui';
+import { Badge, Button, FilmIcon, LayersIcon, Notice, Page, PaletteIcon, PlusIcon, SparklesIcon, WandIcon, useUi } from '../ui';
 
 export function Library() {
   const { toast } = useUi();
@@ -39,7 +39,59 @@ export function Library() {
     >
       {error ? <Notice tone="error" title="Could not load library">{error}</Notice> : null}
 
-      <div className="section-title" style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+      {lib?.templates?.length ? (
+        <section>
+          <div className="section-title" style={{ marginTop: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FilmIcon size={14} />
+              <span>Motion Templates & Production Archetypes</span>
+            </div>
+            <Badge tone="blue">{lib.templates.length} Ready-Made</Badge>
+          </div>
+
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', marginBottom: 28 }}>
+            {lib.templates.map(t => {
+              const aspect = t.width && t.height ? (t.width > t.height ? '16:9' : t.width < t.height ? '9:16' : '1:1') : undefined;
+              return (
+                <div className="card" key={t.id} style={{ padding: 18, gap: 10, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <b style={{ fontSize: 14.5 }}>{t.name}</b>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {aspect ? <Badge tone="blue">{aspect}</Badge> : null}
+                      {t.durationSeconds ? <Badge tone="purple">{Math.round(t.durationSeconds)}s</Badge> : null}
+                    </div>
+                  </div>
+
+                  <div className="meta" style={{ marginTop: 0, flex: 1 }}>
+                    {t.description}
+                  </div>
+
+                  {t.tags?.length ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '4px 0' }}>
+                      {t.tags.slice(0, 4).map(tag => (
+                        <span key={tag} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'var(--surface-sunken)', color: 'var(--muted)' }}>
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={<WandIcon size={13} />}
+                    onClick={() => go(`#/new?template=${encodeURIComponent(t.id)}`)}
+                  >
+                    Create Video with this Template
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="section-title" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
         <PaletteIcon size={14} />
         <span>Designer Color Palettes</span>
       </div>

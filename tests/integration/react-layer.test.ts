@@ -50,6 +50,6 @@ describe('react layer', () => {
     await writeFile(bad, 'export default function X() { return null; }\n');
     await expect(runBuild(['build', bad, '--output', join(dir, 'bad', 'composition.json')])).rejects.toThrow(/export const config/);
     await writeFile(bad, 'export const config = { width: 10, height: 10, durationInFrames: 5 };\n');
-    await expect(runBuild(['build', bad, '--output', join(dir, 'bad', 'composition.json')])).rejects.toThrow(/default export/);
+    await expect(runBuild(['build', bad, '--output', join(dir, 'bad', 'composition.json')])).rejects.toThrow(/default.*export/i);
   });
 });

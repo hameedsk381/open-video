@@ -162,7 +162,7 @@ export function App() {
           ) : session.state === 'out' ? (
             <AuthPage signups={session.signups} onSignedIn={user => setSession({ state: 'in', user })} />
           ) : route.name === 'new' ? (
-            <Create />
+            <Create initialTemplate={route.template} initialKind={route.kind} />
           ) : route.name === 'making' ? (
             <Making id={route.id} job={route.job} />
           ) : route.name === 'editor' ? (
