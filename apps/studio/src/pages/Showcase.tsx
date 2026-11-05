@@ -326,7 +326,8 @@ export function Showcase() {
               <SearchIcon size={16} />
               <input
                 type="text"
-                placeholder="Search prompts, motion styles, UI state animations, or creators..."
+                className="showcase-search-input"
+                placeholder="Search prompts, motion styles, UI state animations, or creators... (⌘K)"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />

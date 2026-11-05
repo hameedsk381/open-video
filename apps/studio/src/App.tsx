@@ -8,7 +8,7 @@ import { Showcase } from './pages/Showcase';
 import { AuthPage, TokenPage, type Me } from './pages/Auth';
 import { api } from './api';
 import { useRoute } from './router';
-import { FilmIcon, LayersIcon, MoonIcon, PlusIcon, SlidersIcon, SparklesIcon, Spinner, StudioBrandLogo, SunIcon, UiProvider } from './ui';
+import { FilmIcon, LayersIcon, MoonIcon, PlusIcon, SearchIcon, SlidersIcon, SparklesIcon, Spinner, StudioBrandLogo, SunIcon, UiProvider } from './ui';
 
 type Mode = 'dark' | 'light' | 'system';
 const modes: Mode[] = ['dark', 'light', 'system'];
@@ -72,8 +72,8 @@ function ProviderBadge() {
 }
 
 const nav = [
-  ['showcase', '#/showcase', 'Inspiration', SparklesIcon] as const,
-  ['projects', '#/', 'Projects', FilmIcon] as const,
+  ['showcase', '#/', 'Showcase', SparklesIcon] as const,
+  ['projects', '#/projects', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Library', LayersIcon] as const,
   ['settings', '#/settings', 'Settings', SlidersIcon] as const,
 ];
@@ -102,6 +102,23 @@ export function App() {
     if (session.state === 'local' || session.state === 'in') return connectJobs();
   }, [session.state]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (location.hash !== '#/' && location.hash !== '#/showcase') {
+          location.hash = '#/';
+        }
+        setTimeout(() => {
+          const input = document.querySelector<HTMLInputElement>('.showcase-search-input, input[type="text"]');
+          input?.focus();
+        }, 50);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const route = useRoute();
   const jobs = useJobs();
   const running = Object.values(jobs).filter(j => j.status === 'running' || j.status === 'queued')[0];
@@ -114,8 +131,8 @@ export function App() {
           <a className="brand" href="#/">
             <StudioBrandLogo size={24} />
             <div className="brand-title">
-              <span>MotionRender</span>
-              <span className="brand-badge">Studio</span>
+              <span>Prompt Motion</span>
+              <span className="brand-badge">Engine</span>
             </div>
           </a>
 
@@ -127,6 +144,24 @@ export function App() {
               </a>
             ))}
           </nav>
+
+          <button
+            className="btn secondary sm topbar-search-trigger"
+            onClick={() => {
+              if (location.hash !== '#/' && location.hash !== '#/showcase') {
+                location.hash = '#/';
+              }
+              setTimeout(() => {
+                const input = document.querySelector<HTMLInputElement>('.showcase-search-input');
+                input?.focus();
+              }, 50);
+            }}
+            title="Search prompt library (⌘K)"
+          >
+            <SearchIcon size={13} />
+            <span className="search-lbl">Search prompts...</span>
+            <kbd className="kbd-pill">⌘K</kbd>
+          </button>
 
           <div className="grow" />
 

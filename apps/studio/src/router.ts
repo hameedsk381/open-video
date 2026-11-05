@@ -16,13 +16,14 @@ export function parse(hash: string): Route {
   const params = new URLSearchParams(query ?? '');
   const parts = (path ?? '').split('/').filter(Boolean).map(decodeURIComponent);
   if ((parts[0] === 'reset' || parts[0] === 'verify') && parts[1]) return { name: parts[0], token: parts[1] };
+  if (parts[0] === 'projects') return { name: 'projects' };
   if (parts[0] === 'showcase') return { name: 'showcase' };
   if (parts[0] === 'new') return { name: 'new', template: params.get('template') ?? undefined, kind: params.get('kind') ?? undefined, prompt: params.get('prompt') ?? undefined };
   if (parts[0] === 'library') return { name: 'library' };
   if (parts[0] === 'settings') return { name: 'settings' };
   if (parts[0] === 'making' && parts[1]) return { name: 'making', id: parts[1], job: parts[2] ?? '' };
   if (parts[0] === 'p' && parts[1]) return { name: 'editor', id: parts[1], tab: parts[2] ?? 'edit' };
-  return { name: 'projects' };
+  return { name: 'showcase' };
 }
 export const useRoute = (): Route => parse(useSyncExternalStore(subscribe, read));
 export const go = (path: string) => { location.hash = path; };

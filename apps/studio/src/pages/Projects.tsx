@@ -12,6 +12,7 @@ import {
   PlusIcon,
   SearchIcon,
   Skeleton,
+  SparklesIcon,
   TrashIcon,
   useUi,
 } from '../ui';
@@ -75,14 +76,19 @@ export function Projects() {
       {projects && projects.length === 0 ? (
         <Empty
           icon={<FilmIcon size={38} />}
-          title="Create your first video"
+          title="No video projects yet"
         >
           <p style={{ maxWidth: 460, margin: '8px auto 0' }}>
-            Describe your idea or paste your website URL to instantly synthesize high-converting motion graphics with full scene control.
+            Choose from our curated prompt library or describe your idea to synthesize broadcast-grade motion graphics in seconds.
           </p>
-          <Button variant="primary" size="lg" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>
-            Create New Video
-          </Button>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 18, flexWrap: 'wrap' }}>
+            <Button variant="primary" size="md" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>
+              Create New Video
+            </Button>
+            <Button variant="secondary" size="md" icon={<SparklesIcon size={14} />} onClick={() => go('#/')}>
+              Browse Prompt Showcase
+            </Button>
+          </div>
         </Empty>
       ) : null}
 
@@ -157,12 +163,12 @@ function ProjectCard({
   }, [project.id, project.modified]);
 
   return (
-    <div className="card">
-      <div className="thumb" ref={holder} onClick={open}>
+    <div className="card bento-card project-card">
+      <div className="thumb bento-media" ref={holder} onClick={open}>
         {src && !broken ? (
           <img src={src} alt="" onError={() => setBroken(true)} />
         ) : (
-          <span className="ph" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--faint)' }}>
+          <span className="ph" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)' }}>
             <FilmIcon size={20} />
             <span>{broken ? 'No preview' : 'Loading preview…'}</span>
           </span>
@@ -180,9 +186,9 @@ function ProjectCard({
         </div>
         <div className="meta" style={{ marginTop: 6 }}>
           <span>Edited {ago(project.modified)}</span>
-          <Badge tone={project.mode === 'template' ? 'blue' : 'neutral'}>
+          <span className="tag-pill category-tag" style={{ fontSize: 11, padding: '2px 8px' }}>
             {project.mode === 'template' ? 'Dynamic' : 'Custom Motion'}
-          </Badge>
+          </span>
         </div>
       </div>
 

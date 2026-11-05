@@ -2,41 +2,45 @@
 // the Player and edits its own composition file. Self-contained (no build step, no framework, no remote assets). The script uses no
 // backticks, ${} or backslashes, so the whole page can live inside this template string.
 export const aiStudioPage = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MotionRender Studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prompt Motion & MotionRender Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#07090e;
-  --bg-gradient:radial-gradient(circle at 50% -10%,rgba(45,212,191,0.08) 0%,transparent 55%),radial-gradient(circle at 95% 15%,rgba(129,140,248,0.06) 0%,transparent 45%),#07090e;
-  --panel:rgba(15,22,34,0.78);
-  --panel-solid:#0f1622;
-  --panel2:rgba(10,15,24,0.88);
-  --panel2-solid:#0a0f18;
+  --bg:#000000;
+  --bg-gradient:radial-gradient(circle at 50% -10%,rgba(59,130,246,0.06) 0%,transparent 55%),#000000;
+  --panel:#111216;
+  --panel-solid:#111216;
+  --panel2:#181920;
+  --panel2-solid:#181920;
   --line:rgba(255,255,255,0.08);
   --line-hover:rgba(255,255,255,0.16);
-  --text:#f8fafc;
-  --muted:#94a3b8;
-  --dim:#64748b;
-  --accent:#2dd4bf;
-  --accent-glow:rgba(45,212,191,0.25);
+  --text:#ededed;
+  --muted:#a1a1aa;
+  --dim:#71717a;
+  --accent:#3b82f6;
+  --accent-glow:rgba(59,130,246,0.25);
   --accent2:#818cf8;
-  --ok:#34d399;
+  --ok:#10b981;
   --warn:#fbbf24;
-  --err:#fb7185;
-  --radius:12px;
-  --radius-sm:8px;
+  --err:#ef4444;
+  --radius:22px;
+  --radius-sm:10px;
+  --radius-lg:14px;
+  --focus-ring:oklab(0.820314 0.0000373721 0.0000163913 / 0.5);
 }
 *{box-sizing:border-box}html,body{height:100%}
-body{margin:0;background:var(--bg-gradient);background-attachment:fixed;color:var(--text);font:14px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:-.01em;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.55 "Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:-.015em;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:999px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.24)}
-a{color:var(--accent);text-decoration:none;transition:color .15s}a:hover{filter:brightness(1.15)}
-header.top{display:flex;align-items:center;gap:16px;padding:0 22px;height:58px;border-bottom:1px solid var(--line);background:rgba(9,13,20,0.85);backdrop-filter:blur(20px);flex:none;z-index:10}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:var(--text);letter-spacing:-.02em}
-.mark{font:800 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:#04211e;background:linear-gradient(135deg,#2dd4bf,#06b6d4);padding:6px 8px;border-radius:6px;box-shadow:0 0 12px var(--accent-glow)}
+a{color:var(--text);text-decoration:none;transition:color .15s}a:hover{color:#fff}
+header.top{display:flex;align-items:center;gap:16px;padding:0 24px;height:64px;border-bottom:1px solid var(--line);background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);flex:none;z-index:10}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--text);letter-spacing:-.03em}
+.mark{font:800 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:#fff;background:rgba(255,255,255,0.1);border:1px solid var(--line);padding:6px 9px;border-radius:6px}
 .vpill{font-size:11px;font-weight:600;color:var(--muted);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
-nav.main{display:flex;gap:3px;background:rgba(255,255,255,0.03);padding:3px;border-radius:10px;border:1px solid var(--line)}
-nav.main a{color:var(--muted);padding:5px 13px;border-radius:7px;font-size:13px;font-weight:500;transition:all .15s}
+nav.main{display:flex;gap:4px;background:rgba(255,255,255,0.03);padding:3px;border-radius:999px;border:1px solid var(--line)}
+nav.main a{color:var(--muted);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;transition:all .15s}
 nav.main a:hover{color:var(--text);background:rgba(255,255,255,0.05)}
-nav.main a.on{color:#fff;background:rgba(255,255,255,0.1);box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+nav.main a.on{color:#fff;background:rgba(255,255,255,0.1);border:1px solid var(--line)}
 .grow{flex:1}
 .pbadge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:rgba(255,255,255,0.03);border:1px solid var(--line);padding:4px 10px;border-radius:999px;text-decoration:none;transition:all .15s}
 .pbadge:hover{border-color:var(--line-hover);color:var(--text)}
@@ -47,18 +51,18 @@ nav.main a.on{color:#fff;background:rgba(255,255,255,0.1);box-shadow:0 1px 3px r
 #app{flex:1;min-height:0;overflow:auto}
 .page{max-width:1160px;margin:0 auto;padding:32px 24px 64px}
 .hero{margin-bottom:28px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:-.03em;color:#fff}
-h2{margin:0 0 10px;font-size:16px;font-weight:600;letter-spacing:-.01em}
-.lead{color:var(--muted);margin:0;font-size:14px}
+h1{margin:0 0 6px;font-size:28px;font-weight:700;letter-spacing:-.03em;color:#fff}
+h2{margin:0 0 10px;font-size:18px;font-weight:600;letter-spacing:-.02em}
+.lead{color:var(--muted);margin:0;font-size:14.5px}
 button{font:inherit;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
-.btn{background:linear-gradient(135deg,#2dd4bf 0%,#14b8a6 100%);color:#03211c;border:0;border-radius:8px;padding:8px 16px;font-weight:600;font-size:13.5px;box-shadow:0 2px 10px -2px rgba(45,212,191,0.4);transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
-.btn:hover{filter:brightness(1.08);box-shadow:0 4px 16px -2px rgba(45,212,191,0.55);transform:translateY(-1px)}
+.btn{background:#ffffff;color:#000000;border:0;border-radius:10px;padding:8px 18px;font-weight:600;font-size:14px;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:all 150ms;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn:hover{background:#f4f4f5;box-shadow:0 4px 14px rgba(255,255,255,0.22);transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
-.btn.sec{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--line);font-weight:500;box-shadow:none}
+.btn.sec{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--line);font-weight:500;box-shadow:none}
 .btn.sec:hover{background:rgba(255,255,255,0.09);border-color:var(--line-hover);filter:none}
-.btn.sm{padding:5px 11px;font-size:12.5px;border-radius:6px}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:8px}
 .btn.danger{color:#fda4af}.btn.danger:hover{background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.3)}
-input,textarea,select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:inherit;transition:border-color .15s,box-shadow .15s}
+input,textarea,select{width:100%;background:rgba(255,255,255,0.04);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:inherit;transition:border-color .15s,box-shadow .15s}
 textarea{resize:vertical;min-height:96px;font-size:13.5px}
 input:focus,textarea:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 input[type=color]{padding:2px;height:36px;width:64px;border-radius:6px}input[type=checkbox]{width:auto}
