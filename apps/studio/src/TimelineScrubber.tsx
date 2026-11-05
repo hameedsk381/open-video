@@ -154,7 +154,7 @@ export function TimelineScrubber({
         const barRatio = i / audioPeaks.length;
 
         if (barRatio <= playRatio) {
-          ctx.fillStyle = '#38bdf8'; // Played highlight
+          ctx.fillStyle = '#3b82f6'; // Played highlight (Brand Accent)
         } else {
           ctx.fillStyle = 'rgba(148, 163, 184, 0.28)'; // Unplayed
         }
@@ -394,8 +394,8 @@ export function TimelineScrubber({
             bottom: 0,
             left: `${progressPercent}%`,
             width: 2,
-            background: '#38bdf8',
-            boxShadow: '0 0 10px rgba(56, 189, 248, 0.8), 0 0 4px #38bdf8',
+            background: 'var(--color-accent-brand, #3b82f6)',
+            boxShadow: '0 0 10px rgba(59, 130, 246, 0.8), 0 0 4px var(--color-accent-brand, #3b82f6)',
             pointerEvents: 'none',
             transform: 'translateX(-50%)',
             zIndex: 10,
@@ -410,7 +410,7 @@ export function TimelineScrubber({
               transform: 'translateX(-50%)',
               width: 10,
               height: 10,
-              background: '#38bdf8',
+              background: 'var(--color-accent-brand, #3b82f6)',
               borderRadius: '50%',
               boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
             }}
@@ -474,7 +474,7 @@ export function TimelineScrubber({
           }}
         >
           <div>
-            <span style={{ color: '#38bdf8', fontWeight: 600 }}>{dur(currentFrame / fps)}</span>
+            <span style={{ color: 'var(--color-accent-brand, #3b82f6)', fontWeight: 600 }}>{dur(currentFrame / fps)}</span>
             <span style={{ color: 'var(--muted)', margin: '0 4px' }}>/</span>
             <span style={{ color: 'var(--muted)' }}>{dur(total / fps)}</span>
           </div>

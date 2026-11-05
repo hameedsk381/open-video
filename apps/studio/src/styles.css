@@ -46,10 +46,10 @@
   --color-text-primary-inverted: #ededed;
   --color-text-secondary: #a1a1aa;
   --color-text-secondary-inverted: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-text-muted: #82828a;
   --text: #ededed;
   --muted: #a1a1aa;
-  --faint: #71717a;
+  --faint: #82828a;
   --inverse: #000000;
 
   /* Focus & Accents */
@@ -121,14 +121,14 @@
 
   --color-text-primary: #111111;
   --color-text-secondary: #6b6b6b;
-  --color-text-muted: #8b8b8b;
+  --color-text-muted: #767676;
   --text: #111111;
   --muted: #6b6b6b;
-  --faint: #999999;
+  --faint: #767676;
   --inverse: #ffffff;
 
   --blue: #2563eb;
-  --green: #059669;
+  --green: #047857;
   --red: #dc2626;
   --amber: #d97706;
   --purple: #9333ea;
@@ -315,20 +315,20 @@ h3 { font-size: 15px; }
 .btn.lg { height: 44px; padding: 0 22px; font-size: 15px; border-radius: var(--radius-md); }
 
 .btn.primary {
-  background: #ffffff;
-  color: #000000;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-base, #000000);
   font-weight: 600;
   border: 1px solid transparent;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .btn.primary:hover:not(:disabled) {
-  background: #f4f4f5;
+  background: var(--color-surface-strong, #f4f4f5);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(255, 255, 255, 0.22);
 }
 [data-theme="light"] .btn.primary {
-  background: #111111;
-  color: #ffffff;
+  background: var(--color-text-primary, #111111);
+  color: var(--color-surface-muted, #ffffff);
 }
 
 .btn.secondary {
@@ -352,22 +352,22 @@ h3 { font-size: 15px; }
 
 .btn.danger {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  color: var(--color-status-error, #ef4444);
   border-color: rgba(239, 68, 68, 0.25);
 }
 .btn.danger:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
+  border-color: var(--color-status-error, #ef4444);
 }
 
 .btn.glow {
-  background: #ffffff;
-  color: #000000;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-base, #000000);
   font-weight: 600;
   box-shadow: 0 0 18px rgba(255, 255, 255, 0.3);
 }
 .btn.glow:hover:not(:disabled) {
-  background: #f4f4f5;
+  background: var(--color-surface-strong, #f4f4f5);
   box-shadow: 0 0 24px rgba(255, 255, 255, 0.45);
 }
 
@@ -1067,9 +1067,9 @@ details[open] summary { margin-bottom: 16px; }
 }
 
 .category-pill.active {
-  background: #ffffff;
-  color: #09090b;
-  border-color: #ffffff;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-subtle, #09090b);
+  border-color: var(--color-surface-muted, #ffffff);
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25);
 }
@@ -1085,7 +1085,7 @@ details[open] summary { margin-bottom: 16px; }
 
 .category-pill.active .cat-count {
   background: rgba(0, 0, 0, 0.12);
-  color: #09090b;
+  color: var(--color-surface-subtle, #09090b);
 }
 
 /* Bento Grid */
@@ -1101,8 +1101,8 @@ details[open] summary { margin-bottom: 16px; }
 
 /* Prompt Motion Bento Card (rounded-3xl outer, rounded-2xl inner) */
 .bento-card {
-  background: #111216;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-elevated, #111216);
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 10px;
   display: flex;
@@ -1188,8 +1188,8 @@ details[open] summary { margin-bottom: 16px; }
 
 .bento-card:hover .preview-play-btn {
   transform: scale(1.1);
-  background: #fff;
-  color: #09090b;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-subtle, #09090b);
 }
 
 /* Media Badges */
@@ -1353,9 +1353,9 @@ details[open] summary { margin-bottom: 16px; }
 }
 
 .customize-btn {
-  background: #ffffff;
-  color: #09090b;
-  border: 1px solid #ffffff;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-subtle, #09090b);
+  border: 1px solid var(--color-surface-muted, #ffffff);
   font-weight: 600;
 }
 
@@ -1488,8 +1488,8 @@ details[open] summary { margin-bottom: 16px; }
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #ffffff;
-  color: #09090b;
+  background: var(--color-surface-muted, #ffffff);
+  color: var(--color-surface-subtle, #09090b);
   display: flex;
   align-items: center;
   justify-content: center;

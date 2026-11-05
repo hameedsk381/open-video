@@ -16,7 +16,7 @@ export const aiStudioPage = `<!doctype html>
   --line-hover:rgba(255,255,255,0.16);
   --text:#ededed;
   --muted:#a1a1aa;
-  --dim:#71717a;
+  --dim:#82828a;
   --accent:#3b82f6;
   --accent-glow:rgba(59,130,246,0.25);
   --accent2:#818cf8;
