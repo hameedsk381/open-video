@@ -21,6 +21,7 @@ Commands:
   mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
+  mr mcp                         start Model Context Protocol (MCP) server for Claude, Cursor, Codex & AI agents
   mr dev <composition.json> [--port 3000] [--allow-host name] [variables]
   mr validate <composition.json> [variables]
     (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
@@ -113,6 +114,7 @@ try {
     else throw new Error('Usage: ove cache size, or ove cache clean [--older-than 30d]'); }
   else if (command === 'serve') { const { runServe } = await import('./serve'); await runServe(); }
   else if (command === 'job-worker') { const { runJobWorker } = await import('./serve'); await runJobWorker(); }
+  else if (command === 'mcp') { const { runMcp } = await import('./mcp'); await runMcp(argv); }
   else if (command === 'worker') { const port=option('--port') === undefined ? undefined : Number(option('--port')); const concurrency=option('--concurrency') === undefined ? undefined : Number(option('--concurrency'));
     const worker=await startWorker({ port, host: option('--host'), token: option('--token') ?? process.env.OVE_WORKER_TOKEN, concurrency, log: line => console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`) });
     console.log(`Worker listening on ${worker.url}

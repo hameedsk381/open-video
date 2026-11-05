@@ -1,0 +1,248 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MotionRender Video Generation API",
+    "description": "JSON-first, frame-deterministic motion graphics video engine. Generate, inspect, edit, and render broadcast-grade motion videos from natural language briefs.",
+    "version": "0.3.3"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3100",
+      "description": "Local MotionRender Studio / Server"
+    }
+  ],
+  "paths": {
+    "/api/compose": {
+      "post": {
+        "operationId": "composeVideo",
+        "summary": "Create a new motion graphics video",
+        "description": "Generates a complete, frame-accurate motion graphics video composition from a creative brief, target format, duration, theme, and optional brand styles.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["brief"],
+                "properties": {
+                  "brief": {
+                    "type": "string",
+                    "description": "Creative brief or description of the video content"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["reel", "promo", "product", "project"],
+                    "default": "reel",
+                    "description": "Format archetype: reel (9:16 vertical), promo (16:9 widescreen), product (1:1 square), or project (16:9 narrative)"
+                  },
+                  "duration": {
+                    "type": "number",
+                    "description": "Duration in seconds (e.g. 6, 10, 15)"
+                  },
+                  "template": {
+                    "type": "string",
+                    "description": "Optional archetype template ID (e.g. social-reel, product-card, launch-wide)"
+                  },
+                  "theme": {
+                    "type": "string",
+                    "description": "Visual theme ID: neon, midnight, slate, warm, editorial, terminal, sunset"
+                  },
+                  "typography": {
+                    "type": "string",
+                    "enum": ["sans", "serif", "mono", "display"],
+                    "description": "Font styling family"
+                  },
+                  "motionPacing": {
+                    "type": "string",
+                    "enum": ["snappy", "dynamic", "smooth", "cinematic"],
+                    "description": "Animation pacing and velocity curve"
+                  },
+                  "customColors": {
+                    "type": "object",
+                    "description": "Brand color palette overrides",
+                    "properties": {
+                      "bg": { "type": "string", "example": "#0b0f19" },
+                      "text": { "type": "string", "example": "#ffffff" },
+                      "accent": { "type": "string", "example": "#6366f1" },
+                      "accent2": { "type": "string", "example": "#ec4899" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Video generation job queued or completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "status": { "type": "string", "enum": ["queued", "running", "done", "error"] },
+                        "messages": { "type": "array", "items": { "type": "string" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/render": {
+      "post": {
+        "operationId": "renderVideo",
+        "summary": "Render a composition to MP4 or WebM video",
+        "description": "Renders the specified composition.json into an MP4 or WebM video file.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "Path to the composition.json file to render"
+                  },
+                  "scale": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "Resolution scale (0.5 for fast draft, 1 for full 1080p)"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": ["mp4", "webm", "mov", "gif"],
+                    "default": "mp4"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Render job queued or completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "status": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/refine": {
+      "post": {
+        "operationId": "refineVideo",
+        "summary": "Apply natural language edits to an existing video",
+        "description": "Edits an existing composition.json following conversational natural language instructions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "instruction"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "Path to composition.json to edit"
+                  },
+                  "instruction": {
+                    "type": "string",
+                    "description": "Edit instruction (e.g. 'make the headline larger and change accent color to gold')"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refinement job queued or completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "status": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library": {
+      "get": {
+        "operationId": "getLibrary",
+        "summary": "List available templates, themes, and audio assets",
+        "description": "Returns the list of built-in templates, archetypes, and color themes.",
+        "responses": {
+          "200": {
+            "description": "MotionRender library catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "description": { "type": "string" },
+                          "width": { "type": "number" },
+                          "height": { "type": "number" }
+                        }
+                      }
+                    },
+                    "themes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

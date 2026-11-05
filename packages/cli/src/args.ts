@@ -18,6 +18,7 @@ export const commandSpecs: Record<string, Spec> = {
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
   theme: { flags: ['--json'], positionals: 2 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
+  mcp: {},
   serve: {},
   'job-worker': {},
   dev: { values: ['--port', '--allow-host', ...variables], flags: ['--allow-code'], positionals: 1 },

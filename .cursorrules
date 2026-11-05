@@ -1,0 +1,28 @@
+# MotionRender Video Engine Rules for Cursor & Codex Agents
+
+You have access to MotionRender (`mr` / `motionrender`), a frame-deterministic motion graphics video engine.
+
+## Golden Rules
+1. Video is defined as a JSON specification in `composition.json`. You never need to write manual canvas rendering code.
+2. Coordinate system:
+   - Origin (0,0) is TOP-LEFT. Units are exact pixels.
+   - For `text`, `y` is the baseline/top of the text; for `rect` and `image`, `x, y` is top-left. For `circle`, `x, y` is center.
+3. Timing:
+   - Everything is integer frames (`fps` typically 30).
+   - Keyframe frames are relative to the layer's `startFrame`.
+   - Easings use camelCase: `land`, `glide`, `pop`, `drift`, `spring`, `easeOut`, `easeInOut`.
+4. The Verification Loop:
+   - Always validate edits: `mr validate composition.json`
+   - Check still images: `mr still composition.json --frame 0 --output still-0.png`
+   - Review quality: `mr review composition.json --output review.png`
+   - Render video: `mr render composition.json --output out.mp4`
+
+## MCP Server Available
+When MCP is connected, call the tools directly:
+- `motionrender_create_video`: Generates a complete video from brief
+- `motionrender_render_video`: Renders MP4/WebM video
+- `motionrender_render_still`: Captures PNG frame
+- `motionrender_review_video`: Design quality, contrast, and safe-zone check
+- `motionrender_validate`: Schema verification
+- `motionrender_inspect`: Structural inspect
+- `motionrender_refine_video`: Natural language edits
