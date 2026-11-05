@@ -2,6 +2,13 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.7 (2026-11-05)
+
+### Added
+- **Prompt Motion Design System & Bento UI.** Integrated `prompt-motion.com`'s dark bento design language across MotionRender Studio (`apps/studio` and `mr ai studio`), featuring `rounded-3xl` outer cards, `rounded-2xl` inner media containers, ring borders, and Geist-style tight typography.
+- **Motion Graphics Prompt Showcase & Library.** Added a curated inspiration showcase featuring 12 ready-to-run motion prompts across Product UI, Kinetic Type, 3D & WebGL, Social Reels, and Charts & Data, complete with live category pill filtering, real-time counters, one-click clipboard copying, and direct "Customize & Render Video" workflows.
+- **Interactive Motion Canvas Drawer Modal.** Full-resolution preview drawer displaying full prompt text, motion parameters, audio/TTS settings, and instant render trigger.
+
 ## 0.3.6 (2026-11-05)
 
 ### Fixed
