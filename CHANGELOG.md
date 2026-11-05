@@ -2,6 +2,12 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.6 (2026-11-05)
+
+### Fixed
+- **Native Zero-Dependency Edge TTS.** Replaced external `msedge-tts` npm dependency with a pure native Node 22 implementation using built-in `WebSocket` and `crypto.subtle` (Sec-MS-GEC v2). This eliminates third-party lifecycle errors (`npx only-allow pnpm` exit code 127) that prevented `npm install -g motionrender` and broke Docker container image builds.
+- **Docker Image Build Hardening.** Added `--ignore-scripts` to `npm install -g --omit=dev` in `Dockerfile` for both `base` and `chromium` stages, guaranteeing reproducible container builds independent of external lifecycle hooks.
+
 ## 0.3.5 (2026-11-05)
 
 ### Added

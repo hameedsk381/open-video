@@ -38,7 +38,7 @@ ENV OVE_CHROMIUM_ARGS=--no-sandbox
 # The package and ffmpeg, without a browser (used by API).
 FROM runtime-base AS base
 COPY --from=build /out/*.tgz /tmp/app.tgz
-RUN npm install -g --omit=dev /tmp/app.tgz && rm /tmp/app.tgz \
+RUN npm install -g --omit=dev --ignore-scripts /tmp/app.tgz && rm /tmp/app.tgz \
  && mkdir -p /data && chown node:node /data
 WORKDIR /data
 VOLUME /data
@@ -54,7 +54,7 @@ CMD ["serve"]
 # Adds the application onto the pre-cached Chromium base (for workers and studio).
 FROM chromium-base AS chromium
 COPY --from=build /out/*.tgz /tmp/app.tgz
-RUN npm install -g --omit=dev /tmp/app.tgz && rm /tmp/app.tgz \
+RUN npm install -g --omit=dev --ignore-scripts /tmp/app.tgz && rm /tmp/app.tgz \
  && mkdir -p /data && chown node:node /data
 WORKDIR /data
 VOLUME /data
