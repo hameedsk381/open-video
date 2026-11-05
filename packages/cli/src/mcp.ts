@@ -5,7 +5,7 @@ import readline from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { createProvider, refineVideo, writeCompositionProject, type ComposeOptions } from '@ove/ai';
-import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, type Composition } from '@ove/core';
+import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, type Composition } from '@ove/core';
 import { composeSmart, templateChoices } from './templates';
 import { listThemes, listBlocks } from './blocks';
 
@@ -37,6 +37,7 @@ const TOOLS = [
         output: { type: 'string', description: 'Path to write output video (defaults to out.mp4 in the same directory)' },
         format: { type: 'string', enum: ['mp4', 'webm', 'mov', 'gif', 'png'], description: 'Output container format (defaults to mp4)' },
         scale: { type: 'number', description: 'Render scale: 0.5 for fast draft, 1 for full 1080p resolution' },
+        aspect: { type: 'string', description: 'Optional aspect ratio to dynamically adapt video to (e.g. "9:16", "16:9", "1:1", "4:5")' },
       },
       required: ['file']
     }
@@ -49,7 +50,8 @@ const TOOLS = [
       properties: {
         file: { type: 'string', description: 'Path to composition.json' },
         frame: { type: 'number', description: 'Frame number to capture (defaults to 0)' },
-        output: { type: 'string', description: 'Destination PNG image path (defaults to still.png)' }
+        output: { type: 'string', description: 'Destination PNG image path (defaults to still.png)' },
+        aspect: { type: 'string', description: 'Optional aspect ratio to dynamically adapt frame to (e.g. "9:16", "16:9", "1:1")' }
       },
       required: ['file']
     }
@@ -62,7 +64,8 @@ const TOOLS = [
       properties: {
         file: { type: 'string', description: 'Path to composition.json' },
         output: { type: 'string', description: 'Destination contact sheet path (defaults to review.png)' },
-        showSafeZones: { type: 'boolean', description: 'Whether to overlay social media (TikTok/Reels/Shorts) UI safe zones' }
+        showSafeZones: { type: 'boolean', description: 'Whether to overlay social media (TikTok/Reels/Shorts) UI safe zones' },
+        aspect: { type: 'string', description: 'Optional aspect ratio to adapt review checks to (e.g. "9:16", "16:9")' }
       },
       required: ['file']
     }
@@ -257,7 +260,8 @@ Next actions you can take:
       const file = resolve(String(args.file || ''));
       const raw = JSON.parse(await readFile(file, 'utf8'));
       const baseDir = dirname(file);
-      const composition = loadComposition(raw);
+      let composition = loadComposition(raw);
+      if (args.aspect) composition = adaptCompositionAspect(composition, args.aspect);
       const output = resolve(args.output || resolve(baseDir, 'out.mp4'));
       const format = args.format || 'mp4';
       const scale = Number(args.scale) || 1;
@@ -276,6 +280,7 @@ Next actions you can take:
           text: `Render complete in ${((Date.now() - started) / 1000).toFixed(1)}s!
 - Output: ${res.output}
 - Format: ${res.format}
+- Resolution: ${composition.width}x${composition.height}${args.aspect ? ` (${args.aspect})` : ''}
 - Frames rendered: ${res.frames}
 - Duration: ${res.durationSeconds.toFixed(1)}s`
         }],
@@ -287,7 +292,8 @@ Next actions you can take:
       const file = resolve(String(args.file || ''));
       const raw = JSON.parse(await readFile(file, 'utf8'));
       const baseDir = dirname(file);
-      const composition = loadComposition(raw);
+      let composition = loadComposition(raw);
+      if (args.aspect) composition = adaptCompositionAspect(composition, args.aspect);
       const frame = Number(args.frame) || 0;
       const output = resolve(args.output || resolve(baseDir, `still-${frame}.png`));
 
@@ -296,7 +302,7 @@ Next actions you can take:
       return {
         content: [{
           type: 'text',
-          text: `Rendered still frame ${frame} to "${output}".`
+          text: `Rendered still frame ${frame} (${composition.width}x${composition.height}) to "${output}".`
         }],
         isError: false
       };
@@ -306,7 +312,8 @@ Next actions you can take:
       const file = resolve(String(args.file || ''));
       const raw = JSON.parse(await readFile(file, 'utf8'));
       const baseDir = dirname(file);
-      const composition = loadComposition(raw);
+      let composition = loadComposition(raw);
+      if (args.aspect) composition = adaptCompositionAspect(composition, args.aspect);
       const output = resolve(args.output || resolve(baseDir, 'review.png'));
 
       const result = await reviewComposition(composition, {

@@ -37,6 +37,7 @@ const num=(v: unknown, what: string) => { if (typeof v !== 'number' || !Number.i
 const functions: Record<string, (...args: unknown[]) => unknown> = {
   round: (x, d=0) => { const f=10**num(d,'round'); return Math.round(num(x,'round')*f)/f; }, floor: x => Math.floor(num(x,'floor')), ceil: x => Math.ceil(num(x,'ceil')), abs: x => Math.abs(num(x,'abs')),
   min: (...xs) => Math.min(...xs.map(x => num(x,'min'))), max: (...xs) => Math.max(...xs.map(x => num(x,'max'))),
+  clamp: (x, lo, hi) => Math.min(Math.max(num(x, 'clamp'), num(lo, 'clamp min')), num(hi, 'clamp max')),
   upper: s => String(s).toUpperCase(), lower: s => String(s).toLowerCase(), string: v => String(v), number: v => num(Number(v),'number') };
 const blocked = new Set(['__proto__','prototype','constructor']);
 // Only own fields of plain objects, array items and .length are readable.

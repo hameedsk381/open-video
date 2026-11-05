@@ -203,8 +203,34 @@ export function parseComposition(input: unknown): Composition { return compositi
 // pauses (segments), in seconds and in frames at the composition's fps. Measured in Node by @ove/core (measureMedia).
 export type MediaSegment = { start: number; end: number; startFrame: number; endFrame: number };
 export type MediaInfo = { duration: number; frames: number; segments: MediaSegment[]; soundEnd: number; soundEndFrames: number };
-// Expressions can read the canvas (canvas.width, canvas.height, canvas.fps) once those are plain numbers, so reusable layers can fit any size.
-const canvasNames = (input: unknown) => { const raw = (input ?? {}) as Record<string, unknown>; const [width, height, fps] = [raw.width, raw.height, raw.fps]; return typeof width === 'number' && typeof height === 'number' ? { canvas: { width, height, fps: typeof fps === 'number' ? fps : 30 } } : {}; };
+// Expressions can read the canvas (canvas.width, canvas.height, canvas.fps, canvas.aspect, canvas.isVertical, canvas.safeTop, canvas.safeBottom...) once those are plain numbers, so reusable layers can fit any size.
+const canvasNames = (input: unknown) => {
+  const raw = (input ?? {}) as Record<string, unknown>;
+  const [width, height, fps] = [raw.width, raw.height, raw.fps];
+  if (typeof width !== 'number' || typeof height !== 'number') return {};
+  const f = typeof fps === 'number' ? fps : 30;
+  const isVertical = width < height;
+  const isWide = width > height;
+  const isSquare = width === height;
+  const aspect = isVertical ? '9:16' : isSquare ? '1:1' : '16:9';
+  return {
+    canvas: {
+      width,
+      height,
+      fps: f,
+      aspect,
+      isVertical,
+      isWide,
+      isSquare,
+      safeTop: Math.round(height * (isVertical ? 0.08 : 0.05)),
+      safeBottom: Math.round(height * (isVertical ? 0.20 : 0.08)),
+      safeLeft: Math.round(width * (isVertical ? 0.06 : 0.05)),
+      safeRight: Math.round(width * (isVertical ? 0.16 : 0.05)),
+      vw: (pct: number) => Math.round((width * Number(pct)) / 100),
+      vh: (pct: number) => Math.round((height * Number(pct)) / 100),
+    }
+  };
+};
 export type LoadOptions = { media?: Record<string, MediaInfo> };
 // Places scenes that leave out startFrame after the previous one (minus their overlap) and works out durationFrames: "auto".
 export function sequenceScenes(expanded: unknown): unknown { if (!expanded || typeof expanded !== 'object' || !Array.isArray((expanded as any).scenes)) return expanded; const raw = expanded as any; let end = 0, latest = 0;

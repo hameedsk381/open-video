@@ -3,7 +3,7 @@
 // `--name=value` is accepted as well as `--name value`.
 type Spec = { values?: string[]; flags?: string[]; positionals?: number };
 const variables = ['--var', '--vars'];
-const renderValues = ['--output', '--format', '--codec', '--frames', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--workers', '--chunk-size', '--token', '--batch'];
+const renderValues = ['--output', '--format', '--codec', '--frames', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--workers', '--chunk-size', '--token', '--batch', '--aspect'];
 export const commandSpecs: Record<string, Spec> = {
   init: { values: ['--template'], flags: ['--force', '--no-skill'], positionals: 1 },
   schema: { values: ['--output'] },
@@ -12,7 +12,7 @@ export const commandSpecs: Record<string, Spec> = {
   browser: { positionals: 1 },
   blocks: { flags: ['--json'] },
   build: { values: ['--output'], positionals: 1 },
-  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url'], flags: ['--reel', '--landscape', '--render', '--no-render', '--no-plan'], positionals: 2 },
+  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url', '--aspect'], flags: ['--reel', '--landscape', '--render', '--no-render', '--no-plan'], positionals: 2 },
   track: { values: ['--fps', '--output'], positionals: 1 },
   thumbnail: { values: ['--frame', '--title', '--width', '--output', ...variables], flags: ['--allow-code'], positionals: 1 },
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
@@ -21,12 +21,12 @@ export const commandSpecs: Record<string, Spec> = {
   mcp: {},
   serve: {},
   'job-worker': {},
-  dev: { values: ['--port', '--allow-host', ...variables], flags: ['--allow-code'], positionals: 1 },
-  validate: { values: variables, positionals: 1 },
-  inspect: { values: variables, positionals: 1 },
+  dev: { values: ['--port', '--allow-host', '--aspect', ...variables], flags: ['--allow-code'], positionals: 1 },
+  validate: { values: ['--aspect', ...variables], positionals: 1 },
+  inspect: { values: ['--aspect', ...variables], positionals: 1 },
   captions: { values: ['--output', ...variables], positionals: 1 },
-  still: { values: ['--frame', '--output', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
-  review: { values: ['--output', '--every', '--sheet-frames', '--frames', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
+  still: { values: ['--frame', '--output', '--aspect', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
+  review: { values: ['--output', '--every', '--sheet-frames', '--frames', '--aspect', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
   ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--size', '--composition', '--id', '--start', '--output', '--template', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format'],
     flags: ['--force', '--dry-run', '--json', '--review', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--transparent', '--no-motion-blur'], positionals: 3 },
