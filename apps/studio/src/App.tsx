@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { connectJobs, useJobs } from './api';
+import { connectJobs, useJobs, cleanUserStatus } from './api';
 import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
 import { Library, Settings } from './pages/Library';
@@ -62,7 +62,7 @@ function ProviderBadge() {
       href="#/settings"
       className="btn ghost sm"
       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.9 }}
-      title={`AI Provider: ${label} (${provider.model})`}
+      title={`AI Motion Engine: ${label}`}
     >
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
       <span>{label}</span>
@@ -131,7 +131,7 @@ export function App() {
           {running ? (
             <div className="busy">
               <Spinner size={12} />
-              <span>{running.messages.at(-1) ?? `Processing video…`}</span>
+              <span>{cleanUserStatus(running.messages.at(-1))}</span>
             </div>
           ) : null}
 

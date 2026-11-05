@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, upload, waitJob, type Job, type Library, type TemplateSummary } from '../api';
+import { api, upload, waitJob, cleanUserStatus, type Job, type Library, type TemplateSummary } from '../api';
 import { go } from '../router';
 import {
   AlertCircleIcon,
@@ -693,10 +693,44 @@ export function Create({ initialTemplate, initialKind }: { initialTemplate?: str
 }
 
 /* ==================== Making Screen ==================== */
+const STAGE_SENTENCES: Record<number, string[]> = {
+  1: [
+    'Analyzing your creative brief and key message points…',
+    'Selecting typography hierarchy and color contrast rules…',
+    'Configuring responsive canvas specifications…',
+    'Calibrating visual style and branding mood…',
+  ],
+  2: [
+    'Structuring scene hooks and narrative progression…',
+    'Choreographing entrance timing for key features…',
+    'Calibrating scene durations for optimal retention…',
+    'Drafting high-impact on-screen copy and headlines…',
+  ],
+  3: [
+    'Composing kinetic typography with fluid entrance curves…',
+    'Choreographing dynamic 3D camera sweeps and drifts…',
+    'Positioning visual badges, highlights and layouts…',
+    'Balancing layer depth and motion responsiveness…',
+  ],
+  4: [
+    'Fine-tuning frame durations and transition cuts…',
+    'Synchronizing audio accents and visual dynamics…',
+    'Verifying visual contrast and readability across frames…',
+    'Finalizing broadcast-grade motion graphics for preview…',
+  ],
+};
+
+const CREATIVE_TIPS = [
+  '✨ 60fps kinetic motion graphics calibrated for high viewer engagement',
+  '🎨 Color harmony automatically adapts to your chosen brand palette',
+  '📐 Camera motion and transitions are timed to natural eye movement',
+  '🎵 Audio layers and sound effects automatically sync with visual reveals',
+];
+
 export function Making({ id, job }: { id: string; job: string }) {
   const [messages, setMessages] = useState<string[]>([]);
   const [error, setError] = useState('');
-  const [showLog, setShowLog] = useState(false);
+  const [sentenceIndex, setSentenceIndex] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -704,105 +738,168 @@ export function Making({ id, job }: { id: string; job: string }) {
       if (live) setMessages(j.messages);
     }).then(
       () => { if (live) go(`#/p/${encodeURIComponent(id)}`); },
-      e => { if (live) setError((e as Error).message); }
+      e => {
+        if (live) {
+          const msg = (e as Error).message || '';
+          setError(
+            msg.includes('rate') || msg.includes('429')
+              ? 'Our video generation engine is experiencing high demand. Please try again in a few moments.'
+              : 'Video creation was interrupted. Please review your brief and try again.'
+          );
+        }
+      }
     );
     return () => { live = false; };
   }, [id, job]);
 
+  // Rotate informative status sentences every 2.8s
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSentenceIndex(prev => prev + 1);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, []);
+
   // Determine stage based on messages count & content
-  const stage = messages.some(m => /retim|review|audio|render/i.test(m))
+  const stage = messages.some(m => /retim|review|audio|render|finish/i.test(m))
     ? 4
-    : messages.some(m => /template|compose|layer|scene/i.test(m))
+    : messages.some(m => /template|compose|layer|scene|kinetic/i.test(m))
       ? 3
-      : messages.some(m => /plan|beat|story/i.test(m))
+      : messages.some(m => /plan|beat|story|narrat/i.test(m))
         ? 2
         : 1;
 
   const currentStatusText = messages.length
-    ? (() => {
-        const last = messages[messages.length - 1]!;
-        if (/planning/i.test(last)) return 'Structuring video scenes and timing beats…';
-        if (/template/i.test(last)) return 'Composing kinetic typography and motion layers…';
-        if (/retim/i.test(last)) return 'Optimizing rhythm, transitions and pacing…';
-        if (/review/i.test(last)) return 'Performing automated visual quality checks…';
-        return last;
-      })()
-    : 'Initializing autonomous motion pipeline…';
+    ? cleanUserStatus(messages[messages.length - 1]!)
+    : (STAGE_SENTENCES[stage] || STAGE_SENTENCES[1])[sentenceIndex % (STAGE_SENTENCES[stage] || STAGE_SENTENCES[1]).length];
+
+  const currentTip = CREATIVE_TIPS[sentenceIndex % CREATIVE_TIPS.length];
 
   return (
-    <div className="center">
+    <div className="center" style={{ maxWidth: 540, margin: '40px auto', padding: '0 20px' }}>
       {error ? (
         <>
-          <div style={{ margin: '0 auto 20px', width: 48, height: 48, borderRadius: '50%', background: 'color-mix(in srgb, var(--red) 15%, transparent)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertCircleIcon size={24} />
+          <div style={{ margin: '0 auto 20px', width: 56, height: 56, borderRadius: '50%', background: 'color-mix(in srgb, var(--red) 15%, transparent)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertCircleIcon size={28} />
           </div>
-          <h2>Creation paused</h2>
+          <h2>Creation Paused</h2>
           <Notice tone="error" title="Notice">{error}</Notice>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
-            <Button variant="primary" onClick={() => go('#/new')}>Try Again</Button>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+            <Button variant="primary" onClick={() => go('#/new')}>Start New Video</Button>
             <Button onClick={() => api('/api/project/delete', { id }).then(() => go('#/'))}>Back to Projects</Button>
           </div>
         </>
       ) : (
         <>
-          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
-            <Spinner size={36} />
+          {/* Animated Product Loader */}
+          <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '3px solid color-mix(in srgb, var(--indigo) 20%, transparent)',
+                borderTopColor: 'var(--indigo)',
+                animation: 'spin 1.2s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite',
+              }}
+            />
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'var(--brand-gradient)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 24px var(--brand-glow)',
+                color: '#fff',
+              }}
+            >
+              <SparklesIcon size={22} />
+            </div>
           </div>
-          <h2>Creating your video</h2>
-          <p className="sub" style={{ maxWidth: 440, margin: '6px auto 0' }}>
-            {currentStatusText}
-          </p>
 
-          <div className="pipeline-card">
+          <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 8px' }}>
+            Creating Your Video
+          </h2>
+
+          {/* Dynamic rotating status sentence */}
+          <div
+            key={currentStatusText}
+            style={{
+              minHeight: 28,
+              fontSize: 14.5,
+              fontWeight: 500,
+              color: 'var(--text)',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'opacity 0.25s ease',
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--indigo)', animation: 'pulse 1.5s infinite' }} />
+            <span>{currentStatusText}</span>
+          </div>
+
+          {/* Visual Production Pipeline */}
+          <div className="pipeline-card" style={{ textAlign: 'left', margin: '0 0 20px' }}>
             <div className="pipeline-header">
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Autonomous Production Flow</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Production Pipeline</span>
               <Badge tone="blue" dot>Stage {stage} of 4</Badge>
             </div>
 
             <div className={`pipeline-step ${stage === 1 ? 'active' : stage > 1 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 1 ? <CheckIcon size={14} /> : '1'}</div>
               <div className="step-content">
-                <b>Concept & Brand Ingestion</b>
-                <small>Analyzing creative brief and brand color systems</small>
+                <b>Concept & Creative Direction</b>
+                <small>Analyzing creative brief and setting up brand color hierarchy</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 2 ? 'active' : stage > 2 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 2 ? <CheckIcon size={14} /> : '2'}</div>
               <div className="step-content">
-                <b>Storyboard & Pacing Plan</b>
-                <small>Structuring scene hooks, feature beats, and call-to-actions</small>
+                <b>Storyboard & Scene Pacing</b>
+                <small>Structuring visual hooks, core message beats, and call-to-actions</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 3 ? 'active' : stage > 3 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 3 ? <CheckIcon size={14} /> : '3'}</div>
               <div className="step-content">
-                <b>Kinetic Motion & Typography Layout</b>
-                <small>Assembling camera animations, typography, and visual assets</small>
+                <b>Kinetic Motion & Layout</b>
+                <small>Choreographing camera transitions, typography reveals, and motion layers</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 4 ? 'active' : ''}`}>
-              <div className="step-circle">4</div>
+              <div className="step-circle">{stage === 4 ? <SparklesIcon size={12} /> : '4'}</div>
               <div className="step-content">
-                <b>Quality Review & Timeline Polish</b>
-                <small>Fine-tuning frame durations, easings, and render readiness</small>
+                <b>Visual Review & Polish</b>
+                <small>Fine-tuning frame durations, easings, audio sync, and render quality</small>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <button
-              className="btn ghost sm"
-              style={{ fontSize: 12, color: 'var(--faint)' }}
-              onClick={() => setShowLog(v => !v)}
-            >
-              {showLog ? 'Hide activity details' : 'Show activity details'}
-            </button>
-            {showLog && messages.length ? (
-              <div className="log">{messages.join('\n')}</div>
-            ) : null}
+          {/* Product feature insight footer */}
+          <div
+            style={{
+              padding: '10px 16px',
+              borderRadius: 'var(--radius)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              fontSize: 12.5,
+              color: 'var(--muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <span>{currentTip}</span>
           </div>
         </>
       )}

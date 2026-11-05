@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type TextLayer, type Variable } from '../api';
+import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type TextLayer, type Variable } from '../api';
 import { PlayerView, type PlayerHandle } from '../Player';
 import { editorPath, go } from '../router';
 import {
@@ -300,7 +300,7 @@ function AskAi({ detail, file, reload, setNote }: PaneProps) {
       await runJob<{ warnings?: string[] }>(
         '/api/refine',
         { file, instruction: text.trim() },
-        (j: Job) => setNote(j.messages.at(-1) ?? 'Refining video…')
+        (j: Job) => setNote(cleanUserStatus(j.messages.at(-1)))
       );
       setNote('AI refinement applied');
       setText('');
@@ -500,7 +500,7 @@ function Export({ detail, file }: PaneProps) {
     }
   };
 
-  const progress = (j: Job) => setLabel(j.messages.at(-1) ?? '');
+  const progress = (j: Job) => setLabel(cleanUserStatus(j.messages.at(-1)));
 
   return (
     <>

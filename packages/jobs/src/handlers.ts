@@ -14,6 +14,27 @@ import type { JobSpec } from './queue';
 const audioTypes = ['.wav', '.mp3', '.ogg', '.m4a', '.aac', '.flac', '.webm', '.mp4', '.mov', '.mkv'];
 type Input = Record<string, unknown>;
 
+export function cleanProgressMessage(message: string): string {
+  if (!message) return 'Crafting your video…';
+  const clean = message.replace(/^PROGRESS:\s*/i, '').trim();
+  if (/synthesiz|speak|voice|narrat/i.test(clean)) return 'Synthesizing voice narration and audio mix…';
+  if (/transcrib|caption|cue|timing/i.test(clean)) return 'Synchronizing subtitles and word timings…';
+  if (/retim/i.test(clean)) return 'Optimizing rhythm, transitions and scene timing…';
+  if (/visual system|contract|palette|brand/i.test(clean)) return 'Establishing brand colors and typographic hierarchy…';
+  if (/designing.*scene|storyboard|beat|plan/i.test(clean)) return 'Structuring scene layouts and narrative beats…';
+  if (/template|compose|layer|scene/i.test(clean)) return 'Composing kinetic typography and motion layers…';
+  if (/review|check|inspect/i.test(clean)) return 'Reviewing visual hierarchy and animation quality…';
+  if (/heal|re-design|polish/i.test(clean)) return 'Applying fine polish to animation curves and easing…';
+  if (/render/i.test(clean)) {
+    const frames = clean.match(/Rendered\s+(\d+\/\d+)\s+frames/i);
+    return frames ? `Rendering video frames (${frames[1]})…` : 'Rendering high-resolution video frames…';
+  }
+  if (/(freellm|qwen|llama|gpt|nemotron|claude|openai|mistral|attempt|\.schema|json|ast|token|px)/i.test(clean)) {
+    return 'Crafting broadcast-grade motion graphics…';
+  }
+  return clean;
+}
+
 export function createHandlers(env: JobEnv) {
   const { paths, capabilities } = env;
   const { resultFile, urlFor, relative, readJson, loadForRender, writeComposition } = paths;
@@ -48,7 +69,7 @@ export function createHandlers(env: JobEnv) {
       const options: ComposeOptions = {
         ...canvas, brief: effectiveBrief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
         includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
-        onProgress: message => progress(message),
+        onProgress: message => progress(cleanProgressMessage(message)),
       };
       const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
       const result = await capabilities.composeSmart(ai, options, { full, theme, template });
@@ -72,7 +93,7 @@ export function createHandlers(env: JobEnv) {
       if (options.narration) {
         const produced = await capabilities.narrateSmart(ai, result, {
           brief, outDir: resolve(dir, 'assets'), durationSeconds: canvas.durationSeconds, composition,
-          compositionPath: resolve(dir, 'composition.json'), tailSeconds: 0.8, onProgress: message => progress(message),
+          compositionPath: resolve(dir, 'composition.json'), tailSeconds: 0.8, onProgress: message => progress(cleanProgressMessage(message)),
         });
         composition = produced.composition ?? composition;
         narration = {
@@ -99,7 +120,7 @@ export function createHandlers(env: JobEnv) {
     const review = boolOf(input.review);
     return { kind: 'refine', run: async progress => {
       const current = await readJson(file) as Composition;
-      const result = await refineVideo(env.provider(), current, { instruction, review, baseDir: dirname(file), onProgress: message => progress(message) });
+      const result = await refineVideo(env.provider(), current, { instruction, review, baseDir: dirname(file), onProgress: message => progress(cleanProgressMessage(message)) });
       await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
       return {
         ...resultFile(file), frames: result.composition.durationFrames, seconds: result.composition.durationFrames / result.composition.fps, scenes: result.composition.scenes.length,
@@ -111,7 +132,7 @@ export function createHandlers(env: JobEnv) {
   const importJson = (input: Input): JobSpec => {
     const rawText = textOf(input.json, 'JSON content');
     return { kind: 'import', run: async progress => {
-      progress('Extracting JSON and validating against MotionRender schema…');
+      progress('Preparing project composition…');
       const composition = loadComposition(sanitizeCompositionJson(extractJson(rawText)));
       // Nothing is supplied with pasted JSON, so it may only use built-in sounds and files that stay inside its own project folder.
       const problems = assetProblems(composition, { assets: new Map(), relativeInside: true });
@@ -124,7 +145,7 @@ export function createHandlers(env: JobEnv) {
         if (optionalText(input.folder)) throw new Error(`${relative(dir)} already has a composition. Choose another folder name, or leave the folder empty to get a new one.`);
         for (let n = 2; await taken(dir); n++) dir = paths.projectDir(`${folder}-${n}`, folder);
       }
-      progress(`Writing composition files to ${folder}…`);
+      progress('Saving composition files…');
       const files = await writeCompositionProject(dir, composition, { force: true });
       await saveRevision(files.composition, { kind: 'import', label: 'Pasted composition' });
       return { id: relative(dir), dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps, scenes: composition.scenes.length, attempts: 1, warnings: [], issues: [] };
@@ -180,7 +201,7 @@ export function createHandlers(env: JobEnv) {
       const produced = await narrate(env.provider(), {
         text: script, brief, outDir, composition, compositionPath: file, voice: optionalText(input.voice),
         language: optionalText(input.language), durationSeconds: optionalNumber(input.duration, 'duration', 0.1, 3600) ?? 20,
-        tailSeconds: optionalNumber(input.tail, 'tail', 0, 10) ?? 0.8, onProgress: message => progress(message),
+        tailSeconds: optionalNumber(input.tail, 'tail', 0, 10) ?? 0.8, onProgress: message => progress(cleanProgressMessage(message)),
       });
       if (produced.composition && file) await writeComposition(file, produced.composition, { kind: 'edit', label: 'Narration added' });
       return {
@@ -198,7 +219,7 @@ export function createHandlers(env: JobEnv) {
       const composition = file ? await readJson(file) as Composition : undefined;
       const result = await captionAudio(env.provider(), {
         audio, outDir, composition, compositionPath: file, language: optionalText(input.language),
-        startSeconds: optionalNumber(input.start, 'start', 0, 86_400) ?? 0, onProgress: message => progress(message),
+        startSeconds: optionalNumber(input.start, 'start', 0, 86_400) ?? 0, onProgress: message => progress(cleanProgressMessage(message)),
       });
       if (result.composition && file) await writeComposition(file, result.composition, { kind: 'edit', label: 'Captions added' });
       return { ...resultFile(result.captions), captionsUrl: urlFor(result.captions), words: result.words, cues: result.cues, durationSeconds: result.durationSeconds, composition: file ? resultFile(file) : undefined };
@@ -230,14 +251,14 @@ export function createHandlers(env: JobEnv) {
       if (templateInput) {
         templatePath = paths.fileInside(templateInput, 'template'); templateDir = dirname(templatePath); composition = await readJson(templatePath) as Composition;
       } else {
-        const result = await composeVideo(env.provider(), { ...canvasFor(input), brief, fields: fieldsFromRows(rows), baseDir: dir, onProgress: message => progress(message) });
+        const result = await composeVideo(env.provider(), { ...canvasFor(input), brief, fields: fieldsFromRows(rows), baseDir: dir, onProgress: message => progress(cleanProgressMessage(message)) });
         composition = result.composition;
         const files = await writeCompositionProject(dir, composition, { force: true });
         templatePath = files.composition; templateDir = dir;
       }
       const limit = input.limit === undefined || input.limit === '' ? undefined : integerIn(input.limit, 1, 'limit', 1, 1000);
       const plan = await planBatch(composition, rows, pattern, templateDir);
-      const rendered = await renderBatch(plan, templateDir, renderSettings(input), { limit, onProgress: message => progress(message) });
+      const rendered = await renderBatch(plan, templateDir, renderSettings(input), { limit, onProgress: message => progress(cleanProgressMessage(message)) });
       return { ...resultFile(templatePath), outputs: rendered.outputs.map(output => ({ ...resultFile(output) })), count: rendered.outputs.length };
     } };
   };

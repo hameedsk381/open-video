@@ -52,5 +52,26 @@ export async function runJob<T = any>(path: string, body: unknown, progress?: (j
   return (await waitJob(job.id, progress)).result as T;
 }
 
+export function cleanUserStatus(raw?: string): string {
+  if (!raw) return 'Crafting your video…';
+  const clean = raw.replace(/^PROGRESS:\s*/i, '').trim();
+  if (/synthesiz|speak|voice|narrat/i.test(clean)) return 'Generating voice narration and audio mix…';
+  if (/transcrib|caption|cue|timing/i.test(clean)) return 'Synchronizing subtitles and word timings…';
+  if (/retim/i.test(clean)) return 'Optimizing rhythm, transitions and scene timing…';
+  if (/visual system|contract|palette|brand/i.test(clean)) return 'Establishing brand colors and typographic hierarchy…';
+  if (/designing.*scene|storyboard|beat|plan/i.test(clean)) return 'Structuring scene layouts and narrative beats…';
+  if (/template|compose|layer|scene/i.test(clean)) return 'Composing kinetic typography and motion layers…';
+  if (/review|check|inspect/i.test(clean)) return 'Reviewing visual hierarchy and animation quality…';
+  if (/heal|re-design|polish/i.test(clean)) return 'Applying fine polish to animation curves and easing…';
+  if (/render/i.test(clean)) {
+    const frames = clean.match(/Rendered\s+(\d+\/\d+)\s+frames/i);
+    return frames ? `Rendering video frames (${frames[1]})…` : 'Rendering high-resolution video frames…';
+  }
+  if (/(freellm|qwen|llama|gpt|nemotron|claude|openai|mistral|attempt|\.schema|json|ast|token|px)/i.test(clean)) {
+    return 'Crafting broadcast-grade motion graphics…';
+  }
+  return clean;
+}
+
 export const dur = (seconds: number) => { const m = Math.floor(seconds / 60), s = Math.round(seconds - m * 60); return m ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`; };
 export const ago = (ms: number) => { const s = Math.max(1, Math.round((Date.now() - ms) / 1000)); return s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)}m ago` : s < 86400 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86400)}d ago`; };
