@@ -26,9 +26,8 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'compose', run: async progress => {
       const ai = env.provider();
       const pictures = (await env.assets(paths.idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
-      const customLength = input.duration !== undefined && input.duration !== null && input.duration !== '';
       const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
-      const full = boolOf(input.full) || (customLength && !template);
+      const full = boolOf(input.full);
 
       // Enrich creative direction from user customization
       const directions: string[] = [];

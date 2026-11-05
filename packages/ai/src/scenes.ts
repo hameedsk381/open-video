@@ -182,6 +182,115 @@ Design this scene. Reply ONLY the scene JSON.` },
   ];
 };
 
+const COLOR_PROPS = new Set(['fill', 'color', 'stroke']);
+const VALID_PROPERTIES = new Set([
+  'x', 'y', 'opacity', 'rotation', 'scale', 'fontSize', 'width', 'height',
+  'radius', 'letterSpacing', 'strokeWidth', 'trimStart', 'trimEnd', 'blur', 'volume',
+  'd', 'fill', 'color', 'stroke'
+]);
+const PROPERTY_MAP: Record<string, string> = {
+  fade: 'opacity',
+  rotate: 'rotation',
+  zoom: 'scale',
+  size: 'fontSize',
+  tracking: 'letterSpacing',
+};
+const VALID_EASINGS = new Set([
+  'linear', 'easeIn', 'easeOut', 'easeInOut',
+  'easeInCubic', 'easeOutCubic', 'easeInOutCubic',
+  'easeInQuart', 'easeOutQuart', 'easeInOutQuart',
+  'easeInExpo', 'easeOutExpo', 'easeInOutExpo',
+  'easeInBack', 'easeOutBack',
+  'spring', 'hold', 'land', 'snap', 'glide', 'pop', 'move', 'exit', 'drift'
+]);
+const EASING_MAP: Record<string, string> = {
+  ease: 'easeInOut',
+  'ease-in': 'easeIn',
+  'ease-out': 'easeOut',
+  'ease-in-out': 'easeInOut',
+  easein: 'easeIn',
+  easeout: 'easeOut',
+  easeinout: 'easeInOut',
+  in: 'easeIn',
+  out: 'easeOut',
+  'in-out': 'easeInOut',
+};
+
+export function normalizeEasing(easing: any): string | undefined {
+  if (typeof easing !== 'string') return undefined;
+  if (VALID_EASINGS.has(easing)) return easing;
+  const lower = easing.toLowerCase().trim();
+  if (EASING_MAP[lower]) return EASING_MAP[lower];
+  if (VALID_EASINGS.has(lower)) return lower;
+  return undefined;
+}
+
+export function normalizeAnimation(animation: any, frames: number): any | undefined {
+  if (!animation || typeof animation !== 'object' || typeof animation.property !== 'string') return undefined;
+  let prop = animation.property.trim();
+  if (PROPERTY_MAP[prop.toLowerCase()]) {
+    prop = PROPERTY_MAP[prop.toLowerCase()];
+  }
+  const isCssVar = prop.startsWith('--');
+  if (!VALID_PROPERTIES.has(prop) && !isCssVar) return undefined;
+
+  const isColor = COLOR_PROPS.has(prop);
+  const isPath = prop === 'd';
+
+  const cleanKeyframe = (keyframe: any) => {
+    if (!keyframe || typeof keyframe !== 'object') return null;
+    const frame = Math.max(0, Math.min(frames, Math.round(Number(keyframe?.frame) || 0)));
+    let val = keyframe.value;
+    if (isCssVar) {
+      if (typeof val !== 'string' && typeof val !== 'number') return null;
+    } else if (isColor) {
+      if (typeof val !== 'string' || !val.trim()) return null;
+      val = val.trim();
+    } else if (isPath) {
+      if (typeof val !== 'string' || !val.trim()) return null;
+    } else {
+      // numeric property
+      if (typeof val === 'string') {
+        const parsed = Number(val.replace(/px$/, '').replace(/%$/, '').trim());
+        if (!Number.isFinite(parsed)) return null;
+        val = parsed;
+      } else if (typeof val !== 'number' || !Number.isFinite(val)) {
+        return null;
+      }
+      if (prop === 'opacity') {
+        if (val > 1) val = val <= 100 ? val / 100 : 1;
+        if (val < 0) val = 0;
+      }
+    }
+    const easing = normalizeEasing(keyframe.easing);
+    return { frame, value: val, ...(easing ? { easing } : {}) };
+  };
+
+  if (Array.isArray(animation.keyframes) && animation.keyframes.length) {
+    const keyframes = animation.keyframes
+      .map(cleanKeyframe)
+      .filter((k: any): k is NonNullable<typeof k> => k !== null)
+      .sort((a: any, b: any) => a.frame - b.frame);
+    if (!keyframes.length) return undefined;
+    return {
+      property: prop,
+      keyframes,
+      ...(Number.isFinite(Number(animation.repeat)) ? { repeat: Math.max(0, Math.round(Number(animation.repeat))) } : {})
+    };
+  }
+
+  // The from/to shorthand: two keyframes, the easing on the one being arrived at.
+  if (animation.from !== undefined && animation.to !== undefined) {
+    const start = Math.max(0, Math.round(Number(animation.startFrame) || 0));
+    const end = Math.min(frames, Math.max(start + 1, Math.round(Number(animation.endFrame) || frames)));
+    const k1 = cleanKeyframe({ frame: start, value: animation.from });
+    const k2 = cleanKeyframe({ frame: end, value: animation.to, easing: animation.easing });
+    if (!k1 || !k2) return undefined;
+    return { property: prop, keyframes: [k1, k2] };
+  }
+  return undefined;
+}
+
 /** Coerces one scene reply into a schema-safe scene body; throws when the model produced nothing usable.
  *  Animations are normalized to the schema's keyframes form — both the correct `{ property, keyframes }` shape and
  *  a from/to shorthand the model may invent (`{ property, from, to, startFrame, endFrame, easing }`) are accepted. */
@@ -194,6 +303,45 @@ export function parseScene(raw: any, frames: number): any {
       if (!layer.content && layer.text) layer.content = layer.text;
       if (!layer.text && layer.content) layer.text = layer.content;
       if (!text(layer.content ?? layer.text)) throw new Error('a text layer has no text');
+      if (layer.fontSize !== undefined) {
+        const fs = typeof layer.fontSize === 'number' ? layer.fontSize : Number(String(layer.fontSize).replace(/px$/, ''));
+        layer.fontSize = Number.isFinite(fs) && fs > 0 ? fs : 48;
+      }
+    }
+    if (typeof layer.x === 'string') {
+      const num = Number(layer.x.replace(/px$/, ''));
+      if (Number.isFinite(num)) layer.x = num;
+    }
+    if (typeof layer.y === 'string') {
+      const num = Number(layer.y.replace(/px$/, ''));
+      if (Number.isFinite(num)) layer.y = num;
+    }
+    if (typeof layer.opacity === 'string') {
+      const num = Number(layer.opacity.replace(/%$/, ''));
+      if (Number.isFinite(num)) layer.opacity = num > 1 ? num / 100 : Math.max(0, num);
+    }
+    if (typeof layer.width === 'string') {
+      const num = Number(layer.width.replace(/px$/, ''));
+      if (Number.isFinite(num) && num > 0) layer.width = num;
+      else delete layer.width;
+    }
+    if (typeof layer.height === 'string') {
+      const num = Number(layer.height.replace(/px$/, ''));
+      if (Number.isFinite(num) && num > 0) layer.height = num;
+      else delete layer.height;
+    }
+    if (layer.split) {
+      if (typeof layer.split !== 'object') {
+        layer.split = { by: 'words', stagger: 4, preset: 'rise' };
+      } else {
+        const allowedPresets = ['rise', 'fade', 'pop', 'blur', 'slide', 'drop', 'typewriter'];
+        const p = String(layer.split.preset || 'rise').toLowerCase().replace(/-in$/, '');
+        layer.split.preset = allowedPresets.includes(p) ? p : 'rise';
+        const allowedBy = ['words', 'letters', 'lines'];
+        const b = String(layer.split.by || 'words').toLowerCase();
+        layer.split.by = allowedBy.includes(b) ? b : 'words';
+        layer.split.stagger = Math.max(1, Math.round(Number(layer.split.stagger) || 4));
+      }
     }
     if (Array.isArray(layer.animations)) layer.animations = layer.animations.map((animation: any) => normalizeAnimation(animation, frames)).filter(Boolean);
   }
@@ -201,23 +349,6 @@ export function parseScene(raw: any, frames: number): any {
     background: raw.background && typeof raw.background === 'object' ? raw.background : undefined,
     layers,
   };
-}
-
-function normalizeAnimation(animation: any, frames: number): any | undefined {
-  if (!animation || typeof animation !== 'object' || typeof animation.property !== 'string') return undefined;
-  if (Array.isArray(animation.keyframes) && animation.keyframes.length) {
-    const keyframes = animation.keyframes
-      .map((keyframe: any) => ({ frame: Math.max(0, Math.min(frames, Math.round(Number(keyframe?.frame) || 0))), value: keyframe?.value, easing: keyframe?.easing }))
-      .sort((a: any, b: any) => a.frame - b.frame);
-    return { property: animation.property, keyframes, ...(Number.isFinite(Number(animation.repeat)) ? { repeat: Math.max(0, Math.round(Number(animation.repeat))) } : {}) };
-  }
-  // The from/to shorthand: two keyframes, the easing on the one being arrived at.
-  if (animation.from !== undefined && animation.to !== undefined) {
-    const start = Math.max(0, Math.round(Number(animation.startFrame) || 0));
-    const end = Math.min(frames, Math.max(start + 1, Math.round(Number(animation.endFrame) || frames)));
-    return { property: animation.property, keyframes: [{ frame: start, value: animation.from }, { frame: end, value: animation.to, easing: animation.easing }] };
-  }
-  return undefined;
 }
 
 const houseCamera = (frames: number) => ({

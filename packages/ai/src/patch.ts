@@ -19,11 +19,11 @@ function findLayer(layers: any[] | undefined, id: string): any {
 /** Applies the fixes to a copy of the composition. A fix that cannot be placed is an error the model gets to read. */
 export function applyFixes(previous: any, fixes: Fix[]): any {
   if (!previous || typeof previous !== 'object') throw new Error('There is no earlier composition to apply fixes to; return the complete composition JSON');
-  if (!fixes.length) throw new Error('"fixes" is empty; list what to change or return the complete composition JSON');
+  const validFixes = Array.isArray(fixes) ? fixes.filter(fix => fix && typeof fix === 'object') : [];
+  if (!validFixes.length) throw new Error('"fixes" has no valid changes; list what to change or return the complete composition JSON');
   const result = structuredClone(previous);
-  fixes.forEach((fix, index) => {
+  validFixes.forEach((fix, index) => {
     const label = `fix ${index + 1}`;
-    if (!fix || typeof fix !== 'object') throw new Error(`${label} must be an object`);
     if (typeof fix.layer === 'string') {
       const layer = result.scenes?.map((scene: any) => findLayer(scene.layers, fix.layer!)).find(Boolean);
       if (!layer) throw new Error(`${label}: there is no layer "${fix.layer}"`);

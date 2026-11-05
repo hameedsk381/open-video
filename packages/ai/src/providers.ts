@@ -392,9 +392,9 @@ export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
   // Preference orders are live-probed against the gateway (tmp/diag-freellm.ts): models that failed JSON mode
   // (llama-3.3-70b), took 39-63 s for identical output (qwen3.5-397b, gemma-4-31b) or returned the wrong shape
   // (nemotron-3-nano-30b-reasoning) are dropped; the gateway's own 'auto' router is the fast, reliable floor.
-  compose: ['gpt-oss-120b', 'auto'],
-  template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'qwen3.6-27b', 'auto'],
-  heal: ['nemotron-3-nano-omni-reasoning', 'auto'],
+  compose: ['auto', 'gpt-oss-120b'],
+  template: ['auto', 'qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'qwen3.6-27b'],
+  heal: ['auto', 'nemotron-3-nano-omni-reasoning'],
   vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
   brand: ['auto', 'qwen3.8-27b'],
   batch: ['auto', 'kilo-auto', 'qwen3.6-27b', 'free-router'],
@@ -438,7 +438,7 @@ export function inferChatTask(messages: ChatMessage[], options?: ChatOptions): C
   if (/fill in ready-made video templates|fill a template|candidates\.find/i.test(fullText)) {
     return 'template';
   }
-  if (/production planner|Decide how the brief|planBuild/i.test(fullText)) {
+  if (/production planner|Decide how the brief|planBuild|plan motion-graphics|Plan a .*motion-graphics video/i.test(fullText)) {
     return 'fast';
   }
   if (/Extract a clean BrandPack|Brand Identity & Design System|brand pack|brand-scraper/i.test(fullText)) {

@@ -7,7 +7,7 @@ import { extractJson } from './json';
 import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
 import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type MotionPlan, type PromptOptions } from './prompt';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
-import { composeByScenes, healScenes, type ScenesOptions } from './scenes';
+import { composeByScenes, healScenes, normalizeAnimation, type ScenesOptions } from './scenes';
 
 export type ComposeOptions = PromptOptions & {
   brief: string;
@@ -38,7 +38,7 @@ const numeric = (value: unknown): number | undefined => {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function cleanLayer(layer: any) {
+function cleanLayer(layer: any, frames = 300) {
   if (!layer || typeof layer !== 'object') return;
   if ('fontWeight' in layer && typeof layer.fontWeight === 'string') {
     const s = layer.fontWeight.trim().toLowerCase();
@@ -49,8 +49,30 @@ function cleanLayer(layer: any) {
     else if (s === 'medium') layer.fontWeight = 500;
     else if (s === 'light') layer.fontWeight = 300;
   }
-  if (Array.isArray(layer.children)) layer.children.forEach(cleanLayer);
-  if (Array.isArray(layer.spans)) layer.spans.forEach(cleanLayer);
+  if (typeof layer.x === 'string') {
+    const num = Number(layer.x.replace(/px$/, ''));
+    if (Number.isFinite(num)) layer.x = num;
+  }
+  if (typeof layer.y === 'string') {
+    const num = Number(layer.y.replace(/px$/, ''));
+    if (Number.isFinite(num)) layer.y = num;
+  }
+  if (typeof layer.fontSize === 'string') {
+    const num = Number(layer.fontSize.replace(/px$/, ''));
+    if (Number.isFinite(num) && num > 0) layer.fontSize = num;
+  }
+  if (typeof layer.opacity === 'string') {
+    const num = Number(layer.opacity.replace(/%$/, ''));
+    if (Number.isFinite(num)) layer.opacity = num > 1 ? num / 100 : Math.max(0, num);
+  }
+  if (Array.isArray(layer.animations)) {
+    layer.animations = layer.animations.map((a: any) => {
+      if (!a || typeof a !== 'object') return a;
+      return normalizeAnimation(a, frames) ?? a;
+    });
+  }
+  if (Array.isArray(layer.children)) layer.children.forEach((c: any) => cleanLayer(c, frames));
+  if (Array.isArray(layer.spans)) layer.spans.forEach((s: any) => cleanLayer(s, frames));
 }
 
 function normalize(raw: any, options: ComposeOptions): any {
@@ -86,7 +108,8 @@ function normalize(raw: any, options: ComposeOptions): any {
       } else if (start + (Number(scene.durationFrames) || 0) > raw.durationFrames) {
         scene.durationFrames = Math.max(1, raw.durationFrames - start);
       }
-      for (const layer of scene?.layers ?? []) cleanLayer(layer);
+      const sceneFrames = Number(scene.durationFrames) || raw.durationFrames || 300;
+      for (const layer of scene?.layers ?? []) cleanLayer(layer, sceneFrames);
     }
   }
   return raw;
@@ -196,7 +219,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
       const planText = await provider.chat([
         { role: 'system', content: planSystemPrompt() },
         { role: 'user', content: planUserPrompt(options.brief, options) },
-      ], { json: true, temperature: 0.55, signal: options.signal });
+      ], { json: true, task: 'fast', temperature: 0.55, signal: options.signal });
       const planned = extractJson(planText);
       if (isMotionPlan(planned)) motionPlan = planned;
       else {
@@ -210,8 +233,9 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
   }
   const composeOptions = motionPlan ? { ...options, motionPlan } : options;
   // Scene-scoped strategy: a style contract plus one small call per scene, deterministic timing, targeted scene heal.
-  // Opt-in with strategy: 'scenes' or OVE_COMPOSE_STRATEGY=scenes; any failure falls through to the single-call loop.
-  const useScenes = composeOptions.strategy === 'scenes' || (composeOptions.strategy === undefined && process.env.OVE_COMPOSE_STRATEGY === 'scenes');
+  // Opt-in with strategy: 'scenes' or OVE_COMPOSE_STRATEGY=scenes; freellmapi uses scenes for fast multi-scene speed.
+  // Any failure falls through to the single-call loop.
+  const useScenes = composeOptions.strategy === 'scenes' || (composeOptions.strategy === undefined && (process.env.OVE_COMPOSE_STRATEGY === 'scenes' || provider.id === 'freellmapi'));
   if (useScenes) {
     const scenesOptions: ScenesOptions = {
       brief: options.brief,
@@ -226,15 +250,24 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
     try {
       let state = await composeByScenes(provider, scenesOptions, motionPlan);
       let reviewIssues: ReviewIssue[] | undefined;
+      let lastAccepted: { composition: Composition; raw: any; current: any } | undefined;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const sceneDurationSeconds = typeof state.raw.durationFrames === 'number'
           ? state.raw.durationFrames / (state.raw.fps || composeOptions.fps || 30)
           : composeOptions.durationSeconds;
         const accepted = await acceptComposition(state.raw, { ...composeOptions, durationSeconds: sceneDurationSeconds });
+        lastAccepted = accepted;
         const reviewed = await maybeReview(accepted.composition, composeOptions, attempt, maxAttempts, (intro, issues) => { reviewIssues = issues; });
         if (reviewed) return reviewed;
-        if (!reviewIssues?.some(issue => issue.frame !== undefined)) throw new Error('the review found errors but none carried a frame to map back to a scene');
-        state = await healScenes(provider, state, reviewIssues, scenesOptions);
+        if (!reviewIssues?.some(issue => issue.frame !== undefined)) break;
+        try {
+          state = await healScenes(provider, state, reviewIssues, scenesOptions);
+        } catch {
+          break;
+        }
+      }
+      if (lastAccepted) {
+        return { composition: lastAccepted.composition, attempts: maxAttempts, issues: reviewIssues ?? [], warnings: [] };
       }
       throw new Error('the scene rounds did not converge');
     } catch (error) {
