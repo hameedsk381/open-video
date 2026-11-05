@@ -7,6 +7,7 @@ import { extractJson } from './json';
 import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
 import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type MotionPlan, type PromptOptions } from './prompt';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
+import { composeByScenes, healScenes, type ScenesOptions } from './scenes';
 
 export type ComposeOptions = PromptOptions & {
   brief: string;
@@ -15,6 +16,8 @@ export type ComposeOptions = PromptOptions & {
   review?: boolean;
   /** Plan beats and look first (Claude-style motion graphics), then write the composition. */
   plan?: boolean;
+  /** How the composition is generated: one big call, or a style contract plus one small call per scene (OVE_COMPOSE_STRATEGY=scenes). */
+  strategy?: 'single' | 'scenes';
   baseDir?: string;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
@@ -52,6 +55,9 @@ function cleanLayer(layer: any) {
 
 function normalize(raw: any, options: ComposeOptions): any {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('The response must be one JSON object');
+  if (raw.background && typeof raw.background === 'object' && raw.background.type === 'color' && typeof raw.background.color === 'string') {
+    raw.background = raw.background.color;
+  }
   raw.version = '1.0';
   raw.$schema = './composition.schema.json';
   raw.width = options.width ?? (typeof raw.width === 'number' && raw.width > 0 ? raw.width : 1080);
@@ -72,6 +78,7 @@ function normalize(raw: any, options: ComposeOptions): any {
   if (Array.isArray(raw.scenes)) {
     for (const scene of raw.scenes) {
       if (!scene || typeof scene !== 'object') continue;
+      if (scene && typeof scene === 'object' && 'background' in scene) delete scene.background;
       const start = Number(scene.startFrame) || 0;
       if (start >= raw.durationFrames) {
         scene.startFrame = Math.max(0, raw.durationFrames - 1);
@@ -163,7 +170,7 @@ async function acceptComposition(rawInput: unknown, options: ComposeOptions): Pr
   return { composition, raw, current };
 }
 
-async function maybeReview(composition: Composition, options: ComposeOptions, attempt: number, maxAttempts: number, retry: (intro: string) => void): Promise<ComposeResult | undefined> {
+async function maybeReview(composition: Composition, options: ComposeOptions, attempt: number, maxAttempts: number, retry: (intro: string, issues?: ReviewIssue[]) => void): Promise<ComposeResult | undefined> {
   if (!options.review) return { composition, attempts: attempt, issues: [], warnings: [] };
   options.onProgress?.('Reviewing the generated composition with the renderer…');
   let review;
@@ -174,7 +181,7 @@ async function maybeReview(composition: Composition, options: ComposeOptions, at
   }
   const errors = review.issues.filter(issue => issue.severity === 'error');
   if (errors.length && attempt < maxAttempts) {
-    retry(`The renderer's design review found errors:\n${errors.map(issue => `- ${issue.frame === undefined ? '' : `frame ${issue.frame}: `}${issue.message}${issue.layer ? ` [${issue.layer}]` : ''}`).join('\n')}`);
+    retry(`The renderer's design review found errors:\n${errors.map(issue => `- ${issue.frame === undefined ? '' : `frame ${issue.frame}: `}${issue.message}${issue.layer ? ` [${issue.layer}]` : ''}`).join('\n')}`, errors);
     return undefined;
   }
   return { composition, attempts: attempt, issues: review.issues, warnings: review.issues.filter(issue => issue.severity === 'warning').map(issue => issue.message) };
@@ -202,6 +209,38 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
     } catch { /* planning failed; write the composition without a plan */ }
   }
   const composeOptions = motionPlan ? { ...options, motionPlan } : options;
+  // Scene-scoped strategy: a style contract plus one small call per scene, deterministic timing, targeted scene heal.
+  // Opt-in with strategy: 'scenes' or OVE_COMPOSE_STRATEGY=scenes; any failure falls through to the single-call loop.
+  const useScenes = composeOptions.strategy === 'scenes' || (composeOptions.strategy === undefined && process.env.OVE_COMPOSE_STRATEGY === 'scenes');
+  if (useScenes) {
+    const scenesOptions: ScenesOptions = {
+      brief: options.brief,
+      width: composeOptions.width,
+      height: composeOptions.height,
+      fps: composeOptions.fps,
+      durationSeconds: composeOptions.durationSeconds,
+      assets: composeOptions.assets,
+      signal: options.signal,
+      onProgress: options.onProgress,
+    };
+    try {
+      let state = await composeByScenes(provider, scenesOptions, motionPlan);
+      let reviewIssues: ReviewIssue[] | undefined;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const sceneDurationSeconds = typeof state.raw.durationFrames === 'number'
+          ? state.raw.durationFrames / (state.raw.fps || composeOptions.fps || 30)
+          : composeOptions.durationSeconds;
+        const accepted = await acceptComposition(state.raw, { ...composeOptions, durationSeconds: sceneDurationSeconds });
+        const reviewed = await maybeReview(accepted.composition, composeOptions, attempt, maxAttempts, (intro, issues) => { reviewIssues = issues; });
+        if (reviewed) return reviewed;
+        if (!reviewIssues?.some(issue => issue.frame !== undefined)) throw new Error('the review found errors but none carried a frame to map back to a scene');
+        state = await healScenes(provider, state, reviewIssues, scenesOptions);
+      }
+      throw new Error('the scene rounds did not converge');
+    } catch (error) {
+      options.onProgress?.(`Scene-by-scene composing fell back to one call (${describeError(error)}).`);
+    }
+  }
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt(composeOptions) },
     { role: 'user', content: userPrompt(options.brief, composeOptions) },

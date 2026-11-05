@@ -396,9 +396,9 @@ export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
   template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'qwen3.6-27b', 'auto'],
   heal: ['nemotron-3-nano-omni-reasoning', 'auto'],
   vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
-  brand: ['qwen3.8-27b', 'auto'],
-  batch: ['kilo-auto', 'qwen3.6-27b', 'free-router', 'auto'],
-  fast: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'gemma-4-31b', 'auto'],
+  brand: ['auto', 'qwen3.8-27b'],
+  batch: ['auto', 'kilo-auto', 'qwen3.6-27b', 'free-router'],
+  fast: ['auto', 'mistral-small-3.2-24b', 'qwen3.8-27b'],
 };
 
 let cachedFreeLlmModels: { models: Set<string>; expiresAt: number } | undefined;

@@ -147,7 +147,7 @@ export async function planBuild(provider: AiProvider, options: PlanOptions): Pro
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     options.onProgress?.(`Planning the video with ${provider.id} (attempt ${attempt}/${maxAttempts})…`);
     const conversation = messages(options, prior);
-    const text = await provider.chat(conversation, { json: true, task: 'fast', temperature: attempt === 1 ? 0.35 : 0.2, maxTokens: 800, signal: options.signal });
+    const text = await provider.chat(conversation, { json: true, task: 'fast', temperature: attempt === 1 ? 0.35 : 0.2, maxTokens: 1600, signal: options.signal });
     let reply: unknown;
     try { reply = extractJson(text); } catch (error) { prior = { text, feedback: (error as Error).message }; last = prior.feedback; continue; }
     const { plan, problems } = readBuildPlan(reply, options);

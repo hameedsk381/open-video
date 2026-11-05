@@ -59,6 +59,10 @@ Before either path runs, `compose` asks the model for a **plan**: which of the t
 
 If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to the routing that always worked (template first, then a full composition). Pass `--no-plan` to skip planning entirely.
 
+### Scene-by-scene composing (`OVE_COMPOSE_STRATEGY=scenes`)
+
+On gateways where one big generation call stalls for tens of seconds or drops global constraints ("exactly 2 scenes" comes back as one), the JSON route can be composed as a series of **small calls** instead: one short call agrees the visual system with the plan's beats (palette, fonts, a motion move per beat — the *style contract*), then one small call designs **each scene** against that contract and a summary of where the previous scene ends, and the timing is decided entirely by code — the beats' shares of the requested duration, an exact total, transitions, ids and a house camera push are stitched in deterministically. Each call lands in the provider's fast path, fails on its own (a bad scene costs its retry, not the video), and when the renderer's review finds errors only the scenes that own the failing frames are re-designed with the exact findings. Any failure in the small-call chain falls back to the proven single-call path, so `--provider mock` and offline runs are untouched. Opt in per call with `OVE_COMPOSE_STRATEGY=scenes` (or `strategy: 'scenes'` in the SDK).
+
 ```sh
 ove ai capabilities            # list every registered capability the AI may use
 ove ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
