@@ -50,7 +50,7 @@ describe('AI studio server', () => {
     const page = await send('GET', '/');
     expect(page.status).toBe(200);
     expect(page.headers['content-type']).toMatch(/text\/html/);
-    expect(page.body.toString('utf8')).toContain('MotionRender Studio');
+    expect(page.body.toString('utf8')).toContain('Prompt Motion & MotionRender');
 
     const status = json(await send('GET', '/api/status'));
     expect(status.outDir.replace(/\\/g, '/')).toBe(root.replace(/\\/g, '/'));
