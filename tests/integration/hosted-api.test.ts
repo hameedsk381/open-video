@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { request } from 'node:http';
+import { request, createServer } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AddressInfo } from 'node:net';
+import { setTimeout as delay } from 'node:timers/promises';
 import { createApp, createAccounts, createQuotas, MemoryUserStore, type App } from '@ove/api';
 import { InProcessQueue, createJobRunner } from '@ove/jobs';
 import { FsProjectStore } from '@ove/storage';
@@ -170,5 +172,28 @@ describe('hosted limits and closed doors', () => {
     expect((await c.post('/api/render', { file: `${ids[0]}/composition.json`, scale: 0.1 })).json.error).toMatch(/today's 1 renders/);
     const other = new Client(); await other.post('/api/auth/signup', { email: 'quota2@example.com', password });
     expect((await other.post('/api/project/blank', { name: 'fresh' })).status).toBe(200);               // someone else's limits are their own
+  });
+
+  it('keeps result delivery on the operator side: a request cannot point webhooks or object storage at its own targets', async () => {
+    const hits: string[] = [];
+    const listener = createServer((_req, res) => { hits.push('hit'); res.end(); });
+    await new Promise<void>(ok => listener.listen(0, '127.0.0.1', ok));
+    const port = (listener.address() as AddressInfo).port;
+    try {
+      const c = new Client(); await c.post('/api/auth/signup', { email: 'delivery@example.com', password });
+      const id = (await c.post('/api/project/blank', { name: 'deliv' })).json.id;
+      const reply = await c.post('/api/render', {
+        file: `${id}/composition.json`, scale: 0.1,
+        webhookUrl: `http://127.0.0.1:${port}/hook`, webhookSecret: 'stolen', s3Key: 'renders/evil', s3Config: { bucket: 'evil' },
+      });
+      expect(reply.status).toBe(202);
+      for (let attempt = 0; attempt < 300; attempt++) {
+        const job = (await c.get(`/api/job?id=${reply.json.job.id}`)).json.job;
+        if (job.status === 'done' || job.status === 'error') break;
+        await delay(200);
+      }
+      await delay(500);                                                                              // a webhook would fire right after the job ends
+      expect(hits).toEqual([]);
+    } finally { listener.close(); listener.closeAllConnections(); }
   });
 });

@@ -12,6 +12,8 @@ export interface JobPaths {
   /** `project/path` style name of a file, as shown to people. */
   relative(file: string): string;
   urlFor(file: string): string;
+  /** The requester's tenant id — job-side keys (object storage, external services) must be prefixed with it. */
+  tenantId: string;
   /** The project a file belongs to. */
   idOf(file: string): string;
   projectDir(value: unknown, brief: string): string;
@@ -50,6 +52,7 @@ export function createFsPaths(store: FsProjectStore, who: Principal, info: () =>
   const resolveIn = (value: string, label: string, base?: string) => store.resolve(who, value, label, base);
   const readJson = async (file: string) => JSON.parse((await readFile(file, 'utf8')).replace(/^﻿/, ''));
   const paths: JobPaths = {
+    tenantId: who.tenantId,
     resolve: resolveIn, relative,
     urlFor: file => '/files/' + relative(file).split('/').map(encodeURIComponent).join('/'),
     idOf: file => relative(file).split('/')[0]!,

@@ -7,7 +7,7 @@ import {
   sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
 } from '@ove/ai';
 import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
-import { S3Client, loadS3ConfigFromEnv, type S3Config } from '@ove/storage';
+import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
 import { boolOf, canvasFor, folderName, integerIn, optionalNumber, optionalText, renderSettings, textOf } from './input';
 import type { JobEnv } from './env';
 import type { JobSpec } from './queue';
@@ -202,7 +202,9 @@ export function createHandlers(env: JobEnv) {
       const baseResult = { ...resultFile(result.output), frames: result.frames, seconds: result.durationSeconds, format: result.format };
 
       // Optional S3 / Cloudflare R2 / MinIO Direct Upload
-      const s3Conf = (input.s3Config as S3Config | undefined) ?? loadS3ConfigFromEnv();
+      // Object storage is the operator's, configured by env: a job request never chooses the endpoint or the key.
+      // The key is tenant-scoped so two people rendering the same project name cannot collide or overwrite each other.
+      const s3Conf = loadS3ConfigFromEnv();
       if (s3Conf && (input.uploadS3 !== false)) {
         try {
           progress('Uploading rendered video to object storage (S3/R2)…');
@@ -211,7 +213,7 @@ export function createHandlers(env: JobEnv) {
           const ext = result.format;
           const contentType = ext === 'mp4' ? 'video/mp4' : ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : ext === 'gif' ? 'image/gif' : 'application/octet-stream';
           const filename = result.output.split(/[\\/]/).pop() || `out.${ext}`;
-          const s3Key = optionalText(input.s3Key) ?? `renders/${paths.idOf(baseDir)}/${Date.now()}-${filename}`;
+          const s3Key = `renders/${paths.tenantId}/${paths.idOf(baseDir)}/${Date.now()}-${filename}`;
           const s3Upload = await s3Client.putObject(s3Key, videoBytes, contentType);
           const presignedUrl = s3Client.getSignedDownloadUrl(s3Key, 86400);
           return {
