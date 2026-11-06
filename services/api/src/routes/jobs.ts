@@ -16,9 +16,11 @@ const jobRoutes: Record<string, JobKind> = {
 export function jobsRoutes(): Route[] {
   const start = async (c: Ctx, kind: JobKind) => {
     const input = await c.body();
-    // Integration side-channels (webhooks, object storage) are the operator's configuration on the hosted service:
-    // a request never chooses where results are delivered or uploaded. On your own machine you keep full control.
-    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key']) delete input[key]; }
+    // Integration side-channels and provider identity are the operator's configuration on the hosted service:
+    // a request never chooses where results are delivered, where uploads go, or which AI endpoint the worker
+    // calls (a caller-supplied baseUrl would make the worker fetch internal addresses). `model` stays: it
+    // selects among the operator's gateway models. On your own machine you keep full control.
+    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key', 'provider', 'baseUrl', 'apiKey']) delete input[key]; }
     const request = { kind, input, who: c.who };
     c.deps.validate(request);
     // A job on a project that is not there (or is someone else's, which looks the same) is turned away now, not left to fail later.

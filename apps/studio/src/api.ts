@@ -13,6 +13,16 @@ export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   return json;
 }
 
+/* Whether this studio runs on this machine (your keys, your gateway, full control) or on a hosted service
+ * (the operator's managed gateway does the work). A hosted service answers /api/auth/me; a local one does not. */
+let hostMode: 'loading' | 'local' | 'hosted' = 'loading';
+const modeListeners = new Set<() => void>();
+fetch('/api/auth/me').then(
+  r => { hostMode = r.ok ? 'hosted' : 'local'; },
+  () => { hostMode = 'local'; },
+).finally(() => modeListeners.forEach(fn => fn()));
+export const useHostMode = () => useSyncExternalStore(fn => { modeListeners.add(fn); return () => modeListeners.delete(fn); }, () => hostMode);
+
 export async function upload(project: string, file: File): Promise<void> {
   const response = await fetch(`/api/upload?project=${encodeURIComponent(project)}&name=${encodeURIComponent(file.name)}`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: file });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Upload failed');

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, upload, waitJob, cleanUserStatus, type Job, type Library, type TemplateSummary } from '../api';
+import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type TemplateSummary } from '../api';
 import { go } from '../router';
 import {
   AlertCircleIcon,
@@ -37,6 +37,7 @@ const examples = [
 ];
 
 export function Create({ initialTemplate, initialKind, initialPrompt }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string } = {}) {
+  const hostMode = useHostMode();
   const [kind, setKind] = useState<string>(initialKind || 'reel');
   const [brief, setBrief] = useState(initialPrompt || '');
   const [name, setName] = useState('');
@@ -90,6 +91,9 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
   const [customApiKey, setCustomApiKey] = useState<string>(() => {
     try { return localStorage.getItem('ove-custom-api-key') || ''; } catch { return ''; }
   });
+  // On a hosted service the operator's gateway does the work, so a stored "custom gateway" preference
+  // behaves as Auto there; bring-your-own-key stays a local-machine feature.
+  const effectivePreset = hostMode === 'hosted' && modelPreset === 'custom' ? 'auto' : modelPreset;
 
   // Brand scraping
   const [urlInput, setUrlInput] = useState('');
@@ -197,13 +201,14 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         body.theme = theme;
       }
 
-      // Model & Custom Gateway Config
-      if (modelPreset === 'custom') {
+      // Model & Custom Gateway Config. On a hosted service only a model choice is sent — the gateway
+      // endpoint and key are always the operator's (the API strips anything else anyway).
+      if (hostMode !== 'hosted' && modelPreset === 'custom') {
         if (customModel.trim()) body.model = customModel.trim();
         if (customBaseUrl.trim()) body.baseUrl = customBaseUrl.trim();
         if (customApiKey.trim()) body.apiKey = customApiKey.trim();
-      } else if (modelPreset !== 'auto') {
-        body.model = modelPreset;
+      } else if (effectivePreset !== 'auto') {
+        body.model = effectivePreset;
       }
 
       try {
@@ -572,19 +577,25 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         label={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <span><SparklesIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Creative Engine & AI Model</span>
-            <label className="check" style={{ margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
-              <input
-                type="checkbox"
-                checked={modelPreset === 'custom'}
-                onChange={e => setModelPreset(e.target.checked ? 'custom' : 'auto')}
-              />
-              <span style={{ fontSize: 12 }}>Custom Gateway / BYOK</span>
-            </label>
+            {hostMode !== 'hosted' ? (
+              <label className="check" style={{ margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
+                <input
+                  type="checkbox"
+                  checked={modelPreset === 'custom'}
+                  onChange={e => setModelPreset(e.target.checked ? 'custom' : 'auto')}
+                />
+                <span style={{ fontSize: 12 }}>Custom Gateway / BYOK</span>
+              </label>
+            ) : null}
           </div>
         }
-        hint={modelPreset === 'custom' ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, LiteLLM, Ollama, etc.)' : 'Choose a specialized model or connect your own API gateway'}
+        hint={effectivePreset === 'custom'
+          ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, LiteLLM, Ollama, etc.)'
+          : hostMode === 'hosted'
+            ? "AI runs on the service's managed gateway — pick a model or leave it on Auto Router"
+            : 'Choose a specialized model or connect your own API gateway'}
       >
-        {modelPreset === 'custom' ? (
+        {effectivePreset === 'custom' ? (
           <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginRight: 4 }}>Quick Gateway:</span>
@@ -656,7 +667,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
               { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Gateway favourite — fast & stable', badge: 'Fast' },
               { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'OpenAI — Multimodal', badge: 'OpenAI' },
             ].map(m => {
-              const active = modelPreset === m.id;
+              const active = effectivePreset === m.id;
               return (
                 <div
                   key={m.id}

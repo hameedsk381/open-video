@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, dur, type Block, type Library as Lib, type Project, type Status } from '../api';
+import { api, dur, useHostMode, type Block, type Library as Lib, type Project, type Status } from '../api';
 import { editorPath, go } from '../router';
 import { Badge, Button, FilmIcon, LayersIcon, Notice, Page, PaletteIcon, PlusIcon, SparklesIcon, WandIcon, useUi } from '../ui';
 
@@ -163,6 +163,7 @@ export function Library() {
 
 export function Settings() {
   const { toast } = useUi();
+  const hostMode = useHostMode();
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
 
@@ -210,7 +211,11 @@ export function Settings() {
     >
       {error ? <Notice tone="error" title="Settings error">{error}</Notice> : null}
 
-      {/* Custom BYOK Gateway & Model Card */}
+      {hostMode === 'hosted' ? (
+        <Notice tone="info" title="Managed AI">
+          AI runs on the service's managed gateway — there is nothing to configure. Pick a model on the Create page if you want one; the Auto Router chooses well on its own.
+        </Notice>
+      ) : (
       <div className="card" style={{ padding: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <b>Creative Engine & Custom Gateway (BYOK)</b>
@@ -286,6 +291,7 @@ export function Settings() {
           </div>
         </div>
       </div>
+      )}
 
       {status ? (
         <>
