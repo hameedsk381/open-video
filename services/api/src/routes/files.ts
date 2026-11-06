@@ -31,24 +31,25 @@ export function fileRoutes(): Route[] {
 
     let exists = false;
     try { exists = (await stat(target)).isFile(); } catch {}
+    // Auto-heal template assets for real projects only: the project's own composition.json must already exist in
+    // this account's space, and the document itself is never healed (it belongs to the project, not the template).
+    // Without this gate any project id — including another account's — would get a fabricated copy served as 200.
     if (!exists) {
       const rel = decodeURIComponent(c.url.pathname.slice('/files/'.length));
       const parts = rel.split(/[\\/]/);
       const projectId = parts[0];
       const filename = parts.slice(1).join('/');
-      if (projectId && filename) {
+      if (projectId && filename && filename !== 'composition.json') {
         const projectDir = resolve(space, projectId);
         let templateId: string | undefined;
         try {
           const compJson = JSON.parse(await readFile(resolve(projectDir, 'composition.json'), 'utf8'));
           templateId = compJson.template || compJson.id;
-        } catch {}
-        const tDir = findTemplatesDir(c.deps.app?.dir);
+        } catch { templateId = undefined; }
+        const tDir = templateId === undefined ? undefined : findTemplatesDir(c.deps.app?.dir);
         if (tDir) {
           const candidates = [
             templateId ? resolve(tDir, templateId, filename) : undefined,
-            resolve(tDir, 'kinetic-reel', filename),
-            resolve(tDir, 'saas-launch', filename),
           ].filter(Boolean) as string[];
           for (const cand of candidates) {
             try {
