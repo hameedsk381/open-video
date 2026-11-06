@@ -212,7 +212,7 @@ export function Settings() {
       {error ? <Notice tone="error" title="Settings error">{error}</Notice> : null}
 
       {hostMode === 'hosted' ? (
-        <Notice tone="info" title="Managed AI">
+        <Notice tone="neutral" title="Managed AI">
           AI runs on the service's managed gateway — there is nothing to configure. Pick a model on the Create page if you want one; the Auto Router chooses well on its own.
         </Notice>
       ) : (

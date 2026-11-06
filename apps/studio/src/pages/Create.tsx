@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type TemplateSummary } from '../api';
+import { composeReport } from '../composeReport';
 import { go } from '../router';
 import {
   AlertCircleIcon,
@@ -886,17 +887,38 @@ const CREATIVE_TIPS = [
   '🎵 Audio layers and sound effects automatically sync with visual reveals',
 ];
 
+const Bulleted = ({ items }: { items: string[] }) => (
+  <>
+    {items.map((message, index) => (
+      <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+        <span aria-hidden>•</span>
+        <span>{message}</span>
+      </div>
+    ))}
+  </>
+);
+
 export function Making({ id, job }: { id: string; job: string }) {
   const [messages, setMessages] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [report, setReport] = useState<{ notes: string[]; errors: string[] } | undefined>();
   const [sentenceIndex, setSentenceIndex] = useState(0);
 
   useEffect(() => {
+    // The page stays mounted when the route moves to another job, so what the last one reported must not describe this one.
+    setMessages([]); setError(''); setReport(undefined);
     let live = true;
     waitJob(job, j => {
       if (live) setMessages(j.messages);
     }).then(
-      () => { if (live) go(`#/p/${encodeURIComponent(id)}`); },
+      j => {
+        if (!live) return;
+        // A video the engine had to repair, or that the design review still faults, is not a plain success: stop here
+        // and say what happened instead of a redirect that buries it inside the player.
+        const reported = composeReport(j.result);
+        if (reported) { setReport(reported); return; }
+        go(`#/p/${encodeURIComponent(id)}`);
+      },
       e => {
         if (live) {
           const msg = (e as Error).message || '';
@@ -936,7 +958,20 @@ export function Making({ id, job }: { id: string; job: string }) {
 
   return (
     <div className="center" style={{ maxWidth: 540, margin: '40px auto', padding: '0 20px' }}>
-      {error ? (
+      {report ? (
+        <>
+          <div style={{ margin: '0 auto 20px', width: 56, height: 56, borderRadius: '50%', background: `color-mix(in srgb, var(--${report.errors.length ? 'red' : 'amber'}) 15%, transparent)`, color: `var(--${report.errors.length ? 'red' : 'amber'})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {report.errors.length ? <AlertCircleIcon size={28} /> : <SparklesIcon size={28} />}
+          </div>
+          <h2>{report.errors.length ? 'Made, but the review still faults it' : 'Made, with notes'}</h2>
+          {report.errors.length ? <Notice tone="error" title="Unresolved review faults"><Bulleted items={report.errors} /></Notice> : null}
+          {report.notes.length ? <Notice tone={report.errors.length ? 'neutral' : 'warn'} title="What the engine had to change"><Bulleted items={report.notes} /></Notice> : null}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+            <Button variant="primary" onClick={() => go(`#/p/${encodeURIComponent(id)}`)}>Open the video</Button>
+            <Button onClick={() => go('#/')}>Back to Projects</Button>
+          </div>
+        </>
+      ) : error ? (
         <>
           <div style={{ margin: '0 auto 20px', width: 56, height: 56, borderRadius: '50%', background: 'color-mix(in srgb, var(--red) 15%, transparent)', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <AlertCircleIcon size={28} />
