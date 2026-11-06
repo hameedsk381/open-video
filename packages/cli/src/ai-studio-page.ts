@@ -2,7 +2,7 @@
 // the Player and edits its own composition file. Self-contained (no build step, no framework, no remote assets). The script uses no
 // backticks, ${} or backslashes, so the whole page can live inside this template string.
 export const aiStudioPage = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prompt Motion & MotionRender Studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MotionRender Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -327,7 +327,7 @@ function showcase() {
   var hero = h('div', { class: 'hero', style: 'margin-bottom:14px' }, [
     h('div', null, [
       h('div', { style: 'display:flex;align-items:center;gap:10px;margin-bottom:12px' }, [
-        h('span', { class: 'tag', style: 'color:#fff;background:rgba(255,255,255,0.06);padding:3px 10px', text: '✨ Prompt Motion Showcase' }),
+        h('span', { class: 'tag', style: 'color:#fff;background:rgba(255,255,255,0.06);padding:3px 10px', text: '✨ MotionRender Showcase' }),
         h('span', { class: 'tag ok', text: '● 12 Curated Prompts' })
       ]),
       h('h1', { text: 'Motion Graphics Prompt Library', style: 'font-size:32px;letter-spacing:-0.03em' }),

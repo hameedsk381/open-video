@@ -131,7 +131,7 @@ export function App() {
           <a className="brand" href="#/">
             <StudioBrandLogo size={24} />
             <div className="brand-title">
-              <span>Prompt Motion</span>
+              <span>MotionRender</span>
               <span className="brand-badge">Engine</span>
             </div>
           </a>

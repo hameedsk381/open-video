@@ -305,7 +305,7 @@ export function Showcase() {
           <div className="showcase-headline-row">
             <span className="showcase-badge-pill">
               <SparklesIcon size={13} />
-              <span>Prompt Motion Showcase</span>
+              <span>MotionRender Showcase</span>
             </span>
             <span className="showcase-live-pill">
               <span className="pulse-dot" />
