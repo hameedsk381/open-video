@@ -79,7 +79,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
 
   // AI Creative Engine & Custom BYOK Gateway
   const [modelPreset, setModelPreset] = useState<string>(() => {
-    try { return localStorage.getItem('ove-model-preset') || 'auto'; } catch { return 'auto'; }
+    try { return (localStorage.getItem('ove-model-preset') || 'auto').replace('qwen2.5-72b', 'qwen3.8-27b'); } catch { return 'auto'; }
   });
   const [customModel, setCustomModel] = useState<string>(() => {
     try { return localStorage.getItem('ove-custom-model') || ''; } catch { return ''; }
@@ -582,7 +582,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
             </label>
           </div>
         }
-        hint={modelPreset === 'custom' ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, RunAPI, Together, Ollama, etc.)' : 'Choose a specialized model or connect your own API gateway'}
+        hint={modelPreset === 'custom' ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, LiteLLM, Ollama, etc.)' : 'Choose a specialized model or connect your own API gateway'}
       >
         {modelPreset === 'custom' ? (
           <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -649,12 +649,12 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 8 }}>
             {[
-              { id: 'auto', name: 'Auto Router', desc: 'Managed Fast & Smart', badge: 'Default' },
-              { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic — Elite Design', badge: 'Best Quality' },
+              { id: 'auto', name: 'Auto Router', desc: 'Task-aware gateway routing', badge: 'Default' },
+              { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic', badge: 'Best Quality' },
               { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Google — Fast Multimodal', badge: 'Google' },
-              { id: 'deepseek-r1', name: 'DeepSeek-R1', desc: 'Deep Reasoning & Pacing', badge: 'Reasoning' },
-              { id: 'qwen2.5-72b', name: 'Qwen 2.5 72B', desc: 'Groq — Sub-Second Speed', badge: 'Instant' },
-              { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'Multimodal Vision & Code', badge: 'OpenAI' },
+              { id: 'deepseek-r1', name: 'DeepSeek-R1', desc: 'DeepSeek — Deep Reasoning', badge: 'Reasoning' },
+              { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Gateway favourite — fast & stable', badge: 'Fast' },
+              { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'OpenAI — Multimodal', badge: 'OpenAI' },
             ].map(m => {
               const active = modelPreset === m.id;
               return (

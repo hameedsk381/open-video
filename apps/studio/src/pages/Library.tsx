@@ -168,7 +168,7 @@ export function Settings() {
 
   // BYOK Gateway Preferences
   const [modelPreset, setModelPreset] = useState(() => {
-    try { return localStorage.getItem('ove-model-preset') || 'auto'; } catch { return 'auto'; }
+    try { return (localStorage.getItem('ove-model-preset') || 'auto').replace('qwen2.5-72b', 'qwen3.8-27b'); } catch { return 'auto'; }
   });
   const [customModel, setCustomModel] = useState(() => {
     try { return localStorage.getItem('ove-custom-model') || ''; } catch { return ''; }
@@ -220,7 +220,7 @@ export function Settings() {
         </div>
 
         <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--muted)' }}>
-          Configure your preferred LLM provider. Bring your own API key to connect OpenRouter, RunAPI, Together, or a local Ollama instance.
+          Configure your preferred LLM provider. Bring your own API key to connect OpenRouter, LiteLLM, a local Ollama instance, or any OpenAI-compatible gateway.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -231,11 +231,11 @@ export function Settings() {
               value={modelPreset}
               onChange={e => setModelPreset(e.target.value)}
             >
-              <option value="auto">Auto Router (Smart Managed Gateway: Qwen 2.5 / DeepSeek / Llama 3.3)</option>
-              <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Anthropic — Elite Design & Spatial Layouts)</option>
-              <option value="deepseek-r1">DeepSeek-R1 (Deep Reasoning, Pacing & Self-Healing)</option>
-              <option value="qwen2.5-72b">Qwen 2.5 72B (Groq — Sub-Second Realtime Generation)</option>
-              <option value="gpt-4o">OpenAI GPT-4o (Multimodal Vision & Layout)</option>
+              <option value="auto">Auto Router (task-aware: the gateway picks the best model per task)</option>
+              <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (Anthropic)</option>
+              <option value="deepseek-r1">DeepSeek-R1 (DeepSeek)</option>
+              <option value="qwen3.8-27b">Qwen 3.8 27B (gateway favourite for most tasks)</option>
+              <option value="gpt-4o">OpenAI GPT-4o (OpenAI)</option>
               <option value="custom">Custom OpenAI-Compatible Gateway / BYOK</option>
             </select>
           </div>
