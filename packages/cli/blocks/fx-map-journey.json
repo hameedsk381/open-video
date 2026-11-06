@@ -341,7 +341,8 @@
           "fontWeight": 800,
           "maxWidth": "{{round(canvas.width * 0.4)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -414,7 +415,8 @@
           "fontWeight": 800,
           "maxWidth": "{{round(canvas.width * 0.4)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

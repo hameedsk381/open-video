@@ -80,7 +80,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "blue",
@@ -150,7 +151,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "main",
@@ -227,7 +229,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "slice-0",

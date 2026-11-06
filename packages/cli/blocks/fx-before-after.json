@@ -181,7 +181,8 @@
         "blur": 10,
         "offsetX": 0,
         "offsetY": 3
-      }
+      },
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "after",
@@ -199,7 +200,8 @@
         "blur": 10,
         "offsetX": 0,
         "offsetY": 3
-      }
+      },
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-1",

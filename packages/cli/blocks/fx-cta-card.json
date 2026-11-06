@@ -65,10 +65,11 @@
       "split": {
         "by": "words",
         "stagger": 5,
-        "preset": "rise",
+        "preset": "{{motion}}",
         "duration": 18
       },
-      "startFrame": 4
+      "startFrame": 4,
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "line2",
@@ -113,7 +114,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "bubble-a",
@@ -175,7 +177,8 @@
           "color": "#ffffff",
           "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
           "y": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
-          "fontWeight": 600
+          "fontWeight": 600,
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -240,7 +243,8 @@
           "fontWeight": 800,
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

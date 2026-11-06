@@ -23,6 +23,11 @@
     "url": {
       "type": "string",
       "default": "example.com"
+    },
+    "variant": {
+      "type": "string",
+      "default": "center",
+      "description": "Layout: center (centred stack), left (aligned left) or panel (full accent panel with inverted text)"
     }
   },
   "layers": [
@@ -116,16 +121,27 @@
       ]
     },
     {
-      "id": "stack",
-      "type": "group",
+      "if": "{{variant == 'panel'}}",
+      "id": "panel",
+      "type": "rect",
       "x": 0,
       "y": 0,
       "width": "{{canvas.width}}",
       "height": "{{canvas.height}}",
+      "fill": "{{accent}}",
+      "opacity": 1
+    },
+    {
+      "id": "stack",
+      "type": "group",
+      "x": "{{variant == 'left' ? round(canvas.width * 0.08) : 0}}",
+      "y": 0,
+      "width": "{{round(canvas.width * (variant == 'left' ? 0.84 : 1))}}",
+      "height": "{{canvas.height}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
-        "align": "center",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.05 * density)}}",
+        "align": "{{variant == 'left' ? 'start' : 'center'}}",
         "justify": "center"
       },
       "children": [
@@ -134,9 +150,9 @@
           "type": "text",
           "content": "{{headline}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
-          "color": "{{text}}",
+          "color": "{{variant == 'panel' ? bg : text}}",
           "fontWeight": "{{headWeight}}",
-          "textAlign": "center",
+          "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
           "maxWidth": "{{round(canvas.width * 0.84)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
@@ -144,9 +160,10 @@
           "split": {
             "by": "words",
             "stagger": 4,
-            "preset": "rise",
+            "preset": "{{motion}}",
             "duration": 18
-          }
+          },
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "btn",
@@ -192,7 +209,7 @@
               "width": "{{round(canvas.width * 0.42)}}",
               "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
               "radius": "{{round(min(canvas.width, canvas.height) * 0.065)}}",
-              "fill": "{{accent}}"
+              "fill": "{{variant == 'panel' ? bg : accent}}"
             },
             {
               "id": "label",
@@ -202,11 +219,12 @@
               "y": "{{round(min(canvas.width, canvas.height) * 0.065 - min(canvas.width, canvas.height) * 0.03)}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
               "fontWeight": 800,
-              "color": "{{bg}}",
+              "color": "{{variant == 'panel' ? accent : bg}}",
               "textAlign": "center",
               "maxWidth": "{{round(canvas.width * 0.38)}}",
               "maxLines": 1,
-              "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}"
+              "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+              "fontFamily": "{{fontDisplay}}"
             }
           ]
         },
@@ -215,8 +233,8 @@
           "type": "text",
           "content": "{{url}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
-          "color": "{{muted}}",
-          "textAlign": "center",
+          "color": "{{variant == 'panel' ? bg : muted}}",
+          "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
           "maxWidth": "{{round(canvas.width * 0.8)}}",
           "startFrame": 34,
           "animations": [
@@ -248,7 +266,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

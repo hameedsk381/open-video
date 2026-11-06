@@ -79,10 +79,11 @@
       "split": {
         "by": "words",
         "stagger": 5,
-        "preset": "rise",
+        "preset": "{{motion}}",
         "duration": 18
       },
-      "startFrame": 10
+      "startFrame": 10,
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "sfx-1",

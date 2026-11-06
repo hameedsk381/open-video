@@ -56,8 +56,15 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{canvas.height + 250}}", "easing": "easeOutBack" },
-            { "frame": 18, "value": "{{round(canvas.height * 0.44)}}" }
+            {
+              "frame": 0,
+              "value": "{{canvas.height + 250}}",
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.44)}}"
+            }
           ]
         }
       ]
@@ -82,8 +89,15 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 8, "value": "{{canvas.height + 250}}", "easing": "easeOutBack" },
-            { "frame": 24, "value": "{{round(canvas.height * 0.46)}}" }
+            {
+              "frame": 8,
+              "value": "{{canvas.height + 250}}",
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 24,
+              "value": "{{round(canvas.height * 0.46)}}"
+            }
           ]
         }
       ]
@@ -105,8 +119,15 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 16, "value": 0.2, "easing": "easeOutBack" },
-            { "frame": 30, "value": 1.0 }
+            {
+              "frame": 16,
+              "value": 0.2,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 30,
+              "value": 1
+            }
           ]
         }
       ]
@@ -124,11 +145,19 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 18, "value": 0 },
-            { "frame": 32, "value": 1.0, "easing": "easeOutBack" }
+            {
+              "frame": 18,
+              "value": 0
+            },
+            {
+              "frame": 32,
+              "value": 1,
+              "easing": "easeOutBack"
+            }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "tape-pin",
@@ -171,8 +200,15 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 26, "value": "{{round(canvas.height * 0.70)}}", "easing": "easeOutCubic" },
-            { "frame": 36, "value": "{{round(canvas.height * 0.64)}}" }
+            {
+              "frame": 26,
+              "value": "{{round(canvas.height * 0.70)}}",
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 36,
+              "value": "{{round(canvas.height * 0.64)}}"
+            }
           ]
         }
       ]
@@ -195,8 +231,14 @@
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 32, "value": 0 },
-            { "frame": 44, "value": 1 }
+            {
+              "frame": 32,
+              "value": 0
+            },
+            {
+              "frame": 44,
+              "value": 1
+            }
           ]
         }
       ]
@@ -218,8 +260,14 @@
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 40, "value": 0 },
-            { "frame": 50, "value": 1 }
+            {
+              "frame": 40,
+              "value": 0
+            },
+            {
+              "frame": 50,
+              "value": 1
+            }
           ]
         }
       ]
@@ -247,4 +295,3 @@
     }
   ]
 }
-

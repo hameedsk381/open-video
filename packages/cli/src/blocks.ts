@@ -5,7 +5,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { coerceVariable, loadComposition, variablesSchema, type VariableDeclaration } from '@ove/schema';
+import { coerceVariable, loadComposition, themeTokenNames, themeTokenType, variablesSchema, type VariableDeclaration } from '@ove/schema';
 
 export const blocksDir = fileURLToPath(new URL('../blocks', import.meta.url));
 export const themesDir = fileURLToPath(new URL('../themes', import.meta.url));
@@ -36,9 +36,9 @@ export async function readTheme(id: string, root = themesDir): Promise<Theme> {
   return found;
 }
 
-/** The variable names every block reads. */
-export const themeTokens = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight'] as const;
-const tokenType = (name: string) => name === 'radius' || name === 'headWeight' ? 'number' : 'color';
+/** The variable names every block reads: palette, type, texture, motion, transition, layout and density. */
+export const themeTokens = themeTokenNames;
+const tokenType = themeTokenType;
 
 /** Sets the theme's values as the composition's variable defaults (other variables are left alone). */
 export function applyTheme(raw: any, theme: Theme, only?: readonly string[]): any {
@@ -107,4 +107,4 @@ export function emptyComposition(name: string, width: number, height: number, fp
 }
 
 // The theme used for tokens a composition does not have yet. Kept in step with themes/midnight.json (a test checks it).
-export const themeDefaults: Theme = { id: 'midnight', name: 'Midnight', description: '', variables: { bg: '#0b1020', surface: '#151c33', text: '#f5f7fb', muted: '#9aa6c4', accent: '#22d3ee', accent2: '#a78bfa', radius: 20, headWeight: 800 } };
+export const themeDefaults: Theme = { id: 'midnight', name: 'Midnight', description: '', variables: { bg: '#0b1020', surface: '#151c33', text: '#f5f7fb', muted: '#9aa6c4', accent: '#22d3ee', accent2: '#a78bfa', radius: 20, headWeight: 800, fontDisplay: 'Space Grotesk', fontBody: 'Inter', texture: 'grid', textureColor: '#ffffff', textureOpacity: 0.035, motion: 'blur', transition: 'fade', layout: 'left', density: 1 } };

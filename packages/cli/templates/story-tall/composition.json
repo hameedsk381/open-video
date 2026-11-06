@@ -7,6 +7,10 @@
   "height": 1920,
   "fps": 30,
   "durationFrames": "auto",
+  "export": {
+    "format": "mp4",
+    "loudness": -14
+  },
   "motionBlur": {
     "samples": 4,
     "shutter": 180
@@ -111,13 +115,73 @@
       "type": "string",
       "default": "NEW",
       "description": "Corner label on the opening scene"
+    },
+    "fontDisplay": {
+      "type": "string",
+      "default": "Space Grotesk",
+      "description": "Theme: fontDisplay"
+    },
+    "fontBody": {
+      "type": "string",
+      "default": "Inter",
+      "description": "Theme: fontBody"
+    },
+    "texture": {
+      "type": "string",
+      "default": "scanlines",
+      "description": "Theme: texture"
+    },
+    "textureColor": {
+      "type": "color",
+      "default": "#ffffff",
+      "description": "Theme: textureColor"
+    },
+    "textureOpacity": {
+      "type": "number",
+      "default": 0.05,
+      "description": "Theme: textureOpacity"
+    },
+    "motion": {
+      "type": "string",
+      "default": "pop",
+      "description": "Theme: motion"
+    },
+    "transition": {
+      "type": "string",
+      "default": "zoom",
+      "description": "Theme: transition"
+    },
+    "layout": {
+      "type": "string",
+      "default": "center",
+      "description": "Theme: layout"
+    },
+    "density": {
+      "type": "number",
+      "default": 0.9,
+      "description": "Theme: density"
+    },
+    "closeVariant": {
+      "type": "string",
+      "default": "left",
+      "description": "Closing layout: center, left or panel"
+    },
+    "heroVariant": {
+      "type": "string",
+      "default": "center",
+      "description": "Opening layout: left, center or band"
+    },
+    "statVariant": {
+      "type": "string",
+      "default": "center",
+      "description": "Stat layout: center, left or split"
     }
   },
   "scenes": [
     {
       "id": "title-hero",
       "name": "Title hero",
-      "durationFrames": 120,
+      "durationFrames": 150,
       "camera": {
         "animations": [
           {
@@ -128,7 +192,7 @@
                 "value": 1
               },
               {
-                "frame": 120,
+                "frame": 150,
                 "value": 1.08,
                 "easing": "drift"
               }
@@ -143,7 +207,8 @@
           "with": {
             "kicker": "{{kicker}}",
             "headline": "{{title}}",
-            "subtitle": "{{subtitle}}"
+            "subtitle": "{{subtitle}}",
+            "variant": "{{heroVariant}}"
           }
         },
         {
@@ -186,12 +251,13 @@
           "id": "big-stat-block",
           "with": {
             "value": "{{stat}}",
-            "label": "{{statLabel}}"
+            "label": "{{statLabel}}",
+            "variant": "{{statVariant}}"
           }
         }
       ],
       "transitionIn": {
-        "type": "push",
+        "type": "{{transition}}",
         "durationFrames": 16,
         "direction": "left",
         "easing": "glide"
@@ -231,7 +297,7 @@
         }
       ],
       "transitionIn": {
-        "type": "push",
+        "type": "{{transition}}",
         "durationFrames": 16,
         "direction": "left",
         "easing": "glide"
@@ -266,12 +332,13 @@
           "with": {
             "headline": "{{ctaHeadline}}",
             "button": "{{ctaButton}}",
-            "url": "{{url}}"
+            "url": "{{url}}",
+            "variant": "{{closeVariant}}"
           }
         }
       ],
       "transitionIn": {
-        "type": "push",
+        "type": "{{transition}}",
         "durationFrames": 16,
         "direction": "left",
         "easing": "glide"
@@ -293,6 +360,11 @@
         "subtitle": {
           "type": "string",
           "default": "One clear line about why it matters."
+        },
+        "variant": {
+          "type": "string",
+          "default": "left",
+          "description": "Layout: left (stacked left), center (centred stack) or band (accent panel on the left)"
         }
       },
       "layers": [
@@ -386,16 +458,27 @@
           ]
         },
         {
+          "if": "{{variant == 'band'}}",
+          "id": "band",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": "{{round(canvas.width * 0.36)}}",
+          "height": "{{canvas.height}}",
+          "fill": "{{accent}}",
+          "opacity": 1
+        },
+        {
           "id": "stack",
           "type": "group",
-          "x": "{{round(canvas.width * 0.08)}}",
+          "x": "{{variant == 'band' ? round(canvas.width * 0.04) : variant == 'center' ? 0 : round(canvas.width * 0.08)}}",
           "y": 0,
-          "width": "{{round(canvas.width * 0.84)}}",
+          "width": "{{round(canvas.width * (variant == 'band' ? 0.3 : variant == 'center' ? 1 : 0.84))}}",
           "height": "{{canvas.height}}",
           "layout": {
             "direction": "column",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
-            "align": "start",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.03 * density)}}",
+            "align": "{{variant == 'center' ? 'center' : 'start'}}",
             "justify": "center"
           },
           "children": [
@@ -404,7 +487,7 @@
               "type": "text",
               "content": "{{kicker}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
-              "color": "{{accent}}",
+              "color": "{{variant == 'band' ? bg : accent}}",
               "fontWeight": 700,
               "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
               "startFrame": 0,
@@ -437,26 +520,30 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontBody}}",
+              "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
             },
             {
               "id": "headline",
               "type": "text",
               "content": "{{headline}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
-              "color": "{{text}}",
+              "color": "{{variant == 'band' ? bg : text}}",
               "fontWeight": "{{headWeight}}",
               "lineHeight": 1.05,
-              "maxWidth": "{{round(canvas.width * 0.84)}}",
+              "maxWidth": "{{round(canvas.width * (variant == 'band' ? 0.28 : 0.84))}}",
               "maxLines": 4,
               "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
               "split": {
                 "by": "words",
                 "stagger": 4,
-                "preset": "rise",
+                "preset": "{{motion}}",
                 "duration": 18
               },
-              "startFrame": 8
+              "startFrame": 8,
+              "fontFamily": "{{fontDisplay}}",
+              "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
             },
             {
               "id": "rule",
@@ -464,7 +551,7 @@
               "width": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
               "height": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
               "radius": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
-              "fill": "{{accent}}",
+              "fill": "{{variant == 'band' ? bg : accent}}",
               "startFrame": 26,
               "animations": [
                 {
@@ -488,8 +575,8 @@
               "type": "text",
               "content": "{{subtitle}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
-              "color": "{{muted}}",
-              "maxWidth": "{{round(canvas.width * 0.7)}}",
+              "color": "{{variant == 'band' ? bg : muted}}",
+              "maxWidth": "{{round(canvas.width * (variant == 'band' ? 0.28 : 0.7))}}",
               "maxLines": 3,
               "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
               "startFrame": 34,
@@ -522,7 +609,9 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontBody}}",
+              "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
             }
           ]
         },
@@ -545,6 +634,11 @@
         "label": {
           "type": "string",
           "default": "of viewers keep watching until the end"
+        },
+        "variant": {
+          "type": "string",
+          "default": "center",
+          "description": "Layout: center (one centred column), left (aligned left) or split (number left, label right)"
         }
       },
       "layers": [
@@ -640,14 +734,14 @@
         {
           "id": "stack",
           "type": "group",
-          "x": 0,
+          "x": "{{variant == 'left' ? round(canvas.width * 0.08) : 0}}",
           "y": 0,
-          "width": "{{canvas.width}}",
+          "width": "{{round(canvas.width * (variant == 'left' ? 0.84 : 1))}}",
           "height": "{{canvas.height}}",
           "layout": {
-            "direction": "column",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
-            "align": "center",
+            "direction": "{{variant == 'split' ? 'row' : 'column'}}",
+            "gap": "{{round(min(canvas.width, canvas.height) * (variant == 'split' ? 0.06 : 0.03) * density)}}",
+            "align": "{{variant == 'left' ? 'start' : 'center'}}",
             "justify": "center"
           },
           "children": [
@@ -655,11 +749,11 @@
               "id": "value",
               "type": "text",
               "content": "{{value}}",
-              "fontSize": "{{round(min(canvas.width, canvas.height) * 0.3)}}",
+              "fontSize": "{{round(min(canvas.width, canvas.height) * (variant == 'split' ? 0.22 : 0.3))}}",
               "color": "{{accent}}",
               "fontWeight": 900,
-              "textAlign": "center",
-              "maxWidth": "{{round(canvas.width * 0.9)}}",
+              "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
+              "maxWidth": "{{round(canvas.width * (variant == 'split' ? 0.5 : 0.9))}}",
               "lineHeight": 1,
               "animations": [
                 {
@@ -689,7 +783,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontDisplay}}"
             },
             {
               "id": "label",
@@ -697,8 +792,8 @@
               "content": "{{label}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
               "color": "{{text}}",
-              "textAlign": "center",
-              "maxWidth": "{{round(canvas.width * 0.72)}}",
+              "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
+              "maxWidth": "{{round(canvas.width * (variant == 'split' ? 0.36 : 0.72))}}",
               "maxLines": 3,
               "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
               "startFrame": 14,
@@ -731,7 +826,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontDisplay}}"
             }
           ]
         },
@@ -1074,6 +1170,11 @@
         "url": {
           "type": "string",
           "default": "example.com"
+        },
+        "variant": {
+          "type": "string",
+          "default": "center",
+          "description": "Layout: center (centred stack), left (aligned left) or panel (full accent panel with inverted text)"
         }
       },
       "layers": [
@@ -1167,16 +1268,27 @@
           ]
         },
         {
-          "id": "stack",
-          "type": "group",
+          "if": "{{variant == 'panel'}}",
+          "id": "panel",
+          "type": "rect",
           "x": 0,
           "y": 0,
           "width": "{{canvas.width}}",
           "height": "{{canvas.height}}",
+          "fill": "{{accent}}",
+          "opacity": 1
+        },
+        {
+          "id": "stack",
+          "type": "group",
+          "x": "{{variant == 'left' ? round(canvas.width * 0.08) : 0}}",
+          "y": 0,
+          "width": "{{round(canvas.width * (variant == 'left' ? 0.84 : 1))}}",
+          "height": "{{canvas.height}}",
           "layout": {
             "direction": "column",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
-            "align": "center",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.05 * density)}}",
+            "align": "{{variant == 'left' ? 'start' : 'center'}}",
             "justify": "center"
           },
           "children": [
@@ -1185,9 +1297,9 @@
               "type": "text",
               "content": "{{headline}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
-              "color": "{{text}}",
+              "color": "{{variant == 'panel' ? bg : text}}",
               "fontWeight": "{{headWeight}}",
-              "textAlign": "center",
+              "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
               "maxWidth": "{{round(canvas.width * 0.84)}}",
               "maxLines": 3,
               "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
@@ -1195,9 +1307,10 @@
               "split": {
                 "by": "words",
                 "stagger": 4,
-                "preset": "rise",
+                "preset": "{{motion}}",
                 "duration": 18
-              }
+              },
+              "fontFamily": "{{fontDisplay}}"
             },
             {
               "id": "btn",
@@ -1243,7 +1356,7 @@
                   "width": "{{round(canvas.width * 0.42)}}",
                   "height": "{{round(min(canvas.width, canvas.height) * 0.13)}}",
                   "radius": "{{round(min(canvas.width, canvas.height) * 0.065)}}",
-                  "fill": "{{accent}}"
+                  "fill": "{{variant == 'panel' ? bg : accent}}"
                 },
                 {
                   "id": "label",
@@ -1253,11 +1366,12 @@
                   "y": "{{round(min(canvas.width, canvas.height) * 0.065 - min(canvas.width, canvas.height) * 0.03)}}",
                   "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
                   "fontWeight": 800,
-                  "color": "{{bg}}",
+                  "color": "{{variant == 'panel' ? accent : bg}}",
                   "textAlign": "center",
                   "maxWidth": "{{round(canvas.width * 0.38)}}",
                   "maxLines": 1,
-                  "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}"
+                  "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+                  "fontFamily": "{{fontDisplay}}"
                 }
               ]
             },
@@ -1266,8 +1380,8 @@
               "type": "text",
               "content": "{{url}}",
               "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
-              "color": "{{muted}}",
-              "textAlign": "center",
+              "color": "{{variant == 'panel' ? bg : muted}}",
+              "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
               "maxWidth": "{{round(canvas.width * 0.8)}}",
               "startFrame": 34,
               "animations": [
@@ -1299,7 +1413,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontBody}}"
             }
           ]
         },
@@ -1375,5 +1490,11 @@
         }
       ]
     }
+  },
+  "texture": {
+    "type": "{{texture}}",
+    "color": "{{textureColor}}",
+    "opacity": "{{textureOpacity}}",
+    "scale": 48
   }
 }

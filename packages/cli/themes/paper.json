@@ -1,7 +1,7 @@
 {
   "id": "paper",
   "name": "Paper",
-  "description": "Warm off-white with ink text and a red accent. Editorial.",
+  "description": "Warm off-white, Fraunces headlines, a fine dot grid and quiet rise entrances. Editorial and light.",
   "variables": {
     "bg": "#f6f1e8",
     "surface": "#e9e1d2",
@@ -10,6 +10,15 @@
     "accent": "#d9482b",
     "accent2": "#1f6f5c",
     "radius": 8,
-    "headWeight": 800
+    "headWeight": 800,
+    "fontDisplay": "Fraunces",
+    "fontBody": "Inter",
+    "texture": "dots",
+    "textureColor": "#1d1a16",
+    "textureOpacity": 0.05,
+    "motion": "rise",
+    "transition": "wipe",
+    "layout": "editorial",
+    "density": 1.05
   }
 }

@@ -927,7 +927,7 @@ function editor(id, tabHint) {
     ({ edit: paneEdit, ai: paneAi, look: paneLook, history: paneHistory, export: paneExport }[tab])();
   }
 
-  var themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight'];
+  var themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight', 'fontDisplay', 'fontBody', 'texture', 'textureColor', 'textureOpacity', 'motion', 'transition', 'layout', 'density'];
 
   function paneEdit() {
     var fields = [], apply = h('button', { class: 'btn', text: 'Save changes' }), box2 = h('div');

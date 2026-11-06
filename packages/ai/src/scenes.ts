@@ -7,6 +7,7 @@
 // throws, and the caller falls back to the proven single-call path — so the mock provider and offline runs keep
 // working untouched.
 import { safeZoneBands } from '@ove/core';
+import { layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook } from '@ove/schema';
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionPlan } from './prompt';
@@ -21,6 +22,13 @@ export type StyleContract = {
   /** One motion move per beat, e.g. "word-cascade". */
   moves: string[];
   style: string;
+  /** Entrance preset for kinetic headlines. */
+  motion: string;
+  /** Transition every cut uses. */
+  transition: string;
+  layout: string;
+  density: number;
+  texture?: { type: string; color: string; opacity: number; scale: number };
 };
 
 export type ScenesBeat = { name: string; onScreen?: string; motion?: string; seconds?: number };
@@ -44,6 +52,8 @@ export type ScenesOptions = {
   fps: number;
   durationSeconds: number;
   assets?: { id: string; src: string; type: string }[];
+  /** The planner's art direction: palette, fonts, texture, motion, transition, layout and density. */
+  look?: DesignLook;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
 };
@@ -70,23 +80,51 @@ export function parseBeats(raw: unknown): ScenesBeat[] {
   return beats;
 }
 
-/** Turns the model's raw contract reply into a valid StyleContract; anything missing or malformed gets a house default. */
-export function parseContract(raw: any): StyleContract {
+const pick = (value: unknown, options: readonly string[], fallback: string): string => {
+  const wanted = text(value).toLowerCase().replace(/[-_]+/g, ' ');
+  return options.find(option => option.toLowerCase() === wanted) ?? fallback;
+};
+const ratio = (value: unknown, fallback: number): number => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : fallback;
+};
+
+/** Turns the model's raw contract reply into a valid StyleContract; anything missing or malformed gets a house default.
+ *  A planner look, when present, wins over the contract's own palette, fonts and design choices. */
+export function parseContract(raw: any, look?: DesignLook): StyleContract {
   if (!raw || typeof raw !== 'object') throw new Error('the style contract reply was not a JSON object');
   const palette = raw.palette && typeof raw.palette === 'object' ? raw.palette : {};
   const fonts = raw.fonts && typeof raw.fonts === 'object' ? raw.fonts : {};
   const moves = Array.isArray(raw.moves) ? raw.moves.map((move: unknown) => text(move)).filter(Boolean) : [];
   const fallbackMoves = ['rise-in', 'ken-burns', 'pop-in', 'drift', 'wipe-reveal', 'word-cascade'];
   const beats = parseBeats(raw.beats);
+  const motion = pick(look?.motion ?? raw.motion, motionPresets, 'rise');
+  const transition = pick(look?.transition ?? raw.transition, transitionStyles, 'fade');
+  const layout = pick(look?.layout ?? raw.layout, layoutStyles, 'left');
+  const densityIn = Number(raw.density);
+  const density = look?.density ?? (Number.isFinite(densityIn) ? Math.max(0.75, Math.min(1.25, densityIn)) : 1);
+  const textureIn = raw.texture && typeof raw.texture === 'object' ? raw.texture : undefined;
+  const textureType = pick(look?.texture?.type ?? textureIn?.type, textureTypes, 'none');
+  const texture = textureType === 'none' ? undefined : {
+    type: textureType,
+    color: hex6(look?.texture?.color) ?? hex6(textureIn?.color) ?? '#ffffff',
+    opacity: ratio(look?.texture?.opacity ?? textureIn?.opacity, 0.05),
+    scale: Math.max(6, Number(look?.texture?.scale ?? textureIn?.scale) || 48),
+  };
   return {
-    background: hex6(palette.background) ?? '#0b0e14',
-    text: hex6(palette.text) ?? '#f8fafc',
-    primary: hex6(palette.primary) ?? '#6366f1',
-    accent: hex6(palette.accent) ?? '#ec4899',
-    secondary: hex6(palette.secondary) ?? '#22d3ee',
-    fonts: { heading: text(fonts.heading, 'Inter'), body: text(fonts.body, text(fonts.heading, 'Inter')) },
+    background: hex6(look?.palette?.bg) ?? hex6(palette.background) ?? '#0b0e14',
+    text: hex6(look?.palette?.text) ?? hex6(palette.text) ?? '#f8fafc',
+    primary: hex6(look?.palette?.accent) ?? hex6(palette.primary) ?? '#6366f1',
+    accent: hex6(look?.palette?.accent2) ?? hex6(palette.accent) ?? '#ec4899',
+    secondary: hex6(look?.palette?.muted) ?? hex6(palette.secondary) ?? '#22d3ee',
+    fonts: { heading: look?.fonts?.display ?? text(fonts.heading, 'Inter'), body: look?.fonts?.body ?? text(fonts.body, look?.fonts?.display ?? text(fonts.heading, 'Inter')) },
     moves: beats.map((_, i) => moves[i] ?? fallbackMoves[i % fallbackMoves.length]!),
     style: text(raw.style, 'clean modern motion'),
+    motion,
+    transition,
+    layout,
+    density,
+    texture,
   };
 }
 
@@ -162,34 +200,44 @@ const contractMessages = (options: ScenesOptions, plan?: MotionPlan): ChatMessag
   const beatLines = plan?.beats?.length
     ? plan.beats.map((beat, i) => `${i + 1}. ${beat.name}${beat.onScreen ? `: ${beat.onScreen}` : ''}`).join('\n')
     : undefined;
-  const look = plan?.look && Object.keys(plan.look).length ? `\nLook decided earlier: ${JSON.stringify(plan.look)}` : '';
+  const lookValue = plan?.look ?? options.look;
+  const look = lookValue && Object.keys(lookValue).length ? `\nA look was decided earlier; use it exactly (palette, fonts, texture, motion, transition, layout, density): ${JSON.stringify(lookValue)}` : '';
   return [
     { role: 'system', content: 'You are a motion-design director. Reply with ONE JSON object and nothing else.' },
     { role: 'user', content: `Brief: ${options.brief.trim()}
 ${beatLines ? `The video follows these beats:\n${beatLines}\n` : 'Split the brief into 3-6 short beats (one idea each, unequal weight).\n'}
-Decide the visual system all scenes will share. Reply ONLY JSON:
+Decide the visual system all scenes will share${look ? ', following the look above' : ' — the subject decides it, not a house style'}. Reply ONLY JSON:
 { "beats": [{ "name": "...", "onScreen": "what is on screen, concretely", "seconds": 3 }],
   "palette": { "background": "#hex", "text": "#hex", "primary": "#hex", "accent": "#hex", "secondary": "#hex" },
-  "fonts": { "heading": "Font", "body": "Font" },
+  "fonts": { "heading": "Inter|Space Grotesk|Fraunces|Archivo|Source Sans 3", "body": "<family>" },
   "moves": ["one motion move per beat, e.g. word-cascade, ken-burns, pop-in, rise-in, drift, wipe-reveal"],
+  "motion": "rise|blur|slide|pop|fade",
+  "transition": "push|fade|slide|wipe|zoom|dip",
+  "layout": "left|center|split|editorial",
+  "density": 1,
+  "texture": { "type": "none|grid|dots|scanlines|paper", "color": "#hex", "opacity": 0.04 },
   "style": "3-6 words on the visual mood" }${look}` },
   ];
 };
 
 const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number, total: number, frames: number, previous: string | undefined, options: ScenesOptions): ChatMessage[] => {
   const assets = (options.assets ?? []).filter(asset => asset.type === 'image');
-  const margin = Math.round(options.width * 0.08);
+  const margin = Math.round(options.width * 0.08 * contract.density);
   // The areas a player's own chrome covers come from the same table the review checks against, including its
   // letterbox math — a landscape canvas has no bands, and the prompt must not invent rules the renderer ignores.
   const bands = safeZoneBands(options.width, options.height);
   const platformUi = bands.length ? ` ${bands.map(band => band.hint).join('. ')}.` : '';
+  const arrangement = contract.layout === 'center' ? 'centre the content symmetrically'
+    : contract.layout === 'split' ? 'create two-column tension: the headline on one side, supporting content on the other'
+    : contract.layout === 'editorial' ? 'use an asymmetric grid with generous margins and oversized type'
+    : 'align content to a straight left edge';
   return [
     { role: 'system', content: `You design ONE scene of a ${options.width}x${options.height} motion-graphics video (${options.fps} fps). Reply with ONE JSON object and nothing else:
 { "background": { "type": "color", "color": "#hex from the palette" },
   "layers": [ ...2 to 4 layers... ] }
 
 Layer shapes (x and y are the layer's CENTRE in pixels):
-- text: { "type": "text", "text": "...", "x": <centre x>, "y": <centre y>, "fontSize": <px>, "color": "#hex from the palette", "fontFamily": "<the heading or body font>", "align": "center", "split": { "by": "words", "stagger": 4, "preset": "rise" }, "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": <y+80> }, { "frame": 20, "value": <y>, "easing": "land" }] }] }
+- text: { "type": "text", "text": "...", "x": <centre x>, "y": <centre y>, "fontSize": <px>, "color": "#hex from the palette", "fontFamily": "<the heading or body font>", "align": "center", "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }, "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": <y+80> }, { "frame": 20, "value": <y>, "easing": "land" }] }] }
 - rect: { "type": "rect", "x": ..., "y": ..., "width": ..., "height": ..., "radius": ..., "fill": "#hex from the palette", "opacity": 0.2, "animations": [...] }
 - circle: { "type": "circle", "x": ..., "y": ..., "width": ..., "height": ..., "fill": "#hex from the palette", "opacity": 0.25, "animations": [...] }${assets.length ? `
 - image: { "type": "image", "src": "<one of the asset srcs below, verbatim>", "x": ..., "y": ..., "width": ..., "height": ..., "animations": [...] }` : ''}
@@ -197,8 +245,9 @@ Layer shapes (x and y are the layer's CENTRE in pixels):
 House rules:
 - Use ONLY the palette colours: background ${contract.background}, text ${contract.text}, primary ${contract.primary}, accent ${contract.accent}, secondary ${contract.secondary}.
 - Fonts: headings in ${contract.fonts.heading}, supporting text in ${contract.fonts.body}.
+- Layout: ${arrangement}.
 - Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}.${platformUi}
-- The scene's headline (largest text) MUST carry "split": { "by": "words", "stagger": 4, "preset": "rise" }.
+- The scene's headline (largest text) MUST carry "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }.
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.
 - Decoration (rect/circle) stays subtle: opacity at most 0.35, behind the text.` },
@@ -433,7 +482,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     const texts = ((target?.layers ?? []) as any[]).filter((layer: any) => layer.type === 'text');
     if (texts.length) {
       const biggest = texts.reduce((big: any, layer: any) => (Number(layer.fontSize) || 0) > (Number(big.fontSize) || 0) ? layer : big, texts[0]!);
-      biggest.split = { by: 'words', stagger: 4, preset: 'rise' };
+      biggest.split = { by: 'words', stagger: 4, preset: plan.contract.motion };
     }
   }
   const stitched = scenes.map((scene, i) => ({
@@ -441,7 +490,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     name: plan.beats[i]?.name ?? `Scene ${i + 1}`,
     startFrame: ranges[i]!.start,
     durationFrames: plan.durations[i]!,
-    ...(i > 0 ? { transitionIn: { type: 'fade', durationFrames: overlaps[i] } } : {}),
+    ...(i > 0 ? { transitionIn: { type: plan.contract.transition, durationFrames: overlaps[i] } } : {}),
     camera: scene.camera ?? houseCamera(plan.durations[i]!),
     layers: (scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })),
   }));
@@ -455,6 +504,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     fps: options.fps,
     durationFrames: ranges[ranges.length - 1]!.end,
     background: plan.contract.background,
+    ...(plan.contract.texture ? { texture: plan.contract.texture } : {}),
     scenes: stitched,
   };
 }
@@ -476,7 +526,7 @@ export async function composeByScenes(provider: AiProvider, options: ScenesOptio
   if (contractRaw === undefined) throw new Error(`the style contract call failed twice: ${lastError}`);
   const beats = parseBeats(contractRaw.beats);
   if (!beats.length) throw new Error('the style contract had no usable beats');
-  const contract = parseContract(contractRaw);
+  const contract = parseContract(contractRaw, options.look ?? motionPlan?.look);
   const durations = sceneDurations(beats, options.durationSeconds, options.fps);
   const plan: ScenesPlan = { beats, contract, durations, sceneRanges: sceneRanges(durations, sceneOverlaps(durations.length, options.fps)) };
 

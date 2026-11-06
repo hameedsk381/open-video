@@ -170,7 +170,8 @@
           "x": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
           "y": "{{round(min(canvas.width, canvas.height) * 0.145)}}",
           "fontWeight": 700,
-          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}"
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -292,7 +293,8 @@
           "fontWeight": 700,
           "maxWidth": "{{round(canvas.width * 0.36)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "track",
@@ -885,7 +887,8 @@
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
           "maxWidth": "{{round(canvas.width * 0.26)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

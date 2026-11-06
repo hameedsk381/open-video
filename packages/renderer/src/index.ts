@@ -121,7 +121,7 @@ export async function createRenderer(composition: Composition, options: Renderer
         }
       }
     }
-    return {width:output.width,height:output.height,scaleX:output.width/composition.width,scaleY:output.height/composition.height,background:composition.background,transparent:composition.export.transparent,grain:composition.grain,frame,operations,videoFrames,subframes}; };
+    return {width:output.width,height:output.height,scaleX:output.width/composition.width,scaleY:output.height/composition.height,background:composition.background,transparent:composition.export.transparent,grain:composition.grain,texture:composition.texture,frame,operations,videoFrames,subframes}; };
   const renderFrame=async (frame: number) => { const p=await payload(frame); const png=await pool.run(`Frame ${frame}`, page => page.evaluate(p => (window as any).OVE.draw(p), p) as Promise<string>); return Buffer.from(png,'base64'); };
   // Draws a frame without encoding it and returns where its text landed and a small thumbnail (for `ove review`).
   const inspectFrame=async (frame: number): Promise<FrameReport> => { const p=await payload(frame, true); return pool.run(`Frame ${frame}`, page => page.evaluate(p => (window as any).OVE.inspect(p), p) as Promise<FrameReport>); };

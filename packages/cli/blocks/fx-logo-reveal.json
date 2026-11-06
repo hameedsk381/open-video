@@ -49,9 +49,19 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 0, "value": 0.2, "easing": "easeOutCubic" },
-            { "frame": 30, "value": 1.1 },
-            { "frame": 120, "value": 1.0 }
+            {
+              "frame": 0,
+              "value": 0.2,
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 30,
+              "value": 1.1
+            },
+            {
+              "frame": 120,
+              "value": 1
+            }
           ]
         }
       ]
@@ -75,15 +85,29 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 6, "value": 0.1, "easing": "easeOutBack" },
-            { "frame": 26, "value": 1.0 }
+            {
+              "frame": 6,
+              "value": 0.1,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 26,
+              "value": 1
+            }
           ]
         },
         {
           "property": "rotation",
           "keyframes": [
-            { "frame": 6, "value": -90, "easing": "easeOutCubic" },
-            { "frame": 120, "value": 90 }
+            {
+              "frame": 6,
+              "value": -90,
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 120,
+              "value": 90
+            }
           ]
         }
       ]
@@ -102,8 +126,15 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 12, "value": 0.2, "easing": "easeOutBack" },
-            { "frame": 28, "value": 1.0 }
+            {
+              "frame": 12,
+              "value": 0.2,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 28,
+              "value": 1
+            }
           ]
         }
       ]
@@ -127,11 +158,19 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 10, "value": 0.1, "easing": "easeOutBack" },
-            { "frame": 26, "value": 1.0 }
+            {
+              "frame": 10,
+              "value": 0.1,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 26,
+              "value": 1
+            }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "brand-title",
@@ -150,15 +189,28 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 20, "value": "{{round(canvas.height * 0.72)}}", "easing": "easeOutCubic" },
-            { "frame": 34, "value": "{{round(canvas.height * 0.68)}}" }
+            {
+              "frame": 20,
+              "value": "{{round(canvas.height * 0.72)}}",
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 34,
+              "value": "{{round(canvas.height * 0.68)}}"
+            }
           ]
         },
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 20, "value": 0 },
-            { "frame": 32, "value": 1 }
+            {
+              "frame": 20,
+              "value": 0
+            },
+            {
+              "frame": 32,
+              "value": 1
+            }
           ]
         }
       ]
@@ -180,8 +232,14 @@
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 28, "value": 0 },
-            { "frame": 40, "value": 1 }
+            {
+              "frame": 28,
+              "value": 0
+            },
+            {
+              "frame": 40,
+              "value": 1
+            }
           ]
         }
       ]
@@ -209,4 +267,3 @@
     }
   ]
 }
-

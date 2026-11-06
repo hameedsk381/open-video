@@ -1312,7 +1312,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "subtitle",
@@ -1343,7 +1344,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-1",

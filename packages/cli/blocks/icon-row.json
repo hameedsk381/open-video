@@ -136,7 +136,7 @@
       "height": "{{canvas.height}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.07 * density)}}",
         "align": "start",
         "justify": "center"
       },
@@ -181,7 +181,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "cells",
@@ -189,7 +190,7 @@
           "width": "{{round(canvas.width * 0.84)}}",
           "layout": {
             "direction": "{{canvas.width > canvas.height ? 'row' : 'column'}}",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.05 * density)}}",
             "align": "start",
             "justify": "{{canvas.width > canvas.height ? 'space-between' : 'start'}}"
           },

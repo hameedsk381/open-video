@@ -151,7 +151,7 @@
       "height": "{{round(canvas.height * 0.57)}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.025 * density)}}",
         "align": "start",
         "justify": "end"
       },
@@ -194,7 +194,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "headline",
@@ -210,10 +211,11 @@
           "split": {
             "by": "words",
             "stagger": 4,
-            "preset": "rise",
+            "preset": "{{motion}}",
             "duration": 18
           },
-          "startFrame": 8
+          "startFrame": 8,
+          "fontFamily": "{{fontDisplay}}"
         }
       ]
     },

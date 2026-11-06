@@ -147,7 +147,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-0",
@@ -239,7 +240,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-1",
@@ -331,7 +333,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-2",
@@ -423,7 +426,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-3",
@@ -515,7 +519,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-4",

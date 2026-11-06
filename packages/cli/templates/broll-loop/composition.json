@@ -7,6 +7,10 @@
   "height": 1920,
   "fps": 30,
   "durationFrames": 150,
+  "export": {
+    "format": "mp4",
+    "loudness": -14
+  },
   "background": "#0b0d14",
   "grain": 0.08,
   "variables": {

@@ -185,8 +185,15 @@
             {
               "property": "x",
               "keyframes": [
-                { "frame": 0, "value": 1440 },
-                { "frame": 150, "value": 1405, "easing": "drift" }
+                { "frame": 0, "value": 1408 },
+                { "frame": 150, "value": 1373, "easing": "drift" }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                { "frame": 0, "value": 0 },
+                { "frame": 12, "value": 1 }
               ]
             }
           ]

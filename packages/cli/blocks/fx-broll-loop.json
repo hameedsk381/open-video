@@ -49,9 +49,20 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 0, "value": 1.0, "easing": "easeInOut" },
-            { "frame": 75, "value": 1.15, "easing": "easeInOut" },
-            { "frame": 150, "value": 1.0 }
+            {
+              "frame": 0,
+              "value": 1,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": 1.15,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": 1
+            }
           ]
         }
       ]
@@ -77,17 +88,39 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
-            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
-            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.46)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": "{{round(canvas.height * 0.46 - 16)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.46)}}"
+            }
           ]
         },
         {
           "property": "rotation",
           "keyframes": [
-            { "frame": 0, "value": -1.5, "easing": "easeInOut" },
-            { "frame": 75, "value": 1.5, "easing": "easeInOut" },
-            { "frame": 150, "value": -1.5 }
+            {
+              "frame": 0,
+              "value": -1.5,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": 1.5,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": -1.5
+            }
           ]
         }
       ]
@@ -108,17 +141,39 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
-            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
-            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.46)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": "{{round(canvas.height * 0.46 - 16)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.46)}}"
+            }
           ]
         },
         {
           "property": "rotation",
           "keyframes": [
-            { "frame": 0, "value": -1.5, "easing": "easeInOut" },
-            { "frame": 75, "value": 1.5, "easing": "easeInOut" },
-            { "frame": 150, "value": -1.5 }
+            {
+              "frame": 0,
+              "value": -1.5,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": 1.5,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": -1.5
+            }
           ]
         }
       ]
@@ -142,17 +197,39 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{round(canvas.height * 0.46)}}", "easing": "easeInOut" },
-            { "frame": 75, "value": "{{round(canvas.height * 0.46 - 16)}}", "easing": "easeInOut" },
-            { "frame": 150, "value": "{{round(canvas.height * 0.46)}}" }
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.46)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": "{{round(canvas.height * 0.46 - 16)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.46)}}"
+            }
           ]
         },
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 0, "value": 1.0, "easing": "easeInOut" },
-            { "frame": 75, "value": 1.08, "easing": "easeInOut" },
-            { "frame": 150, "value": 1.0 }
+            {
+              "frame": 0,
+              "value": 1,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": 1.08,
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": 1
+            }
           ]
         }
       ]
@@ -170,12 +247,24 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}", "easing": "easeInOut" },
-            { "frame": 75, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01 - 16)}}", "easing": "easeInOut" },
-            { "frame": 150, "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}" }
+            {
+              "frame": 0,
+              "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 75,
+              "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01 - 16)}}",
+              "easing": "easeInOut"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.height * 0.46 - min(canvas.width, canvas.height) * 0.01)}}"
+            }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "kicker-tag",
@@ -211,4 +300,3 @@
     }
   ]
 }
-

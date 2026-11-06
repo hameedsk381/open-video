@@ -1,7 +1,7 @@
 {
   "id": "midnight",
   "name": "Midnight",
-  "description": "Deep navy with a cyan accent. Clean and technical.",
+  "description": "Deep navy, Space Grotesk headings, a faint technical grid and soft glows. Modern tech.",
   "variables": {
     "bg": "#0b1020",
     "surface": "#151c33",
@@ -10,6 +10,15 @@
     "accent": "#22d3ee",
     "accent2": "#a78bfa",
     "radius": 20,
-    "headWeight": 800
+    "headWeight": 800,
+    "fontDisplay": "Space Grotesk",
+    "fontBody": "Inter",
+    "texture": "grid",
+    "textureColor": "#ffffff",
+    "textureOpacity": 0.035,
+    "motion": "blur",
+    "transition": "fade",
+    "layout": "left",
+    "density": 1
   }
 }

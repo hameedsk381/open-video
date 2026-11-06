@@ -92,7 +92,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "sfx-1",

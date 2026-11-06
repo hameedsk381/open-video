@@ -53,8 +53,15 @@
         {
           "property": "x",
           "keyframes": [
-            { "frame": 0, "value": "{{round(canvas.width * 0.55)}}" },
-            { "frame": 150, "value": "{{round(canvas.width * 0.45)}}", "easing": "drift" }
+            {
+              "frame": 0,
+              "value": "{{round(canvas.width * 0.55)}}"
+            },
+            {
+              "frame": 150,
+              "value": "{{round(canvas.width * 0.45)}}",
+              "easing": "drift"
+            }
           ]
         }
       ]
@@ -80,8 +87,15 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 0, "value": 0.9, "easing": "easeOutCubic" },
-            { "frame": 24, "value": 1.0 }
+            {
+              "frame": 0,
+              "value": 0.9,
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 24,
+              "value": 1
+            }
           ]
         }
       ]
@@ -104,15 +118,28 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 8, "value": "{{round(canvas.height * 0.47)}}", "easing": "easeOutCubic" },
-            { "frame": 22, "value": "{{round(canvas.height * 0.44)}}" }
+            {
+              "frame": 8,
+              "value": "{{round(canvas.height * 0.47)}}",
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 22,
+              "value": "{{round(canvas.height * 0.44)}}"
+            }
           ]
         },
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 8, "value": 0 },
-            { "frame": 20, "value": 1 }
+            {
+              "frame": 8,
+              "value": 0
+            },
+            {
+              "frame": 20,
+              "value": 1
+            }
           ]
         }
       ]
@@ -135,8 +162,14 @@
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 16, "value": 0 },
-            { "frame": 28, "value": 1 }
+            {
+              "frame": 16,
+              "value": 0
+            },
+            {
+              "frame": 28,
+              "value": 1
+            }
           ]
         }
       ]
@@ -157,4 +190,3 @@
     }
   ]
 }
-

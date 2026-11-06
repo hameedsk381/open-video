@@ -56,8 +56,15 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 0, "value": "{{canvas.height + 200}}", "easing": "easeOutBack" },
-            { "frame": 18, "value": "{{round(canvas.height * 0.48)}}" }
+            {
+              "frame": 0,
+              "value": "{{canvas.height + 200}}",
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 18,
+              "value": "{{round(canvas.height * 0.48)}}"
+            }
           ]
         }
       ]
@@ -83,8 +90,15 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 10, "value": 0.4, "easing": "easeOutBack" },
-            { "frame": 24, "value": 1.0 }
+            {
+              "frame": 10,
+              "value": 0.4,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 24,
+              "value": 1
+            }
           ]
         }
       ]
@@ -110,8 +124,15 @@
         {
           "property": "scale",
           "keyframes": [
-            { "frame": 10, "value": 0.4, "easing": "easeOutBack" },
-            { "frame": 24, "value": 1.0 }
+            {
+              "frame": 10,
+              "value": 0.4,
+              "easing": "easeOutBack"
+            },
+            {
+              "frame": 24,
+              "value": 1
+            }
           ]
         }
       ]
@@ -157,8 +178,15 @@
         {
           "property": "y",
           "keyframes": [
-            { "frame": 28, "value": "{{round(canvas.height * 0.78)}}", "easing": "easeOutCubic" },
-            { "frame": 38, "value": "{{round(canvas.height * 0.72)}}" }
+            {
+              "frame": 28,
+              "value": "{{round(canvas.height * 0.78)}}",
+              "easing": "easeOutCubic"
+            },
+            {
+              "frame": 38,
+              "value": "{{round(canvas.height * 0.72)}}"
+            }
           ]
         }
       ]
@@ -180,8 +208,14 @@
         {
           "property": "opacity",
           "keyframes": [
-            { "frame": 36, "value": 0 },
-            { "frame": 46, "value": 1 }
+            {
+              "frame": 36,
+              "value": 0
+            },
+            {
+              "frame": 46,
+              "value": 1
+            }
           ]
         }
       ]
@@ -209,4 +243,3 @@
     }
   ]
 }
-

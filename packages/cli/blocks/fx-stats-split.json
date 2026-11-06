@@ -124,7 +124,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "id": "sub",
@@ -168,7 +169,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "count",
@@ -209,7 +211,8 @@
       "x": "{{round(canvas.width * 0.06)}}",
       "y": "{{round(canvas.height * 0.035) + round(min(canvas.width, canvas.height) * 0.235)}}",
       "fontWeight": 700,
-      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}"
+      "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.003)}}",
+      "fontFamily": "{{fontBody}}"
     },
     {
       "id": "line",

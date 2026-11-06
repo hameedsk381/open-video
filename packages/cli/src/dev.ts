@@ -51,7 +51,7 @@ export async function startDevServer(file: string, options: DevOptions = {}): Pr
         return send(res, 200, 'audio/wav', await readFile(await sfxFile(name))); }
       // The Player's built-in fonts (it loads them from ./fonts/ beside player.js).
       if (req.method === 'GET' && url.pathname.startsWith('/fonts/')) { const face=builtinFontFaces.find(f => `/fonts/${f.file}` === url.pathname); if (!face) return send(res, 404, 'text/plain', 'Not found');
-        return send(res, 200, 'font/woff2', await readFile(join(builtinFontDir(), face.file))); }
+        return send(res, 200, 'font/woff2', await readFile(join(builtinFontDir(face.pkg), face.file))); }
       if (req.method === 'GET' && url.pathname.startsWith('/media/')) { const target=resolve(baseDir, decodeURIComponent(url.pathname.slice('/media/'.length))); const inside=relative(baseDir, target);
         if (!inside || inside.startsWith('..') || isAbsolute(inside)) return send(res, 403, 'text/plain', 'Only files inside the composition folder are served');
         const data=await readFile(target).catch(() => undefined); return data ? send(res, 200, mediaTypes[extname(target).toLowerCase()] ?? 'application/octet-stream', data) : send(res, 404, 'text/plain', 'Not found'); }

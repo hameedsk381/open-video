@@ -113,7 +113,8 @@
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "maxWidth": "{{round(canvas.width * 0.78)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.022)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "sub",
@@ -125,7 +126,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.08)}}",
           "maxWidth": "{{round(canvas.width * 0.78)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "track",
@@ -178,7 +180,8 @@
           "fontWeight": 600,
           "maxWidth": "{{round(canvas.width * 0.42)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "ring1",
@@ -242,7 +245,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 0,
-          "endFrame": 20
+          "endFrame": 20,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "running1",
@@ -255,7 +259,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 20,
-          "endFrame": 60
+          "endFrame": 60,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "finished1",
@@ -267,7 +272,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 0 * round(min(canvas.width, canvas.height) * 0.1)}}",
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
-          "startFrame": 60
+          "startFrame": 60,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "task2",
@@ -280,7 +286,8 @@
           "fontWeight": 600,
           "maxWidth": "{{round(canvas.width * 0.42)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "ring2",
@@ -344,7 +351,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 0,
-          "endFrame": 52
+          "endFrame": 52,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "running2",
@@ -357,7 +365,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 52,
-          "endFrame": 92
+          "endFrame": 92,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "finished2",
@@ -369,7 +378,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 1 * round(min(canvas.width, canvas.height) * 0.1)}}",
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
-          "startFrame": 92
+          "startFrame": 92,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "task3",
@@ -382,7 +392,8 @@
           "fontWeight": 600,
           "maxWidth": "{{round(canvas.width * 0.42)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "ring3",
@@ -446,7 +457,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 0,
-          "endFrame": 84
+          "endFrame": 84,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "running3",
@@ -459,7 +471,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 84,
-          "endFrame": 124
+          "endFrame": 124,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "finished3",
@@ -471,7 +484,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 2 * round(min(canvas.width, canvas.height) * 0.1)}}",
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
-          "startFrame": 124
+          "startFrame": 124,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "task4",
@@ -484,7 +498,8 @@
           "fontWeight": 600,
           "maxWidth": "{{round(canvas.width * 0.42)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "ring4",
@@ -548,7 +563,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 0,
-          "endFrame": 116
+          "endFrame": 116,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "running4",
@@ -561,7 +577,8 @@
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
           "startFrame": 116,
-          "endFrame": 156
+          "endFrame": 156,
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "finished4",
@@ -573,7 +590,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.178) + 3 * round(min(canvas.width, canvas.height) * 0.1)}}",
           "fontWeight": 800,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.002)}}",
-          "startFrame": 156
+          "startFrame": 156,
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

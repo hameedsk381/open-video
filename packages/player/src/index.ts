@@ -68,7 +68,7 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
     for (const [id, video] of videos) if (!drawables.has(id) && !video.paused) video.pause(); return drawables; }
   async function draw(exact = false) { if (drawing) { pendingDraw = true; return; } drawing = true;
     try { const operations = prepareOperations(toDrawOperations(evaluateFrame(composition, frame)), composition.fps); const drawables = await syncVideos(operations, exact);
-      await runtime.draw({ width: composition.width, height: composition.height, background: composition.background, transparent: composition.export.transparent, grain: composition.grain, frame, operations }, drawables); emit('frame', frame); }
+      await runtime.draw({ width: composition.width, height: composition.height, background: composition.background, transparent: composition.export.transparent, grain: composition.grain, texture: composition.texture, frame, operations }, drawables); emit('frame', frame); }
     catch (error) { emit('error', error); } finally { drawing = false; if (pendingDraw) { pendingDraw = false; void draw(exact); } } }
   const decode = (url: string) => { let job = buffers.get(url); if (!job) { job = fetch(url).then(r => r.arrayBuffer()).then(data => audio!.decodeAudioData(data)).catch(() => undefined); buffers.set(url, job); } return job; };
   // Schedules every clip that is still to come from `from` seconds, so sound starts mid-clip on a seek, with volume and fades as gain automation.

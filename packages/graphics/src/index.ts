@@ -34,28 +34,40 @@ export type TextSpan = { text: string; fontSize?: number; [style: string]: unkno
 export type RichLayout = { lines: { runs: { text: string; span: number; kind: 'word' | 'space'; size: number; width: number }[]; width: number }[]; scale: number; truncated: boolean };
 // Builds a CSS font shorthand. Family lists are kept; each named family is quoted so names with spaces work, generic ones are not.
 const genericFamilies = new Set(['serif','sans-serif','monospace','cursive','fantasy','system-ui','ui-serif','ui-sans-serif','ui-monospace','ui-rounded','emoji','math','fangsong']);
-// Inter (SIL Open Font License) is built in and is the default family, so text looks the same on every machine without font assets.
-// Variable weight 100–900 and optical sizes: large text gets Inter Display's tighter shapes. Faces are split by script like the
-// @fontsource-variable/inter package they come from; fonts.ts (Node) finds the files.
+// Open Font License families are built in, so text looks the same on every machine without font assets. Inter is the default;
+// Space Grotesk, Fraunces, Archivo and Source Sans 3 give themes a real typographic range. Faces are split by script like the
+// @fontsource-variable packages they come from; fonts.ts (Node) finds the files through each face's "pkg".
+export type BuiltinFontFace = { family: string; file: string; weight: string; style: 'normal' | 'italic'; unicodeRange: string; pkg: string };
+const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
+const INTER = '@fontsource-variable/inter', GROTESK = '@fontsource-variable/space-grotesk', FRAUNCES = '@fontsource-variable/fraunces', ARCHIVO = '@fontsource-variable/archivo', SOURCE = '@fontsource-variable/source-sans-3';
 // What the canvas runtime reports about a frame drawn with payload.report (see createCanvasRuntime).
 export type TextNote = { id: string; kind: 'text'|'captions'; x0: number; y0: number; x1: number; y1: number; size: number; baseSize: number; alpha: number; color: string; truncated: boolean; shrunk: boolean; text: string; words: number };
 export type FrameReport = { texts: TextNote[]; thumb: { width: number; height: number; pixels: number[] } };
 export type FontSpec = { family: string; src: string; url: string; weight: number | string; style: string; unicodeRange?: string };
-export const builtinFontFaces: { family: string; file: string; weight: string; style: 'normal'|'italic'; unicodeRange: string }[] = [
-  { family: 'Inter', file: 'inter-latin-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD' },
-  { family: 'Inter', file: 'inter-latin-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF' },
-  { family: 'Inter', file: 'inter-cyrillic-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116' },
-  { family: 'Inter', file: 'inter-cyrillic-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F' },
-  { family: 'Inter', file: 'inter-greek-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF' },
-  { family: 'Inter', file: 'inter-greek-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+1F00-1FFF' },
-  { family: 'Inter', file: 'inter-vietnamese-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB' },
-  { family: 'Inter', file: 'inter-latin-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD' },
-  { family: 'Inter', file: 'inter-latin-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF' },
-  { family: 'Inter', file: 'inter-cyrillic-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116' },
-  { family: 'Inter', file: 'inter-cyrillic-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F' },
-  { family: 'Inter', file: 'inter-greek-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF' },
-  { family: 'Inter', file: 'inter-greek-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+1F00-1FFF' },
-  { family: 'Inter', file: 'inter-vietnamese-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB' },
+export const builtinFontFaces: BuiltinFontFace[] = [
+  { family: 'Inter', file: 'inter-latin-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN, pkg: INTER },
+  { family: 'Inter', file: 'inter-latin-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: INTER },
+  { family: 'Inter', file: 'inter-cyrillic-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116', pkg: INTER },
+  { family: 'Inter', file: 'inter-cyrillic-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F', pkg: INTER },
+  { family: 'Inter', file: 'inter-greek-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF', pkg: INTER },
+  { family: 'Inter', file: 'inter-greek-ext-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+1F00-1FFF', pkg: INTER },
+  { family: 'Inter', file: 'inter-vietnamese-opsz-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB', pkg: INTER },
+  { family: 'Inter', file: 'inter-latin-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: LATIN, pkg: INTER },
+  { family: 'Inter', file: 'inter-latin-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: LATIN_EXT, pkg: INTER },
+  { family: 'Inter', file: 'inter-cyrillic-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116', pkg: INTER },
+  { family: 'Inter', file: 'inter-cyrillic-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F', pkg: INTER },
+  { family: 'Inter', file: 'inter-greek-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF', pkg: INTER },
+  { family: 'Inter', file: 'inter-greek-ext-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+1F00-1FFF', pkg: INTER },
+  { family: 'Inter', file: 'inter-vietnamese-opsz-italic.woff2', weight: '100 900', style: 'italic', unicodeRange: 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB', pkg: INTER },
+  { family: 'Space Grotesk', file: 'space-grotesk-latin-wght-normal.woff2', weight: '300 700', style: 'normal', unicodeRange: LATIN, pkg: GROTESK },
+  { family: 'Space Grotesk', file: 'space-grotesk-latin-ext-wght-normal.woff2', weight: '300 700', style: 'normal', unicodeRange: LATIN_EXT, pkg: GROTESK },
+  { family: 'Fraunces', file: 'fraunces-latin-full-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN, pkg: FRAUNCES },
+  { family: 'Fraunces', file: 'fraunces-latin-ext-full-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: FRAUNCES },
+  { family: 'Archivo', file: 'archivo-latin-standard-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN, pkg: ARCHIVO },
+  { family: 'Archivo', file: 'archivo-latin-ext-standard-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: ARCHIVO },
+  { family: 'Source Sans 3', file: 'source-sans-3-latin-wght-normal.woff2', weight: '200 900', style: 'normal', unicodeRange: LATIN, pkg: SOURCE },
+  { family: 'Source Sans 3', file: 'source-sans-3-latin-ext-wght-normal.woff2', weight: '200 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: SOURCE },
 ];
 export const fontStack = (family: string) => family.split(',').map(f => f.trim()).filter(Boolean).map(f => /^["']/.test(f) || genericFamilies.has(f.toLowerCase()) ? f : `"${f.replace(/"/g, '')}"`).join(', ');
 export const cssFont = (layer: { fontStyle?: string; fontWeight?: number | string; fontFamily: string }, fontSize: number) => `${layer.fontStyle ?? 'normal'} ${layer.fontWeight ?? 400} ${fontSize}px ${fontStack(layer.fontFamily)}`;

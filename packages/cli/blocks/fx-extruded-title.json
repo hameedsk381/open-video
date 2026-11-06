@@ -78,7 +78,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-13",
@@ -93,7 +94,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-12",
@@ -108,7 +110,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-11",
@@ -123,7 +126,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-10",
@@ -138,7 +142,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-9",
@@ -153,7 +158,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-8",
@@ -168,7 +174,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-7",
@@ -183,7 +190,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-6",
@@ -198,7 +206,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-5",
@@ -213,7 +222,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-4",
@@ -228,7 +238,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-3",
@@ -243,7 +254,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-2",
@@ -258,7 +270,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "depth-1",
@@ -273,7 +286,8 @@
           "maxWidth": "{{round(canvas.width * 0.9)}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
-          "lineHeight": 1
+          "lineHeight": 1,
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "front",
@@ -294,7 +308,8 @@
             "blur": 24,
             "offsetX": 0,
             "offsetY": 18
-          }
+          },
+          "fontFamily": "{{fontDisplay}}"
         }
       ]
     },

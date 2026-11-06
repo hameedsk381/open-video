@@ -73,7 +73,7 @@
       "height": "{{round(canvas.height * 0.34)}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.012)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.012 * density)}}",
         "align": "start",
         "justify": "end"
       },
@@ -133,7 +133,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "line2",
@@ -175,7 +176,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "line3",
@@ -216,7 +218,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         }
       ]
     },

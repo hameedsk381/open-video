@@ -28,7 +28,7 @@ const tabs = [
   ['export', 'Export', DownloadIcon] as const,
 ];
 
-const themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight'];
+const themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight', 'fontDisplay', 'fontBody', 'texture', 'textureColor', 'textureOpacity', 'motion', 'transition', 'layout', 'density'];
 
 export function Editor({ id, tab }: { id: string; tab: string }) {
   const { toast } = useUi();
@@ -291,18 +291,22 @@ function AskAi({ detail, file, reload, setNote }: PaneProps) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notes, setNotes] = useState<string[]>([]);
 
   const run = async () => {
     if (!text.trim()) return;
     setError('');
+    setNotes([]);
     setBusy(true);
     try {
-      await runJob<{ warnings?: string[] }>(
+      const result = await runJob<{ warnings?: string[] }>(
         '/api/refine',
         { file, instruction: text.trim() },
         (j: Job) => setNote(cleanUserStatus(j.messages.at(-1)))
       );
-      setNote('AI refinement applied');
+      const warnings = result?.warnings ?? [];
+      setNotes(warnings);
+      setNote(warnings.length ? `AI refinement applied · ${warnings.length} note${warnings.length === 1 ? '' : 's'}` : 'AI refinement applied');
       setText('');
       await reload(false);
     } catch (e) {
@@ -350,6 +354,14 @@ function AskAi({ detail, file, reload, setNote }: PaneProps) {
       ) : null}
 
       {error ? <Notice tone="error" title="Could not apply change">{error}</Notice> : null}
+
+      {notes.length ? (
+        <Notice tone="warn" title="Applied, with notes">
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {notes.map(n => <li key={n}>{n}</li>)}
+          </ul>
+        </Notice>
+      ) : null}
 
       <Button variant="primary" loading={busy} icon={<SparklesIcon size={14} />} onClick={run}>
         {busy ? 'Directing AI…' : 'Apply AI Direction'}

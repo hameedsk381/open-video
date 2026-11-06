@@ -96,7 +96,7 @@
       "height": "{{canvas.width > canvas.height ? canvas.height : round(canvas.height * 0.5)}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.025 * density)}}",
         "align": "start",
         "justify": "center"
       },
@@ -139,7 +139,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "headline",
@@ -182,7 +183,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "rule",
@@ -248,7 +250,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

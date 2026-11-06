@@ -42,6 +42,15 @@ export function importFigmaTokens(input: any, themeName = 'Figma Brand'): FigmaI
     accent2: '#818cf8',
     radius: 12,
     headWeight: 800,
+    fontDisplay: 'Inter',
+    fontBody: 'Inter',
+    texture: 'none',
+    textureColor: '#ffffff',
+    textureOpacity: 0.04,
+    motion: 'rise',
+    transition: 'fade',
+    layout: 'left',
+    density: 1,
   };
 
   if (!input || typeof input !== 'object') {

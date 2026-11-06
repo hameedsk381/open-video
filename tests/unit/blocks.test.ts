@@ -84,7 +84,7 @@ describe('templates made of blocks', () => {
     const infos = await listTemplates(), ids = infos.map(info => info.id);
     for (const id of ['launch-wide', 'story-tall', 'explainer-square', 'keynote-wide', 'product-wide', 'showcase-tall']) expect(ids).toContain(id);
     const choices = await templateChoices(), themed = choices.filter(choice => choice.themed);
-    expect(themed.map(choice => choice.id).sort()).toEqual(['explainer-square', 'keynote-wide', 'launch-wide', 'product-card', 'product-wide', 'showcase-tall', 'social-reel', 'story-tall']);
+    expect(themed.map(choice => choice.id).sort()).toEqual(['explainer-square', 'keynote-wide', 'launch-wide', 'product-card', 'product-wide', 'showcase-tall', 'social-reel', 'story-tall', 'testimonial']);
     const neon = await readTheme('neon') as ThemeChoice, launch = themed.find(choice => choice.id === 'launch-wide')!;
     const composition = fillTemplate(launch, { title: 'Hello there' }, neon);
     expect(JSON.stringify(composition)).toContain('Hello there'); expect(JSON.stringify(composition)).toContain('#ff3cac');

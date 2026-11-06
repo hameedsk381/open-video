@@ -1,7 +1,7 @@
 {
   "id": "neon",
   "name": "Neon",
-  "description": "Near-black with hot magenta and lime. Loud and social.",
+  "description": "Near-black with hot magenta, lime, scanlines and pop entrances. Loud and social.",
   "variables": {
     "bg": "#0a0710",
     "surface": "#1b1030",
@@ -10,6 +10,15 @@
     "accent": "#ff3cac",
     "accent2": "#c6ff3c",
     "radius": 28,
-    "headWeight": 900
+    "headWeight": 900,
+    "fontDisplay": "Space Grotesk",
+    "fontBody": "Inter",
+    "texture": "scanlines",
+    "textureColor": "#ffffff",
+    "textureOpacity": 0.05,
+    "motion": "pop",
+    "transition": "zoom",
+    "layout": "center",
+    "density": 0.9
   }
 }

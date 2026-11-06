@@ -6,12 +6,15 @@ import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionBeat } from './prompt';
 import { describeCapabilities, sameShape, type GenerationPath, type Registry } from './registry';
+import { fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook } from '@ove/schema';
 
 export type BuildPlan = {
   path: GenerationPath;
   template?: string;
   theme?: string;
   idea?: string;
+  /** The art direction the video must follow: fonts, palette, texture, motion, transition, layout and density. */
+  look?: DesignLook;
   beats: MotionBeat[];
   reasons: string[];
 };
@@ -37,16 +40,31 @@ export type PlanOptions = {
 const paths: GenerationPath[] = ['template', 'json', 'react'];
 const allowedPaths = (options: PlanOptions) => (options.paths ?? paths).filter(path => path !== 'react' || options.allowReact);
 
-const systemText = (options: PlanOptions) => `You are the creative production planner for MotionRender. Decide how the brief below should be produced, before anything is generated.
+const systemText = (options: PlanOptions) => `You are the creative director for MotionRender. Decide how the brief below should be produced, and the art direction it deserves, before anything is generated.
 Reply with ONE JSON object and nothing else:
 {
   "path": "template" | "json" | "react",
   "template": "<template id>",            // only with "template": the one template that best suits the brief's structure and topic
   "theme": "<theme id>",                  // optional, only with a template that takes a theme
   "idea": "<what the video says, in one line>",
+  "look": {
+    "fonts": { "display": "<family>", "body": "<family>" },
+    "palette": { "bg": "#hex", "surface": "#hex", "text": "#hex", "muted": "#hex", "accent": "#hex", "accent2": "#hex" },
+    "texture": { "type": "none" | "grid" | "dots" | "scanlines" | "paper", "color": "#hex", "opacity": 0.04 },
+    "motion": "rise" | "blur" | "slide" | "pop" | "fade",
+    "transition": "push" | "fade" | "slide" | "wipe" | "zoom" | "dip",
+    "layout": "left" | "center" | "split" | "editorial",
+    "density": 1
+  },
   "beats": [{ "name": "Hook", "onScreen": "what is on screen, concretely", "seconds": 3, "motion": "how it moves in" }],
-  "reasons": ["why this path suits this brief"]
+  "reasons": ["why this path and look suit this brief"]
 }
+The design is YOURS to decide. There is no house style: choose the fonts, palette, texture and motion that this specific subject calls for.
+- Fonts must be one of: Inter (neutral tech/product), Space Grotesk (quirky engineering/AI), Fraunces (expressive editorial/craft/food/culture), Archivo (bold condensed/sports/news/launch), Source Sans 3 (calm humanist/education/long-form). Pair a distinct display face with a readable body face; do not default to Inter for both.
+- Palette: derive it from the subject and its industry. A warm artisan brand should not look like a dark tech gradient, and a children's topic should not look like a cyberpunk terminal. Ensure strong text contrast on the background.
+- Texture: a grid for engineered/technical, dots for editorial/print, scanlines for games/broadcast, paper for warm/organic, none for clean graphic fields.
+- Motion and transition: one entrance style and one transition style for the whole video. Match the energy: pop for playful, slide for product, blur for premium, rise for editorial, fade for calm. Density 0.8-1.2 scales spacing.
+- This look applies to JSON videos directly and refines the chosen theme for a template.
 Templates provide proven layouts, but pick the template that specifically fits the brief's narrative style:
 - Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "story-tall" or "quote-card".
 - Multi-feature tours, app UI cards, feature lists, and product showcases: choose "showcase-tall", "product-wide" or "product-card".
@@ -55,7 +73,7 @@ Templates provide proven layouts, but pick the template that specifically fits t
 - Choose "json" when the brief requires a bespoke kinetic video with custom motion graphics, camera moves, and scene architecture.
 - Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics.
 
-Themes: For templates that take a theme, ALWAYS choose the theme matching the tone and brand of the brief:
+Themes are named presets of the same look (palette, type, texture, motion). For a template that takes a theme, name the closest theme AND still give the look you actually want; the look refines the theme:
 - "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue).
 - "neon": gaming, nightlife, social apps, crypto, cutting-edge AI (dark violet, hot magenta, electric lime).
 - "espresso": artisan craft, food & beverage, coffee, lifestyle, podcasts, warmth (dark espresso, amber gold).
@@ -65,6 +83,47 @@ Every beat needs a concrete picture, not a mood. In "motion", name the move — 
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
 ${describeCapabilities(options.registry, options)}`;
+
+const colorPattern = /^(#[0-9a-fA-F]{3,8}|rgba?\(.+\)|transparent)$/;
+const canonical = <T extends string>(value: unknown, options: readonly T[]): T | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const wanted = value.trim().toLowerCase().replace(/[-_]+/g, ' ');
+  return options.find(option => option.toLowerCase().replace(/[-_]+/g, ' ') === wanted);
+};
+
+/**
+ * Reads the planner's art direction. Anything malformed is left out rather than failing the whole plan: the look is a
+ * refinement, and losing it must not cost the video its routing and beats. Enums are matched case-insensitively so a
+ * model writing "Space-Grotesk" or "Slide" still gets what it asked for.
+ */
+export function readLook(raw: unknown): DesignLook | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const source = raw as Record<string, any>;
+  const look: DesignLook = {};
+  const fonts = source.fonts && typeof source.fonts === 'object' ? source.fonts : {};
+  const display = canonical(fonts.display, fontIds), body = canonical(fonts.body, fontIds);
+  if (display || body) look.fonts = { ...(display ? { display } : {}), ...(body ? { body } : {}) };
+  const paletteIn = source.palette && typeof source.palette === 'object' ? source.palette : {};
+  const palette: NonNullable<DesignLook['palette']> = {};
+  for (const name of ['bg', 'surface', 'text', 'muted', 'accent', 'accent2'] as const) {
+    const value = paletteIn[name];
+    if (typeof value === 'string' && colorPattern.test(value.trim())) palette[name] = value.trim();
+  }
+  if (Object.keys(palette).length) look.palette = palette;
+  const textureIn = source.texture && typeof source.texture === 'object' ? source.texture : undefined;
+  if (textureIn) {
+    const type = canonical(textureIn.type, textureTypes);
+    const color = typeof textureIn.color === 'string' && colorPattern.test(textureIn.color.trim()) ? textureIn.color.trim() : undefined;
+    const opacity = Number.isFinite(Number(textureIn.opacity)) ? Math.max(0, Math.min(1, Number(textureIn.opacity))) : undefined;
+    const scale = Number.isFinite(Number(textureIn.scale)) && Number(textureIn.scale) > 0 ? Number(textureIn.scale) : undefined;
+    if (type || color || opacity !== undefined || scale) look.texture = { ...(type ? { type } : {}), ...(color ? { color } : {}), ...(opacity !== undefined ? { opacity } : {}), ...(scale ? { scale } : {}) };
+  }
+  const motion = canonical(source.motion, motionPresets); if (motion) look.motion = motion;
+  const transition = canonical(source.transition, transitionStyles); if (transition) look.transition = transition;
+  const layout = canonical(source.layout, layoutStyles); if (layout) look.layout = layout;
+  if (Number.isFinite(Number(source.density))) look.density = Math.max(0.75, Math.min(1.25, Number(source.density)));
+  return Object.keys(look).length ? look : undefined;
+}
 
 function beatsOf(raw: any, durationSeconds: number): { beats: MotionBeat[]; problems: string[] } {
   const problems: string[] = [], beats: MotionBeat[] = [];
@@ -122,6 +181,7 @@ export function readBuildPlan(reply: unknown, options: PlanOptions): { plan?: Bu
       template: raw.path === 'template' ? String(raw.template) : undefined,
       theme: raw.path === 'template' && typeof raw.theme === 'string' && raw.theme ? raw.theme : undefined,
       idea: typeof raw.idea === 'string' && raw.idea.trim() ? raw.idea.trim().slice(0, 200) : undefined,
+      look: readLook(raw.look),
       beats, reasons,
     },
   };

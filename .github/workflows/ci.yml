@@ -56,6 +56,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:integration
+      # The catalogue is shared by every OS, so one runner reviews it; the check needs FFmpeg and a browser.
+      - name: Check the template catalogue
+        if: runner.os == 'Linux'
+        run: pnpm check:templates
 
       - name: Build and smoke-test the npm package
         shell: bash

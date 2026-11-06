@@ -2,7 +2,7 @@
   "name": "motionrender",
   "private": true,
   "type": "module",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "workspaces": [
     "packages/*"
   ],
@@ -19,7 +19,8 @@
     "dev:studio": "pnpm --filter @ove/studio dev",
     "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "eval:ai": "tsx scripts/eval-briefs.ts"
+    "eval:ai": "tsx scripts/eval-briefs.ts",
+    "check:templates": "tsx scripts/check-templates.ts"
   },
   "devDependencies": {
     "@ove/ai": "workspace:*",

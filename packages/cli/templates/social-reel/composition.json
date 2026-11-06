@@ -31,7 +31,7 @@
     "footer": { "type": "string", "default": "Generated from a brief. Rendered deterministically.", "description": "Small line at the bottom" },
     "kicker": { "type": "string", "default": "MAKE IT MOVE", "description": "Small label above the headline" },
     "title": { "type": "string", "default": "One brief.\nOne video.", "description": "Headline; a line break starts a new line" },
-    "detail": { "type": "string", "default": "Describe the video. MotionRender writes a composition, checks it against the same schema as a hand-written one, and renders every frame the same way, every time." },
+    "detail": { "type": "string", "default": "MotionRender writes a composition, checks it, and renders every frame the same way." },
     "cta": { "type": "string", "default": "Try MotionRender" }
   },
   "scenes": [

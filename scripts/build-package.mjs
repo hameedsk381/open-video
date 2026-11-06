@@ -36,9 +36,11 @@ const playerTypes=join(types, 'packages/player/src/index.d.ts'); await writeFile
 await writeFile(join(dist, 'react.d.ts'), "export * from './types/packages/react/src/index.js';\n");
 await writeFile(join(dist, 'builder.d.ts'), "export * from './types/packages/builder/src/index.js';\n");
 await writeFile(join(dist, 'player.d.ts'), "export * from './types/packages/player/src/index.js';\n");
-// The built-in Inter faces with their licence: the renderer reads them from dist/fonts, and the Player loads them from there by URL.
+// The built-in faces with their licences: the renderer reads them from dist/fonts, and the Player loads them from there by URL.
 const { builtinFontDir } = await import('../packages/graphics/src/fonts.ts'); const { builtinFontFaces } = await import('../packages/graphics/src/index.ts'); await mkdir(join(dist, 'fonts'), { recursive: true });
-for (const face of builtinFontFaces) await cp(join(builtinFontDir(), face.file), join(dist, 'fonts', face.file)); await cp(join(builtinFontDir(), '..', 'LICENSE'), join(dist, 'fonts', 'LICENSE-Inter.txt'));
+const fontPackages = new Map();
+for (const face of builtinFontFaces) { await cp(join(builtinFontDir(face.pkg), face.file), join(dist, 'fonts', face.file)); if (!fontPackages.has(face.pkg)) fontPackages.set(face.pkg, face.family); }
+for (const [pkg, family] of fontPackages) await cp(join(builtinFontDir(pkg), '..', 'LICENSE'), join(dist, 'fonts', `LICENSE-${family.replace(/\s+/g, '')}.txt`));
 // The drawing runtime and text layout, read as text by the bundled code from dist/runtime.
 await cp(join(root, 'packages/graphics/runtime'), join(dist, 'runtime'), { recursive: true });
 const { lottiePlayerPath } = await import('../packages/graphics/src/runtime.ts'); await cp(lottiePlayerPath(), join(dist, 'runtime', 'lottie_light_canvas.min.js'));

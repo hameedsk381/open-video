@@ -1,7 +1,7 @@
 {
   "id": "espresso",
   "name": "Espresso",
-  "description": "Dark coffee brown with cream text and an orange accent. Warm.",
+  "description": "Dark coffee with cream text, Fraunces headlines, paper grain and warm amber. Editorial craft.",
   "variables": {
     "bg": "#2a1a12",
     "surface": "#3d2a1f",
@@ -10,6 +10,15 @@
     "accent": "#f4a259",
     "accent2": "#e76f51",
     "radius": 16,
-    "headWeight": 800
+    "headWeight": 800,
+    "fontDisplay": "Fraunces",
+    "fontBody": "Source Sans 3",
+    "texture": "paper",
+    "textureColor": "#f6ead9",
+    "textureOpacity": 0.05,
+    "motion": "rise",
+    "transition": "fade",
+    "layout": "editorial",
+    "density": 1.1
   }
 }

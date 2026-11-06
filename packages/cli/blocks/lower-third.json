@@ -79,7 +79,8 @@
           "fontWeight": 800,
           "maxWidth": "{{round(canvas.width * 0.42 - min(canvas.width, canvas.height) * 0.06)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "role",
@@ -91,7 +92,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.088)}}",
           "maxWidth": "{{round(canvas.width * 0.42 - min(canvas.width, canvas.height) * 0.06)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.024)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

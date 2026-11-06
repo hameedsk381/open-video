@@ -63,7 +63,7 @@
       "height": "{{canvas.height}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.03 * density)}}",
         "align": "start",
         "justify": "center"
       },
@@ -108,7 +108,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "rows",
@@ -116,7 +117,7 @@
           "width": "{{round(canvas.width * 0.84)}}",
           "layout": {
             "direction": "column",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.04 * density)}}",
             "align": "start"
           },
           "children": [

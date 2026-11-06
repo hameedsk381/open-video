@@ -26,9 +26,9 @@
         "body": { "type": "string", "default": "" }
       },
       "default": [
-        { "title": "One source of truth", "body": "A composition is a JSON file. Every render reads the same file the same way." },
-        { "title": "Frames, not guesses", "body": "Text, shapes and pictures are drawn at exact frames, so a second render matches the first." },
-        { "title": "Built to be edited", "body": "Change a value, re-render, and only what you changed moves. Everything else stays put." }
+        { "title": "One source of truth", "body": "A composition is one JSON file; every render reads it the same way." },
+        { "title": "Frames, not guesses", "body": "Text and pictures are drawn at exact frames, so renders match." },
+        { "title": "Built to be edited", "body": "Change a value and only that changes; everything else stays." }
       ]
     },
     "kicker": { "type": "string", "default": "HOW IT WORKS" },
@@ -43,7 +43,12 @@
         {
           "id": "slide-{{index + 1}}",
           "name": "{{slide.title}}",
-          "durationFrames": 120,
+          "durationFrames": 180,
+          "camera": {
+            "animations": [
+              { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 180, "value": 1.06, "easing": "drift" }] }
+            ]
+          },
           "transitionIn": { "type": "fade", "durationFrames": 12 },
           "transitionOut": { "type": "fade", "durationFrames": 12 },
           "layers": [
@@ -57,7 +62,7 @@
               "opacity": 0.13,
               "blur": 90,
               "animations": [
-                { "property": "x", "keyframes": [{ "frame": 0, "value": 1280 }, { "frame": 120, "value": 1160, "easing": "drift" }] }
+                { "property": "x", "keyframes": [{ "frame": 0, "value": 1280 }, { "frame": 180, "value": 1160, "easing": "drift" }] }
               ]
             },
             {

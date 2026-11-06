@@ -23,6 +23,11 @@
     "subtitle": {
       "type": "string",
       "default": "One clear line about why it matters."
+    },
+    "variant": {
+      "type": "string",
+      "default": "left",
+      "description": "Layout: left (stacked left), center (centred stack) or band (accent panel on the left)"
     }
   },
   "layers": [
@@ -116,16 +121,27 @@
       ]
     },
     {
+      "if": "{{variant == 'band'}}",
+      "id": "band",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "width": "{{round(canvas.width * 0.36)}}",
+      "height": "{{canvas.height}}",
+      "fill": "{{accent}}",
+      "opacity": 1
+    },
+    {
       "id": "stack",
       "type": "group",
-      "x": "{{round(canvas.width * 0.08)}}",
+      "x": "{{variant == 'band' ? round(canvas.width * 0.04) : variant == 'center' ? 0 : round(canvas.width * 0.08)}}",
       "y": 0,
-      "width": "{{round(canvas.width * 0.84)}}",
+      "width": "{{round(canvas.width * (variant == 'band' ? 0.3 : variant == 'center' ? 1 : 0.84))}}",
       "height": "{{canvas.height}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
-        "align": "start",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.03 * density)}}",
+        "align": "{{variant == 'center' ? 'center' : 'start'}}",
         "justify": "center"
       },
       "children": [
@@ -134,7 +150,7 @@
           "type": "text",
           "content": "{{kicker}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
-          "color": "{{accent}}",
+          "color": "{{variant == 'band' ? bg : accent}}",
           "fontWeight": 700,
           "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.006)}}",
           "startFrame": 0,
@@ -167,26 +183,30 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}",
+          "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
         },
         {
           "id": "headline",
           "type": "text",
           "content": "{{headline}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
-          "color": "{{text}}",
+          "color": "{{variant == 'band' ? bg : text}}",
           "fontWeight": "{{headWeight}}",
           "lineHeight": 1.05,
-          "maxWidth": "{{round(canvas.width * 0.84)}}",
+          "maxWidth": "{{round(canvas.width * (variant == 'band' ? 0.28 : 0.84))}}",
           "maxLines": 4,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.06)}}",
           "split": {
             "by": "words",
             "stagger": 4,
-            "preset": "rise",
+            "preset": "{{motion}}",
             "duration": 18
           },
-          "startFrame": 8
+          "startFrame": 8,
+          "fontFamily": "{{fontDisplay}}",
+          "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
         },
         {
           "id": "rule",
@@ -194,7 +214,7 @@
           "width": "{{round(min(canvas.width, canvas.height) * 0.12)}}",
           "height": "{{round(min(canvas.width, canvas.height) * 0.008)}}",
           "radius": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
-          "fill": "{{accent}}",
+          "fill": "{{variant == 'band' ? bg : accent}}",
           "startFrame": 26,
           "animations": [
             {
@@ -218,8 +238,8 @@
           "type": "text",
           "content": "{{subtitle}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.04)}}",
-          "color": "{{muted}}",
-          "maxWidth": "{{round(canvas.width * 0.7)}}",
+          "color": "{{variant == 'band' ? bg : muted}}",
+          "maxWidth": "{{round(canvas.width * (variant == 'band' ? 0.28 : 0.7))}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
           "startFrame": 34,
@@ -252,7 +272,9 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}",
+          "textAlign": "{{variant == 'center' ? 'center' : 'left'}}"
         }
       ]
     },

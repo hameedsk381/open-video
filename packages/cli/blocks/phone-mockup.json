@@ -111,7 +111,7 @@
       "height": "{{canvas.height}}",
       "layout": {
         "direction": "{{canvas.width > canvas.height ? 'row' : 'column'}}",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.07 * density)}}",
         "align": "center",
         "justify": "center"
       },
@@ -122,7 +122,7 @@
           "width": "{{canvas.width > canvas.height ? round(canvas.width * 0.38) : round(canvas.width * 0.84)}}",
           "layout": {
             "direction": "column",
-            "gap": "{{round(min(canvas.width, canvas.height) * 0.025)}}",
+            "gap": "{{round(min(canvas.width, canvas.height) * 0.025 * density)}}",
             "align": "{{canvas.width > canvas.height ? 'start' : 'center'}}"
           },
           "children": [
@@ -168,7 +168,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontDisplay}}"
             },
             {
               "id": "rule",
@@ -235,7 +236,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "fontFamily": "{{fontBody}}"
             }
           ]
         },

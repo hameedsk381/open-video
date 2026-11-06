@@ -45,7 +45,7 @@ export const studioLibrary: ApiLibrary = {
 export const studioPlayer: PlayerFiles = {
   script: playerScript,
   async sound(name) { return (sfxNames as readonly string[]).includes(name) ? readFile(await sfxFile(name as (typeof sfxNames)[number])) : undefined; },
-  async font(path) { const face = builtinFontFaces.find(f => `/fonts/${f.file}` === path); return face ? readFile(join(builtinFontDir(), face.file)) : undefined; },
+  async font(path) { const face = builtinFontFaces.find(f => `/fonts/${f.file}` === path); return face ? readFile(join(builtinFontDir(face.pkg), face.file)) : undefined; },
 };
 // The web app (apps/studio, built by `pnpm build:studio`) sits next to blocks/ and themes/, in the workspace and in the published package.
 // Without a build the studio falls back to the plain page in ai-studio-page.ts.

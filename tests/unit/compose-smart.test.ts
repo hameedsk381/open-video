@@ -1,7 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { composeSmart } from '../../packages/cli/src/templates';
 import { buildRegistry, composeSmart as composeWithSource, createProvider, type AiProvider, type ChatMessage, type Registry, type TemplateChoice } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
+
+// A filled template still has to face the renderer: the review is stubbed here so the assertion is about what the router
+// does with its verdict, not about the pixels of a fixture composition.
+vi.mock('@ove/core', async importOriginal => {
+  const core = await importOriginal<Record<string, unknown>>();
+  return {
+    ...core,
+    reviewComposition: vi.fn(async () => ({
+      issues: [
+        { severity: 'error', message: 'the quote is cut short', frame: 30, layer: 'quote' },
+        { severity: 'warning', message: '2 text colours (#ffffff, #a78bfa): use a heading colour, a body colour and one or two accents' },
+      ],
+      sheet: Buffer.alloc(0), sheetFrames: [], sampledFrames: 4,
+    })),
+  };
+});
 
 // The smart composer routes a brief: the planner's answer picks the template or the full-composition path (with the beats
 // as the motion plan), and a refused or failed plan falls back to the routing that always worked.
@@ -23,7 +39,7 @@ describe('composeSmart routing', () => {
     const result = await composeSmart(provider, { ...base, maxAttempts: 3, onProgress: message => progress.push(message) }, { registry });
     expect(result.template).toBeUndefined();
     expect(provider.seen).toHaveLength(2);
-    expect(String(provider.seen[0]![0]!.content)).toContain('production planner');
+    expect(String(provider.seen[0]![0]!.content)).toContain('creative director');
     const composeText = provider.seen[1]!.map(message => message.content).join('\n');
     expect(composeText).toContain('Hook');
     expect(composeText).toContain('the headline springs in');
@@ -83,6 +99,10 @@ describe('composeSmart with a host-supplied catalogue', () => {
   const choice: TemplateChoice = { id: 'square-card', name: 'Square card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2,
     variables: [{ name: 'title', type: 'string', default: 'Hello there' }], composition: card };
   const filled = { template: 'square-card', values: { title: 'Morning Brew' } };
+  const wideCard = { ...card, id: 'wide-card', name: 'Wide card', width: 1920, height: 1080 };
+  const wideChoice: TemplateChoice = { id: 'wide-card', name: 'Wide card', description: 'A wide title card', width: 1920, height: 1080, durationSeconds: 2,
+    variables: [{ name: 'title', type: 'string', default: 'Hello there' }], composition: wideCard };
+  const wideFilled = { template: 'wide-card', values: { title: 'Morning Brew' } };
 
   it('fills from the injected templates and copies the template\'s own files next to the project', async () => {
     const copied: [string, string][] = [];
@@ -102,6 +122,37 @@ describe('composeSmart with a host-supplied catalogue', () => {
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain('could not be copied to /tmp/project');
     expect(result.warnings[0]).toContain('permission denied');
+  });
+
+  it('reviews a filled template and returns its faults instead of a clean run', async () => {
+    const provider = scripted(filled);
+    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, review: true }, { templates: async () => [choice] }, { noPlan: true });
+    expect(result.template).toBe('square-card');
+    expect(result.issues.map(issue => issue.severity)).toEqual(['error', 'warning']);
+    expect(result.issues[0]!.message).toBe('the quote is cut short');
+    // The warning is also in the notes, which is all a surface that ignores `issues` reads.
+    expect(result.warnings).toContain('2 text colours (#ffffff, #a78bfa): use a heading colour, a body colour and one or two accents');
+  });
+
+  it('fills an explicitly chosen template at its own canvas instead of filtering it out', async () => {
+    const provider = scripted(wideFilled);
+    const result = await composeWithSource(provider, { ...base, maxAttempts: 2 }, { templates: async () => [choice, wideChoice] }, { noPlan: true, template: 'wide-card' });
+    expect(result.template).toBe('wide-card');
+    expect(result.composition.width).toBe(1920);
+    expect(result.composition.height).toBe(1080);
+  });
+
+  it('does not let the model decline an explicitly chosen template', async () => {
+    const provider = scripted({ template: 'none' }, wideFilled);
+    const result = await composeWithSource(provider, { ...base, maxAttempts: 2 }, { templates: async () => [choice, wideChoice] }, { noPlan: true, template: 'wide-card' });
+    expect(result.template).toBe('wide-card');
+    expect(provider.seen).toHaveLength(2);
+  });
+
+  it('does not substitute another template when the named one does not exist', async () => {
+    const provider = scripted(filled);
+    await expect(composeWithSource(provider, { ...base, maxAttempts: 2 }, { templates: async () => [choice] }, { noPlan: true, template: 'nope' }))
+      .rejects.toThrow('There is no template "nope". Available templates: square-card.');
   });
 
   it('does not invent a planner when the host has no capability list', async () => {

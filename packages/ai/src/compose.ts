@@ -6,6 +6,7 @@ import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
 import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type MotionPlan, type PromptOptions } from './prompt';
+import { readLook } from './plan';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
 import { composeByScenes, healScenes, normalizeAnimation, type ScenesOptions } from './scenes';
 
@@ -252,7 +253,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
         { role: 'user', content: planUserPrompt(options.brief, options) },
       ], { json: true, task: 'fast', temperature: 0.55, signal: options.signal });
       const planned = extractJson(planText);
-      if (isMotionPlan(planned)) motionPlan = planned;
+      if (isMotionPlan(planned)) motionPlan = { ...planned, look: readLook(planned.look) };
       else {
         try {
           const accepted = await acceptComposition(planned, options);
@@ -275,6 +276,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
       fps: composeOptions.fps,
       durationSeconds: composeOptions.durationSeconds,
       assets: composeOptions.assets,
+      look: motionPlan?.look,
       signal: options.signal,
       onProgress: options.onProgress,
     };

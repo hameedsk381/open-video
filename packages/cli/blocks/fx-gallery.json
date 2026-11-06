@@ -135,7 +135,8 @@
             }
           ]
         }
-      ]
+      ],
+      "fontFamily": "{{fontDisplay}}"
     },
     {
       "repeat": "{{tiles}}",

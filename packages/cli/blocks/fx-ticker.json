@@ -94,7 +94,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "line-1",
@@ -119,7 +120,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -164,7 +166,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.0185)}}",
           "textAlign": "center",
           "fontWeight": 900,
-          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}"
+          "letterSpacing": "{{round(min(canvas.width, canvas.height) * 0.004)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },

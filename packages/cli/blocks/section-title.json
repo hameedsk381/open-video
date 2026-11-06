@@ -120,7 +120,7 @@
       "height": "{{canvas.height}}",
       "layout": {
         "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.012)}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * 0.012 * density)}}",
         "align": "start",
         "justify": "center"
       },
@@ -163,7 +163,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "title",
@@ -205,7 +206,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         }
       ]
     },

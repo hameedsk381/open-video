@@ -114,7 +114,7 @@
           "maxWidth": 880,
           "maxLines": 1,
           "minFontSize": 34,
-          "color": "#ede9fe",
+          "color": "#f5f3ff",
           "animations": [
             { "property": "opacity", "keyframes": [{ "frame": 28, "value": 0 }, { "frame": 48, "value": 1 }] }
           ]
@@ -143,7 +143,7 @@
           "lineHeight": 1.5,
           "maxWidth": 820,
           "maxLines": 4,
-          "color": "#a9a1d6",
+          "color": "#b9b1e8",
           "animations": [
             { "property": "opacity", "keyframes": [{ "frame": 44, "value": 0 }, { "frame": 64, "value": 1 }] }
           ]

@@ -19,6 +19,11 @@
     "label": {
       "type": "string",
       "default": "of viewers keep watching until the end"
+    },
+    "variant": {
+      "type": "string",
+      "default": "center",
+      "description": "Layout: center (one centred column), left (aligned left) or split (number left, label right)"
     }
   },
   "layers": [
@@ -114,14 +119,14 @@
     {
       "id": "stack",
       "type": "group",
-      "x": 0,
+      "x": "{{variant == 'left' ? round(canvas.width * 0.08) : 0}}",
       "y": 0,
-      "width": "{{canvas.width}}",
+      "width": "{{round(canvas.width * (variant == 'left' ? 0.84 : 1))}}",
       "height": "{{canvas.height}}",
       "layout": {
-        "direction": "column",
-        "gap": "{{round(min(canvas.width, canvas.height) * 0.03)}}",
-        "align": "center",
+        "direction": "{{variant == 'split' ? 'row' : 'column'}}",
+        "gap": "{{round(min(canvas.width, canvas.height) * (variant == 'split' ? 0.06 : 0.03) * density)}}",
+        "align": "{{variant == 'left' ? 'start' : 'center'}}",
         "justify": "center"
       },
       "children": [
@@ -129,11 +134,11 @@
           "id": "value",
           "type": "text",
           "content": "{{value}}",
-          "fontSize": "{{round(min(canvas.width, canvas.height) * 0.3)}}",
+          "fontSize": "{{round(min(canvas.width, canvas.height) * (variant == 'split' ? 0.22 : 0.3))}}",
           "color": "{{accent}}",
           "fontWeight": 900,
-          "textAlign": "center",
-          "maxWidth": "{{round(canvas.width * 0.9)}}",
+          "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
+          "maxWidth": "{{round(canvas.width * (variant == 'split' ? 0.5 : 0.9))}}",
           "lineHeight": 1,
           "animations": [
             {
@@ -163,7 +168,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         },
         {
           "id": "label",
@@ -171,8 +177,8 @@
           "content": "{{label}}",
           "fontSize": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
           "color": "{{text}}",
-          "textAlign": "center",
-          "maxWidth": "{{round(canvas.width * 0.72)}}",
+          "textAlign": "{{variant == 'left' ? 'left' : 'center'}}",
+          "maxWidth": "{{round(canvas.width * (variant == 'split' ? 0.36 : 0.72))}}",
           "maxLines": 3,
           "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.032)}}",
           "startFrame": 14,
@@ -205,7 +211,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "fontFamily": "{{fontDisplay}}"
         }
       ]
     },

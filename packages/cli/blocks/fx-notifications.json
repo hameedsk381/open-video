@@ -159,7 +159,8 @@
           "fontWeight": 700,
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "b",
@@ -171,7 +172,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -292,7 +294,8 @@
           "fontWeight": 700,
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "b",
@@ -304,7 +307,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
@@ -415,7 +419,8 @@
           "fontWeight": 700,
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "fontFamily": "{{fontBody}}"
         },
         {
           "id": "b",
@@ -427,7 +432,8 @@
           "y": "{{round(min(canvas.width, canvas.height) * 0.07)}}",
           "maxWidth": "{{round(canvas.width * 0.46)}}",
           "maxLines": 1,
-          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}"
+          "minFontSize": "{{round(min(canvas.width, canvas.height) * 0.018)}}",
+          "fontFamily": "{{fontBody}}"
         }
       ]
     },
