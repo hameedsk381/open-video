@@ -1,6 +1,7 @@
 export * from './types';
 export * from './app';
 export * from './guard';
+export { assertPublicHttpUrl } from './url-guard';
 export * from './projects';
 export { mediaTypes, send, sendJson, sendError, readBody, readBytes, serveFile } from './http';
 export * from './auth';

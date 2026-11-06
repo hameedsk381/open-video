@@ -6,6 +6,7 @@ import { distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
 import type { RevisionMeta } from '@ove/storage';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from '../projects';
 import { readBytes } from '../http';
+import { assertPublicHttpUrl } from '../url-guard';
 import type { Ctx, Route } from '../types';
 
 const setAtPath = (rootValue: any, path: string, apply: (layer: any) => void) => {
@@ -61,6 +62,9 @@ export function projectRoutes(): Route[] {
     } },
     { method: 'POST', path: '/api/upload', handle: async c => {
       const id = await exists(c, c.url.searchParams.get('project')), name = textOf(c.url.searchParams.get('name'), 'name');
+      // Refuse an oversized upload before buffering it: the declared size is checked now, the actual bytes again below.
+      const declared = Number(c.req.headers['content-length']);
+      if (Number.isFinite(declared) && declared > 0) await c.deps.quotas?.beforeUpload(c.who, declared);
       const bytes = await readBytes(c.req, 150_000_000);
       await c.deps.quotas?.beforeUpload(c.who, bytes.length);
       c.json(200, { assets: await c.deps.store.putAsset(c.who, id, name, bytes) });
@@ -111,6 +115,8 @@ export function projectRoutes(): Route[] {
     } },
     { method: 'POST', path: '/api/brand/scrape', handle: async c => {
       const body = await c.body(), url = textOf(body.url, 'url');
+      await assertPublicHttpUrl(url);                                              // the server fetches this: it must be a public site
+      await c.deps.quotas?.beforeJob(c.who, 'compose');                            // scraping and distilling are AI work; they count as a request
       const scraped = await scrapeWebsiteBrand(url);
       const distilled = await distillBrandPack(scraped);
       c.json(200, { scraped, brand: distilled.brand, suggestedBrief: distilled.suggestedBrief });
