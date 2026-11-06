@@ -208,16 +208,9 @@ export async function runVideoAgent(
   }
 
   // Determine format: explicit > auto-detect from brief > default landscape
-  let format: VideoFormat;
-  let reelSafeZone = false;
-  if (options.format) {
-    format = options.format;
-  } else if (detectReelFormat(activeBrief)) {
-    format = 'reel';
-    reelSafeZone = true;
-  } else {
-    format = 'landscape';
-  }
+  const format: VideoFormat = options.format ?? (detectReelFormat(activeBrief) ? 'reel' : 'landscape');
+  // The platform bands come from the shape of the video, not from how the shape was chosen.
+  const reelSafeZone = format === 'reel';
   const width = format === 'reel' ? 1080 : 1920;
   const height = format === 'reel' ? 1920 : 1080;
   const fps = options.fps ?? 30;

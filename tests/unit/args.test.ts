@@ -6,6 +6,9 @@ describe('command-line options', () => {
     expect(checkArgs(['render', 'v.json', '--loudness', '-14'])).toContain('-14'); expect(checkArgs(['browser', 'install'])).toEqual(['browser', 'install']);
     expect(checkArgs(['ai', 'refine', 'v.json', '--instruction', 'make it bigger'])).toContain('--instruction'); expect(checkArgs(['ai', 'transcribe', 'voice.wav', '--composition', 'v.json', '--start', '2.5'])).toContain('--start');
     expect(checkArgs(['ai', 'studio', '--port', '3100', '--out', 'demo'])).toEqual(['ai', 'studio', '--port', '3100', '--out', 'demo']);
+    expect(checkArgs(['ai', 'compose', 'out', '--brief', 'A launch', '--template', 'testimonial', '--theme', 'espresso', '--typography', 'editorial', '--cta', 'Start|https://x.test', '--sfx', '--review'])).toContain('--theme');
+    expect(checkArgs(['ai', 'edit', 'clip.mp4', '--out', 'reel', '--max-silence', '0.4', '--keep-fillers', '--width', '1080'])).toContain('--keep-fillers');
+    expect(checkArgs(['ai', 'shorts', 'long.mp4', '--out', 'shorts', '--count', '2', '--min', '10', '--max', '40', '--no-cut'])).toContain('--no-cut');
     expect(checkArgs(['review', 'v.json', '--show-safe-zones'])).toContain('--show-safe-zones'); });
   it('rejects typos with a suggestion', () => { expect(() => checkArgs(['render', 'v.json', '--crff', '18'])).toThrow('ove render does not take --crff; did you mean --crf?');
     expect(() => checkArgs(['rendr', 'v.json'])).toThrow('Unknown command "rendr"; did you mean "ove render"?'); });

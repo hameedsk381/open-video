@@ -117,7 +117,9 @@ export function projectRoutes(): Route[] {
       const body = await c.body(), url = textOf(body.url, 'url');
       await assertPublicHttpUrl(url);                                              // the server fetches this: it must be a public site
       await c.deps.quotas?.beforeJob(c.who, 'compose');                            // scraping and distilling are AI work; they count as a request
-      const scraped = await scrapeWebsiteBrand(url);
+      // The guard is handed to the scraper too, so redirects and linked stylesheets/crawl targets are checked per hop
+      // rather than only the first URL.
+      const scraped = await scrapeWebsiteBrand(url, 8000, assertPublicHttpUrl);
       const distilled = await distillBrandPack(scraped);
       c.json(200, { scraped, brand: distilled.brand, suggestedBrief: distilled.suggestedBrief });
     } },
