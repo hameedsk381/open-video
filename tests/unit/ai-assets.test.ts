@@ -96,12 +96,11 @@ describe('requests', () => {
 });
 
 describe('documentation', () => {
-  it('names the default Groq models the code uses', () => {
-    const source = readFileSync('packages/ai/src/providers.ts', 'utf8'), code = source.slice(source.indexOf('class GroqProvider'), source.indexOf('class OpenAIProvider')), docs = readFileSync('docs/ai.md', 'utf8');
-    for (const variable of ['OVE_AI_MODEL', 'OVE_AI_SPEECH_MODEL', 'OVE_AI_TRANSCRIPTION_MODEL']) {
-      const match = new RegExp(`${variable} \\?\\? '([^']+)'`).exec(code);
-      expect(match, `${variable} default in providers.ts`).not.toBeNull();
-      expect(docs, `${variable} in docs/ai.md`).toContain(`${variable}=${match![1]}`);
+  it('documents the provider env vars the code reads', () => {
+    const source = readFileSync('packages/ai/src/providers.ts', 'utf8'), docs = readFileSync('docs/ai.md', 'utf8');
+    for (const variable of ['OVE_AI_MODEL', 'OVE_AI_TRANSCRIPTION_MODEL', 'OVE_AI_IMAGE_MODEL']) {
+      expect(source, `${variable} read in providers.ts`).toContain(variable);
+      expect(docs, `${variable} in docs/ai.md`).toContain(variable);
     }
   });
 });

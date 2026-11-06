@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { captionAudio, composeVideo, createProvider, extractJson, fieldsFromRows, FreeLlmApiProvider, generateImage, narrate, planBatch, refineVideo, type AiProvider } from '@ove/ai';
+import { captionAudio, composeVideo, createProvider, extractJson, fieldsFromRows, generateImage, narrate, planBatch, refineVideo, type AiProvider } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
 
 const base = (content = 'Hello', durationFrames = 30) => ({
@@ -182,14 +182,7 @@ describe('narration', () => {
   });
 });
 
-describe('FreeLlmApiProvider', () => {
-  it('instantiates FreeLlmApiProvider with config or env fallback', () => {
-    const p = new FreeLlmApiProvider({ baseUrl: 'http://localhost:3001/v1', model: 'llama-3.3-70b' });
-    expect(p.id).toBe('freellmapi');
-    expect(p.model).toBe('llama-3.3-70b');
-    expect(p.baseUrl).toBe('http://localhost:3001/v1');
-  });
-
+describe('FreeLLMAPI routing through the Vercel AI SDK', () => {
   it('createProvider selects freellmapi when FREELLMAPI_BASE_URL is set', () => {
     const orig = process.env.FREELLMAPI_BASE_URL;
     try {
@@ -213,7 +206,8 @@ describe('FreeLlmApiProvider', () => {
   });
 
   it('honors explicit model override over auto routing', async () => {
-    const provider = new FreeLlmApiProvider({ baseUrl: 'http://localhost:3001/v1', model: 'custom-model' });
+    const { VercelAiProvider } = await import('@ove/ai');
+    const provider = new VercelAiProvider({ provider: 'freellmapi', baseUrl: 'http://localhost:3001/v1', model: 'custom-model' });
     expect(await provider.resolveModel('compose')).toBe('custom-model');
   });
 });

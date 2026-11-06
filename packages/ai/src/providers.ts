@@ -1,9 +1,11 @@
-// The provider surface the AI commands are written against.
-// Groq is the provider for chat, speech synthesis and transcription (it has no image model). An offline MockProvider is included for tests and development.
-// An offline MockProvider is included for offline tests and development.
-import { extractJson } from './json';
+// The provider surface the AI commands are written against. There is exactly ONE network integration layer: the
+// Vercel AI SDK (generateText / generateImage / transcribe) with per-vendor drivers — OpenAI, Anthropic, Google,
+// Groq, and any OpenAI-compatible gateway (FreeLLMAPI, NVIDIA NIM, LiteLLM, OpenRouter, vLLM) all ride the same
+// code path, so retries, timeouts and message shaping are the SDK's problem, not ours. What survives here is
+// policy, not plumbing: the FreeLLMAPI task-aware model routing probed live against that gateway. Speech is Edge
+// TTS (attachEdgeAudio); an offline MockProvider covers tests and development with no key and no network.
 import { attachEdgeAudio } from './edge-tts';
-import { generateText, type ModelMessage } from 'ai';
+import { generateImage, generateText, experimental_transcribe, type ModelMessage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -46,11 +48,9 @@ export type ProviderConfig = {
   model?: string;
   baseUrl?: string;
   apiKey?: string;
-  /** The model used for images, speech and transcription; chat uses `model`. */
+  /** The model used for images and transcription; chat uses `model`. */
   imageModel?: string;
-  speechModel?: string;
   transcriptionModel?: string;
-  engine?: 'native' | 'vercel';
 };
 
 export const providerCapabilities = (provider: AiProvider) => ({
@@ -141,39 +141,6 @@ export function pcmToWav(pcmData: Uint8Array, sampleRate = 24000, numChannels = 
   return out;
 }
 
-export function splitSpeech(text: string, limit = 200): string[] {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (!clean) return [];
-  if (clean.length <= limit) return [clean];
-  const sentences = clean.split(/(?<=[.!?…])\s+/).filter(Boolean);
-  const chunks: string[] = [];
-  let current = '';
-  const flush = () => { if (current.trim()) chunks.push(current.trim()); current = ''; };
-  const add = (piece: string) => {
-    if (!current) { current = piece; return; }
-    if (current.length + 1 + piece.length <= limit) current += ' ' + piece;
-    else { flush(); current = piece; }
-  };
-  for (const sentence of sentences) {
-    if (sentence.length <= limit) { add(sentence); continue; }
-    flush();
-    let rest = sentence;
-    while (rest.length > limit) {
-      const window = rest.slice(0, limit);
-      let cut = Math.max(window.lastIndexOf(', '), window.lastIndexOf('; '));
-      if (cut >= limit * 0.4) cut += 1;
-      else cut = window.lastIndexOf(' ');
-      if (cut <= 0) cut = limit;
-      const piece = rest.slice(0, cut).trim();
-      if (piece) chunks.push(piece);
-      rest = rest.slice(cut).trim();
-    }
-    if (rest) add(rest);
-  }
-  flush();
-  return chunks;
-}
-
 function wavPart(data: Uint8Array): { fmt: Uint8Array; audio: Uint8Array } {
   const tag = (at: number) => String.fromCharCode(data[at] ?? 0, data[at + 1] ?? 0, data[at + 2] ?? 0, data[at + 3] ?? 0);
   if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('Speech audio was not a WAV file');
@@ -215,186 +182,6 @@ export function concatWav(parts: Uint8Array[]): Uint8Array {
   return out;
 }
 
-// Groq counts the input plus the requested completion length against the per-minute token limit (8000 on the free tier), so the
-// completion is capped at what is left after the messages, within 1500..4096 tokens (about 3 characters of JSON per token).
-const completionBudget = (messages: ChatMessage[]) => Math.max(1500, Math.min(4096, 7600 - Math.ceil(JSON.stringify(messages).length / 3)));
-
-export class GroqProvider implements AiProvider {
-  id = 'groq';
-  model: string;
-  baseUrl: string;
-  apiKey: string;
-  speechModel: string;
-  transcriptionModel: string;
-
-  constructor(config: ProviderConfig = {}) {
-    this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.GROQ_API_KEY ?? '';
-    if (!this.apiKey) throw new Error('The groq provider needs an API key: set GROQ_API_KEY (or OVE_AI_API_KEY)');
-    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'openai/gpt-oss-120b';
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1');
-    this.speechModel = config.speechModel ?? process.env.OVE_AI_SPEECH_MODEL ?? 'canopylabs/orpheus-v1-english';
-    this.transcriptionModel = config.transcriptionModel ?? process.env.OVE_AI_TRANSCRIPTION_MODEL ?? 'whisper-large-v3-turbo';
-  }
-
-  private headers() { return { authorization: `Bearer ${this.apiKey}` }; }
-
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const body = (json: boolean) => JSON.stringify({
-      model: this.model,
-      messages,
-      temperature: options.temperature ?? 0.4,
-      max_completion_tokens: options.maxTokens ?? completionBudget(messages),
-      ...(json ? { response_format: { type: 'json_object' } } : {}),
-    });
-
-    let response: Response;
-    try {
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(!!options.json),
-      }, 'Groq chat');
-    } catch (error) {
-      if (!options.json || !/json_validate_failed/.test(String(error))) throw error;
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(false),
-      }, 'Groq chat');
-    }
-    const data: any = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== 'string' || !text.trim()) throw new Error('Groq chat returned no text');
-    return text;
-  }
-
-  async speak(text: string, options: SpeakOptions = {}): Promise<AudioResult> {
-    const chunks = splitSpeech(text, 200);
-    if (!chunks.length) throw new Error('There is no text to speak');
-    const voice = options.voice ?? process.env.OVE_AI_VOICE ?? (this.speechModel.includes('arabic') ? 'lulwa' : 'hannah');
-    const parts: Uint8Array[] = [];
-    for (const input of chunks) {
-      const response = await request(`${this.baseUrl}/audio/speech`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: JSON.stringify({ model: this.speechModel, input, voice, response_format: 'wav' }),
-      }, 'Groq speech');
-      parts.push(new Uint8Array(await response.arrayBuffer()));
-    }
-    return { data: concatWav(parts), extension: 'wav' };
-  }
-
-  async transcribe(audio: Uint8Array, filename: string, options: { language?: string; signal?: AbortSignal } = {}): Promise<Transcript> {
-    const form = new FormData();
-    const bytes = audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength) as ArrayBuffer;
-    form.append('file', new Blob([bytes], { type: 'application/octet-stream' }), filename);
-    form.append('model', this.transcriptionModel);
-    form.append('response_format', 'verbose_json');
-    form.append('timestamp_granularities[]', 'word');
-    form.append('timestamp_granularities[]', 'segment');
-    if (options.language) form.append('language', options.language);
-    const response = await request(`${this.baseUrl}/audio/transcriptions`, {
-      method: 'POST',
-      signal: timeoutSignal(options.signal),
-      headers: this.headers(),
-      body: form,
-    }, 'Groq transcription');
-    return transcriptFrom(await response.json());
-  }
-}
-
-export class AnthropicProvider implements AiProvider {
-  id = 'anthropic';
-  model: string;
-  baseUrl: string;
-  apiKey: string;
-
-  constructor(config: ProviderConfig = {}) {
-    this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? '';
-    if (!this.apiKey) throw new Error('The anthropic provider needs an API key: set ANTHROPIC_API_KEY (or OVE_AI_API_KEY)');
-    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'claude-sonnet-4-5';
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com');
-  }
-
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const system = messages.filter(message => message.role === 'system').map(message => message.content).join('\n\n');
-    const turns = messages.filter(message => message.role !== 'system');
-    const body = JSON.stringify({
-      model: this.model,
-      max_tokens: options.maxTokens ?? 16_384,
-      temperature: options.temperature ?? 0.4,
-      ...(system ? { system } : {}),
-      messages: turns.length ? turns : [{ role: 'user', content: 'Reply with the JSON now.' }],
-    });
-    const response = await request(`${this.baseUrl}/v1/messages`, {
-      method: 'POST',
-      signal: timeoutSignal(options.signal),
-      headers: jsonHeaders({ 'x-api-key': this.apiKey, 'anthropic-version': '2023-06-01' }),
-      body,
-    }, 'Anthropic chat');
-    const data: any = await response.json();
-    const text = Array.isArray(data?.content) ? data.content.filter((block: any) => block?.type === 'text').map((block: any) => block.text).join('\n') : data?.content?.[0]?.text;
-    if (typeof text !== 'string' || !text.trim()) throw new Error('Anthropic chat returned no text');
-    return text;
-  }
-}
-
-export class NvidiaProvider implements AiProvider {
-  id = 'nvidia';
-  model: string;
-  baseUrl: string;
-  apiKey: string;
-
-  constructor(config: ProviderConfig = {}) {
-    this.apiKey = config.apiKey ?? process.env.OVE_AI_API_KEY ?? process.env.NVIDIA_API_KEY ?? '';
-    if (!this.apiKey) throw new Error('The nvidia provider needs an API key: set NVIDIA_API_KEY (or OVE_AI_API_KEY)');
-    this.model = config.model ?? process.env.OVE_AI_MODEL ?? 'nvidia/nemotron-3.5-bolt-e4b';
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1');
-  }
-
-  private headers() { return { authorization: `Bearer ${this.apiKey}` }; }
-
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const body = (json: boolean) => JSON.stringify({
-      model: this.model,
-      messages,
-      temperature: options.temperature ?? 0.4,
-      max_tokens: options.maxTokens ?? 4096,
-      ...(json ? { response_format: { type: 'json_object' } } : {}),
-    });
-
-    let response: Response;
-    try {
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(!!options.json),
-      }, 'NVIDIA chat');
-    } catch (error) {
-      if (!options.json) throw error;
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(false),
-      }, 'NVIDIA chat');
-    }
-    const data: any = await response.json();
-    const message = data?.choices?.[0]?.message;
-    const text = (typeof message?.content === 'string' && message.content.trim())
-      ? message.content
-      : (typeof message?.reasoning_content === 'string' && message.reasoning_content.trim())
-        ? message.reasoning_content
-        : '';
-    if (!text) throw new Error('NVIDIA chat returned no text');
-    return text;
-  }
-}
-
 export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
   // Preference orders are live-probed against the FreeLLMAPI gateway: qwen3.8-27b delivers the lowest
   // latency (161ms TTFT, 185 tok/s, 199ms JSON task) and highest stability. gpt-oss-120b (stalls 40+ s, 502/429 errors),
@@ -410,6 +197,11 @@ export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
 };
 
 let cachedFreeLlmModels: { models: Set<string>; expiresAt: number } | undefined;
+
+/** Drops the cached gateway model list (tests, and long-lived processes after the gateway's catalogue changes). */
+export function clearFreeLlmModelCache(): void {
+  cachedFreeLlmModels = undefined;
+}
 
 export async function getAvailableFreeLlmModels(baseUrl: string, headers: Record<string, string>, signal?: AbortSignal): Promise<Set<string>> {
   const now = Date.now();
@@ -458,198 +250,58 @@ export function inferChatTask(messages: ChatMessage[], options?: ChatOptions): C
   return 'compose';
 }
 
-export class FreeLlmApiProvider implements AiProvider {
-  id = 'freellmapi';
-  model: string;
-  baseUrl: string;
-  apiKey: string;
+const extensionFromMediaType = (mediaType: string) => mediaType.split('/')[1]?.split(';')[0] ?? 'png';
 
-  constructor(config: ProviderConfig = {}) {
-    this.apiKey = config.apiKey ?? process.env.FREELLMAPI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.OVE_AI_API_KEY ?? 'freellmapi-aacb1a9828b7dee95f03f09185441437b5e5c6b73ac7c66a';
-    this.model = config.model ?? process.env.FREELLMAPI_MODEL ?? process.env.OVE_AI_MODEL ?? 'auto';
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL ?? 'https://ai.hamathopc.in/v1');
-  }
-
-  private headers(): Record<string, string> {
-    return this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {};
-  }
-
-  async resolveModel(task: ChatTask, explicitModel?: string, signal?: AbortSignal): Promise<string> {
-    if (explicitModel) return explicitModel;
-    if (this.model && this.model !== 'auto' && this.model !== 'smart') return this.model;
-
-    const available = await getAvailableFreeLlmModels(this.baseUrl, this.headers(), signal);
-    const preferences = TASK_MODEL_PREFERENCES[task] || ['auto'];
-    for (const candidate of preferences) {
-      if (candidate === 'auto' || available.has(candidate.toLowerCase())) {
-        return candidate;
-      }
-    }
-    return 'auto';
-  }
-
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const task = inferChatTask(messages, options);
-    const selectedModel = await this.resolveModel(task, options.model, options.signal);
-
-    const body = (modelToUse: string, json: boolean) => JSON.stringify({
-      model: modelToUse,
-      messages,
-      temperature: options.temperature ?? (task === 'heal' ? 0.2 : 0.4),
-      max_tokens: options.maxTokens ?? 4096,
-      ...(json ? { response_format: { type: 'json_object' } } : {}),
-    });
-
-    let response: Response;
-    try {
-      response = await request(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        signal: timeoutSignal(options.signal),
-        headers: jsonHeaders(this.headers()),
-        body: body(selectedModel, !!options.json),
-      }, `FreeLLMAPI chat (${selectedModel})`);
-    } catch (error) {
-      if (selectedModel !== 'auto' && !/timeout/i.test(String(error))) {
-        try {
-          response = await request(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            signal: timeoutSignal(options.signal),
-            headers: jsonHeaders(this.headers()),
-            body: body('auto', !!options.json),
-          }, 'FreeLLMAPI chat (auto fallback)');
-        } catch {
-          if (!options.json) throw error;
-          response = await request(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            signal: timeoutSignal(options.signal),
-            headers: jsonHeaders(this.headers()),
-            body: body('auto', false),
-          }, 'FreeLLMAPI chat (no-json fallback)');
-        }
-      } else {
-        if (!options.json) throw error;
-        response = await request(`${this.baseUrl}/chat/completions`, {
-          method: 'POST',
-          signal: timeoutSignal(options.signal),
-          headers: jsonHeaders(this.headers()),
-          body: body(selectedModel, false),
-        }, 'FreeLLMAPI chat (no-json)');
-      }
-    }
-    const data: any = await response.json();
-    const message = data?.choices?.[0]?.message;
-    const text = (typeof message?.content === 'string' && message.content.trim())
-      ? message.content
-      : (typeof message?.reasoning_content === 'string' && message.reasoning_content.trim())
-        ? message.reasoning_content
-        : '';
-    if (!text) throw new Error('FreeLLMAPI chat returned no text. Check active models and upstream keys in your FreeLLMAPI dashboard.');
-    return text;
-  }
-
-  async speak(text: string, options: SpeakOptions = {}): Promise<AudioResult> {
-    const response = await request(`${this.baseUrl}/audio/speech`, {
-      method: 'POST',
-      signal: timeoutSignal(options.signal),
-      headers: jsonHeaders(this.headers()),
-      body: JSON.stringify({
-        model: 'auto',
-        input: text,
-        voice: options.voice ?? 'alloy',
-      }),
-    }, 'FreeLLMAPI speech');
-    return { data: new Uint8Array(await response.arrayBuffer()), extension: 'mp3' };
-  }
-
-  async transcribe(audio: Uint8Array, filename: string, options: { language?: string; signal?: AbortSignal } = {}): Promise<Transcript> {
-    const form = new FormData();
-    form.append('file', new Blob([audio as any]), filename || 'audio.mp3');
-    form.append('model', 'auto');
-    form.append('response_format', 'verbose_json');
-    if (options.language) form.append('language', options.language);
-    const response = await request(`${this.baseUrl}/audio/transcriptions`, {
-      method: 'POST',
-      signal: timeoutSignal(options.signal),
-      headers: this.headers(),
-      body: form,
-    }, 'FreeLLMAPI transcription');
-    const data: any = await response.json();
-    return {
-      text: String(data?.text ?? ''),
-      words: Array.isArray(data?.words) ? data.words.map((w: any) => ({
-        text: String(w.word ?? w.text ?? ''),
-        start: Number(w.start) || 0,
-        end: Number(w.end) || 0,
-      })) : [],
-      cues: Array.isArray(data?.segments) ? data.segments.map((s: any) => ({
-        text: String(s.text ?? ''),
-        start: Number(s.start) || 0,
-        end: Number(s.end) || 0,
-      })) : [],
-    };
-  }
-
-  async image(prompt: string, options: ImageOptions = {}): Promise<ImageResult> {
-    const size = options.size ?? '1024x1024';
-    const response = await request(`${this.baseUrl}/images/generations`, {
-      method: 'POST',
-      signal: timeoutSignal(options.signal),
-      headers: jsonHeaders(this.headers()),
-      body: JSON.stringify({
-        model: 'auto',
-        prompt,
-        n: 1,
-        size,
-        response_format: 'b64_json',
-      }),
-    }, 'FreeLLMAPI image');
-    const data: any = await response.json();
-    const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) throw new Error('FreeLLMAPI did not return image data');
-    return { data: Buffer.from(b64, 'base64'), extension: 'png' };
-  }
-}
-
-const attachGroqAudio = (provider: AiProvider, config: ProviderConfig): AiProvider => {
-  if (provider.speak || provider.transcribe || !process.env.GROQ_API_KEY) return provider;
-  try {
-    const groq = new GroqProvider({ apiKey: process.env.GROQ_API_KEY, speechModel: config.speechModel, transcriptionModel: config.transcriptionModel, baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1' });
-    provider.speak = groq.speak.bind(groq);
-    provider.transcribe = groq.transcribe.bind(groq);
-  } catch { /* Groq audio is optional when composing with Claude or NVIDIA */ }
-  return provider;
-};
-
+/**
+ * The one network integration: every vendor rides the Vercel AI SDK. `driver` picks the SDK provider factory;
+ * anything OpenAI-compatible (FreeLLMAPI, NVIDIA NIM, LiteLLM, OpenRouter, a self-hosted vLLM) uses the openai
+ * driver pointed at its base URL. The FreeLLMAPI task-aware routing is policy layered on top: when the model is
+ * `auto`, each task picks its preferred model from the gateway's live model list, and any failure falls back to
+ * the gateway's own `auto` router.
+ */
 export class VercelAiProvider implements AiProvider {
   id: string;
   model: string;
   baseUrl: string;
   apiKey: string;
   driver: 'openai' | 'anthropic' | 'google' | 'groq';
+  imageModel: string;
+  transcriptionModel: string;
 
   constructor(config: ProviderConfig = {}) {
-    const rawId = (config.provider || process.env.OVE_AI_PROVIDER || 'openai').toLowerCase();
+    const rawId = (config.provider || process.env.OVE_AI_PROVIDER || 'freellmapi').toLowerCase();
     this.id = rawId;
-    this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? '');
 
     if (rawId === 'anthropic' || rawId === 'claude') {
       this.driver = 'anthropic';
       this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.ANTHROPIC_API_KEY || '';
       this.model = config.model || process.env.OVE_AI_MODEL || 'claude-3-7-sonnet-20250219';
-      if (!this.baseUrl) this.baseUrl = 'https://api.anthropic.com/v1';
+      this.baseUrl = trimSlash((config.baseUrl ?? process.env.OVE_AI_BASE_URL) || 'https://api.anthropic.com/v1');
     } else if (rawId === 'google' || rawId === 'gemini') {
       this.driver = 'google';
       this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
       this.model = config.model || process.env.OVE_AI_MODEL || 'gemini-2.0-flash';
+      this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? '');
     } else if (rawId === 'groq') {
       this.driver = 'groq';
       this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.GROQ_API_KEY || '';
-      this.model = config.model || process.env.OVE_AI_MODEL || 'llama-3.3-70b-versatile';
-      if (!this.baseUrl) this.baseUrl = 'https://api.groq.com/openai/v1';
+      this.model = config.model || process.env.OVE_AI_MODEL || 'openai/gpt-oss-120b';
+      this.baseUrl = trimSlash((config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.GROQ_BASE_URL) || 'https://api.groq.com/openai/v1');
+    } else if (rawId === 'nvidia' || rawId === 'nim') {
+      this.driver = 'openai';
+      this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.NVIDIA_API_KEY || '';
+      this.model = config.model || process.env.OVE_AI_MODEL || 'nvidia/nemotron-3.5-bolt-e4b';
+      this.baseUrl = trimSlash((config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.NVIDIA_BASE_URL) || 'https://integrate.api.nvidia.com/v1');
+    } else if (rawId === 'freellmapi') {
+      this.driver = 'openai';
+      this.apiKey = config.apiKey || process.env.FREELLMAPI_API_KEY || process.env.OPENAI_API_KEY || process.env.OVE_AI_API_KEY || 'freellmapi-aacb1a9828b7dee95f03f09185441437b5e5c6b73ac7c66a';
+      this.model = config.model || process.env.FREELLMAPI_MODEL || process.env.OVE_AI_MODEL || 'auto';
+      this.baseUrl = trimSlash((config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL) || 'https://ai.hamathopc.in/v1');
     } else {
       // openai, openrouter, litellm, vercel, custom, or any OpenAI-compatible gateway
       this.driver = 'openai';
       this.apiKey = config.apiKey || process.env.OVE_AI_API_KEY || process.env.OPENAI_API_KEY || '';
+      this.baseUrl = trimSlash(config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? '');
       if (rawId === 'openrouter') {
         this.apiKey = this.apiKey || process.env.OPENROUTER_API_KEY || '';
         this.baseUrl = this.baseUrl || 'https://openrouter.ai/api/v1';
@@ -662,44 +314,73 @@ export class VercelAiProvider implements AiProvider {
         if (!this.baseUrl) this.baseUrl = 'https://api.openai.com/v1';
       }
     }
+    this.imageModel = config.imageModel || process.env.OVE_AI_IMAGE_MODEL || (this.id === 'freellmapi' ? 'auto' : 'gpt-image-1');
+    this.transcriptionModel = config.transcriptionModel || process.env.OVE_AI_TRANSCRIPTION_MODEL
+      || (this.id === 'groq' ? 'whisper-large-v3-turbo' : this.id === 'freellmapi' ? 'auto' : 'whisper-1');
   }
 
-  private resolveModelInstance(explicitModel?: string) {
-    const targetModel = explicitModel || this.model;
+  private authHeaders(): Record<string, string> {
+    return this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {};
+  }
+
+  /** An OpenAI-compatible client against this provider's base URL — for transcription and image endpoints. */
+  private openaiCompatible() {
+    return createOpenAI({ apiKey: this.apiKey || 'dummy-key', baseURL: this.baseUrl });
+  }
+
+  private resolveModelInstance(model: string) {
     switch (this.driver) {
       case 'anthropic': {
-        const anthropic = createAnthropic({
-          apiKey: this.apiKey,
-          baseURL: this.baseUrl,
-        });
-        return anthropic(targetModel);
+        const anthropic = createAnthropic({ apiKey: this.apiKey, baseURL: this.baseUrl });
+        return anthropic(model);
       }
       case 'google': {
-        const google = createGoogleGenerativeAI({
-          apiKey: this.apiKey,
-          baseURL: this.baseUrl || undefined,
-        });
-        return google(targetModel);
+        const google = createGoogleGenerativeAI({ apiKey: this.apiKey, baseURL: this.baseUrl || undefined });
+        return google(model);
       }
       case 'groq': {
-        const groq = createGroq({
-          apiKey: this.apiKey,
-          baseURL: this.baseUrl,
-        });
-        return groq(targetModel);
+        const groq = createGroq({ apiKey: this.apiKey, baseURL: this.baseUrl });
+        return groq(model);
       }
       case 'openai':
       default: {
-        const openai = createOpenAI({
-          apiKey: this.apiKey || 'dummy-key',
-          baseURL: this.baseUrl,
-        });
-        return openai.chat(targetModel);
+        const openai = this.openaiCompatible();
+        return openai.chat(model);
       }
     }
   }
 
+  /**
+   * Picks the model for one call. An explicit model always wins; a configured model (anything but `auto`/`smart`)
+   * is next; on the FreeLLMAPI gateway the task's preferred models are checked against the live model list, and
+   * `auto` — the gateway's own router — is the floor.
+   */
+  async resolveModel(task: ChatTask, explicitModel?: string, signal?: AbortSignal): Promise<string> {
+    if (explicitModel) return explicitModel;
+    if (this.model && this.model !== 'auto' && this.model !== 'smart') return this.model;
+    const available = await getAvailableFreeLlmModels(this.baseUrl, this.authHeaders(), signal);
+    for (const candidate of TASK_MODEL_PREFERENCES[task] ?? ['auto']) {
+      if (candidate === 'auto' || available.has(candidate.toLowerCase())) return candidate;
+    }
+    return 'auto';
+  }
+
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    if (this.id === 'freellmapi') {
+      const task = inferChatTask(messages, options);
+      const selected = await this.resolveModel(task, options.model, options.signal);
+      try {
+        return await this.complete(selected, messages, options);
+      } catch (error) {
+        if (selected === 'auto') throw error;
+        // A specific model failing is not the video's problem: the gateway's own router is the safety net.
+        return await this.complete('auto', messages, options);
+      }
+    }
+    return this.complete(options.model ?? this.model, messages, options);
+  }
+
+  private async complete(model: string, messages: ChatMessage[], options: ChatOptions): Promise<string> {
     const system = messages.filter(m => m.role === 'system').map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n\n');
     const turns = messages.filter(m => m.role !== 'system');
 
@@ -731,19 +412,58 @@ export class VercelAiProvider implements AiProvider {
       coreMessages.push({ role: 'user', content: 'Generate the JSON now.' });
     }
 
-    const modelInstance = this.resolveModelInstance(options.model);
     const result = await generateText({
-      model: modelInstance,
+      model: this.resolveModelInstance(model),
       system: system || undefined,
       messages: coreMessages,
       temperature: options.temperature ?? 0.4,
-      maxOutputTokens: options.maxTokens,
+      maxOutputTokens: options.maxTokens ?? (this.driver === 'anthropic' ? 16_384 : 4096),
       abortSignal: timeoutSignal(options.signal),
+      maxRetries: 2,
     });
 
     const text = result.text.trim();
     if (!text) throw new Error(`${this.id} via Vercel AI SDK returned no text`);
     return text;
+  }
+
+  /** Image generation through the SDK's image model; OpenAI-compatible gateways only (Groq and NIM have none here). */
+  get image(): ((prompt: string, options?: ImageOptions) => Promise<ImageResult>) | undefined {
+    if (this.driver !== 'openai' || this.id === 'groq' || this.id === 'nvidia' || this.id === 'nim') return undefined;
+    return async (prompt: string, options: ImageOptions = {}) => {
+      const result = await generateImage({
+        model: this.openaiCompatible().image(this.imageModel as Parameters<ReturnType<typeof createOpenAI>['image']>[0]),
+        prompt,
+        size: (options.size ?? '1024x1024') as `${number}x${number}`,
+        abortSignal: timeoutSignal(options.signal),
+        maxRetries: 2,
+      });
+      return { data: result.image.uint8Array, extension: extensionFromMediaType(result.image.mediaType) };
+    };
+  }
+
+  /** Transcription through the SDK's transcription model on the OpenAI-compatible endpoint (Groq, gateways, OpenAI).
+   *  `responseFormat: 'verbose_json'` is forced via providerOptions because the SDK only requests it for models in
+   *  its own catalogue — gateway model ids like `auto` or `whisper-large-v3-turbo` would otherwise come back bare. */
+  async transcribe(audio: Uint8Array, _filename: string, options: { language?: string; signal?: AbortSignal } = {}): Promise<Transcript> {
+    if (this.driver === 'anthropic' || this.driver === 'google') return { text: '', words: [], cues: [] };
+    const result: any = await experimental_transcribe({
+      model: this.openaiCompatible().transcription(this.transcriptionModel as Parameters<ReturnType<typeof createOpenAI>['transcription']>[0]),
+      audio,
+      abortSignal: timeoutSignal(options.signal),
+      maxRetries: 2,
+      timestampGranularities: ['word', 'segment'],
+      providerOptions: {
+        openai: { responseFormat: 'verbose_json', ...(options.language ? { language: options.language } : {}) },
+      },
+    });
+    // The SDK renames the timings (startSecond/endSecond); transcriptFrom speaks the wire shape (start/end).
+    const seconds = (value: any, fallback: any) => Number(value ?? fallback);
+    return transcriptFrom({
+      text: result.text,
+      words: (result.words ?? []).map((word: any) => ({ text: String(word.text ?? word.word ?? ''), start: seconds(word.start, word.startSecond), end: seconds(word.end, word.endSecond) })),
+      segments: (result.segments ?? []).map((segment: any) => ({ text: String(segment.text ?? ''), start: seconds(segment.start, segment.startSecond), end: seconds(segment.end, segment.endSecond) })),
+    });
   }
 }
 
@@ -841,41 +561,16 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
       id = 'freellmapi';
     }
   }
-  const effectiveConfig = { ...config, provider: id };
-  switch (id) {
-    case 'mock': return new MockProvider();
-    case 'freellmapi': return attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
-    case 'groq':
-      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
-        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
-        : attachEdgeAudio(new GroqProvider(effectiveConfig));
-    case 'nvidia':
-    case 'nim': return attachEdgeAudio(new NvidiaProvider(effectiveConfig));
-    case 'anthropic':
-    case 'claude':
-      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
-        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
-        : attachEdgeAudio(new AnthropicProvider(effectiveConfig));
-    case 'google':
-    case 'gemini':
-    case 'openrouter':
-    case 'litellm':
-    case 'vercel':
-    case 'custom':
-      return attachEdgeAudio(new VercelAiProvider(effectiveConfig));
-    case 'openai':
-      return config.engine === 'vercel' || process.env.OVE_AI_SDK === 'vercel'
-        ? attachEdgeAudio(new VercelAiProvider(effectiveConfig))
-        : attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
-    default: return attachEdgeAudio(new FreeLlmApiProvider(effectiveConfig));
-  }
+  if (id === 'mock') return new MockProvider();
+  // Every network provider — groq, anthropic, nvidia, freellmapi, openai, google, openrouter, litellm, custom —
+  // is the same Vercel AI SDK integration; only the driver and defaults differ. Edge TTS supplies speech.
+  return attachEdgeAudio(new VercelAiProvider({ ...config, provider: id }));
 }
 
 export function describeProvider(provider: AiProvider): string {
   const capabilities = providerCapabilities(provider);
   const routerInfo = (provider.id === 'freellmapi' && (provider.model === 'auto' || provider.model === 'smart'))
-    ? ' [Autonomous Task-Aware Router: compose → llama-3.3-70b, fast → qwen3.8-27b, heal → nemotron-3-nano-30b-reasoning]'
+    ? ' [task-aware routing: each task picks its preferred model from TASK_MODEL_PREFERENCES, fallback auto]'
     : '';
-  const sdkInfo = provider instanceof VercelAiProvider ? ' [Vercel AI SDK]' : '';
-  return `${provider.id}${sdkInfo} (${provider.model}${routerInfo}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
+  return `${provider.id} [Vercel AI SDK] (${provider.model}${routerInfo}) at ${provider.baseUrl} — ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`;
 }

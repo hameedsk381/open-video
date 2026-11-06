@@ -97,11 +97,11 @@ describe('VercelAiProvider', () => {
     expect(fromCustomUrl.id).toBe('custom');
   });
 
-  it('createProvider routes openai and anthropic through Vercel AI SDK when engine is vercel', () => {
-    const openaiVercel = createProvider({ provider: 'openai', engine: 'vercel', apiKey: 'sk-openai' });
+  it('routes openai and anthropic through the Vercel AI SDK — the only integration layer now', () => {
+    const openaiVercel = createProvider({ provider: 'openai', apiKey: 'sk-openai' });
     expect(openaiVercel).toBeInstanceOf(VercelAiProvider);
 
-    const anthropicVercel = createProvider({ provider: 'anthropic', engine: 'vercel', apiKey: 'sk-ant' });
+    const anthropicVercel = createProvider({ provider: 'anthropic', apiKey: 'sk-ant' });
     expect(anthropicVercel).toBeInstanceOf(VercelAiProvider);
   });
 

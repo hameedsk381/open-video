@@ -13,15 +13,27 @@ brief ──► model ──► composition.json ──► schema validation ─
 
 ## Setup
 
-Set a Groq API key. Nothing is stored on disk by OVE.
+Pick a provider and set its key. Nothing is stored on disk by OVE. Every network provider is the same integration —
+the Vercel AI SDK (`generateText`, `generateImage`, `transcribe`) with a per-vendor driver — so retries, timeouts and
+message shaping behave identically everywhere; only defaults differ.
 
 ```sh
-# Groq: chat, speech synthesis and transcription with one key
-export GROQ_API_KEY=gsk_...
-export OVE_AI_MODEL=openai/gpt-oss-120b                  # optional; default
-export OVE_AI_SPEECH_MODEL=canopylabs/orpheus-v1-english # optional; default (a Groq preview model)
-export OVE_AI_TRANSCRIPTION_MODEL=whisper-large-v3-turbo # optional; default
-export OVE_AI_VOICE=hannah                               # optional; hannah, austin, troy
+# The default: an OpenAI-compatible gateway with task-aware model routing
+export FREELLMAPI_API_KEY=...            # or OPENAI_API_KEY / OVE_AI_API_KEY
+export OVE_AI_MODEL=auto                 # auto routes each task to its preferred gateway model
+
+# Or a first-party vendor key
+export ANTHROPIC_API_KEY=sk-ant-...      # --provider anthropic (or claude)
+export GROQ_API_KEY=gsk_...              # --provider groq
+export NVIDIA_API_KEY=nvapi-...          # --provider nvidia (or nim)
+export OPENAI_API_KEY=sk-...             # --provider openai
+export GEMINI_API_KEY=...                # --provider google (or gemini)
+
+# Shared knobs
+export OVE_AI_BASE_URL=...               # any OpenAI-compatible endpoint (also --provider custom)
+export OVE_AI_TRANSCRIPTION_MODEL=whisper-1   # transcription; per-provider default
+export OVE_AI_IMAGE_MODEL=gpt-image-1         # image generation; `auto` on gateways
+export OVE_AI_VOICE=hannah               # Edge TTS voice for narration
 
 # No key, no network: a deterministic stand-in for trying the pipeline
 ove ai compose demo --provider mock --brief "a test"
@@ -29,15 +41,20 @@ ove ai compose demo --provider mock --brief "a test"
 
 | Provider | chat | images | speech | word timings |
 |---|---|---|---|---|
-| `groq` | yes (`openai/gpt-oss-120b`) | — | yes (`canopylabs/orpheus-v1-english`) | yes (`whisper-large-v3-turbo`) |
+| `freellmapi` (default) | yes (`auto` routes per task) | yes | yes (Edge TTS) | yes |
+| `openai` | yes | yes | yes (Edge TTS) | yes (`whisper-1`) |
+| `groq` | yes (`openai/gpt-oss-120b`) | — | yes (Edge TTS) | yes (`whisper-large-v3-turbo`) |
+| `anthropic` / `claude` | yes | — | yes (Edge TTS) | — |
+| `nvidia` / `nim` | yes | — | yes (Edge TTS) | — |
+| `google` / `gemini` | yes | — | yes (Edge TTS) | — |
+| `openrouter`, `litellm`, `custom` | yes | yes | yes (Edge TTS) | gateway-dependent |
 | `mock` | yes | yes | — | — |
 
-Groq covers composition generation and repair, speech synthesis and word-timed transcription. It offers no image model, so
-`ove ai image` works only with `--provider mock`; compositions use your own pictures or drawn layers. Groq and `mock` are the only providers.
-
-Other environment variables: `OVE_AI_PROVIDER`, `GROQ_API_KEY`, `OVE_AI_API_KEY`, `GROQ_BASE_URL`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
-`OVE_AI_SPEECH_MODEL`, `OVE_AI_TRANSCRIPTION_MODEL`, and `OVE_AI_VOICE`. `ove ai doctor` prints what is configured and what it can do.
-`OVE_AI_SPEECH_MODEL`, `OVE_AI_TRANSCRIPTION_MODEL`, and `OVE_AI_VOICE`. `ove ai doctor` prints what is configured and what it can do.
+Speech synthesis is Edge TTS for every provider (free, word-boundary timed; `OVE_AI_TTS_PROVIDER=groq` opts out).
+Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
+`OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, `OVE_AI_VOICE`, plus the per-vendor keys above and
+`FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
+`ove ai doctor` prints what is configured and what it can do.
 
 ## Templates first, full composition when needed
 
@@ -186,7 +203,7 @@ hand-written composition.
 ove ai narrate --brief "Explain why deterministic video rendering matters" --duration 25 \
   --composition video/composition.json
 
-# Use a script you already wrote; Groq voices include hannah (default), austin and troy
+# Use a script you already wrote; voices include hannah (default), austin and troy
 ove ai narrate script.txt --composition video/composition.json --voice hannah --language en
 ```
 

@@ -2,6 +2,11 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## Unreleased
+
+### Changed
+- **The Vercel AI SDK is now the only network integration layer.** The hand-rolled HTTP clients for Groq, Anthropic, NVIDIA and FreeLLMAPI are gone: every provider — `groq`, `anthropic`/`claude`, `nvidia`/`nim`, `freellmapi` (the default), `openai`, `google`/`gemini`, `openrouter`, `litellm`, `custom` and any OpenAI-compatible base URL — is the same `VercelAiProvider` riding `generateText`, `generateImage` and `transcribe` from the `ai` package, with per-vendor drivers and defaults. Retries (429/5xx ×2 with backoff), timeouts and message shaping are now the SDK's consistent behavior everywhere. What survives in `providers.ts` is policy, not plumbing: the FreeLLMAPI task-aware model routing (`TASK_MODEL_PREFERENCES`, live model-list discovery, the `auto` fallback) still picks each task's preferred model, and transcription forces `response_format: 'verbose_json'` through provider options so gateway model ids like `auto` still return word timestamps. The unstable gateway JSON mode is no longer requested at all — the tolerant `extractJson` parser was already doing that work. Speech stays Edge TTS for every provider (it was already the default engine), the mock provider and the offline pipeline are untouched, and `OVE_AI_SPEECH_MODEL` (a Groq-only concept) is retired along with the `engine: 'vercel'` opt-in — there is no other engine left.
+
 ## 0.3.12 (2026-11-06)
 
 ### Fixed
