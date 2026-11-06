@@ -1,7 +1,7 @@
 // Hosted use. `ove serve` is the API behind a login, `ove job-worker` runs the jobs it queues. Both read their settings from the environment
 // (containers pass settings that way) and print what they are doing. The same published package serves both; only the command differs.
 import { resolve } from 'node:path';
-import { createProvider, type AiProvider } from '@ove/ai';
+import { createProvider, FREELLMAPI_DEFAULT_BASE_URL, type AiProvider } from '@ove/ai';
 import { createAccounts, createApp, createQuotas, consoleMailer, PgUserStore, type Limits } from '@ove/api';
 import { RedisQueue, createJobRunner, redisConnection, type JobClass } from '@ove/jobs';
 import { FsProjectStore } from '@ove/storage';
@@ -31,7 +31,7 @@ export async function runServe(env: NodeJS.ProcessEnv = process.env): Promise<vo
   const app = createApp({
     mode: 'hosted', store, queue, validate: runner.validate, auth, quotas, library: studioLibrary, player: studioPlayer, app: studioApp,
     makeThumbnail: async () => { throw new Error('Thumbnails are drawn by the render workers'); },
-    providerState: () => ({ provider: { id: 'freellmapi', model: env.FREELLMAPI_MODEL ?? env.AI_MODEL ?? 'auto', baseUrl: env.FREELLMAPI_BASE_URL ?? 'https://ai.hamathopc.in/v1', capabilities: { chat: true, speech: true, transcription: true, image: true } }, error: null }),
+    providerState: () => ({ provider: { id: 'freellmapi', model: env.FREELLMAPI_MODEL ?? env.AI_MODEL ?? 'auto', baseUrl: env.FREELLMAPI_BASE_URL ?? FREELLMAPI_DEFAULT_BASE_URL, capabilities: { chat: true, speech: true, transcription: true, image: true } }, error: null }),
     // 127.0.0.1 and localhost are listed so a container health check can ask; they cannot be reached by a web page on another site.
     allowHosts: [publicHost, '127.0.0.1', 'localhost'], publicOrigin,
   });

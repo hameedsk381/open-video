@@ -173,8 +173,10 @@ normal project, so everything downstream is unchanged and deterministic.
 Code layers and React layers (`react`: a bundle written by `ove build video.tsx` that mounts the component live in the page for a frame, canvases captured as pictures, then drawn through the html path (or, with `config.live = false`, whose render function returns static markup)) are the only places a composition can run JavaScript. The renderer refuses them unless `allowCode` is set, blocks network requests from the render page when they are present, and reads their `src` files itself; the AI layer's asset check rejects them in anything a model wrote or a user pasted, so neither the Studio nor a worker ever renders one. The builder (`packages/builder`) is pure TypeScript that produces composition JSON and never touches rendering.
 
 Providers are thin `fetch` adapters behind one interface: `chat` is required; `image`, `speak` and `transcribe` are
-optional and reported by `ove ai doctor`. Groq is the main provider, handling chat (`openai/gpt-oss-120b`),
-speech synthesis (`canopylabs/orpheus-v1-english`) and word-timed transcription (`whisper-large-v3-turbo`) under
+optional and reported by `ove ai doctor`. Speech is an engine choice rather than a provider fact: the free Edge TTS
+engine is attached by default, and `OVE_AI_TTS_PROVIDER=native` (or `--speech-engine native`) keeps the provider's own
+`/audio/speech` endpoint instead (`gpt-4o-mini-tts`, or `canopylabs/orpheus-v1-english` on Groq). Groq also covers chat
+(`openai/gpt-oss-120b`) and word-timed transcription (`whisper-large-v3-turbo`) under
 one API key, with no image model; `mock` is a deterministic offline stand-in.
 `narrate` speaks a script, transcribes it for timings, writes `{ words }` (or `{ cues }`) as a captions asset, and
 appends one full-length scene holding the audio and a captions layer, extending `durationFrames` to fit. Because

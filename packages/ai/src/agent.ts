@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { safeZoneBands } from '@ove/core';
 import type { AiProvider, ChatMessage } from './providers';
 import { distillBrandPack, scrapeWebsiteBrand } from './brand-scraper';
 
@@ -75,7 +76,11 @@ function brandPromptSection(brand: BrandPack): string {
 }
 
 const agentSystemPrompt = (format: VideoFormat, width: number, height: number, durationFrames: number, fps: number, reelSafeZone?: boolean, brand?: BrandPack) => {
-  const reelNote = reelSafeZone ? `\n## Safe Zone Rules (REQUIRED for Vertical Reel)\nThis is a 9:16 vertical reel. You MUST respect these safe zones at all times:\n- Top safe zone: keep all content below the top 8% of the frame\n- Bottom safe zone: keep all content above the bottom 18% of the frame (platform UI overlays)\n- Right safe zone: keep all content left of the right 11% of the frame (action buttons)\nYou MUST use BentoGrid, KineticText, GlassCard, and AmbientGlow in this composition.\n` : '';
+  // The same insets the design review measures against, rather than percentages retyped here.
+  const reelBands = reelSafeZone ? safeZoneBands(width, height) : [];
+  const reelNote = reelBands.length
+    ? `\n## Safe Zone Rules (REQUIRED for Vertical Reel)\nYou MUST respect these areas the platform's own UI covers:\n${reelBands.map(band => `- ${band.name}: ${band.hint}`).join('\n')}\nYou MUST use BentoGrid, KineticText, GlassCard, and AmbientGlow in this composition.\n`
+    : '';
   const brandNote = brand ? brandPromptSection(brand) : '';
 
   return `You are the lead Motion Graphics Director and React Animation Engineer for MotionRender.

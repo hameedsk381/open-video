@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { safeZoneBands } from '../../packages/core/src/review';
+import { systemPrompt, userPrompt } from '@ove/ai';
 
 describe('safeZoneBands', () => {
   it('gives a 9:16 canvas bottom, right, top and left UI bands in that order', () => {
@@ -29,5 +30,24 @@ describe('safeZoneBands', () => {
     expect(safeZoneBands(1080, 1920, { bottom: 0 })).toHaveLength(3);
     expect(safeZoneBands(1080, 1920, { bottom: 0.5 })[0]!.y0).toBe(960);
     expect(safeZoneBands(1080, 1920, { top: 0, bottom: 0, left: 0, right: 0 })).toEqual([]);
+  });
+});
+
+// The bands used to be retyped as percentages in three prompts, so the model was asked to obey numbers the renderer
+// never checked (and a landscape canvas got rules that do not exist). One table now feeds both sides.
+describe('the prompts state the bands the review enforces', () => {
+  it('lists the pixel areas for a vertical canvas', () => {
+    const reel = userPrompt('a launch reel', { width: 1080, height: 1920, fps: 30, durationSeconds: 10 });
+    expect(reel).toContain('keep text above y 1574');
+    expect(reel).toContain('keep text left of x 961');
+  });
+
+  it('invents no platform UI rules for a landscape canvas', () => {
+    expect(userPrompt('a promo', { width: 1920, height: 1080, fps: 30, durationSeconds: 10 })).not.toContain('platform UI areas');
+  });
+
+  it('keeps the percentages out of the static cheat sheet', () => {
+    expect(systemPrompt()).not.toContain('bottom 18%');
+    expect(systemPrompt()).toContain('listed for this canvas in the task message');
   });
 });

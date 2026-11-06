@@ -103,6 +103,8 @@ services:
       WORKER_CONCURRENCY: "${AI_CONCURRENCY:-1}"
       GROQ_API_KEY: "${GROQ_API_KEY:-}"
       FREELLMAPI_KEY: "${FREELLMAPI_KEY:-}"
+      FREELLMAPI_API_KEY: "${FREELLMAPI_API_KEY:-}"
+      OVE_AI_TTS_PROVIDER: "${OVE_AI_TTS_PROVIDER:-}"
       WEBHOOK_URL: "${WEBHOOK_URL:-}"
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     networks: [internal, edge]     # calls the AI provider

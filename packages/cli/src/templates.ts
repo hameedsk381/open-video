@@ -2,11 +2,11 @@
 // assets) and a template.json describing how to show it. `ove init --template` copies one; `ove ai studio` previews it,
 // fills its variables and writes a project. Template ids are folder names, so they never contain a path separator.
 import { cp, readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadComposition, variablesSchema } from '@ove/schema';
 import { listBlocks, listThemes } from './blocks';
-import { buildRegistry, composeFromTemplate, composeVideo, narrate, narrateScenes, planBuild, retimeComposition, type BuildPlan, type NarrateOptions, type NarrateResult, type AiProvider, type ComposeOptions, type ComposeResult, type Registry, type TemplateChoice } from '@ove/ai';
+import { buildRegistry, composeSmart as routeComposition, type AiProvider, type ComposeOptions, type Registry, type SmartMode, type SmartResult, type TemplateChoice, type TemplateSource } from '@ove/ai';
 
 export const templatesDir = fileURLToPath(new URL('../templates', import.meta.url));
 
@@ -120,81 +120,35 @@ export async function cliRegistry(): Promise<Registry> {
 }
 
 /**
- * Compose by filling a ready-made template — the primary path, chosen whenever a template's kind and aspect fit the
- * brief — and write the whole composition only when that cannot work: `full` was asked for, assets or batch fields
- * were supplied (templates use neither), no template has the wanted shape, or the model finds none that suits the
- * brief. Before either path, the planner (plan.ts) decides the route and, for a JSON video, supplies the beats the
- * composition must follow. Planning failure or `--no-plan` keeps the same template-first routing.
+ * Everything the router in @ove/ai needs that only the CLI knows: the template folders shipped with this package, the
+ * themes next to them, the capability list built from both, and the copy that moves a template's own pictures and
+ * sounds next to the project being written.
  */
-export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; registry?: Registry; theme?: string; template?: string } = {}): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }> {
-  // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.
-  const needsFull = mode.full || !!options.fields?.length || (options.assets ?? []).some(asset => asset.type !== 'image');
-  let plan: BuildPlan | undefined;
-  if (!mode.noPlan && !mode.full && !mode.template) {
-    const registry = mode.registry ?? await cliRegistry();
-    try { plan = await planBuild(provider, { ...options, registry, maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
-    catch (error) { options.onProgress?.(`Planning skipped (${(error as Error).message.split('\n')[0]}); using the built-in routing.`); }
-  }
-  // A refusal to plan keeps the safest pre-planner behaviour: try the template catalogue first, else write from scratch.
-  const templatePath = (plan ? plan.path === 'template' : !needsFull) || Boolean(mode.template);
-  if (templatePath && !needsFull) {
-    try {
-      const choices = await templateChoices();
-      const targetTemplateId = mode.template ?? plan?.template;
-      const picked = targetTemplateId ? choices.filter(choice => choice.id === targetTemplateId) : choices;
-      const targetThemeId = mode.theme ?? plan?.theme;
-      const allThemes = await listThemes();
-      const themes = targetThemeId ? allThemes.filter(theme => theme.id === targetThemeId) : allThemes;
-      const filled = await composeFromTemplate(provider, picked.length ? picked : choices, { ...options, themes: themes.length ? themes : allThemes });
-      if (filled) {
-        // A template keeps its own length unless the brief asked for another: stretch or trim the resolved
-        // composition to fit. The saved source stays the untouched template only when no retiming happened —
-        // retimed timing is bespoke, so the plain composition is saved instead (it stays fully editable).
-        const wanted = options.durationSeconds;
-        const current = filled.composition.durationFrames / filled.composition.fps;
-        let composition = filled.composition, source: Record<string, unknown> | undefined = filled.source;
-        const warnings = [...filled.warnings];
-        if (wanted && Math.abs(wanted - current) > 0.25) {
-          composition = retimeComposition(filled.composition, wanted);
-          source = undefined;
-          warnings.push(`Retimed the ${filled.template} template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s; saved as a plain composition (the timing is now bespoke).`);
-          options.onProgress?.(`Retiming the template from ${current.toFixed(1)} s to ${wanted.toFixed(1)} s.`);
+export const cliTemplateSource: TemplateSource = {
+  templates: () => templateChoices(),
+  themes: () => listThemes(),
+  registry: cliRegistry,
+  copyAssets: async (templateId, destDir) => {
+    const safe = assertTemplateId(templateId);
+    const candidates = [join(templatesDir, safe), resolve(process.cwd(), 'templates', safe)];
+    let lastError: NodeJS.ErrnoException | undefined;
+    for (const dir of candidates) {
+      try {
+        const entries = await readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name === 'template.json' || entry.name === 'composition.json' || entry.name === 'composition.schema.json') continue;
+          await cp(join(dir, entry.name), join(destDir, entry.name), { recursive: true, force: true });
         }
-        if (options.baseDir && filled.template) {
-          try {
-            const templateDir = join(templatesDir, filled.template);
-            const entries = await readdir(templateDir, { withFileTypes: true });
-            for (const entry of entries) {
-              if (entry.name !== 'template.json' && entry.name !== 'composition.json' && entry.name !== 'composition.schema.json') {
-                await cp(join(templateDir, entry.name), join(options.baseDir, entry.name), { recursive: true, force: true });
-              }
-            }
-          } catch {}
-        }
-        return { composition, source, attempts: filled.attempts + (plan ? 1 : 0), issues: [], warnings, template: filled.template };
+        return;
+      } catch (error) {
+        lastError = error as NodeJS.ErrnoException;
       }
-      options.onProgress?.('No template suits this brief; writing a full composition.');
-    } catch (error) {
-      options.onProgress?.(`Template mode failed (${(error as Error).message.split('\n')[0]}); writing a full composition.`);
     }
-  }
-  // The planner's beats become the motion plan the composition must follow, so planning is never wasted.
-  const motionPlan = plan && plan.path !== 'template' ? { idea: plan.idea, beats: plan.beats } : undefined;
-  return composeVideo(provider, { ...options, plan: options.plan || motionPlan !== undefined, motionPlan });
-}
+    throw lastError ?? new Error(`there is no template folder to copy "${safe}" from`);
+  },
+};
 
-/**
- * Narrate a composed video. A template video is cut to the voiceover (one spoken line per scene, scenes as long as their line);
- * a free-form composition gets one script over the whole video, as before.
- */
-export async function narrateSmart(provider: AiProvider, composed: { template?: string }, options: NarrateOptions & { brief: string; composition: NonNullable<NarrateOptions['composition']> }): Promise<NarrateResult> {
-  if (composed.template) {
-    try {
-      const voiced = await narrateScenes(provider, options.composition, { brief: options.brief, outDir: options.outDir, compositionPath: options.compositionPath, voice: options.voice, language: options.language, signal: options.signal, onProgress: options.onProgress });
-      return { audio: voiced.audio, captions: voiced.captions, durationSeconds: voiced.durationSeconds, words: voiced.words, composition: voiced.composition, text: voiced.text };
-    } catch (error) {
-      options.onProgress?.(`Scene-by-scene voiceover failed (${(error as Error).message.split('\n')[0]}); narrating one script over the video.`);
-    }
-  }
-  return narrate(provider, options);
+/** Compose with this CLI's own templates and themes; the routing itself lives in @ove/ai so every host shares it. */
+export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode = {}): Promise<SmartResult> {
+  return routeComposition(provider, options, cliTemplateSource, mode);
 }

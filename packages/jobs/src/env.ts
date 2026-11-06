@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, resolve } from 'node:path';
-import { ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type ComposeResult, type NarrateOptions, type NarrateResult, type RevisionMeta } from '@ove/ai';
+import { ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type NarrateOptions, type NarrateResult, type RevisionMeta, type SmartMode, type SmartResult } from '@ove/ai';
 import { attachCaptions, loadComposition, type Composition } from '@ove/core';
 import type { FsProjectStore, Principal, StoredAsset } from '@ove/storage';
 import { folderName, optionalText, textOf } from './input';
@@ -27,7 +27,8 @@ export interface JobPaths {
 
 /** Work the job code does not own: picking a template and drawing a thumbnail depend on files that ship with the command line. */
 export type JobCapabilities = {
-  composeSmart(provider: AiProvider, options: ComposeOptions, mode: { full?: boolean; noPlan?: boolean; theme?: string; template?: string }): Promise<ComposeResult & { template?: string; source?: Record<string, unknown> }>;
+  /** The host's router over the shared template catalogue (@ove/ai's composeSmart); it also copies a template's own files. */
+  composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode): Promise<SmartResult>;
   narrateSmart(provider: AiProvider, composed: { template?: string }, options: NarrateOptions & { brief: string; composition: NonNullable<NarrateOptions['composition']> }): Promise<NarrateResult>;
   makeThumbnail(raw: any, values: Record<string, unknown>, baseDir: string, options: { frame?: number; title?: string; width?: number }): Promise<{ png: Buffer; frame: number; width: number; height: number }>;
 };

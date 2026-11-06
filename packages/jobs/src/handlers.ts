@@ -1,6 +1,6 @@
 // The studio's jobs. Each handler checks its request straight away (so a bad request is refused before it is queued) and gives back the
 // work to run. They know nothing about HTTP: the files they touch come through JobPaths, the AI through the provider, and the rest is injected.
-import { cp, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
@@ -83,7 +83,7 @@ export function createHandlers(env: JobEnv) {
       const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
 
       const options: ComposeOptions = {
-        ...canvas, brief: effectiveBrief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), narration: boolOf(input.narration),
+        ...canvas, brief: effectiveBrief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), strict: boolOf(input.strict), narration: boolOf(input.narration),
         includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(cleanProgressMessage(message)),
       };
@@ -124,29 +124,12 @@ export function createHandlers(env: JobEnv) {
       await ensureBaseline(resolve(dir, 'composition.json'));
       const source = result.source ? (options.narration ? mergeNarration(result.source, composition) : result.source) : undefined;
       const files = await writeCompositionProject(dir, composition, { force: true, source });
-      if (result.template) {
-        try {
-          const candidates = [
-            resolve(process.cwd(), 'packages/cli/templates', result.template),
-            resolve(process.cwd(), 'templates', result.template),
-          ];
-          for (const tDir of candidates) {
-            try {
-              const entries = await readdir(tDir, { withFileTypes: true });
-              for (const entry of entries) {
-                if (entry.name !== 'template.json' && entry.name !== 'composition.json' && entry.name !== 'composition.schema.json') {
-                  await cp(resolve(tDir, entry.name), resolve(dir, entry.name), { recursive: true, force: true });
-                }
-              }
-              break;
-            } catch {}
-          }
-        } catch {}
-      }
+      // A template's own pictures and sounds travel with it inside composeSmart, which owns the template catalogue;
+      // if they could not, it says so in `result.warnings` and that is reported below like any other note.
       await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: ai.id, model: ai.model, template: result.template, attempts: result.attempts });
       return {
         dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps,
-        scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings,
+        scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(options.review),
         issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), narration,
       };
     } };
@@ -162,7 +145,7 @@ export function createHandlers(env: JobEnv) {
       await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
       return {
         ...resultFile(file), frames: result.composition.durationFrames, seconds: result.composition.durationFrames / result.composition.fps, scenes: result.composition.scenes.length,
-        attempts: result.attempts, warnings: result.warnings, issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), instruction,
+        attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(review), issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), instruction,
       };
     } };
   };
@@ -171,7 +154,8 @@ export function createHandlers(env: JobEnv) {
     const rawText = textOf(input.json, 'JSON content');
     return { kind: 'import', run: async progress => {
       progress('Preparing project composition…');
-      const composition = loadComposition(sanitizeCompositionJson(extractJson(rawText)));
+      const notes: string[] = [];
+      const composition = loadComposition(sanitizeCompositionJson(extractJson(rawText), notes));
       // Nothing is supplied with pasted JSON, so it may only use built-in sounds and files that stay inside its own project folder.
       const problems = assetProblems(composition, { assets: new Map(), relativeInside: true });
       if (problems.length) throw new Error(`The pasted composition refers to files outside its project:\n${problems.join('\n')}`);
@@ -186,7 +170,7 @@ export function createHandlers(env: JobEnv) {
       progress('Saving composition files…');
       const files = await writeCompositionProject(dir, composition, { force: true });
       await saveRevision(files.composition, { kind: 'import', label: 'Pasted composition' });
-      return { id: relative(dir), dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps, scenes: composition.scenes.length, attempts: 1, warnings: [], issues: [] };
+      return { id: relative(dir), dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps, scenes: composition.scenes.length, attempts: 1, warnings: notes, issues: [] };
     } };
   };
 

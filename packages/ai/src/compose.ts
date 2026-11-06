@@ -16,6 +16,12 @@ export type ComposeOptions = PromptOptions & {
   review?: boolean;
   /** Plan beats and look first (Claude-style motion graphics), then write the composition. */
   plan?: boolean;
+  /**
+   * Refuse a reply that only became usable because we repaired it — an invented animation property, a keyframe with a
+   * value that is not a number, a split preset that does not exist. Off by default: the repair happens either way and
+   * is reported in `warnings`; on, the model is told exactly what was altered and asked again.
+   */
+  strict?: boolean;
   /** How the composition is generated: one big call, or a style contract plus one small call per scene (OVE_COMPOSE_STRATEGY=scenes). */
   strategy?: 'single' | 'scenes';
   baseDir?: string;
@@ -38,7 +44,22 @@ const numeric = (value: unknown): number | undefined => {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function cleanLayer(layer: any, frames = 300) {
+/** A reply that only passed because it was repaired, raised when `strict` is on. Distinct from an ordinary failure so
+ *  the scene route does not mistake it for "the scene strategy is broken" and quietly fall back to one big call. */
+class StrictReplyError extends Error {
+  readonly notes: string[];
+
+  constructor(notes: string[]) {
+    super(`Strict mode: the answer was only usable after ${notes.length} repair${notes.length === 1 ? '' : 's'}, so it was refused.\n${notes.map(note => `- ${note}`).join('\n')}\nWithout strict mode the same video is made from the repaired answer and these are reported as warnings.`);
+    this.name = 'StrictReplyError';
+    this.notes = notes;
+  }
+}
+
+/** What each repair did to the layer it touched, phrased for the person reading the warnings. */
+const layerNote = (layer: any) => (message: string) => `${layer?.id ? `layer "${layer.id}"` : 'a layer'}: ${message}`;
+
+function cleanLayer(layer: any, frames = 300, notes: string[] = []) {
   if (!layer || typeof layer !== 'object') return;
   if ('fontWeight' in layer && typeof layer.fontWeight === 'string') {
     const s = layer.fontWeight.trim().toLowerCase();
@@ -68,14 +89,21 @@ function cleanLayer(layer: any, frames = 300) {
   if (Array.isArray(layer.animations)) {
     layer.animations = layer.animations.map((a: any) => {
       if (!a || typeof a !== 'object') return a;
-      return normalizeAnimation(a, frames) ?? a;
+      const held: string[] = [];
+      const clean = normalizeAnimation(a, frames, message => held.push(message));
+      // An animation that cannot be normalized at all stays exactly as the model wrote it, so the schema rejects it
+      // and the model is told the real error — reporting a "repair" here would describe something that did not happen.
+      if (clean === undefined) return a;
+      const note = layerNote(layer);
+      for (const message of held) notes.push(note(message));
+      return clean;
     });
   }
-  if (Array.isArray(layer.children)) layer.children.forEach((c: any) => cleanLayer(c, frames));
-  if (Array.isArray(layer.spans)) layer.spans.forEach((s: any) => cleanLayer(s, frames));
+  if (Array.isArray(layer.children)) layer.children.forEach((c: any) => cleanLayer(c, frames, notes));
+  if (Array.isArray(layer.spans)) layer.spans.forEach((s: any) => cleanLayer(s, frames, notes));
 }
 
-function normalize(raw: any, options: ComposeOptions): any {
+function normalize(raw: any, options: ComposeOptions, notes: string[] = []): any {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('The response must be one JSON object');
   if (raw.background && typeof raw.background === 'object' && raw.background.type === 'color' && typeof raw.background.color === 'string') {
     raw.background = raw.background.color;
@@ -109,7 +137,7 @@ function normalize(raw: any, options: ComposeOptions): any {
         scene.durationFrames = Math.max(1, raw.durationFrames - start);
       }
       const sceneFrames = Number(scene.durationFrames) || raw.durationFrames || 300;
-      for (const layer of scene?.layers ?? []) cleanLayer(layer, sceneFrames);
+      for (const layer of scene?.layers ?? []) cleanLayer(layer, sceneFrames, notes);
     }
   }
   return raw;
@@ -184,17 +212,20 @@ function retryMessages(messages: ChatMessage[], text: string, current: any, intr
   else messages.push({ role: 'assistant', content: text }, { role: 'user', content: `${intro}\n\nFix every problem and return the complete composition JSON again. Keep everything that was already correct.` });
 }
 
-async function acceptComposition(rawInput: unknown, options: ComposeOptions): Promise<{ composition: Composition; raw: any; current: any }> {
+async function acceptComposition(rawInput: unknown, options: ComposeOptions, extraNotes: string[] = []): Promise<{ composition: Composition; raw: any; current: any; notes: string[] }> {
   const current = rawInput;
-  const raw = normalize(structuredClone(current), options);
+  const notes: string[] = [];
+  const raw = normalize(structuredClone(current), options, notes);
   const composition = loadComposition(raw);
   const problems = inspect(composition, raw, options);
+  const repaired = [...extraNotes, ...notes];
+  if (options.strict && repaired.length) throw new StrictReplyError(repaired);
   if (problems.length) throw new Error(problems.join('\n'));
-  return { composition, raw, current };
+  return { composition, raw, current, notes: repaired };
 }
 
-async function maybeReview(composition: Composition, options: ComposeOptions, attempt: number, maxAttempts: number, retry: (intro: string, issues?: ReviewIssue[]) => void): Promise<ComposeResult | undefined> {
-  if (!options.review) return { composition, attempts: attempt, issues: [], warnings: [] };
+async function maybeReview(composition: Composition, options: ComposeOptions, attempt: number, maxAttempts: number, retry: (intro: string, issues?: ReviewIssue[]) => void, notes: string[] = []): Promise<ComposeResult | undefined> {
+  if (!options.review) return { composition, attempts: attempt, issues: [], warnings: notes };
   options.onProgress?.('Reviewing the generated composition with the renderer…');
   let review;
   try {
@@ -207,7 +238,7 @@ async function maybeReview(composition: Composition, options: ComposeOptions, at
     retry(`The renderer's design review found errors:\n${errors.map(issue => `- ${issue.frame === undefined ? '' : `frame ${issue.frame}: `}${issue.message}${issue.layer ? ` [${issue.layer}]` : ''}`).join('\n')}`, errors);
     return undefined;
   }
-  return { composition, attempts: attempt, issues: review.issues, warnings: review.issues.filter(issue => issue.severity === 'warning').map(issue => issue.message) };
+  return { composition, attempts: attempt, issues: review.issues, warnings: [...notes, ...review.issues.filter(issue => issue.severity === 'warning').map(issue => issue.message)] };
 }
 
 export async function composeVideo(provider: AiProvider, options: ComposeOptions): Promise<ComposeResult> {
@@ -250,14 +281,14 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
     try {
       let state = await composeByScenes(provider, scenesOptions, motionPlan);
       let reviewIssues: ReviewIssue[] | undefined;
-      let lastAccepted: { composition: Composition; raw: any; current: any } | undefined;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        const sceneDurationSeconds = typeof state.raw.durationFrames === 'number'
-          ? state.raw.durationFrames / (state.raw.fps || composeOptions.fps || 30)
-          : composeOptions.durationSeconds;
-        const accepted = await acceptComposition(state.raw, { ...composeOptions, durationSeconds: sceneDurationSeconds });
+      let lastAccepted: { composition: Composition; raw: any; current: any; notes: string[] } | undefined;
+      let attempt = 0;
+      for (attempt = 1; attempt <= maxAttempts; attempt++) {
+        // The brief's requested length stays the requirement: validating the stitched scenes against the duration they
+        // themselves produced would make every timing mistake self-certifying.
+        const accepted = await acceptComposition(state.raw, composeOptions, state.notes.flat());
         lastAccepted = accepted;
-        const reviewed = await maybeReview(accepted.composition, composeOptions, attempt, maxAttempts, (intro, issues) => { reviewIssues = issues; });
+        const reviewed = await maybeReview(accepted.composition, composeOptions, attempt, maxAttempts, (intro, issues) => { reviewIssues = issues; }, accepted.notes);
         if (reviewed) return reviewed;
         if (!reviewIssues?.some(issue => issue.frame !== undefined)) break;
         try {
@@ -267,10 +298,16 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
         }
       }
       if (lastAccepted) {
-        return { composition: lastAccepted.composition, attempts: maxAttempts, issues: reviewIssues ?? [], warnings: [] };
+        // Unresolved review errors are returned, not thrown: the composition is written and the caller decides what to
+        // do with a video the renderer still finds fault with. `issues` carries the errors so no surface can mistake
+        // this for a clean run.
+        return { composition: lastAccepted.composition, attempts: Math.min(attempt, maxAttempts), issues: reviewIssues ?? [], warnings: lastAccepted.notes };
       }
       throw new Error('the scene rounds did not converge');
     } catch (error) {
+      // Strict mode refusing a repaired reply is a verdict on the answer, not the scene strategy breaking; falling
+      // back to one big call would run the same repair past the check the user asked for.
+      if (error instanceof StrictReplyError) throw error;
       options.onProgress?.(`Scene-by-scene composing fell back to one call (${describeError(error)}).`);
     }
   }
@@ -291,7 +328,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
         retryMessages(messages, text, current, intro);
         previous = current;
         lastError = intro;
-      });
+      }, accepted.notes);
       if (!reviewed) continue;
       return reviewed;
     } catch (error) {

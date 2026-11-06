@@ -29,6 +29,10 @@ describe('JSON extraction', () => {
     const raw = '{\\\n&#x20; "version": "1.0",\\\n&#x20; "title": "Coffee",\n}';
     expect(extractJson(raw)).toEqual({ version: '1.0', title: 'Coffee' });
   });
+  it('keeps entities that are part of the content and repairs only ones that break the parse', () => {
+    expect(extractJson('{"copy":"Ham &amp; Cheese"}')).toEqual({ copy: 'Ham &amp; Cheese' });   // valid as written: untouched
+    expect(extractJson('{&quot;copy&quot;:&quot;Ham &amp; Cheese&quot;}')).toEqual({ copy: 'Ham & Cheese' });   // only parses once unescaped
+  });
   it('handles unescaped control characters like literal newlines inside strings', () => {
     const rawWithLiteralNewline = '{\n  "version": "1.0",\n  "content": "FRESH\nROASTED"\n}';
     expect(extractJson(rawWithLiteralNewline)).toEqual({ version: '1.0', content: 'FRESH\nROASTED' });
@@ -92,6 +96,24 @@ describe('composeVideo', () => {
     await expect(composeVideo(provider([JSON.stringify(base('Hello', 300))]), {
       width: 1080, height: 1920, fps: 30, durationSeconds: 10, brief: 'test', plan: true, maxAttempts: 1,
     })).rejects.toThrow(/at least 3 scenes/);
+  });
+});
+
+describe('the scene strategy', () => {
+  // The route the default gateway takes: one contract call, one call per scene, and a stitch that owns all timing.
+  const contract = JSON.stringify({ beats: [{ name: 'Hook' }, { name: 'Craft' }, { name: 'Offer' }] });
+  const scene = (headline: string) => JSON.stringify({
+    layers: [{ type: 'text', content: headline, x: 540, y: 860, fontSize: 120, color: '#f8fafc', textAlign: 'center', split: { by: 'words', stagger: 4, preset: 'rise' }, animations: [{ property: 'y', keyframes: [{ frame: 0, value: 940 }, { frame: 20, value: 860, easing: 'land' }] }] }],
+  });
+
+  it('publishes exactly the requested length rather than the length its own stitch produced', async () => {
+    const fake = provider([contract, scene('SLOW COFFEE'), scene('THE POUR'), scene('20% OFF')]);
+    const result = await composeVideo(fake, { width: 1080, height: 1920, fps: 30, durationSeconds: 10, brief: 'a coffee launch', strategy: 'scenes', maxAttempts: 1 });
+    expect(result.attempts).toBe(1);
+    expect(result.composition.durationFrames).toBe(300);
+    const last = result.composition.scenes[result.composition.scenes.length - 1]!;
+    expect(last.startFrame + last.durationFrames).toBe(300);   // the timeline is full, not 13.7 s of a 10 s brief
+    expect(result.composition.scenes[1]!.transitionIn?.durationFrames).toBe(8);
   });
 });
 

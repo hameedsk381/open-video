@@ -13,13 +13,16 @@ brief ──► model ──► composition.json ──► schema validation ─
 
 ## Setup
 
-Pick a provider and set its key. Nothing is stored on disk by OVE. Every network provider is the same integration —
-the Vercel AI SDK (`generateText`, `generateImage`, `transcribe`) with a per-vendor driver — so retries, timeouts and
-message shaping behave identically everywhere; only defaults differ.
+Pick a provider and set its key. Nothing is stored on disk by OVE, and no key ships in the package. Every network
+provider is the same integration — the Vercel AI SDK (`generateText`, `generateImage`, `transcribe`) with a per-vendor
+driver — so retries, timeouts and message shaping behave identically everywhere; only defaults differ. With no key and
+no `--provider`, the commands run on the offline mock and make no network request at all, rather than sending your
+brief somewhere unauthenticated.
 
 ```sh
-# The default: an OpenAI-compatible gateway with task-aware model routing
+# The default gateway: OpenAI-compatible, with task-aware model routing. Its key is yours to supply.
 export FREELLMAPI_API_KEY=...            # or OPENAI_API_KEY / OVE_AI_API_KEY
+export FREELLMAPI_BASE_URL=...           # optional; a different gateway for the same protocol
 export OVE_AI_MODEL=auto                 # auto routes each task to its preferred gateway model
 
 # Or a first-party vendor key
@@ -33,7 +36,8 @@ export GEMINI_API_KEY=...                # --provider google (or gemini)
 export OVE_AI_BASE_URL=...               # any OpenAI-compatible endpoint (also --provider custom)
 export OVE_AI_TRANSCRIPTION_MODEL=whisper-1   # transcription; per-provider default
 export OVE_AI_IMAGE_MODEL=gpt-image-1         # image generation; `auto` on gateways
-export OVE_AI_VOICE=hannah               # Edge TTS voice for narration
+export OVE_AI_TTS_PROVIDER=native             # speech from the provider, not Edge (default: edge)
+export OVE_AI_VOICE=hannah                    # narration voice; names are per engine, see Speech engines
 
 # No key, no network: a deterministic stand-in for trying the pipeline
 ove ai compose demo --provider mock --brief "a test"
@@ -41,20 +45,39 @@ ove ai compose demo --provider mock --brief "a test"
 
 | Provider | chat | images | speech | word timings |
 |---|---|---|---|---|
-| `freellmapi` (default) | yes (`auto` routes per task) | yes | yes (Edge TTS) | yes |
-| `openai` | yes | yes | yes (Edge TTS) | yes (`whisper-1`) |
-| `groq` | yes (`openai/gpt-oss-120b`) | — | yes (Edge TTS) | yes (`whisper-large-v3-turbo`) |
-| `anthropic` / `claude` | yes | — | yes (Edge TTS) | — |
-| `nvidia` / `nim` | yes | — | yes (Edge TTS) | — |
-| `google` / `gemini` | yes | — | yes (Edge TTS) | — |
-| `openrouter`, `litellm`, `custom` | yes | yes | yes (Edge TTS) | gateway-dependent |
+| `freellmapi` (default) | yes (`auto` routes per task) | yes | yes (Edge; see engines) | yes |
+| `openai` | yes | yes | yes (Edge; native TTS available) | yes (`whisper-1`) |
+| `groq` | yes (`openai/gpt-oss-120b`) | — | yes (Edge; native TTS available) | yes (`whisper-large-v3-turbo`) |
+| `anthropic` / `claude` | yes | — | yes (Edge TTS only) | — |
+| `nvidia` / `nim` | yes | — | yes (Edge TTS only) | — |
+| `google` / `gemini` | yes | — | yes (Edge TTS only) | — |
+| `openrouter`, `litellm`, `custom` | yes | yes | yes (Edge; native if the endpoint has `/audio/speech`) | gateway-dependent |
 | `mock` | yes | yes | — | — |
 
-Speech synthesis is Edge TTS for every provider (free, word-boundary timed; `OVE_AI_TTS_PROVIDER=groq` opts out).
+### Speech engines
+
+Narration is the one part of the pipeline that is not the chat provider, and it is pluggable:
+
+- **`edge`** (the default) synthesises through Microsoft's Edge endpoint. It needs no key and costs nothing, and it
+  returns word boundaries with the audio, so captions come from the same call. It is unofficial: Microsoft can change
+  the protocol, and this is the engine to fall back from when they do.
+- **`native`** calls the speech endpoint of the provider you already configured — `POST {base}/audio/speech`, the
+  OpenAI shape: `gpt-4o-mini-tts` on OpenAI, `canopylabs/orpheus-v1-english` on Groq, and `auto` on the gateway, which
+  routes speech the way it routes chat. Narration then follows your provider instead of a third party. It bills with
+  that provider, and word timings come from transcribing the result, so captions need the provider's transcription
+  model.
+
+Choose it per call with `--speech-engine native`, or for the whole process with `OVE_AI_TTS_PROVIDER=native` (`groq`
+and `openai` are accepted aliases, and unset means `edge`); name the model with `OVE_AI_SPEECH_MODEL`. Anthropic and
+Google have no speech endpoint, so `native` refuses there rather than pretending. Voice names are per-engine: `--voice`
+/ `OVE_AI_VOICE` values are passed to the native endpoint as given, but an Edge `…Neural` id means nothing to it, so
+that falls back to the endpoint's own default (or `OVE_AI_SPEECH_VOICE`).
+
 Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
-`OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, `OVE_AI_VOICE`, plus the per-vendor keys above and
+`OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, `OVE_AI_SPEECH_MODEL`, `OVE_AI_SPEECH_VOICE`, `OVE_AI_TTS_PROVIDER`,
+`OVE_AI_VOICE`, plus the per-vendor keys above and
 `FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
-`ove ai doctor` prints what is configured and what it can do.
+`ove ai doctor` prints what is configured, which speech engine is wired up, and what it can do.
 
 ## Templates first, full composition when needed
 
@@ -86,6 +109,8 @@ ove ai capabilities --json     # machine-readable, with ids, descriptions, param
 ```
 
 The registry (registry v2, about 140 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
+
+That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, fill a template or write the whole composition, retime a template to the requested length, and move a template's own pictures and sounds next to the project. It takes the catalogues and the file copy from the host (`TemplateSource`), so the CLI, the studio's job queue, the MCP server and a deployed worker all route a brief the same way without any of them depending on the command line's template folder. A copy that fails is reported in `warnings`, never swallowed.
 
 ## `ove agent`: the planner routes into React code
 
@@ -132,7 +157,7 @@ The studio is a React + Vite app (`apps/studio`; `pnpm build:studio` builds it, 
 - **Editor**: a live preview (the browser Player, so it matches renders closely) with play, scrub and scene jumps. *Edit* changes the text: a video made from a template keeps its variables and components, so each text and colour is a field; a finished video lists every text layer. *Ask AI* applies a natural-language change (an AI change turns a template video into a finished one). *Look* applies a theme or adds a block from the library. *History* restores any saved version. *Export* renders the MP4, runs the problem check, or makes a thumbnail.
 - **Library** (blocks and themes) and **Settings** (output folder, provider status).
 
-A job bar shows live progress over server-sent events. Every job calls the same `@ove/ai` and `@ove/core` functions as the CLI, so nothing about the output or its determinism changes. The preview does not run code layers (`allowCode` is off in the Studio).
+A job bar shows live progress over server-sent events. Every job calls the same `@ove/ai` and `@ove/core` functions as the CLI, so nothing about the output or its determinism changes. The preview does not run code layers (`allowCode` is off in the Studio). A compose that finished with repairs, or that the design review still faults, does not redirect into the player: the page stops and lists what was changed and what is still wrong, with a button to open the video anyway.
 
 - `--port 3100` is the first port tried; if it is busy the next free one is used and printed.
 - `--out ai-videos` (default) is the only folder the page can read or write. Folder and output fields are relative to
@@ -177,7 +202,13 @@ ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudnes
 - `--narration` writes a voiceover from the same brief, synthesises it, adds word-timed captions, and appends a
   full-length narration scene so both play over the whole video (see below).
 - `--review` adds renderer-based design rounds: `ove review` errors are fed back to the model before the file is
-  accepted. Slower, and needs Chromium and FFmpeg.
+  accepted. Slower, and needs Chromium and FFmpeg. If errors are still standing when the rounds run out, the file is
+  written and rendered anyway, the errors are listed, and the command exits 1 — `--json` puts them in `errors`.
+- `--strict` refuses an answer that only became usable because the engine repaired it. Models invent animation
+  properties (`glow`, `fade`, `scaleX`) and put text where numbers belong; normally those are fixed silently — the
+  keyframe disappears, the video loses its motion, and nothing says so. Every repair is now listed as a `note:` (and in
+  `--json` `warnings`); with `--strict` the model is given the exact list and asked again, and if it does not stop
+  needing repairs the command fails instead of shipping the repaired version.
 - `--max-attempts 3` (default) bounds the validation loop.
 - `--schema` appends the exact JSON Schema to the prompt. More tokens, fewer format mistakes on small models.
 - `--dry-run` prints the composition without writing; `--render` renders to `<dir>/out.mp4`; `--json` prints a
@@ -188,7 +219,8 @@ What the loop does:
 1. The model gets a compact specification of the format plus your brief and design rules.
 2. Its JSON is parsed (fences and prose are tolerated) and validated with the real `loadComposition`.
 3. Validation errors, and checks the schema cannot express (empty text, unknown asset ids, off-frame scenes,
-   unused template variables), go back verbatim as the next user turn.
+   unused template variables), go back verbatim as the next user turn. Anything repaired on the way in (see
+   `--strict` above) is listed as a note on the finished video.
 4. With `--review`, the composition is rendered into a contact sheet and design checks; errors go back too.
 5. The accepted composition is written as a normal project: `composition.json`, `composition.schema.json`,
    `assets/`.

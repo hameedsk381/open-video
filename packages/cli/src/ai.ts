@@ -3,10 +3,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
-import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, planBatch, providerCapabilities,
+import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, narrateSmart, planBatch, providerCapabilities,
   refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, renderMedia, type Composition } from '@ove/core';
-import { composeSmart, narrateSmart } from './templates';
+import { composeSmart } from './templates';
 
 const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
@@ -15,8 +15,10 @@ const usage = `Usage:
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
   ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
       [--template id] [--theme id] [--typography style] [--motion-pacing snappy|dynamic|smooth] [--audio-mood mood] [--sfx]
-      [--narration] [--voice-tone tone] [--cta "headline|link"] [--review] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
+      [--narration] [--voice-tone tone] [--cta "headline|link"] [--review] [--strict] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
       [--no-plan]   skip the planner: template-first routing, then a straight composition
+      [--strict]    refuse an answer that only works because we repaired it (invented animation properties, unusable
+                    keyframes); by default those repairs are made and listed as notes
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
   ove ai narrate <script.txt> [--composition video.json] [--out dir] [--voice Puck] [--language en] [--tail 0.8]
   ove ai narrate --brief "..." [--duration 20] [--composition video.json]
@@ -32,8 +34,8 @@ const usage = `Usage:
       [--duration 18] [--fps 30] [render options]
   ove ai studio [--port 3100] [--out ai-videos]   open a local page for the AI commands in a browser
 
-Provider options (all commands): --provider freellmapi|mock, --model name, --base-url URL
-Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, FREELLMAPI_API_KEY, and FREELLMAPI_BASE_URL.
+Provider options (all commands): --provider freellmapi|mock, --model name, --base-url URL, --speech-engine edge|native
+Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, FREELLMAPI_API_KEY, FREELLMAPI_BASE_URL, OVE_AI_TTS_PROVIDER (edge by default).
 Render options: --crf, --bitrate, --audio-bitrate, --scale, --loudness, --concurrency, --preset, --codec, --format`;
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -42,7 +44,12 @@ const flag = (argv: string[], name: string) => argv.includes(name);
 const readJson = async (path: string) => JSON.parse((await readFile(resolve(path), 'utf8')).replace(/^\uFEFF/, ''));
 
 function providerFrom(argv: string[]) {
-  const config: ProviderConfig = { provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') };
+  const config: ProviderConfig = {
+    provider: option(argv, '--provider'),
+    model: option(argv, '--model'),
+    baseUrl: option(argv, '--base-url'),
+    speechEngine: option(argv, '--speech-engine') as ProviderConfig['speechEngine'],
+  };
   return createProvider(config);
 }
 
@@ -167,7 +174,7 @@ async function composeCommand(argv: string[]): Promise<number> {
   const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
 
   const options: ComposeOptions = { ...canvasOptions, brief: effectiveBrief, maxAttempts: numberOption(argv, '--max-attempts', 3),
-    review: flag(argv, '--review'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
+    review: flag(argv, '--review'), strict: flag(argv, '--strict'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
@@ -199,7 +206,8 @@ async function composeCommand(argv: string[]): Promise<number> {
   await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: provider.id, model: provider.model, template: (result as any).template, attempts: result.attempts });
   console.log(`\nChecked and wrote ${files.composition} (${composition.durationFrames} frames, ${composition.scenes.length} scenes, ${result.attempts} attempt${result.attempts === 1 ? '' : 's'})`);
   for (const warning of result.warnings) console.log(`  note: ${warning}`);
-  for (const issue of result.issues.filter(issue => issue.severity === 'error')) console.log(`  review error: ${issue.message}`);
+  const reviewErrors = result.issues.filter(issue => issue.severity === 'error');
+  for (const issue of reviewErrors) console.log(`  review error: ${issue.message}`);
   for (const file of narrationFiles) console.log(`  ${file}`);
   if (flag(argv, '--render')) {
     const output = resolve(option(argv, '--output') ?? resolve(dir, 'out.mp4'));
@@ -208,8 +216,11 @@ async function composeCommand(argv: string[]): Promise<number> {
   } else {
     console.log(`\nNext:\n  ove still ${files.composition} --frame 0 --output still.png\n  ove review ${files.composition} --output review.png\n  ove render ${files.composition} --output ${resolve(dir, 'out.mp4')}\n  ove dev ${files.composition}`);
   }
-  if (flag(argv, '--json')) console.log(JSON.stringify({ composition: files.composition, attempts: result.attempts, warnings: result.warnings, narration: narrationFiles }, null, 2));
-  return 0;
+  if (flag(argv, '--json')) console.log(JSON.stringify({ composition: files.composition, attempts: result.attempts, warnings: result.warnings, errors: reviewErrors.map(issue => issue.message), narration: narrationFiles }, null, 2));
+  // The video is saved and rendered either way, but a composition the renderer still faults is not a clean run: say so
+  // in the exit code, so scripts and agents cannot mistake it for one.
+  if (reviewErrors.length) console.log(`\n${reviewErrors.length} review error${reviewErrors.length === 1 ? '' : 's'} left unresolved in ${files.composition}.`);
+  return reviewErrors.length ? 1 : 0;
 }
 
 async function refineCommand(argv: string[]): Promise<number> {
@@ -236,7 +247,11 @@ async function refineCommand(argv: string[]): Promise<number> {
   await trackedWrite(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), provider: provider.id, model: provider.model, attempts: result.attempts });
   console.log(`\nRefined and updated ${file} (${result.attempts} attempt${result.attempts === 1 ? '' : 's'})`);
   for (const warning of result.warnings) console.log(`  note: ${warning}`);
-  return 0;
+  const reviewErrors = result.issues.filter(issue => issue.severity === 'error');
+  for (const issue of reviewErrors) console.log(`  review error: ${issue.message}`);
+  if (flag(argv, '--json')) console.log(JSON.stringify({ composition: file, attempts: result.attempts, warnings: result.warnings, errors: reviewErrors.map(issue => issue.message) }, null, 2));
+  if (reviewErrors.length) console.log(`\n${reviewErrors.length} review error${reviewErrors.length === 1 ? '' : 's'} left unresolved in ${file}.`);
+  return reviewErrors.length ? 1 : 0;
 }
 
 async function narrateCommand(argv: string[]): Promise<number> {
@@ -403,13 +418,17 @@ function doctorCommand(argv: string[]): number {
   let provider;
   try { provider = providerFrom(argv); } catch (error) { console.log(`No provider ready: ${describeError(error)}`); return 1; }
   const capabilities = providerCapabilities(provider);
-  if (flag(argv, '--json')) { console.log(JSON.stringify({ provider: provider.id, model: provider.model, baseUrl: provider.baseUrl, capabilities }, null, 2)); return 0; }
+  if (flag(argv, '--json')) { console.log(JSON.stringify({ provider: provider.id, model: provider.model, baseUrl: provider.baseUrl, speechEngine: provider.speechEngine, capabilities }, null, 2)); return 0; }
   console.log(`Provider     ${provider.id}`);
   console.log(`Model        ${provider.model}`);
   console.log(`Endpoint     ${provider.baseUrl}`);
+  console.log(`Speech       ${capabilities.speech ? `${provider.speechEngine ?? 'edge'} engine` : 'none'}`);
   console.log(`Capabilities ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`);
+  console.log(`Credential   ${provider.apiKey ? 'configured' : 'NOT SET'}`);
+  if (provider.id === 'freellmapi' && !provider.apiKey) console.log('  The gateway needs FREELLMAPI_API_KEY (or OPENAI_API_KEY / OVE_AI_API_KEY); requests fail without it.');
   console.log(`\n${describeProvider(provider)}`);
-  if (!capabilities.speech) console.log('  Narration needs speech: FreeLLMAPI provides native speech synthesis.');
+  if (!capabilities.speech) console.log('  Narration needs speech: only an offline mock runs without it — set a key, or pass --provider.');
+  if (capabilities.speech && provider.speechEngine === 'native') console.log('  Speech comes from the provider endpoint (--speech-engine native / OVE_AI_TTS_PROVIDER=native); captions are transcribed from it.');
   if (!capabilities.image) console.log('  Images need a provider with image; FreeLLMAPI provides native image generation.');
   console.log('\nSet FREELLMAPI_API_KEY in .env, or pass --provider.');
   return 0;

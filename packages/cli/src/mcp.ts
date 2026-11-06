@@ -23,6 +23,8 @@ const TOOLS = [
         theme: { type: 'string', description: 'Visual color theme: neon, midnight, slate, warm, editorial, terminal, sunset' },
         template: { type: 'string', description: 'Optional template ID to base video on (e.g. social-reel, product-card, announcement)' },
         full: { type: 'boolean', description: 'Set true to design completely from scratch rather than matching a template' },
+        review: { type: 'boolean', description: 'Run the renderer design review before answering, and feed its errors back to the model (slower; the default of false leaves the composition unchecked)' },
+        strict: { type: 'boolean', description: 'Refuse an answer that only became usable because it was repaired (invented animation property, unusable keyframe value) instead of quietly accepting it' },
       },
       required: ['prompt']
     }
@@ -162,7 +164,8 @@ const TOOLS = [
       type: 'object',
       properties: {
         file: { type: 'string', description: 'Path to composition.json' },
-        instruction: { type: 'string', description: 'Edit instruction (e.g. "increase font size of headline", "change background to black")' }
+        instruction: { type: 'string', description: 'Edit instruction (e.g. "increase font size of headline", "change background to black")' },
+        review: { type: 'boolean', description: 'Run the renderer design review after editing and feed its errors back to the model (slower; leaves the edit unchecked when false)' }
       },
       required: ['file', 'instruction']
     }
@@ -280,7 +283,8 @@ async function handleToolCall(name: string, args: Record<string, any>) {
         durationSeconds,
         baseDir: folderName,
         maxAttempts: 3,
-        review: false,
+        review: Boolean(args.review),
+        strict: Boolean(args.strict),
       };
 
       const result = await composeSmart(provider, options, {
@@ -292,22 +296,35 @@ async function handleToolCall(name: string, args: Record<string, any>) {
       const compPath = resolve(folderName, 'composition.json');
       const files = await writeCompositionProject(folderName, result.composition, { force: true });
 
+      // Whether the renderer actually looked at this video changes what the answer means, so say which happened: an
+      // unchecked composition is not a checked one, and unresolved review errors never hide behind "Successfully".
+      const reviewErrors = result.issues.filter(issue => issue.severity === 'error');
+      const checked = options.review
+        ? reviewErrors.length ? `- Design review: ${reviewErrors.length} unresolved error(s):\n${reviewErrors.map(issue => `  · ${issue.message}`).join('\n')}` : '- Design review: clean'
+        : '- Design review: not run (call motionrender_review_video before rendering)';
+      // Anything the answer had to be changed to become usable (an invented animation property, a dropped keyframe)
+      // is a property of the video the agent is about to render, so it is listed rather than only logged.
+      const notes = result.warnings.length
+        ? `\n- Notes (${result.warnings.length}):\n${result.warnings.map(warning => `  · ${warning}`).join('\n')}`
+        : '\n- Notes: none';
+
       return {
         content: [{
           type: 'text',
-          text: `Successfully created video composition in "${folderName}"!
+          text: `Created video composition in "${folderName}"${reviewErrors.length ? ' with unresolved review errors' : ''}!
 - File: ${compPath}
 - Duration: ${(result.composition.durationFrames / result.composition.fps).toFixed(1)}s (${result.composition.durationFrames} frames)
 - Resolution: ${result.composition.width}x${result.composition.height} (${kind})
 - Scenes: ${result.composition.scenes.length} scenes
 ${result.template ? `- Template archetype: ${result.template}` : '- Custom generated composition'}
+${checked}${notes}
 
 Next actions you can take:
 - To inspect visuals: call motionrender_render_still with file="${compPath}"
 - To run design review: call motionrender_review_video with file="${compPath}"
 - To render video: call motionrender_render_video with file="${compPath}"`
         }],
-        isError: false
+        isError: reviewErrors.length > 0
       };
     }
 
@@ -482,20 +499,26 @@ ${result.issues.length ? '\nIssues found:\n' + result.issues.map(i => `[${i.seve
       const result = await refineVideo(provider, current, {
         instruction,
         baseDir,
-        review: false,
+        review: Boolean(args.review),
       });
 
       await writeFile(file, JSON.stringify(result.composition, null, 2) + '\n');
 
+      const reviewErrors = result.issues.filter(issue => issue.severity === 'error');
+      const checked = args.review
+        ? reviewErrors.length ? `- Design review: ${reviewErrors.length} unresolved error(s):\n${reviewErrors.map(issue => `  · ${issue.message}`).join('\n')}` : '- Design review: clean'
+        : '- Design review: not run';
+
       return {
         content: [{
           type: 'text',
-          text: `Successfully refined composition with instruction: "${instruction}"
+          text: `Refined composition with instruction: "${instruction}"
 - Updated file: ${file}
 - Attempts: ${result.attempts}
+${checked}
 ${result.warnings?.length ? `Warnings: ${result.warnings.join(', ')}` : ''}`
         }],
-        isError: false
+        isError: reviewErrors.length > 0
       };
     }
 

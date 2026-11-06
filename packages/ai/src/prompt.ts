@@ -1,6 +1,7 @@
 // The prompt is the product here: a compact, accurate description of the composition format is what makes an LLM
 // emit JSON that validates on the first or second try. The exact JSON Schema can be appended for hard cases (--schema).
 import { compositionJsonSchema } from '@ove/schema';
+import { safeZoneBands } from '@ove/core';
 import { movesGlossary } from './registry';
 
 export type PromptOptions = {
@@ -109,7 +110,7 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Every scene must have layers; every layer must have a unique id; every text layer must have non-empty content.
 - Text at least 24px; body 28-36px; headings 64-96px; titles 140-200px at 1920 wide.
 - Keep content inside a 6% margin; keep the bottom 12% clear when captions may sit there.
-- Social Safe Zones for vertical 9:16 canvases (reels/shorts): keep the bottom 18% clear of text (covered by platform caption/audio UI) and right 11% clear of text (covered by action buttons).
+- Social safe zones: the areas the player covers with its own UI are listed for this canvas in the task message (when it has any) — keep text out of them.
 - Group layouts: prefer a "group" with "layout": { "direction": "column"|"row", "gap": 24, "align": "center", "justify": "center" } for stacking cards, badges, and headline+body text instead of calculating manual y offsets. This prevents text overlap across aspect ratios.
 - Do not use opacity 0 as a way to hide a layer for the whole video: omit it or fade it in.
 - Give every rect/circle a width and height (circle: width). A rect without width and height draws nothing.
@@ -184,6 +185,14 @@ export function userPrompt(brief: string, options: PromptOptions): string {
     brief.trim(),
     '',
   ];
+  // The player's own chrome comes from the same table the design review checks against, so the model is never asked
+  // to obey percentages the renderer does not enforce (and a landscape canvas gets no bands at all).
+  const bands = safeZoneBands(width, height);
+  if (bands.length) {
+    lines.push('Keep content out of these platform UI areas:');
+    for (const band of bands) lines.push(`- ${band.name}: ${band.hint}`);
+    lines.push('');
+  }
   if (options.motionPlan) {
     lines.push('Follow this motion plan (one scene per beat, copy from onScreen, timings from seconds):');
     lines.push(JSON.stringify(options.motionPlan));

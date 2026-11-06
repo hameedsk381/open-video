@@ -2,8 +2,9 @@
 // Vercel AI SDK (generateText / generateImage / transcribe) with per-vendor drivers — OpenAI, Anthropic, Google,
 // Groq, and any OpenAI-compatible gateway (FreeLLMAPI, NVIDIA NIM, LiteLLM, OpenRouter, vLLM) all ride the same
 // code path, so retries, timeouts and message shaping are the SDK's problem, not ours. What survives here is
-// policy, not plumbing: the FreeLLMAPI task-aware model routing probed live against that gateway. Speech is Edge
-// TTS (attachEdgeAudio); an offline MockProvider covers tests and development with no key and no network.
+// policy, not plumbing: the FreeLLMAPI task-aware model routing probed live against that gateway. Speech is pluggable —
+// the free Edge TTS engine by default (attachEdgeAudio), or the provider's own endpoint with OVE_AI_TTS_PROVIDER=native.
+// An offline MockProvider covers tests and development with no key and no network.
 import { attachEdgeAudio } from './edge-tts';
 import { generateImage, generateText, experimental_transcribe, type ModelMessage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -26,6 +27,20 @@ export type ImageOptions = { size?: string; signal?: AbortSignal };
 export type ImageResult = { data: Uint8Array; extension: string };
 export type SpeakOptions = { voice?: string; signal?: AbortSignal };
 export type AudioResult = { data: Uint8Array; extension: string };
+
+/**
+ * The engine that turns a script into voice.
+ * `edge` is the reverse-engineered Microsoft Edge endpoint: free, needs no key, and returns word boundaries with the
+ * audio. `native` calls the speech endpoint of the provider you already pay, so narration follows your provider rather
+ * than a third party that can change the protocol without notice — captions then come from transcribing the result.
+ */
+export type SpeechEngine = 'edge' | 'native';
+
+/** `OVE_AI_TTS_PROVIDER` (or the SDK's `speechEngine`) picks the engine; `groq` and `openai` are accepted as aliases for `native`. */
+export function resolveSpeechEngine(config?: ProviderConfig): SpeechEngine {
+  const raw = (config?.speechEngine ?? process.env.OVE_AI_TTS_PROVIDER ?? '').trim().toLowerCase();
+  return raw === 'native' || raw === 'groq' || raw === 'openai' ? 'native' : 'edge';
+}
 export type TranscriptWord = { text: string; start: number; end: number };
 export type TranscriptCue = { text: string; start: number; end: number };
 export type Transcript = { text: string; words: TranscriptWord[]; cues: TranscriptCue[] };
@@ -35,6 +50,10 @@ export type AiProvider = {
   id: string;
   model: string;
   baseUrl: string;
+  /** The credential this provider sends with each request, when one is needed: present to check, never to display. */
+  apiKey?: string;
+  /** Which engine `speak` was wired to; set by `createProvider`. */
+  speechEngine?: SpeechEngine;
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
   image?(prompt: string, options?: ImageOptions): Promise<ImageResult>;
   speak?(text: string, options?: SpeakOptions): Promise<AudioResult>;
@@ -51,6 +70,10 @@ export type ProviderConfig = {
   /** The model used for images and transcription; chat uses `model`. */
   imageModel?: string;
   transcriptionModel?: string;
+  /** Speech model for the `native` engine; defaults per provider. */
+  speechModel?: string;
+  /** Which engine speaks the narration. Defaults to `edge`, which needs no key. */
+  speechEngine?: SpeechEngine;
 };
 
 export const providerCapabilities = (provider: AiProvider) => ({
@@ -63,6 +86,8 @@ export const providerCapabilities = (provider: AiProvider) => ({
 const trimSlash = (url: string) => url.replace(/\/+$/, '');
 const numberFromPrompt = (prompt: string, name: string, fallback: number) => { const found = new RegExp(`${name}=(\\d+)`).exec(prompt); return found ? Number(found[1]) : fallback; };
 export const requestTimeoutMs = 180_000;
+/** The operator's OpenAI-compatible gateway, used when no base URL is configured. */
+export const FREELLMAPI_DEFAULT_BASE_URL = 'https://ai.hamathopc.in/v1';
 /** Aborts when the caller's signal does or when the timeout passes, whichever comes first (a caller's signal does not remove the timeout). */
 export const timeoutSignal = (signal?: AbortSignal | null, ms = requestTimeoutMs): AbortSignal => signal ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms);
 
@@ -267,6 +292,8 @@ export class VercelAiProvider implements AiProvider {
   driver: 'openai' | 'anthropic' | 'google' | 'groq';
   imageModel: string;
   transcriptionModel: string;
+  speechModel: string;
+  speechEngine: SpeechEngine;
 
   constructor(config: ProviderConfig = {}) {
     const rawId = (config.provider || process.env.OVE_AI_PROVIDER || 'freellmapi').toLowerCase();
@@ -294,9 +321,10 @@ export class VercelAiProvider implements AiProvider {
       this.baseUrl = trimSlash((config.baseUrl ?? process.env.OVE_AI_BASE_URL ?? process.env.NVIDIA_BASE_URL) || 'https://integrate.api.nvidia.com/v1');
     } else if (rawId === 'freellmapi') {
       this.driver = 'openai';
-      this.apiKey = config.apiKey || process.env.FREELLMAPI_API_KEY || process.env.OPENAI_API_KEY || process.env.OVE_AI_API_KEY || 'freellmapi-aacb1a9828b7dee95f03f09185441437b5e5c6b73ac7c66a';
+      // No shipped fallback: the gateway key is a secret, so it comes from the operator's environment only.
+      this.apiKey = config.apiKey || process.env.FREELLMAPI_API_KEY || process.env.FREELLMAPI_KEY || process.env.OPENAI_API_KEY || process.env.OVE_AI_API_KEY || '';
       this.model = config.model || process.env.FREELLMAPI_MODEL || process.env.OVE_AI_MODEL || 'auto';
-      this.baseUrl = trimSlash((config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL) || 'https://ai.hamathopc.in/v1');
+      this.baseUrl = trimSlash((config.baseUrl ?? process.env.FREELLMAPI_BASE_URL ?? process.env.OPENAI_BASE_URL ?? process.env.OVE_AI_BASE_URL) || FREELLMAPI_DEFAULT_BASE_URL);
     } else {
       // openai, openrouter, litellm, vercel, custom, or any OpenAI-compatible gateway
       this.driver = 'openai';
@@ -317,6 +345,10 @@ export class VercelAiProvider implements AiProvider {
     this.imageModel = config.imageModel || process.env.OVE_AI_IMAGE_MODEL || (this.id === 'freellmapi' ? 'auto' : 'gpt-image-1');
     this.transcriptionModel = config.transcriptionModel || process.env.OVE_AI_TRANSCRIPTION_MODEL
       || (this.id === 'groq' ? 'whisper-large-v3-turbo' : this.id === 'freellmapi' ? 'auto' : 'whisper-1');
+    // The gateway routes speech like everything else: `auto` asks it to pick the model, a provider id names one.
+    this.speechModel = config.speechModel || process.env.OVE_AI_SPEECH_MODEL
+      || (this.id === 'freellmapi' ? 'auto' : this.driver === 'groq' ? 'canopylabs/orpheus-v1-english' : 'gpt-4o-mini-tts');
+    this.speechEngine = resolveSpeechEngine(config);
   }
 
   private authHeaders(): Record<string, string> {
@@ -465,6 +497,34 @@ export class VercelAiProvider implements AiProvider {
       segments: (result.segments ?? []).map((segment: any) => ({ text: String(segment.text ?? ''), start: seconds(segment.start, segment.startSecond), end: seconds(segment.end, segment.endSecond) })),
     });
   }
+
+  /** A provider's speech endpoint names voices its own way, so an Edge `…Neural` id is dropped for the engine's own default. */
+  private nativeVoice(voice?: string): string | undefined {
+    const raw = (voice ?? process.env.OVE_AI_SPEECH_VOICE ?? '').trim();
+    if (!raw || /^[a-z]{2}(-[A-Za-z]{2,4})?-[A-Za-z]+Neural$/i.test(raw)) return this.driver === 'groq' ? undefined : 'nova';
+    return raw;
+  }
+
+  /**
+   * Speech from the provider's own endpoint (`/audio/speech`) instead of Edge TTS — the `native` engine. WAV because
+   * scene-by-scene voiceover joins the pieces, and word timings come from `transcribe` rather than the speech call.
+   */
+  async speak(text: string, options: SpeakOptions = {}): Promise<AudioResult> {
+    if (this.driver === 'anthropic' || this.driver === 'google') {
+      throw new Error(`The ${this.id} provider has no speech endpoint; narrate with the edge engine (unset OVE_AI_TTS_PROVIDER)`);
+    }
+    const voice = this.nativeVoice(options.voice);
+    const body = JSON.stringify({ model: this.speechModel, input: text, response_format: 'wav', ...(voice ? { voice } : {}) });
+    const response = await request(`${this.baseUrl}/audio/speech`, {
+      method: 'POST',
+      signal: timeoutSignal(options.signal),
+      headers: jsonHeaders(this.authHeaders()),
+      body,
+    }, 'Speech');
+    const data = new Uint8Array(await response.arrayBuffer());
+    if (!data.byteLength) throw new Error(`Speech came back empty from ${this.baseUrl}/audio/speech`);
+    return { data, extension: 'wav' };
+  }
 }
 
 const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -540,11 +600,8 @@ export class MockProvider implements AiProvider {
 }
 
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  let id = (
-    config.provider ||
-    process.env.OVE_AI_PROVIDER ||
-    ''
-  ).toLowerCase();
+  const explicit = (config.provider || process.env.OVE_AI_PROVIDER || '').trim();
+  let id = explicit.toLowerCase();
 
   if (!id) {
     if (config.baseUrl) {
@@ -563,8 +620,18 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
   }
   if (id === 'mock') return new MockProvider();
   // Every network provider — groq, anthropic, nvidia, freellmapi, openai, google, openrouter, litellm, custom —
-  // is the same Vercel AI SDK integration; only the driver and defaults differ. Edge TTS supplies speech.
-  return attachEdgeAudio(new VercelAiProvider({ ...config, provider: id }));
+  // is the same Vercel AI SDK integration; only the driver and defaults differ. Speech is the one part that is not:
+  // the edge engine (the default, needs no key) replaces speak/transcribe with Edge TTS, the native engine keeps the
+  // provider's own endpoints.
+  const networkProvider = new VercelAiProvider({ ...config, provider: id });
+  const configured = networkProvider.speechEngine === 'native' ? networkProvider : attachEdgeAudio(networkProvider);
+  // Nothing configured and nothing but the gateway default to choose: a request here would carry no credential, so
+  // say so and hand back the offline provider rather than failing at the endpoint minutes into a render.
+  if (id === 'freellmapi' && !explicit && !configured.apiKey) {
+    console.warn('No AI provider is configured (set FREELLMAPI_API_KEY, OPENAI_API_KEY or --provider): using the offline mock, which writes placeholder videos and makes no requests.');
+    return new MockProvider();
+  }
+  return configured;
 }
 
 export function describeProvider(provider: AiProvider): string {

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { ffmpegPath } from '@ove/ffmpeg';
 import type { AiProvider, Transcript, TranscriptWord } from './providers';
 
@@ -114,12 +114,15 @@ export function resolveEdgeVoice(voice?: string, language?: string): string {
 
 export type EdgeSpeechResult = {
   data: Uint8Array;
-  extension: 'wav';
+  extension: 'wav' | 'mp3';
   transcript: Transcript;
 };
 
-// In-memory transcript cache by audio byte length and word count to avoid redundant transcription
+// In-memory transcript cache keyed on the audio bytes, so a synthesized line never needs a second transcription
 export const edgeTranscriptCache = new Map<string, Transcript>();
+
+/** The cache key: the audio itself. Byte length alone collides between different lines that happen to be the same size. */
+export const audioCacheKey = (audio: Uint8Array): string => crypto.createHash('sha256').update(audio).digest('hex').slice(0, 32);
 
 // Sec-MS-GEC v2 algorithm for Microsoft Edge TTS WebSocket authentication
 const EDGE_COPYRIGHT = 'Copyright (C) Microsoft Corporation. All rights reserved.';
@@ -203,6 +206,32 @@ function escapeXml(unsafe: string): string {
       case '"': return '&quot;';
       default: return c;
     }
+  });
+}
+
+/** MP3 in, 24 kHz mono WAV out. Streamed rather than spawnSync'd: a synchronous convert holds the worker's event loop
+ *  for the whole line and dies on anything longer than the buffer cap. */
+function toWav(mp3: Buffer): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegPath(), [
+      '-hide_banner', '-loglevel', 'error',
+      '-i', 'pipe:0',
+      '-f', 'wav',
+      '-ac', '1',
+      '-ar', '24000',
+      'pipe:1',
+    ]);
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    child.stdout.on('data', (chunk: Buffer) => { chunks.push(chunk); bytes += chunk.byteLength; });
+    child.stderr.resume();
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0 && bytes > 0) resolve(Buffer.concat(chunks, bytes));
+      else reject(new Error(`FFmpeg could not convert the speech to WAV (exit ${code})`));
+    });
+    child.stdin.on('error', () => { /* the child closing first is not our failure; its exit code decides */ });
+    child.stdin.end(mp3);
   });
 }
 
@@ -335,21 +364,10 @@ export async function synthesizeEdgeSpeech(
 
   const mp3 = Buffer.concat(audioBuffers);
 
-  // Convert MP3 to standard 24kHz mono WAV using FFmpeg for native OVE waveform and audio mixing compatibility
-  const res = spawnSync(ffmpegPath(), [
-    '-hide_banner', '-loglevel', 'error',
-    '-i', 'pipe:0',
-    '-f', 'wav',
-    '-ac', '1',
-    '-ar', '24000',
-    'pipe:1',
-  ], {
-    input: mp3,
-    maxBuffer: 50 * 1024 * 1024,
-  });
-
-  const wavData = res.status === 0 && res.stdout.length > 0 ? res.stdout : mp3;
-  const extension: 'wav' = 'wav';
+  // Edge answers with MP3; the mixer and scene-by-scene voiceover both want a plain WAV container.
+  const wav = await toWav(mp3).catch(() => undefined);
+  const data = wav ?? mp3;
+  const extension: 'wav' | 'mp3' = wav ? 'wav' : 'mp3';
 
   const transcript: Transcript = {
     text,
@@ -357,36 +375,29 @@ export async function synthesizeEdgeSpeech(
     cues: words.map(w => ({ text: w.text, start: w.start, end: w.end })),
   };
 
-  const key = `${wavData.length}`;
-  edgeTranscriptCache.set(key, transcript);
+  edgeTranscriptCache.set(audioCacheKey(data), transcript);
 
   return {
-    data: new Uint8Array(wavData),
+    data,
     extension,
     transcript,
   };
 }
 
 /**
- * Attaches Edge TTS as the primary, default speech synthesis and word-boundary transcription engine for any AiProvider.
+ * Attaches Edge TTS as the speech and word-boundary transcription engine for any AiProvider. Opting out is
+ * `OVE_AI_TTS_PROVIDER=native` (or the SDK's `speechEngine`), which is decided in `createProvider`, not here.
  */
 export function attachEdgeAudio(provider: AiProvider): AiProvider {
-  // Allow explicit Groq override if the user sets OVE_AI_TTS_PROVIDER=groq
-  if (process.env.OVE_AI_TTS_PROVIDER?.toLowerCase() === 'groq' && process.env.GROQ_API_KEY) {
-    return provider;
-  }
-
   const prevTranscribe = provider.transcribe;
 
   provider.speak = async (text: string, options: { voice?: string; language?: string; signal?: AbortSignal } = {}) => {
     const res = await synthesizeEdgeSpeech(text, options);
-    edgeTranscriptCache.set(`${res.data.byteLength}`, res.transcript);
     return { data: res.data, extension: res.extension };
   };
 
   provider.transcribe = async (audio: Uint8Array, filename: string, options: { language?: string; signal?: AbortSignal } = {}) => {
-    const key = `${audio.byteLength}`;
-    const cached = edgeTranscriptCache.get(key);
+    const cached = edgeTranscriptCache.get(audioCacheKey(audio));
     if (cached && cached.words.length > 0) {
       return cached;
     }

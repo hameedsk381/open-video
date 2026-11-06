@@ -55,14 +55,14 @@ Add to `.cursor/mcp.json`:
 
 | Tool Name | Parameters | Description |
 |---|---|---|
-| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `theme?`, `template?`, `full?` | Generates a complete video composition from a natural language brief. |
+| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `theme?`, `template?`, `full?`, `review?`, `strict?` | Generates a complete video composition from a natural language brief. `review: true` runs the renderer design check and reports unresolved errors (`isError`); without it the composition is unchecked. `strict: true` refuses an answer that only worked because invented animation properties or unusable keyframes were repaired; by default those repairs are made and listed under Notes. |
 | `motionrender_render_video` | `file`, `output?`, `format?`, `scale?` | Renders a `composition.json` to MP4, WebM, or PNG sequence. |
 | `motionrender_render_still` | `file`, `frame?`, `output?` | Renders a single frame still as a PNG image for visual inspection. |
 | `motionrender_review_video` | `file`, `output?`, `showSafeZones?` | Automated design, type scale, safe-zone, and contrast checks with contact sheet. |
 | `motionrender_validate` | `file` | Validates `composition.json` against schema and returns errors. |
 | `motionrender_inspect` | `file` | Returns structured summary of duration, scenes, layers, and assets. |
 | `motionrender_list_templates` | *(none)* | Lists available templates, themes, and scene blocks. |
-| `motionrender_refine_video` | `file`, `instruction` | Applies natural language edits to an existing `composition.json`. |
+| `motionrender_refine_video` | `file`, `instruction`, `review?` | Applies natural language edits to an existing `composition.json`. |
 
 ---
 

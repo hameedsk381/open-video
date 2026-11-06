@@ -4,7 +4,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createProvider, providerCapabilities, type AiProvider } from '@ove/ai';
+import { createProvider, narrateSmart, providerCapabilities, type AiProvider } from '@ove/ai';
 import { describeError, sfxFile } from '@ove/core';
 import { builtinFontFaces } from '@ove/graphics';
 import { builtinFontDir } from '@ove/graphics/fonts';
@@ -15,7 +15,7 @@ import { FsProjectStore, LOCAL_PRINCIPAL, within, type Principal } from '@ove/st
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
-import { composeSmart, listTemplates, narrateSmart } from './templates';
+import { composeSmart, listTemplates } from './templates';
 import { makeThumbnail } from './thumbnail';
 
 export type AiStudioOptions = {

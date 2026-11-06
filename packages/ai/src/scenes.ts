@@ -6,6 +6,7 @@
 // on purpose: each scene continues from the previous one's exit, which is what keeps the story coherent. Any failure
 // throws, and the caller falls back to the proven single-call path — so the mock provider and offline runs keep
 // working untouched.
+import { safeZoneBands } from '@ove/core';
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionPlan } from './prompt';
@@ -33,7 +34,8 @@ export type ScenesPlan = {
   sceneRanges: { start: number; end: number }[];
 };
 
-export type ScenesState = { plan: ScenesPlan; raw: any; scenes: any[] };
+/** `notes` is index-aligned with `scenes`: what each scene reply had to be changed into to become usable. */
+export type ScenesState = { plan: ScenesPlan; raw: any; scenes: any[]; notes: string[][] };
 
 export type ScenesOptions = {
   brief: string;
@@ -89,9 +91,24 @@ export function parseContract(raw: any): StyleContract {
 }
 
 /**
+ * The fade each scene shares with the one before it, in frames. A fixed wall-clock length, so a transition looks the
+ * same whatever the fps — and the reason durations must overshoot the timeline: the loader starts every scene this
+ * much before the previous one ends.
+ */
+export function sceneOverlap(fps: number): number {
+  return Math.max(1, Math.round(0.27 * fps));
+}
+
+/** One overlap per scene; the first scene has none, because nothing precedes it. */
+export function sceneOverlaps(count: number, fps: number): number[] {
+  return Array.from({ length: count }, (_, index) => (index === 0 ? 0 : sceneOverlap(fps)));
+}
+
+/**
  * Frames per scene, decided entirely by code: weighted by each beat's `seconds` (a deterministic jitter keeps the
- * lengths unequal when the model gives every beat the same weight, which the craft checks require), scaled to the
- * exact requested total, with rounding drift absorbed without dropping any scene below 1.2 s.
+ * lengths unequal when the model gives every beat the same weight, which the craft checks require), scaled so the
+ * stitched timeline lands on the exact requested length, with rounding drift absorbed without dropping any scene
+ * below the 1.2 s floor.
  */
 export function sceneDurations(beats: ScenesBeat[], durationSeconds: number, fps: number): number[] {
   const count = Math.max(1, beats.length);
@@ -103,9 +120,14 @@ export function sceneDurations(beats: ScenesBeat[], durationSeconds: number, fps
   });
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   const totalFrames = Math.max(count, Math.round(durationSeconds * fps));
-  const minFrames = Math.max(1, Math.round(1.2 * fps));
-  const frames = weights.map(weight => Math.max(minFrames, Math.round(weight / totalWeight * totalFrames)));
-  let drift = frames.reduce((sum, value) => sum + value, 0) - totalFrames;
+  // The timeline overlaps the scenes, so the durations must overshoot it by the whole overlap budget — otherwise the
+  // video comes out that many frames shorter than the brief asked for.
+  const targetFrames = totalFrames + sceneOverlap(fps) * Math.max(0, count - 1);
+  // The 1.2 s floor is a craft preference; the requested length is the contract. Beats that cannot all fit above the
+  // floor share the timeline instead of the video silently growing past the request.
+  const minFrames = Math.min(Math.max(1, Math.round(1.2 * fps)), Math.floor(targetFrames / count));
+  const frames = weights.map(weight => Math.max(minFrames, Math.round(weight / totalWeight * targetFrames)));
+  let drift = frames.reduce((sum, value) => sum + value, 0) - targetFrames;
   const order = frames.map((value, i) => [value, i] as const).sort((a, b) => b[0] - a[0]);
   for (const [, i] of order) {
     while (drift > 0 && frames[i]! > minFrames) {
@@ -157,6 +179,10 @@ Decide the visual system all scenes will share. Reply ONLY JSON:
 const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number, total: number, frames: number, previous: string | undefined, options: ScenesOptions): ChatMessage[] => {
   const assets = (options.assets ?? []).filter(asset => asset.type === 'image');
   const margin = Math.round(options.width * 0.08);
+  // The areas a player's own chrome covers come from the same table the review checks against, including its
+  // letterbox math — a landscape canvas has no bands, and the prompt must not invent rules the renderer ignores.
+  const bands = safeZoneBands(options.width, options.height);
+  const platformUi = bands.length ? ` ${bands.map(band => band.hint).join('. ')}.` : '';
   return [
     { role: 'system', content: `You design ONE scene of a ${options.width}x${options.height} motion-graphics video (${options.fps} fps). Reply with ONE JSON object and nothing else:
 { "background": { "type": "color", "color": "#hex from the palette" },
@@ -171,7 +197,7 @@ Layer shapes (x and y are the layer's CENTRE in pixels):
 House rules:
 - Use ONLY the palette colours: background ${contract.background}, text ${contract.text}, primary ${contract.primary}, accent ${contract.accent}, secondary ${contract.secondary}.
 - Fonts: headings in ${contract.fonts.heading}, supporting text in ${contract.fonts.body}.
-- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}. On vertical 9:16 canvases, keep text above y ${Math.round(options.height * 0.82)} (bottom 18% is covered by platform UI) and left of x ${Math.round(options.width * 0.89)} (right 11% is covered by buttons).
+- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}.${platformUi}
 - The scene's headline (largest text) MUST carry "split": { "by": "words", "stagger": 4, "preset": "rise" }.
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.
@@ -225,37 +251,52 @@ export function normalizeEasing(easing: any): string | undefined {
   return undefined;
 }
 
-export function normalizeAnimation(animation: any, frames: number): any | undefined {
-  if (!animation || typeof animation !== 'object' || typeof animation.property !== 'string') return undefined;
+/**
+ * Coerces one animation to the schema's keyframes form. Both the correct `{ property, keyframes }` shape and a from/to
+ * shorthand the model may invent (`{ property, from, to, startFrame, endFrame, easing }`) are accepted.
+ *
+ * Anything this function changes or removes is invisible in the finished video, so `onNote` lets callers report it
+ * instead of quietly sanitizing: a renamed property, a dropped keyframe, an animation that did not survive.
+ */
+export function normalizeAnimation(animation: any, frames: number, onNote?: (message: string) => void): any | undefined {
+  const drop = (message: string) => { onNote?.(message); return undefined; };
+  if (!animation || typeof animation !== 'object' || typeof animation.property !== 'string') {
+    return drop(`an animation was dropped: it has no "property" string (${JSON.stringify(animation)?.slice(0, 60) ?? String(animation)})`);
+  }
   let prop = animation.property.trim();
+  const requestedProp = prop;
   if (PROPERTY_MAP[prop.toLowerCase()]) {
     prop = PROPERTY_MAP[prop.toLowerCase()];
+    onNote?.(`the animation property "${requestedProp}" is not a schema property; used "${prop}" instead.`);
   }
   const isCssVar = prop.startsWith('--');
-  if (!VALID_PROPERTIES.has(prop) && !isCssVar) return undefined;
+  if (!VALID_PROPERTIES.has(prop) && !isCssVar) return drop(`the animation on "${requestedProp}" was dropped: "${prop}" is not an animatable property.`);
 
   const isColor = COLOR_PROPS.has(prop);
   const isPath = prop === 'd';
 
   const cleanKeyframe = (keyframe: any) => {
     if (!keyframe || typeof keyframe !== 'object') return null;
-    const frame = Math.max(0, Math.min(frames, Math.round(Number(keyframe?.frame) || 0)));
+    const rawFrame = Math.round(Number(keyframe?.frame) || 0);
+    const frame = Math.max(0, Math.min(frames, rawFrame));
+    if (frame !== rawFrame) onNote?.(`the ${prop} keyframe asked for frame ${rawFrame}, outside this scene's ${frames} frames; moved to ${frame}.`);
     let val = keyframe.value;
+    const dropKeyframe = (reason: string) => { onNote?.(`the ${prop} keyframe at frame ${frame} was dropped: ${reason}.`); return null; };
     if (isCssVar) {
-      if (typeof val !== 'string' && typeof val !== 'number') return null;
+      if (typeof val !== 'string' && typeof val !== 'number') return dropKeyframe(`${JSON.stringify(val) ?? 'undefined'} is not a value`);
     } else if (isColor) {
-      if (typeof val !== 'string' || !val.trim()) return null;
+      if (typeof val !== 'string' || !val.trim()) return dropKeyframe(`${JSON.stringify(val) ?? 'undefined'} is not a colour`);
       val = val.trim();
     } else if (isPath) {
-      if (typeof val !== 'string' || !val.trim()) return null;
+      if (typeof val !== 'string' || !val.trim()) return dropKeyframe(`${JSON.stringify(val) ?? 'undefined'} is not path data`);
     } else {
       // numeric property
       if (typeof val === 'string') {
         const parsed = Number(val.replace(/px$/, '').replace(/%$/, '').trim());
-        if (!Number.isFinite(parsed)) return null;
+        if (!Number.isFinite(parsed)) return dropKeyframe(`"${val}" is not a number`);
         val = parsed;
       } else if (typeof val !== 'number' || !Number.isFinite(val)) {
-        return null;
+        return dropKeyframe(`${JSON.stringify(val) ?? 'undefined'} is not a number`);
       }
       if (prop === 'opacity') {
         if (val > 1) val = val <= 100 ? val / 100 : 1;
@@ -263,6 +304,9 @@ export function normalizeAnimation(animation: any, frames: number): any | undefi
       }
     }
     const easing = normalizeEasing(keyframe.easing);
+    if (easing === undefined && typeof keyframe.easing === 'string' && keyframe.easing.trim()) {
+      onNote?.(`the easing "${keyframe.easing}" on the ${prop} keyframe at frame ${frame} is not a known easing; it was left out.`);
+    }
     return { frame, value: val, ...(easing ? { easing } : {}) };
   };
 
@@ -271,7 +315,7 @@ export function normalizeAnimation(animation: any, frames: number): any | undefi
       .map(cleanKeyframe)
       .filter((k: any): k is NonNullable<typeof k> => k !== null)
       .sort((a: any, b: any) => a.frame - b.frame);
-    if (!keyframes.length) return undefined;
+    if (!keyframes.length) return drop(`the ${prop} animation was dropped: none of its ${animation.keyframes.length} keyframes were usable.`);
     return {
       property: prop,
       keyframes,
@@ -285,20 +329,27 @@ export function normalizeAnimation(animation: any, frames: number): any | undefi
     const end = Math.min(frames, Math.max(start + 1, Math.round(Number(animation.endFrame) || frames)));
     const k1 = cleanKeyframe({ frame: start, value: animation.from });
     const k2 = cleanKeyframe({ frame: end, value: animation.to, easing: animation.easing });
-    if (!k1 || !k2) return undefined;
+    if (!k1 || !k2) return drop(`the ${prop} animation was dropped: its from/to values were not usable.`);
     return { property: prop, keyframes: [k1, k2] };
   }
-  return undefined;
+  return drop(`the ${prop} animation was dropped: it had no "keyframes" and no from/to values.`);
 }
 
 /** Coerces one scene reply into a schema-safe scene body; throws when the model produced nothing usable.
  *  Animations are normalized to the schema's keyframes form — both the correct `{ property, keyframes }` shape and
- *  a from/to shorthand the model may invent (`{ property, from, to, startFrame, endFrame, easing }`) are accepted. */
-export function parseScene(raw: any, frames: number): any {
+ *  a from/to shorthand the model may invent (`{ property, from, to, startFrame, endFrame, easing }`) are accepted.
+ *  Everything removed or reshaped along the way is pushed to `notes` so the caller can report it. */
+export function parseScene(raw: any, frames: number, notes: string[] = []): any {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('the scene reply was not a JSON object');
-  const layers = Array.isArray(raw.layers) ? raw.layers.filter((layer: any) => layer && typeof layer === 'object' && ['text', 'rect', 'circle', 'image'].includes(layer.type)) : [];
+  const usableType = (layer: any) => Boolean(layer && typeof layer === 'object' && ['text', 'rect', 'circle', 'image'].includes(layer.type));
+  for (const layer of Array.isArray(raw.layers) ? raw.layers : []) {
+    if (!usableType(layer)) notes.push(`a layer of type ${JSON.stringify((layer as any)?.type ?? layer) ?? 'undefined'} was dropped; a scene layer is text, rect, circle or image.`);
+  }
+  const layers = (Array.isArray(raw.layers) ? raw.layers : []).filter(usableType);
   if (!layers.length) throw new Error('the scene reply has no usable layers');
-  for (const layer of layers) {
+  layers.forEach((layer: any, index: number) => {
+    const label = `${layer.type} layer ${index + 1}`;
+    const note = (message: string) => notes.push(`${label}: ${message}`);
     if (layer.type === 'text') {
       if (!layer.content && layer.text) layer.content = layer.text;
       if (!layer.text && layer.content) layer.text = layer.content;
@@ -332,19 +383,24 @@ export function parseScene(raw: any, frames: number): any {
     }
     if (layer.split) {
       if (typeof layer.split !== 'object') {
+        note(`the split "${JSON.stringify(layer.split)}" was not an object; used word-by-word rise instead.`);
         layer.split = { by: 'words', stagger: 4, preset: 'rise' };
       } else {
         const allowedPresets = ['rise', 'fade', 'pop', 'blur', 'slide', 'drop', 'typewriter'];
         const p = String(layer.split.preset || 'rise').toLowerCase().replace(/-in$/, '');
+        if (!allowedPresets.includes(p)) note(`the split preset "${layer.split.preset}" does not exist; used "rise" instead.`);
         layer.split.preset = allowedPresets.includes(p) ? p : 'rise';
         const allowedBy = ['words', 'letters', 'lines'];
         const b = String(layer.split.by || 'words').toLowerCase();
+        if (!allowedBy.includes(b)) note(`the split "${layer.split.by}" does not exist; used "words" instead.`);
         layer.split.by = allowedBy.includes(b) ? b : 'words';
         layer.split.stagger = Math.max(1, Math.round(Number(layer.split.stagger) || 4));
       }
     }
-    if (Array.isArray(layer.animations)) layer.animations = layer.animations.map((animation: any) => normalizeAnimation(animation, frames)).filter(Boolean);
-  }
+    if (Array.isArray(layer.animations)) {
+      layer.animations = layer.animations.map((animation: any) => normalizeAnimation(animation, frames, note)).filter(Boolean);
+    }
+  });
   return {
     background: raw.background && typeof raw.background === 'object' ? raw.background : undefined,
     layers,
@@ -369,7 +425,7 @@ export function summarizeExit(scene: any): string | undefined {
  * kinetic-type backstop for compositions where no scene carried a split headline.
  */
 export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOptions, name?: string): any {
-  const overlaps = scenes.map((_, i) => (i === 0 ? 0 : 8));
+  const overlaps = sceneOverlaps(scenes.length, options.fps);
   const ranges = sceneRanges(plan.durations, overlaps);
   if (!scenes.some(scene => (scene.layers ?? []).some((layer: any) => layer.type === 'text' && layer.split))) {
     // Backstop: the biggest headline of the longest scene gets the kinetic split so the craft check holds.
@@ -422,10 +478,11 @@ export async function composeByScenes(provider: AiProvider, options: ScenesOptio
   if (!beats.length) throw new Error('the style contract had no usable beats');
   const contract = parseContract(contractRaw);
   const durations = sceneDurations(beats, options.durationSeconds, options.fps);
-  const plan: ScenesPlan = { beats, contract, durations, sceneRanges: sceneRanges(durations) };
+  const plan: ScenesPlan = { beats, contract, durations, sceneRanges: sceneRanges(durations, sceneOverlaps(durations.length, options.fps)) };
 
   options.onProgress?.(`Designing ${beats.length} scenes, one small call each…`);
   const scenes: any[] = [];
+  const notes: string[][] = [];
   for (const [index, beat] of beats.entries()) {
     const frames = durations[index]!;
     const previous = index > 0 ? summarizeExit(scenes[index - 1]) : undefined;
@@ -433,7 +490,9 @@ export async function composeByScenes(provider: AiProvider, options: ScenesOptio
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const reply = await provider.chat(sceneMessages(contract, beat, index, beats.length, frames, previous, options), { json: true, task: 'fast', temperature: attempt === 1 ? 0.5 : 0.2, maxTokens: 1800, signal: options.signal });
-        scenes[index] = parseScene(extractJson(reply), frames);
+        const attemptNotes: string[] = [];
+        scenes[index] = parseScene(extractJson(reply), frames, attemptNotes);
+        notes[index] = attemptNotes.map(note => `scene ${index + 1} ("${beat.name}"): ${note}`);
         break;
       } catch (error) {
         lastSceneError = error instanceof Error ? error.message : String(error);
@@ -442,7 +501,7 @@ export async function composeByScenes(provider: AiProvider, options: ScenesOptio
     if (!scenes[index]) throw new Error(`scene ${index + 1} ("${beat.name}") failed twice: ${lastSceneError}`);
   }
   const raw = stitchScenes(scenes, plan, options, motionPlan?.idea);
-  return { plan, raw, scenes };
+  return { plan, raw, scenes, notes };
 }
 
 /** Maps review issues (by frame) back to their scenes and re-designs only those, feeding the exact findings back. */
@@ -462,6 +521,7 @@ export async function healScenes(provider: AiProvider, state: ScenesState, issue
   if (!flagged.size) throw new Error('no review issue mapped to a scene');
   options.onProgress?.(`Re-designing ${flagged.size} scene(s) from the review…`);
   const scenes = structuredClone(state.scenes);
+  const notes = state.notes.map(sceneNotes => [...sceneNotes]);
   for (const [index, findings] of flagged) {
     const frames = state.plan.durations[index]!;
     const beat = state.plan.beats[index]!;
@@ -473,9 +533,11 @@ export async function healScenes(provider: AiProvider, state: ScenesState, issue
     for (let attempt = 1; attempt <= 2 && !healed; attempt++) {
       try {
         const reply = await provider.chat(messages, { json: true, task: 'fast', temperature: 0.2, maxTokens: 1800, signal: options.signal });
-        const candidate = parseScene(extractJson(reply), frames);
+        const attemptNotes: string[] = [];
+        const candidate = parseScene(extractJson(reply), frames, attemptNotes);
         if (JSON.stringify(candidate) !== JSON.stringify(scenes[index])) {
           scenes[index] = candidate;
+          notes[index] = attemptNotes.map(note => `scene ${index + 1} ("${beat.name}"): ${note}`);
           healed = true;
         }
       } catch (error) {
@@ -485,5 +547,5 @@ export async function healScenes(provider: AiProvider, state: ScenesState, issue
     if (!healed) throw new Error(`scene ${index + 1} ("${beat.name}") could not be healed: ${lastError}`);
   }
   const raw = stitchScenes(scenes, state.plan, options, state.raw.name);
-  return { plan: state.plan, raw, scenes };
+  return { plan: state.plan, raw, scenes, notes };
 }

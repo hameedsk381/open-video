@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeByScenes, healScenes, parseBeats, parseContract, parseScene, sceneDurations, sceneRanges, stitchScenes, summarizeExit, type ScenesOptions } from '@ove/ai';
+import { composeByScenes, healScenes, parseBeats, parseContract, parseScene, sceneDurations, sceneOverlap, sceneOverlaps, sceneRanges, stitchScenes, summarizeExit, type ScenesOptions } from '@ove/ai';
 import type { AiProvider, ChatMessage, ChatOptions } from '@ove/ai';
 
 // Scene-scoped orchestration: one small call for the style contract, one per scene, deterministic stitch and
@@ -63,10 +63,10 @@ describe('parseContract', () => {
 });
 
 describe('sceneDurations', () => {
-  it('scales beats to the exact total and keeps lengths unequal', () => {
+  it('overshoots the timeline by the overlap budget so the stitched length is exact', () => {
     const beats = parseBeats(JSON.parse(contractReply).beats);
     const durations = sceneDurations(beats, 10, 30);
-    expect(durations.reduce((sum, frames) => sum + frames, 0)).toBe(300);
+    expect(durations.reduce((sum, frames) => sum + frames, 0)).toBe(300 + 2 * sceneOverlap(30));
     expect(new Set(durations).size).toBeGreaterThan(1);
     expect(durations.every(frames => frames >= Math.round(1.2 * 30))).toBe(true);
   });
@@ -75,7 +75,36 @@ describe('sceneDurations', () => {
     const beats = [{ name: 'a' }, { name: 'b' }, { name: 'c' }];
     const durations = sceneDurations(beats, 10, 30);
     expect(new Set(durations).size).toBeGreaterThan(1);
-    expect(durations.reduce((sum, frames) => sum + frames, 0)).toBe(300);
+    expect(durations.reduce((sum, frames) => sum + frames, 0)).toBe(316);
+  });
+
+  // The seam the two halves only ever agreed with each other about: what the stitch publishes has to be what the brief asked for.
+  it('lands on the requested length for every beat count, length and fps', () => {
+    for (const fps of [24, 30, 60]) {
+      for (const seconds of [4, 6, 8, 15, 30]) {
+        for (const count of [1, 2, 3, 5, 8]) {
+          const beats = Array.from({ length: count }, (_, i) => ({ name: `Beat ${i + 1}` }));
+          const durations = sceneDurations(beats, seconds, fps);
+          const end = sceneRanges(durations, sceneOverlaps(count, fps)).at(-1)!.end;
+          expect(end, `${count} beats, ${seconds}s at ${fps} fps`).toBe(Math.round(seconds * fps));
+        }
+      }
+    }
+  });
+
+  it('shrinks the per-scene floor rather than the video when the beats cannot fit above it', () => {
+    const beats = Array.from({ length: 8 }, (_, i) => ({ name: `Beat ${i + 1}` }));
+    const durations = sceneDurations(beats, 6, 30);
+    expect(durations.every(frames => frames > 0)).toBe(true);
+    expect(sceneRanges(durations, sceneOverlaps(8, 30)).at(-1)!.end).toBe(180);
+  });
+});
+
+describe('sceneOverlap', () => {
+  it('is a fixed length in seconds, not a fixed frame count', () => {
+    expect(sceneOverlap(30)).toBe(8);
+    expect(sceneOverlap(60)).toBe(16);
+    expect(sceneOverlaps(3, 60)).toEqual([0, 16, 16]);
   });
 });
 
@@ -109,13 +138,45 @@ describe('parseScene', () => {
     expect(() => parseScene({ layers: [{ type: 'text' }] }, 90)).toThrow();
     expect(() => parseScene({ layers: [] }, 90)).toThrow();
   });
+
+  it('reports every animation it had to change instead of silently sanitizing it', () => {
+    const notes: string[] = [];
+    parseScene({
+      layers: [
+        { type: 'text', text: 'Hi', x: 540, y: 900, animations: [
+          { property: 'glow', keyframes: [{ frame: 0, value: 4 }, { frame: 20, value: 0 }] },
+          { property: 'y', keyframes: [{ frame: 0, value: 980 }, { frame: 20, value: 'high' }] },
+          { property: 'fade', keyframes: [{ frame: 0, value: 0, easing: 'wobbly' }, { frame: 20, value: 1 }] },
+        ], split: { by: 'sentences', preset: 'sparkle' } },
+        { type: 'shader', code: 'nope' },
+      ],
+    }, 90, notes);
+    expect(notes).toEqual([
+      'a layer of type "shader" was dropped; a scene layer is text, rect, circle or image.',
+      'text layer 1: the split preset "sparkle" does not exist; used "rise" instead.',
+      'text layer 1: the split "sentences" does not exist; used "words" instead.',
+      'text layer 1: the animation on "glow" was dropped: "glow" is not an animatable property.',
+      'text layer 1: the y keyframe at frame 20 was dropped: "high" is not a number.',
+      'text layer 1: the animation property "fade" is not a schema property; used "opacity" instead.',
+      'text layer 1: the easing "wobbly" on the opacity keyframe at frame 0 is not a known easing; it was left out.',
+    ]);
+  });
+
+  it('names the scene a repair note came from and keeps notes per scene in the state', async () => {
+    const glowy = JSON.stringify({ layers: [{ type: 'text', text: 'HI', x: 540, y: 900, fontSize: 170, animations: [{ property: 'glow', keyframes: [{ frame: 0, value: 1 }] }] }] });
+    const provider = scriptedProvider([contractReply, glowy, sceneReply('THE POUR', '45 seconds'), sceneReply('20% OFF', 'this week')]);
+    const state = await composeByScenes(provider, options);
+    expect(state.notes).toHaveLength(3);
+    expect(state.notes[0]).toEqual(['scene 1 ("Hook"): text layer 1: the animation on "glow" was dropped: "glow" is not an animatable property.']);
+    expect(state.notes[1]).toEqual([]);
+  });
 });
 
 describe('stitchScenes', () => {
   it('owns ids, durations, transitions, camera and the split backstop', () => {
     const beats = parseBeats(JSON.parse(contractReply).beats);
     const contract = parseContract(JSON.parse(contractReply));
-    const plan = { beats, contract, durations: [105, 135, 60], sceneRanges: sceneRanges([105, 135, 60], [0, 8, 8]) };
+    const plan = { beats, contract, durations: [105, 135, 60], sceneRanges: sceneRanges([105, 135, 60], sceneOverlaps(3, 30)) };
     const scenes = [sceneReply('SLOW COFFEE', 'small batch'), sceneReply('THE POUR', '45 seconds'), sceneReply('20% OFF', 'this week')].map(reply => parseScene(JSON.parse(reply), 135));
     const raw = stitchScenes(scenes, plan, options, 'Slow coffee');
     expect(raw.scenes).toHaveLength(3);
@@ -129,6 +190,18 @@ describe('stitchScenes', () => {
     const noSplit = parseScene({ layers: [{ type: 'text', text: 'PLAIN', x: 540, y: 900, fontSize: 170 }] }, 135);
     const raw2 = stitchScenes([noSplit, scenes[1]!, scenes[2]!], plan, options);
     expect(raw2.scenes[1]!.layers.some((layer: any) => layer.split)).toBe(true);
+  });
+
+  it('takes the fade length from the fps so a transition does not change with the frame rate', () => {
+    const beats = parseBeats(JSON.parse(contractReply).beats);
+    const contract = parseContract(JSON.parse(contractReply));
+    const durations = sceneDurations(beats, 10, 60);
+    const plan = { beats, contract, durations, sceneRanges: sceneRanges(durations, sceneOverlaps(3, 60)) };
+    const scenes = [sceneReply('SLOW COFFEE', 'a'), sceneReply('THE POUR', 'b'), sceneReply('20% OFF', 'c')].map(reply => parseScene(JSON.parse(reply), durations[1]!));
+    const raw = stitchScenes(scenes, plan, { ...options, fps: 60 });
+    expect(raw.fps).toBe(60);
+    expect(raw.scenes[1]!.transitionIn).toEqual({ type: 'fade', durationFrames: 16 });
+    expect(raw.durationFrames).toBe(600);
   });
 });
 
@@ -149,7 +222,9 @@ describe('composeByScenes', () => {
     expect(provider.calls[2]!.messages.map(message => message.content).join('\n')).toContain('Scene 2 of 3');
     expect(provider.calls[2]!.messages.map(message => message.content).join('\n')).toContain('The previous scene ends on: "SLOW COFFEE"');
     expect(state.raw.scenes).toHaveLength(3);
-    expect(state.plan.durations.reduce((sum, frames) => sum + frames, 0)).toBe(300);
+    expect(state.plan.durations.reduce((sum, frames) => sum + frames, 0)).toBe(316);
+    expect(state.raw.durationFrames).toBe(300);      // the brief asked for 10 s, and 10 s is what it is
+    expect(state.plan.sceneRanges[1]!.start).toBe(state.raw.scenes[1]!.startFrame);
     expect(state.raw.scenes.every((scene: any) => scene.camera?.animations?.length)).toBe(true);
   });
 
