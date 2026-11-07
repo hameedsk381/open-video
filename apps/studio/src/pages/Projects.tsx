@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ago, api, dur, type Project } from '../api';
-import { editorPath, go, planPath } from '../router';
+import { discoverPath, editorPath, go, planPath } from '../router';
 import {
   Badge,
   Button,
@@ -18,26 +18,34 @@ import {
   useUi,
 } from '../ui';
 
+type Sort = 'recent' | 'name' | 'longest';
+
+const shape = (project: Project) => project.width > project.height ? 'Landscape' : project.width < project.height ? 'Vertical' : 'Square';
+
 export function Projects() {
   const { toast, confirm } = useUi();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<Sort>('recent');
 
   const load = () =>
     api<{ projects: Project[] }>('/api/projects').then(
-      r => setProjects(r.projects),
-      e => setError(e.message)
+      result => setProjects(result.projects),
+      cause => setError(cause.message)
     );
 
   useEffect(() => {
     load();
   }, []);
 
-  const shown = useMemo(
-    () => (projects ?? []).filter(p => p.name.toLowerCase().includes(query.toLowerCase())),
-    [projects, query]
-  );
+  const shown = useMemo(() => {
+    const matches = (projects ?? []).filter(project => project.name.toLowerCase().includes(query.toLowerCase()));
+    return matches.sort((a, b) =>
+      sort === 'name' ? a.name.localeCompare(b.name) : sort === 'longest' ? b.seconds - a.seconds : b.modified - a.modified);
+  }, [projects, query, sort]);
+
+  const total = projects?.reduce((seconds, project) => seconds + project.seconds, 0) ?? 0;
 
   const run = (promise: Promise<unknown>, done: string) =>
     promise.then(
@@ -45,79 +53,73 @@ export function Projects() {
         toast(done, 'success');
         load();
       },
-      e => toast((e as Error).message, 'error')
+      cause => toast((cause as Error).message, 'error')
     );
 
   return (
     <Page
-      title="Video Projects"
-      subtitle="All your motion graphics pieces and video campaigns in one studio workspace."
-      actions={
-        projects && projects.length > 0 ? (
-          <Button variant="primary" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>
-            New Video
-          </Button>
-        ) : null
-      }
+      title="Projects"
+      subtitle={projects?.length
+        ? `${projects.length} ${projects.length === 1 ? 'production' : 'productions'} · ${dur(total)} of finished video`
+        : 'Every motion piece in this studio, ready to edit, review or export.'}
+      actions={<Button variant="primary" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>New video</Button>}
     >
       {error ? <Notice tone="error" title="Could not load projects">{error}</Notice> : null}
 
       {projects === null && !error ? (
-        <div className="grid">
-          {[1, 2, 3, 4].map(n => (
-            <div className="card" key={n} style={{ padding: 14 }}>
-              <Skeleton height={140} style={{ marginBottom: 12 }} />
-              <Skeleton width="70%" height={18} style={{ marginBottom: 8 }} />
-              <Skeleton width="40%" height={14} />
+        <div className="project-grid">
+          {[1, 2, 3, 4, 5, 6].map(n => (
+            <div className="project-tile" key={n}>
+              <Skeleton height={168} radius={0} />
+              <div className="project-body">
+                <Skeleton width="70%" height={16} />
+                <Skeleton width="45%" height={12} />
+              </div>
             </div>
           ))}
         </div>
       ) : null}
 
       {projects && projects.length === 0 ? (
-        <Empty
-          icon={<FilmIcon size={38} />}
-          title="No video projects yet"
-        >
-          <p style={{ maxWidth: 460, margin: '8px auto 0' }}>
-            Choose from our curated prompt library or describe your idea to synthesize broadcast-grade motion graphics in seconds.
+        <Empty icon={<FilmIcon size={34} />} title="No video projects yet">
+          <p style={{ maxWidth: 440, margin: '8px auto 0' }}>
+            Describe a piece above, or start from a prompt in Discover. The studio writes the script, designs the look and opens an editable timeline.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 18, flexWrap: 'wrap' }}>
-            <Button variant="primary" size="md" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>
-              Create New Video
-            </Button>
-            <Button variant="secondary" size="md" icon={<SparklesIcon size={14} />} onClick={() => go('#/')}>
-              Browse Prompt Showcase
-            </Button>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18, flexWrap: 'wrap' }}>
+            <Button variant="primary" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>Create a video</Button>
+            <Button variant="secondary" icon={<SparklesIcon size={14} />} onClick={() => go(discoverPath)}>Browse Discover</Button>
           </div>
         </Empty>
       ) : null}
 
       {projects && projects.length > 0 ? (
         <>
-          <div className="toolbar">
-            <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
-              <span style={{ position: 'absolute', left: 12, top: 10, color: 'var(--muted)', pointerEvents: 'none' }}>
-                <SearchIcon size={14} />
-              </span>
+          <div className="projects-toolbar">
+            <div className="search-wrap">
+              <SearchIcon size={15} />
               <input
                 className="input"
-                style={{ paddingLeft: 34 }}
-                placeholder="Search your video projects…"
+                placeholder="Search projects…"
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={event => setQuery(event.target.value)}
+                aria-label="Search projects"
               />
+            </div>
+            <div className="segmented">
+              {([['recent', 'Recent'], ['name', 'Name'], ['longest', 'Longest']] as const).map(([id, label]) => (
+                <button key={id} className={sort === id ? 'on' : ''} onClick={() => setSort(id)}>{label}</button>
+              ))}
             </div>
           </div>
 
-          <div className="grid">
+          <div className="project-grid">
             {shown.map(project => (
               <ProjectCard
                 key={project.id}
                 project={project}
                 onDuplicate={() => run(api('/api/project/duplicate', { id: project.id }), 'Project duplicated')}
                 onDelete={async () => {
-                  if (await confirm(`Move "${project.name}" to Trash? You can restore it later if needed.`, 'Move to Trash')) {
+                  if (await confirm(`Move “${project.name}” to Trash? You can restore it later if needed.`, 'Move to Trash')) {
                     run(api('/api/project/delete', { id: project.id }), 'Project moved to trash');
                   }
                 }}
@@ -126,9 +128,7 @@ export function Projects() {
           </div>
 
           {shown.length === 0 ? (
-            <p className="sub" style={{ textAlign: 'center', marginTop: 40 }}>
-              No videos matching "{query}".
-            </p>
+            <p className="empty-note">No projects match “{query}”.</p>
           ) : null}
         </>
       ) : null}
@@ -136,77 +136,54 @@ export function Projects() {
   );
 }
 
-function ProjectCard({
-  project,
-  onDuplicate,
-  onDelete,
-}: {
-  project: Project;
-  onDuplicate: () => void;
-  onDelete: () => void;
-}) {
-  const open = () => go(editorPath(project.id));
+function ProjectCard({ project, onDuplicate, onDelete }: { project: Project; onDuplicate: () => void; onDelete: () => void }) {
   const [broken, setBroken] = useState(false);
   const [src, setSrc] = useState<string>();
   const holder = useRef<HTMLDivElement>(null);
+  const open = () => go(editorPath(project.id));
 
   useEffect(() => {
-    const el = holder.current;
-    if (!el) return;
+    const element = holder.current;
+    if (!element) return;
     const seen = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) {
-        setSrc(`/api/thumb?id=${encodeURIComponent(project.id)}&v=${Math.round(project.modified)}`);
-        seen.disconnect();
-      }
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      setSrc(`/api/thumb?id=${encodeURIComponent(project.id)}&v=${Math.round(project.modified)}`);
+      seen.disconnect();
     });
-    seen.observe(el);
+    seen.observe(element);
     return () => seen.disconnect();
   }, [project.id, project.modified]);
 
   return (
-    <div className="card bento-card project-card">
-      <div className="thumb bento-media" ref={holder} onClick={open}>
+    <article className="project-tile">
+      <div className="project-thumb" ref={holder} onClick={open}>
         {src && !broken ? (
-          <img src={src} alt="" onError={() => setBroken(true)} />
+          <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />
         ) : (
-          <span className="ph" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)' }}>
-            <FilmIcon size={20} />
-            <span>{broken ? 'No preview' : 'Loading preview…'}</span>
-          </span>
+          <span className="project-thumb-empty"><FilmIcon size={20} /><span>{broken ? 'No preview' : 'Loading preview…'}</span></span>
         )}
+        <span className="project-duration">{dur(project.seconds)}</span>
       </div>
 
-      <div className="card-body">
+      <div className="project-body" onClick={open}>
         <b title={project.name}>{project.name}</b>
-        <div className="meta">
+        <div className="project-meta">
           <span>{project.width}×{project.height}</span>
-          <span>·</span>
-          <span>{dur(project.seconds)}</span>
-          <span>·</span>
+          <span>{shape(project)}</span>
           <span>{project.scenes} {project.scenes === 1 ? 'scene' : 'scenes'}</span>
         </div>
-        <div className="meta" style={{ marginTop: 6 }}>
+        <div className="project-meta">
           <span>Edited {ago(project.modified)}</span>
-          <span className="tag-pill category-tag" style={{ fontSize: 11, padding: '2px 8px' }}>
-            {project.mode === 'template' ? 'Dynamic' : 'Custom Motion'}
-          </span>
+          <Badge tone="neutral">{project.mode === 'template' ? 'Dynamic' : 'Custom motion'}</Badge>
         </div>
       </div>
 
-      <div className="card-foot">
-        <Button size="sm" variant="secondary" onClick={open}>
-          Open Studio
-        </Button>
-        <Button size="sm" variant="ghost" icon={<LayersIcon size={12} />} onClick={() => go(planPath(project.id))} title="Open the production plan">
-          Plan
-        </Button>
-        <Button size="sm" variant="ghost" icon={<CopyIcon size={12} />} onClick={onDuplicate} title="Duplicate project">
-          Duplicate
-        </Button>
-        <Button size="sm" variant="ghost" icon={<TrashIcon size={12} />} onClick={onDelete} title="Delete project">
-          Delete
-        </Button>
+      <div className="project-actions">
+        <Button size="sm" variant="secondary" onClick={open}>Open</Button>
+        <Button size="sm" variant="ghost" icon={<LayersIcon size={12} />} onClick={() => go(planPath(project.id))} title="Production plan">Plan</Button>
+        <Button size="sm" variant="ghost" icon={<CopyIcon size={12} />} onClick={onDuplicate} title="Duplicate project">Duplicate</Button>
+        <Button size="sm" variant="ghost" icon={<TrashIcon size={12} />} onClick={onDelete} title="Delete project">Delete</Button>
       </div>
-    </div>
+    </article>
   );
 }

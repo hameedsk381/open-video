@@ -242,15 +242,40 @@ export const TypeIcon = ({ size = 16, ...p }: IconProps) => (
   </svg>
 );
 
+export const HomeIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><path d="M9 21V12h6v9" />
+  </svg>
+);
+
+export const CompassIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+);
+
+export const ImagesIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <rect width="18" height="18" x="3" y="3" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+  </svg>
+);
+
+export const MenuIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="18" y2="18" />
+  </svg>
+);
+
+
 /* ==================== Brand Mark / Logo ==================== */
 export const StudioBrandLogo = ({ size = 22 }: { size?: number }) => (
   <div className="brand-symbol" style={{ width: size, height: size }} aria-hidden>
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <defs>
         <linearGradient id="brand-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6366f1" />
-          <stop offset="0.5" stopColor="#3b82f6" />
-          <stop offset="1" stopColor="#06b6d4" />
+          <stop stopColor="#8b7cff" />
+          <stop offset="0.55" stopColor="#a196ff" />
+          <stop offset="1" stopColor="#5cc8d7" />
         </linearGradient>
       </defs>
       <path d="M4 4h7.5c4.5 0 8.5 3.5 8.5 8s-4 8-8.5 8H4V4z" fill="url(#brand-grad)" fillOpacity="0.25" stroke="url(#brand-grad)" strokeWidth="2" strokeLinejoin="round" />
