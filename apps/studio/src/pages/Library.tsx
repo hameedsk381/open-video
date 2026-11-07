@@ -74,6 +74,7 @@ export function Settings() {
             <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>Model Selection</label>
             <select
               className="input"
+              aria-label="Model selection"
               value={modelPreset}
               onChange={e => setModelPreset(e.target.value)}
             >
@@ -89,7 +90,7 @@ export function Settings() {
           {modelPreset === 'custom' ? (
             <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</label>
                 <input
                   className="input"
                   placeholder="https://openrouter.ai/api/v1 (or http://localhost:11434/v1 for Ollama)"
@@ -99,7 +100,7 @@ export function Settings() {
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Custom Model Identifier</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Custom Model Identifier</label>
                 <input
                   className="input"
                   placeholder="anthropic/claude-3.7-sonnet, deepseek/deepseek-r1, or any model ID"
@@ -109,7 +110,7 @@ export function Settings() {
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key</label>
                 <input
                   className="input"
                   type="password"
@@ -117,7 +118,7 @@ export function Settings() {
                   value={customApiKey}
                   onChange={e => setCustomApiKey(e.target.value)}
                 />
-                <span style={{ fontSize: 11, color: 'var(--faint)', display: 'block', marginTop: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--faint)', display: 'block', marginTop: 4 }}>
                   Stored only in your local browser storage. Never sent to any third party.
                 </span>
               </div>

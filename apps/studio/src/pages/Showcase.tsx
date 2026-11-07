@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { modKeyLabel } from '../platform';
 import { go } from '../router';
 import {
   Badge,
@@ -327,7 +328,8 @@ export function Showcase() {
               <input
                 type="text"
                 className="showcase-search-input"
-                placeholder="Search prompts, motion styles, UI state animations, or creators... (⌘K)"
+                placeholder={`Search prompts, motion styles, UI state animations, or creators... (${modKeyLabel('K')})`}
+                aria-label="Search Discover"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />

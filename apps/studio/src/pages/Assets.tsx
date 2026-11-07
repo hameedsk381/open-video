@@ -163,7 +163,7 @@ function TemplateCard({ template }: { template: TemplateSummary }) {
         ) : null}
       </div>
       <div className="asset-actions">
-        <Button size="sm" variant="primary" icon={<WandIcon size={12} />} onClick={() => go(`#/new?template=${encodeURIComponent(template.id)}`)}>
+        <Button size="sm" variant="secondary" icon={<WandIcon size={12} />} onClick={() => go(`#/new?template=${encodeURIComponent(template.id)}`)}>
           Use template
         </Button>
       </div>

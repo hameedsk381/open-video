@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { modKeyLabel } from '../platform';
 import { ago, api, cleanUserStatus, dur, useJobs, type Job, type Library, type Project, type TemplateSummary } from '../api';
 import { discoverPath, editorPath, go } from '../router';
 import {
@@ -103,9 +104,9 @@ export function Home({ email }: { email?: string }) {
             aria-label="Describe your video"
           />
           <div className="composer-bar">
-            <span className="composer-hint">⌘↵ to start · <a href="#/new">Full composer</a></span>
+            <span className="composer-hint">{modKeyLabel('↵')} to continue · <a href="#/new">Choose format and length</a></span>
             <Button variant="primary" icon={<SparklesIcon size={14} />} onClick={start}>
-              Start production
+              Continue
             </Button>
           </div>
         </div>

@@ -23,14 +23,10 @@ export type TimelineScrubberProps = {
   onSelectScene?: (sceneId: string) => void;
 };
 
-// Scene color palette accents for visual track differentiation
+// Scenes alternate between the accent and a neutral so neighbours read apart: colour is not a scene's identity, and the interface keeps one accent.
 const SCENE_COLORS = [
-  { bg: 'rgba(99, 102, 241, 0.18)', border: 'rgba(99, 102, 241, 0.45)', text: '#a5b4fc', active: 'rgba(99, 102, 241, 0.35)' },
-  { bg: 'rgba(14, 165, 233, 0.18)', border: 'rgba(14, 165, 233, 0.45)', text: '#7dd3fc', active: 'rgba(14, 165, 233, 0.35)' },
-  { bg: 'rgba(168, 85, 247, 0.18)', border: 'rgba(168, 85, 247, 0.45)', text: '#d8b4fe', active: 'rgba(168, 85, 247, 0.35)' },
-  { bg: 'rgba(16, 185, 129, 0.18)', border: 'rgba(16, 185, 129, 0.45)', text: '#6ee7b7', active: 'rgba(16, 185, 129, 0.35)' },
-  { bg: 'rgba(245, 158, 11, 0.18)', border: 'rgba(245, 158, 11, 0.45)', text: '#fcd34d', active: 'rgba(245, 158, 11, 0.35)' },
-  { bg: 'rgba(244, 63, 94, 0.18)', border: 'rgba(244, 63, 94, 0.45)', text: '#fda4af', active: 'rgba(244, 63, 94, 0.35)' },
+  { bg: 'color-mix(in srgb, var(--accent) 18%, transparent)', border: 'color-mix(in srgb, var(--accent) 45%, transparent)', text: 'var(--accent-2)', active: 'color-mix(in srgb, var(--accent) 35%, transparent)' },
+  { bg: 'color-mix(in srgb, var(--muted) 16%, transparent)', border: 'color-mix(in srgb, var(--muted) 40%, transparent)', text: 'var(--text)', active: 'color-mix(in srgb, var(--muted) 30%, transparent)' },
 ];
 
 export function TimelineScrubber({
@@ -158,7 +154,7 @@ export function TimelineScrubber({
         const barRatio = i / audioPeaks.length;
 
         if (barRatio <= playRatio) {
-          ctx.fillStyle = '#3b82f6'; // Played highlight (Brand Accent)
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4693f1'; // Played highlight: the accent, read from the theme (a canvas cannot use var())
         } else {
           ctx.fillStyle = 'rgba(148, 163, 184, 0.28)'; // Unplayed
         }
@@ -259,7 +255,7 @@ export function TimelineScrubber({
         style={{
           position: 'relative',
           height: 64,
-          background: 'rgba(15, 23, 42, 0.75)',
+          background: 'var(--surface-2)',
           border: '1px solid var(--border)',
           borderRadius: 8,
           overflow: 'hidden',
@@ -276,7 +272,7 @@ export function TimelineScrubber({
             right: 0,
             height: 24,
             display: 'flex',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid var(--border)',
           }}
         >
           {detail.scenes.map((scene, idx) => {
@@ -310,7 +306,7 @@ export function TimelineScrubber({
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
                   color: color.text,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   transition: 'background 0.15s ease',
                 }}
@@ -318,7 +314,7 @@ export function TimelineScrubber({
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {scene.name || scene.id}
                 </span>
-                <span style={{ fontSize: 9.5, opacity: 0.65, marginLeft: 4 }}>
+                <span style={{ fontSize: 12, opacity: 0.65, marginLeft: 4 }}>
                   {dur(scene.durationFrames / fps)}
                 </span>
               </div>
@@ -351,7 +347,7 @@ export function TimelineScrubber({
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              fontSize: 10,
+              fontSize: 12,
               color: 'var(--muted)',
               pointerEvents: 'none',
               opacity: 0.75,
@@ -371,7 +367,7 @@ export function TimelineScrubber({
               bottom: 0,
               left: `${(hoverFrame / total) * 100}%`,
               width: 1,
-              background: 'rgba(255, 255, 255, 0.4)',
+              background: 'color-mix(in srgb, var(--text) 40%, transparent)',
               pointerEvents: 'none',
             }}
           >
@@ -380,7 +376,7 @@ export function TimelineScrubber({
                 position: 'absolute',
                 top: 2,
                 left: 4,
-                fontSize: 9.5,
+                fontSize: 12,
                 background: 'rgba(0,0,0,0.8)',
                 padding: '1px 4px',
                 borderRadius: 3,
@@ -401,8 +397,8 @@ export function TimelineScrubber({
             bottom: 0,
             left: `${progressPercent}%`,
             width: 2,
-            background: 'var(--color-accent-brand, #3b82f6)',
-            boxShadow: '0 0 10px rgba(59, 130, 246, 0.8), 0 0 4px var(--color-accent-brand, #3b82f6)',
+            background: 'var(--accent)',
+            boxShadow: '0 0 10px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 4px var(--accent)',
             pointerEvents: 'none',
             transform: 'translateX(-50%)',
             zIndex: 10,
@@ -417,7 +413,7 @@ export function TimelineScrubber({
               transform: 'translateX(-50%)',
               width: 10,
               height: 10,
-              background: 'var(--color-accent-brand, #3b82f6)',
+              background: 'var(--accent)',
               borderRadius: '50%',
               boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
             }}
@@ -451,7 +447,7 @@ export function TimelineScrubber({
           {/* Play / Pause */}
           <Button
             size="sm"
-            variant="primary"
+            variant="secondary"
             style={{ minWidth: 72 }}
             icon={playing ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
             onClick={onTogglePlay}
@@ -481,16 +477,16 @@ export function TimelineScrubber({
           }}
         >
           <div>
-            <span style={{ color: 'var(--color-accent-brand, #3b82f6)', fontWeight: 600 }}>{dur(currentFrame / fps)}</span>
+            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{dur(currentFrame / fps)}</span>
             <span style={{ color: 'var(--muted)', margin: '0 4px' }}>/</span>
             <span style={{ color: 'var(--muted)' }}>{dur(total / fps)}</span>
           </div>
 
           <div
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--muted)',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'var(--surface-2)',
               padding: '2px 8px',
               borderRadius: 4,
             }}

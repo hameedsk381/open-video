@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { slotName } from '../slotName';
 import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
 import { PlayerView, type PlayerHandle } from '../Player';
@@ -371,7 +372,7 @@ function Edit({ detail, save, reload, setNote }: PaneProps) {
         )
       ) : detail.texts.length ? (
         detail.texts.map((t: TextLayer) => (
-          <Field key={t.path} label={`${t.scene} · ${t.id}`}>
+          <Field key={t.path} label={`${t.scene} · ${slotName(t.scene, t.id)}`}>
             <textarea
               className="input"
               style={{ minHeight: t.content.length > 60 ? 90 : 44 }}

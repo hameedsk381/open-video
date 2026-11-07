@@ -270,16 +270,9 @@ export const MenuIcon = ({ size = 16, ...p }: IconProps) => (
 /* ==================== Brand Mark / Logo ==================== */
 export const StudioBrandLogo = ({ size = 22 }: { size?: number }) => (
   <div className="brand-symbol" style={{ width: size, height: size }} aria-hidden>
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="brand-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#8b7cff" />
-          <stop offset="0.55" stopColor="#a196ff" />
-          <stop offset="1" stopColor="#5cc8d7" />
-        </linearGradient>
-      </defs>
-      <path d="M4 4h7.5c4.5 0 8.5 3.5 8.5 8s-4 8-8.5 8H4V4z" fill="url(#brand-grad)" fillOpacity="0.25" stroke="url(#brand-grad)" strokeWidth="2" strokeLinejoin="round" />
-      <polygon points="9,8 16,12 9,16" fill="url(#brand-grad)" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ color: 'var(--accent)' }}>
+      <path d="M4 4h7.5c4.5 0 8.5 3.5 8.5 8s-4 8-8.5 8H4V4z" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <polygon points="9,8 16,12 9,16" fill="currentColor" />
     </svg>
   </div>
 );

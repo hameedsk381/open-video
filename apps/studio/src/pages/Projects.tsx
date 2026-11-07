@@ -62,7 +62,7 @@ export function Projects() {
       subtitle={projects?.length
         ? `${projects.length} ${projects.length === 1 ? 'production' : 'productions'} · ${dur(total)} of finished video`
         : 'Every motion piece in this studio, ready to edit, review or export.'}
-      actions={<Button variant="primary" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>New video</Button>}
+      actions={<Button variant={projects?.length ? 'primary' : 'secondary'} icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>New video</Button>}
     >
       {error ? <Notice tone="error" title="Could not load projects">{error}</Notice> : null}
 

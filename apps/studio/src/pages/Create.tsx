@@ -80,10 +80,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
 
   // Custom Brand Colors
   const [customColorsEnabled, setCustomColorsEnabled] = useState(false);
-  const [brandPrimary, setBrandPrimary] = useState('#6366f1');
-  const [brandAccent, setBrandAccent] = useState('#ec4899');
-  const [brandBg, setBrandBg] = useState('#0b0f19');
-  const [brandText, setBrandText] = useState('#ffffff');
+  const [brandPrimary, setBrandPrimary] = useState('#4693f1');
+  const [brandAccent, setBrandAccent] = useState('#70adfb');
+  const [brandBg, setBrandBg] = useState('#0b0d12');
+  const [brandText, setBrandText] = useState('#f5f6fa');
 
   // AI Creative Engine & Custom BYOK Gateway
   const [modelPreset, setModelPreset] = useState<string>(() => {
@@ -270,6 +270,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         <textarea
           autoFocus
           className="create-brief"
+          aria-label="Describe your video"
           placeholder="What is the video about? Name the product, the benefit and who it is for — or paste a brief."
           value={brief}
           onChange={event => setBrief(event.target.value)}

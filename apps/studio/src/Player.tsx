@@ -145,7 +145,7 @@ export const PlayerView = forwardRef<PlayerHandle, {
               pointerEvents: 'none',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.4)',
+              boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent)',
             }}
           >
             {/* Top Navigation & Status Bar Safe Area (8%) */}
@@ -158,7 +158,7 @@ export const PlayerView = forwardRef<PlayerHandle, {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fca5a5',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
@@ -180,7 +180,7 @@ export const PlayerView = forwardRef<PlayerHandle, {
                   justifyContent: 'center',
                   writingMode: 'vertical-rl',
                   color: '#fca5a5',
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase',
@@ -201,7 +201,7 @@ export const PlayerView = forwardRef<PlayerHandle, {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fca5a5',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',

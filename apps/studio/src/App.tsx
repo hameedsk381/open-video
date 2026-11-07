@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { modKeyLabel } from './platform';
 import { api, connectJobs, useJobs, cleanUserStatus } from './api';
 import { CommandPalette } from './CommandPalette';
 import { Making, Create } from './pages/Create';
@@ -289,10 +290,10 @@ export function App() {
               <b>{sections[route.name]}</b>
             </div>
 
-            <button className="palette-trigger" onClick={() => setPaletteOpen(true)} title="Search projects or jump to (⌘K)">
+            <button className="palette-trigger" onClick={() => setPaletteOpen(true)} title={`Search projects or jump to (${modKeyLabel('K')})`}>
               <SearchIcon size={15} />
               <span className="search-lbl">Search or jump to…</span>
-              <kbd className="kbd-pill">⌘K</kbd>
+              <kbd className="kbd-pill">{modKeyLabel('K')}</kbd>
             </button>
 
             <div className="grow" />
@@ -304,7 +305,8 @@ export function App() {
               </div>
             ) : null}
 
-            <a className="btn primary sm" href="#/new">
+            {/* One filled button per view: only Discover and Assets have no primary action of their own, so the global shortcut steps back everywhere else. */}
+            <a className={`btn ${['showcase', 'library'].includes(route.name) ? 'primary' : 'secondary'} sm`} href="#/new">
               <PlusIcon size={14} />
               <span>New video</span>
             </a>
