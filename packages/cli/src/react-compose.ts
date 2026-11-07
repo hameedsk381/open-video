@@ -41,6 +41,14 @@ export async function convertToReact(raw: unknown, outputPath: string, options: 
   ].join('\n');
   await writeFile(sourcePath, source, 'utf8');
   await buildReact(sourcePath, outputPath);
+  // Film grain, background texture, motion blur and the beat grid belong to the whole frame, which the renderer applies itself from these
+  // top-level fields whatever the layers are. The build knows only some of them, so carry the rest across rather than lose them.
+  const carried: Record<string, unknown> = {};
+  for (const key of ['motionBlur', 'grain', 'texture', 'tempo']) if (composition[key] !== undefined && composition[key] !== null && !(key === 'grain' && !composition[key]) && !(key === 'texture' && composition[key].type === 'none')) carried[key] = composition[key];
+  if (Object.keys(carried).length) {
+    const built = JSON.parse(await readFile(outputPath, 'utf8'));
+    await writeFile(outputPath, JSON.stringify({ ...built, ...carried }, null, 2) + '\n', 'utf8');
+  }
   return { unsupported: [], sourcePath, compositionPath: outputPath };
 }
 

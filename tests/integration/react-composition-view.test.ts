@@ -36,6 +36,24 @@ describe('a composition converted to a React video', () => {
     } finally { await rm(dir, { recursive: true, force: true }); }
   }, 120_000);
 
+  it('carries film grain, background texture and motion blur across, since the renderer applies them to the whole frame', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ove-view-'));
+    try {
+      const composition = loadComposition({
+        version: '1.0', id: 'frame', name: 'frame', width: 320, height: 180, fps: 30, durationFrames: 30, background: '#102030',
+        motionBlur: { samples: 4, shutter: 180 }, grain: 0.05, texture: { type: 'grid', color: '#ffffff', opacity: 0.06, scale: 48 },
+        scenes: [{ id: 's', name: 's', durationFrames: 30, layers: [{ id: 'r', type: 'rect', width: 50, height: 50, fill: '#fff' }] }],
+      } as any);
+      const output = join(dir, 'composition.json');
+      expect((await convertToReact(composition, output)).unsupported).toEqual([]);
+      const built = JSON.parse(await readFile(output, 'utf8'));
+      expect(built.motionBlur).toEqual({ samples: 4, shutter: 180 });
+      expect(built.grain).toBe(0.05);
+      expect(built.texture?.type).toBe('grid');
+      expect(built.background).toBe('#102030');
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }, 60_000);
+
   it('refuses what the view cannot draw, and writes nothing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ove-view-'));
     try {

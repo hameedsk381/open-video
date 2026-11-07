@@ -42,7 +42,6 @@ export function unsupportedFeatures(composition: CompositionData): string[] {
     if (scene.grade) found.add('colour grading');
     for (const t of [scene.transitionIn, scene.transitionOut]) if (t && !supportedTransitions.has(t.type)) found.add(`${t.type} transitions`);
   });
-  if ((composition as any).texture && (composition as any).texture.type !== 'none') found.add('background textures');
   if ((composition as any).export?.transparent) found.add('transparent output');
   return [...found];
 }
@@ -280,5 +279,5 @@ export function CompositionView({ composition, assets = {} }: { composition: Com
     if (t && t.type === 'dip') children.push(createElement('div', { key: 'dip', style: { position: 'absolute', inset: 0, background: t.color ?? '#000000', opacity: 1 - t.progress } }));
     return createElement('div', { key: scene.id ?? index, style: sceneStyle(t && t.type === 'dip' ? { ...t, progress: 1 } : t, width, height) }, children);
   });
-  return createElement('div', { style: { position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden', background: composition.background ?? '#000000' } }, scenes);
+  return createElement('div', { style: { position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' } }, scenes);   // no background here: the renderer paints it (and the texture and grain over it) under every layer
 }
