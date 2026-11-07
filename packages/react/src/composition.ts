@@ -28,10 +28,11 @@ export function unsupportedFeatures(composition: CompositionData): string[] {
       if (layer.matte || layer.masked) found.add('mattes and masks');
       if (layer.clipPath || layer.clip) found.add('group clipping');
       if (layer.layout) found.add('group layout');
-      if (layer.type === 'text' && layer.spans?.length) found.add('rich text (spans)');
+      if (layer.type === 'text' && layer.spans?.length && layer.split) found.add('split rich text');
       if (layer.type === 'path' && ((layer.trimStart ?? 0) > 0 || (layer.trimEnd ?? 1) < 1 || layer.animations?.some((a: any) => a.property === 'd' || a.property === 'trimEnd' || a.property === 'trimStart'))) found.add('path trimming and morphing');
       if (layer.type === 'react') found.add('nested react layers');
-      if (typeof layer.fill === 'object' && layer.fill || typeof layer.color === 'object' && layer.color || typeof layer.stroke === 'object' && layer.stroke) found.add('gradients');
+      // Gradients fill and outline shapes; on text they would need the glyphs as a clip, which this view does not do yet.
+      if (layer.type === 'text' && (typeof layer.color === 'object' && layer.color || typeof layer.stroke === 'object' && layer.stroke || layer.spans?.some((span: any) => typeof span.color === 'object' && span.color))) found.add('gradient text');
       if (layer.animations?.some((a: any) => String(a.property).startsWith('--'))) found.add('shader variables');
       if (layer.children) walk(layer.children, where);
     }
@@ -89,6 +90,46 @@ function unitSteps(n: number, order: string | undefined, seed: string): number[]
   return Array.from({ length: n }, (_, i) => i);
 }
 
+/**
+ * Rich text (spans), placed the way the canvas runtime places it: each line's baseline sits one font ascent below the line's top, words
+ * are laid left to right from the aligned start, and a span's highlight and underline are drawn behind and under its words. Split rich
+ * text is not drawn here yet. Without a page (the Node scan) it is undefined and the caller shows the plain text.
+ */
+function richContent(layer: Layer, size: number): ReactNode[] | undefined {
+  const lay = (globalThis as any).layoutRich as undefined | ((spans: any[], options: Record<string, unknown>, measure: (text: string, span: any, px: number) => number) => { lines: { runs: { text: string; span: number; kind: string; size: number; width: number }[]; width: number }[]; scale: number });
+  if (typeof lay !== 'function' || typeof document === 'undefined') return undefined;
+  const ctx = (layoutLines as any).ctx ??= document.createElement('canvas').getContext('2d');
+  if (!ctx) return undefined;
+  const spans: any[] = layer.spans, align = layer.textAlign ?? 'left';
+  const stack = (span: any) => fontStack(span.fontFamily ?? layer.fontFamily);
+  const weight = (span: any) => span.fontWeight ?? layer.fontWeight ?? 400, style = (span: any) => span.fontStyle ?? layer.fontStyle ?? 'normal';
+  const font = (span: any, px: number) => `${style(span)} ${weight(span)} ${px}px ${stack(span)}`;
+  ctx.letterSpacing = `${num(layer.letterSpacing, 0)}px`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const laid = lay(spans, { fontSize: size, maxWidth: layer.maxWidth, maxLines: layer.maxLines, minFontSize: layer.minFontSize }, (text, span, px) => { ctx.font = font(span, px); return ctx.measureText(text).width; });
+  const out: ReactNode[] = []; let top = 0, k = 0;
+  const lineHeight = num(layer.lineHeight, 1.2), ink = (span: any) => span.color ?? layer.color ?? '#ffffff';
+  const stroke = layer.stroke && num(layer.strokeWidth, 0) > 0 && typeof layer.stroke === 'string' ? `${layer.strokeWidth}px ${layer.stroke}` : undefined;
+  for (const line of laid.lines) {
+    const lineSize = line.runs.length ? Math.max(...line.runs.map(run => run.size)) : size * laid.scale;
+    const metrics = line.runs.map(run => { ctx.font = font(spans[run.span], run.size); const m = ctx.measureText('Hg'); return { ascent: num(m.fontBoundingBoxAscent, run.size * 0.8), descent: num(m.fontBoundingBoxDescent, run.size * 0.2) }; });
+    const ascent = metrics.reduce((a, m) => Math.max(a, m.ascent), 0), base = top + (ascent || lineSize * 0.8);
+    let x = align === 'center' ? -line.width / 2 : align === 'right' ? -line.width : 0;
+    line.runs.forEach((run, i) => {
+      const span = spans[run.span], m = metrics[i]!, left = x;
+      if (span.background) out.push(createElement('div', { key: k++, style: { position: 'absolute', left: left - run.size * 0.08, top: base - run.size * 0.95, width: run.width + run.size * 0.16, height: run.size * 1.25, borderRadius: run.size * 0.15, background: span.background } }));
+      if (run.kind === 'word') {
+        const textStyle: CSSProperties = { position: 'absolute', left, top: base - m.ascent, whiteSpace: 'pre', fontFamily: stack(span), fontSize: run.size, fontWeight: weight(span), fontStyle: style(span), letterSpacing: `${num(layer.letterSpacing, 0)}px`, lineHeight: `${m.ascent + m.descent}px`, color: ink(span) };
+        if (stroke) (textStyle as any).WebkitTextStroke = stroke;
+        out.push(createElement('div', { key: k++, style: textStyle }, run.text));
+      }
+      if (span.underline) out.push(createElement('div', { key: k++, style: { position: 'absolute', left, top: base + run.size * 0.12, width: run.width, height: Math.max(1, run.size * 0.07), background: ink(span) } }));
+      x += run.width;
+    });
+    top += lineSize * lineHeight;
+  }
+  return out;
+}
+
 function layerBox(layer: Layer, frame: number) {
   const width = num(valueOf(layer, 'width', frame), 0), height = num(valueOf(layer, 'height', frame), 0);
   return { width, height };
@@ -110,10 +151,27 @@ function wrapperStyle(layer: Layer, frame: number, width: number, height: number
   return style;
 }
 
-function strokeProps(layer: Layer, frame: number): Record<string, unknown> {
+/**
+ * A colour or a gradient as an SVG paint. Gradient points are in the layer's own pixels, so they become user-space coordinates; a circle's
+ * box starts half a diameter up and left of its centre, so its points move by `offset`. The id comes from the gradient's content, so two
+ * layers with the same gradient share one definition and different ones never collide.
+ */
+function svgPaint(value: any, offset = 0): { paint: string | undefined; defs: ReactElement[] } {
+  if (!value || typeof value !== 'object') return { paint: value, defs: [] };
+  const key = JSON.stringify([value, offset]); let hash = 0; for (const ch of key) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
+  const id = `ove-grad-${(hash >>> 0).toString(36)}`;
+  const stops = value.stops.map((stop: any, i: number) => createElement('stop', { key: i, offset: stop.offset, stopColor: stop.color }));
+  const gradient = value.type === 'radial'
+    ? createElement('radialGradient', { key: id, id, gradientUnits: 'userSpaceOnUse', cx: value.center[0] + offset, cy: value.center[1] + offset, r: value.radius }, stops)
+    : createElement('linearGradient', { key: id, id, gradientUnits: 'userSpaceOnUse', x1: value.from[0] + offset, y1: value.from[1] + offset, x2: value.to[0] + offset, y2: value.to[1] + offset }, stops);
+  return { paint: `url(#${id})`, defs: [gradient] };
+}
+
+function strokeProps(layer: Layer, frame: number, offset = 0): { props: Record<string, unknown>; defs: ReactElement[] } {
   const stroke = valueOf(layer, 'stroke', frame), width = num(valueOf(layer, 'strokeWidth', frame), 1);
-  if (!stroke || !(width > 0)) return {};
-  return { stroke, strokeWidth: width, strokeLinecap: layer.lineCap ?? 'butt', strokeLinejoin: layer.lineJoin ?? 'miter', strokeDasharray: layer.strokeDash?.join(' ') };
+  if (!stroke || !(width > 0)) return { props: {}, defs: [] };
+  const { paint, defs } = svgPaint(stroke, offset);
+  return { props: { stroke: paint, strokeWidth: width, strokeLinecap: layer.lineCap ?? 'butt', strokeLinejoin: layer.lineJoin ?? 'miter', strokeDasharray: layer.strokeDash?.join(' ') }, defs };
 }
 
 function drawLayer(layer: Layer, frame: number, key: string | number, assets: Map<string, string>): ReactElement | null {
@@ -125,15 +183,16 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
   let content: ReactNode;
   let w = width, h = height;
   if (layer.type === 'rect') {
-    const fill = valueOf(layer, 'fill', local) ?? '#000000', radius = Math.min(num(valueOf(layer, 'radius', local), 0), Math.min(width, height) / 2);
+    const fill = svgPaint(valueOf(layer, 'fill', local) ?? '#000000'), radius = Math.min(num(valueOf(layer, 'radius', local), 0), Math.min(width, height) / 2);
     const stroke = strokeProps(layer, local);
-    content = createElement('svg', { width, height, style: { overflow: 'visible', display: 'block' } }, createElement('rect', { x: 0, y: 0, width, height, rx: radius, ry: radius, fill, ...stroke }));
+    content = createElement('svg', { width, height, style: { overflow: 'visible', display: 'block' } }, createElement('defs', null, ...fill.defs, ...stroke.defs), createElement('rect', { x: 0, y: 0, width, height, rx: radius, ry: radius, fill: fill.paint, ...stroke.props }));
   } else if (layer.type === 'circle') {
-    const diameter = width || 40; const fill = valueOf(layer, 'fill', local) ?? '#000000';
+    const diameter = width || 40; const fill = svgPaint(valueOf(layer, 'fill', local) ?? '#000000', diameter / 2), stroke = strokeProps(layer, local, diameter / 2);
     w = h = diameter;
-    content = createElement('svg', { width: diameter, height: diameter, style: { overflow: 'visible', display: 'block', transform: `translate(${-diameter / 2}px, ${-diameter / 2}px)` } }, createElement('circle', { cx: diameter / 2, cy: diameter / 2, r: diameter / 2, fill, ...strokeProps(layer, local) }));
+    content = createElement('svg', { width: diameter, height: diameter, style: { overflow: 'visible', display: 'block', transform: `translate(${-diameter / 2}px, ${-diameter / 2}px)` } }, createElement('defs', null, ...fill.defs, ...stroke.defs), createElement('circle', { cx: diameter / 2, cy: diameter / 2, r: diameter / 2, fill: fill.paint, ...stroke.props }));
   } else if (layer.type === 'path') {
-    content = createElement('svg', { width: 1, height: 1, style: { overflow: 'visible', display: 'block' } }, createElement('path', { d: layer.d, fill: valueOf(layer, 'fill', local) ?? 'none', fillRule: layer.fillRule ?? 'nonzero', ...strokeProps(layer, local) }));
+    const fill = svgPaint(valueOf(layer, 'fill', local) ?? 'none'), stroke = strokeProps(layer, local);
+    content = createElement('svg', { width: 1, height: 1, style: { overflow: 'visible', display: 'block' } }, createElement('defs', null, ...fill.defs, ...stroke.defs), createElement('path', { d: layer.d, fill: fill.paint, fillRule: layer.fillRule ?? 'nonzero', ...stroke.props }));
   } else if (layer.type === 'text') {
     const size = num(valueOf(layer, 'fontSize', local), 48), align = layer.textAlign ?? 'left';
     const textWidth = layer.maxWidth ? num(layer.maxWidth, 0) : undefined;
@@ -141,7 +200,7 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
     const shift = align === 'center' ? '-50%' : align === 'right' ? '-100%' : '0';
     const style: CSSProperties = { position: 'absolute', left: 0, top: 0, whiteSpace: textWidth ? 'normal' : 'pre', width: textWidth, textAlign: align, transform: textWidth ? `translateX(${align === 'center' ? -textWidth / 2 : align === 'right' ? -textWidth : 0}px)` : `translateX(${shift})`, color: valueOf(layer, 'color', local) ?? '#ffffff', fontFamily: fontStack(layer.fontFamily), fontSize: size, fontWeight: layer.fontWeight ?? 400, fontStyle: layer.fontStyle ?? 'normal', letterSpacing: `${num(valueOf(layer, 'letterSpacing', local), 0)}px`, lineHeight: num(layer.lineHeight, 1.2), overflowWrap: 'normal' };
     if (layer.stroke && num(layer.strokeWidth, 0) > 0) (style as any).WebkitTextStroke = `${layer.strokeWidth}px ${layer.stroke}`;
-    const lines = layoutLines(layer, size);
+    const rich = layer.spans?.length ? richContent(layer, size) : undefined, lines = layer.spans?.length ? undefined : layoutLines(layer, size);
     if (lines) {
       const lh = lines.fontSize * num(layer.lineHeight, 1.2);
       content = lines.lines.map((line: string, i: number) => createElement('div', { key: i, style: { ...style, width: undefined, whiteSpace: 'pre', fontSize: lines.fontSize, top: i * lh + lines.shift, transform: `translateX(${shift})`, lineHeight: `${lh}px` } }, line));
@@ -164,7 +223,7 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
           return createElement('div', { key: i, style: pieceStyle }, p.text);
         });
       }
-    } else content = createElement('div', { style }, String(layer.content ?? ''));
+    } else content = rich ?? createElement('div', { style }, layer.spans?.length ? layer.spans.map((span: any) => span.text).join('') : String(layer.content ?? ''));
   } else if (layer.type === 'image') {
     w = width; h = height;
     const src = assets.get(layer.src) ?? layer.src;
