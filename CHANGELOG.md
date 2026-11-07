@@ -2,6 +2,15 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.3.15 (2026-11-07)
+
+### Added
+- **The production plan is a workspace in the studio.** Plan the film beside the timeline — brief, script beats, storyboard, shot list and a dry-run-first compile — reached from a project card or the editor. A plan scaffolds from the existing timeline, saves with field-level issues instead of a bare error, reports a conflict when another tab wrote first, and compiles into a revisioned composition without touching the timeline until applied.
+- **Plans keep their own revision history.** The Revisions pane lists the timeline and `production.json` as separate sequences, with each document restorable on its own, and plan revisions summarize what changed in shots, scenes, length, beats and format.
+
+### Changed
+- **Repairs no longer cost a click on the making page.** Only unresolved review faults stop the flow and say what is wrong. A video the engine repaired opens in the editor with the repairs listed once in a dismissible banner, so warnings stay visible without holding the user on a page for a finished video.
+
 ## 0.3.14 (2026-11-07)
 
 ### Added
