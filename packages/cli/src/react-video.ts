@@ -5,7 +5,7 @@
 // worker that offered it would execute code a prompt chose.
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderStill, reviewComposition, type ReviewIssue } from '@ove/core';
-import { critiqueFrameNumbers, runVideoAgent, type AiProvider, type BuildPlan, type ComposeOptions, type CritiqueFrame, type SmartMode, type SmartResult } from '@ove/ai';
+import { critiqueFrameNumbers, drawableBrand, runVideoAgent, type AiProvider, type BuildPlan, type ComposeOptions, type CritiqueFrame, type SmartMode, type SmartResult } from '@ove/ai';
 import { buildReact } from './build';
 
 type VisualCheck = (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
@@ -62,6 +62,7 @@ export async function reactFromPlan(provider: AiProvider, plan: BuildPlan, optio
     width: options.width, height: options.height,
     durationSeconds: options.durationSeconds, fps: options.fps,
     content: options.content || undefined,
+    brand: drawableBrand(options.brand),
     plan: { idea: plan.idea, look: plan.look, beats: plan.beats },
     onProgress: options.onProgress,
     signal: options.signal,

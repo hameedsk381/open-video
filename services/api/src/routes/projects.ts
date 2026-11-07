@@ -2,7 +2,7 @@ import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequ
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { measureMedia, loadComposition } from '@ove/core';
 import { resolveVariables, variablesSchema } from '@ove/schema';
-import { distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
+import { assertSourcesConfined, distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
 import type { ProjectFile, RevisionMeta } from '@ove/storage';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from '../projects';
 import { readBytes } from '../http';
@@ -19,7 +19,8 @@ const setAtPath = (rootValue: any, path: string, apply: (layer: any) => void) =>
 /** Project reading and editing: everything the editor does that is not a job. Every call goes through the store, as the person asking. */
 export function projectRoutes(): Route[] {
   // A project edit writes the file's own JSON (variables, components and all), kept as a revision.
-  const writeRaw = async (c: Ctx, id: string, raw: unknown, meta: RevisionMeta) => { loadComposition(raw); await c.deps.store.writeRaw(c.who, id, raw, meta); };
+  // Hosted, a composition may only name files of its own project: a template variable or a plan can otherwise carry another account's path into a source the renderer reads.
+  const writeRaw = async (c: Ctx, id: string, raw: unknown, meta: RevisionMeta) => { const composition = loadComposition(raw); if (c.deps.mode === 'hosted') assertSourcesConfined(composition); await c.deps.store.writeRaw(c.who, id, raw, meta); };
   const exists = async (c: Ctx, value: unknown) => { const id = textOf(value, 'project'); c.deps.store.projectDir(c.who, id); if (!await c.deps.store.exists(c.who, id)) throw new Error(`There is no project "${id}"`); return id; };
   // Only the two root documents have histories; a request naming anything else is refused rather than guessed at.
   const projectFile = (file: string): ProjectFile => {

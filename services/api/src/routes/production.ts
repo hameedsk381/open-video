@@ -1,6 +1,6 @@
 import { compileProductionRequest, initProductionRequest, parseRequest, saveProductionRequest } from '@ove/contracts';
 import { compileProduction, productionSummary, scaffoldProduction } from '@ove/core';
-import { summarizeChange } from '@ove/ai';
+import { assertSourcesConfined, summarizeChange } from '@ove/ai';
 import { loadComposition, productionSchema } from '@ove/schema';
 import type { Ctx, Route } from '../types';
 
@@ -63,6 +63,7 @@ export function productionRoutes(): Route[] {
       if (!parsed.success) return c.json(400, { error: 'The plan cannot be compiled yet', issues: issuesOf(parsed.error) });
 
       const compiled = compileProduction(parsed.data), current = loadComposition(await c.deps.store.readRaw(c.who, id));
+      if (c.deps.mode === 'hosted') assertSourcesConfined(compiled.composition);
       const result = {
         dryRun: request.dryRun, summary: productionSummary(parsed.data), notes: compiled.notes, changes: summarizeChange(current, compiled.composition),
         composition: { scenes: compiled.composition.scenes.length, durationFrames: compiled.composition.durationFrames, fps: compiled.composition.fps, width: compiled.composition.width, height: compiled.composition.height },

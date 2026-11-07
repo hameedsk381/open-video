@@ -22,8 +22,10 @@ export type StyleContract = {
   /** One motion move per beat, e.g. "word-cascade". */
   moves: string[];
   style: string;
-  /** Entrance preset for kinetic headlines. */
+  /** Entrance preset for kinetic headlines, or "none" for type that is set still. */
   motion: string;
+  /** "push" gives every scene a slow camera zoom; "none" holds the frame. The model chooses, nothing is added by default. */
+  camera: "push" | "none";
   /** Transition every cut uses. */
   transition: string;
   layout: string;
@@ -100,7 +102,9 @@ export function parseContract(raw: any, look?: DesignLook): StyleContract {
   const moves = Array.isArray(raw.moves) ? raw.moves.map((move: unknown) => text(move)).filter(Boolean) : [];
   const fallbackMoves = ['rise-in', 'ken-burns', 'pop-in', 'drift', 'wipe-reveal', 'word-cascade'];
   const beats = parseBeats(raw.beats);
-  const motion = pick(look?.motion ?? raw.motion, motionPresets, 'rise');
+  const motionAsked = text(look?.motion ?? raw.motion).toLowerCase();
+  const motion = motionAsked === 'none' ? 'none' : pick(look?.motion ?? raw.motion, motionPresets, 'rise');
+  const camera = text(raw.camera).toLowerCase() === 'push' ? 'push' : 'none';
   const transition = pick(look?.transition ?? raw.transition, transitionStyles, 'fade');
   const layout = pick(look?.layout ?? raw.layout, layoutStyles, 'left');
   const densityIn = Number(raw.density);
@@ -123,6 +127,7 @@ export function parseContract(raw: any, look?: DesignLook): StyleContract {
     moves: beats.map((_, i) => moves[i] ?? fallbackMoves[i % fallbackMoves.length]!),
     style: text(raw.style, 'clean modern motion'),
     motion,
+    camera,
     transition,
     layout,
     density,
@@ -213,7 +218,8 @@ Decide the visual system all scenes will share${look ? ', following the look abo
   "palette": { "background": "#hex", "text": "#hex", "primary": "#hex", "accent": "#hex", "secondary": "#hex" },
   "fonts": { "heading": "Inter|Space Grotesk|Fraunces|Archivo|Source Sans 3", "body": "<family>" },
   "moves": ["one motion move per beat, e.g. word-cascade, ken-burns, pop-in, rise-in, drift, wipe-reveal"],
-  "motion": "rise|blur|slide|pop|fade",
+  "motion": "rise|blur|slide|pop|fade|none (none sets type still; right for print, poster and calm looks)",
+  "camera": "none|push (push adds a slow zoom to every scene; choose it only when slow movement serves the subject)",
   "transition": "push|fade|slide|wipe|zoom|dip",
   "layout": "left|center|split|editorial",
   "density": 1,
@@ -233,10 +239,13 @@ const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number,
     : contract.layout === 'split' ? 'create two-column tension: the headline on one side, supporting content on the other'
     : contract.layout === 'editorial' ? 'use an asymmetric grid with generous margins and oversized type'
     : 'align content to a straight left edge';
+  const headlineRule = contract.motion === 'none'
+    ? 'Set the headline still, with no "split". One move (a slide, a fade, a scale) may bring it in, or it may simply be there.'
+    : `The scene's headline (largest text) carries "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }.`;
   return [
     { role: 'system', content: `You design ONE scene of a ${options.width}x${options.height} motion-graphics video (${options.fps} fps). Reply with ONE JSON object and nothing else:
 { "background": { "type": "color", "color": "#hex from the palette" },
-  "layers": [ ...2 to 4 layers... ] }
+  "layers": [ ...2 to 6 layers... ] }
 
 Layer shapes (x and y are the layer's CENTRE in pixels):
 - text: { "type": "text", "text": "...", "x": <centre x>, "y": <centre y>, "fontSize": <px>, "color": "#hex from the palette", "fontFamily": "<the heading or body font>", "align": "center", "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }, "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": <y+80> }, { "frame": 20, "value": <y>, "easing": "land" }] }] }
@@ -249,10 +258,10 @@ House rules:
 - Fonts: headings in ${contract.fonts.heading}, supporting text in ${contract.fonts.body}.
 - Layout: ${arrangement}.
 - Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}.${platformUi}
-- The scene's headline (largest text) MUST carry "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }.
+- ${headlineRule}
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.
-- Decoration (rect/circle) stays subtle: opacity at most 0.35, behind the text.` },
+- Decoration (rect/circle) sits behind the text and must never cost legibility. Keep its opacity low unless a flat block of colour is the design, as it is in a poster look.` },
     { role: 'user', content: `Scene ${index + 1} of ${total} — "${beat.name}"${beat.onScreen ? `: ${beat.onScreen}` : ''}.${beat.data?.length ? `\nFigures to show exactly as written (change no number, add none): ${beat.data.map(datum => `${datum.label}: ${datum.value}${datum.unit ? ` ${datum.unit}` : ''}${datum.period ? ` (${datum.period})` : ''}`).join('; ')}.` : ''}${beat.narration ? `\nThe spoken line (do not put it on screen): ${beat.narration}` : ''}
 Motion: ${beat.motion ?? contract.moves[index] ?? 'a clean entrance'}. Scene length: ${frames} frames (~${(frames / options.fps).toFixed(1)} s).${assets.length ? `\nAvailable image assets (use src verbatim): ${assets.map(asset => asset.src).join(' | ')}` : ''}${previous ? `\nThe previous scene ends on: ${previous}. Do not repeat it; continue the story.` : 'This is the opening scene: land the hook fast.'}
 Design this scene. Reply ONLY the scene JSON.` },
@@ -471,14 +480,14 @@ export function summarizeExit(scene: any): string | undefined {
 }
 
 /**
- * Stitches scene bodies into a full composition: code-owned ids, durations, transitions and camera (the house slow
- * push goes on every scene missing one, which also guarantees the craft checks for camera and motion), plus the
- * kinetic-type backstop for compositions where no scene carried a split headline.
+ * Stitches scene bodies into a full composition: code-owned ids, durations and transitions. A slow camera push goes on
+ * the scenes only when the style contract chose "push"; otherwise the frame is held. When the look has kinetic type
+ * (motion is not "none") and no scene carried a split headline, the biggest one gets it.
  */
 export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOptions, name?: string): any {
   const overlaps = sceneOverlaps(scenes.length, options.fps);
   const ranges = sceneRanges(plan.durations, overlaps);
-  if (!scenes.some(scene => (scene.layers ?? []).some((layer: any) => layer.type === 'text' && layer.split))) {
+  if (plan.contract.motion !== 'none' && !scenes.some(scene => (scene.layers ?? []).some((layer: any) => layer.type === 'text' && layer.split))) {
     // Backstop: the biggest headline of the longest scene gets the kinetic split so the craft check holds.
     const target = scenes[plan.durations.indexOf(Math.max(...plan.durations))];
     const texts = ((target?.layers ?? []) as any[]).filter((layer: any) => layer.type === 'text');
@@ -487,16 +496,19 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
       biggest.split = { by: 'words', stagger: 4, preset: plan.contract.motion };
     }
   }
-  const stitched = scenes.map((scene, i) => ({
+  const stitched = scenes.map((scene, i) => {
+    const camera = scene.camera ?? (plan.contract.camera === 'push' ? houseCamera(plan.durations[i]!) : undefined);
+    return {
     id: `scene-${i + 1}`,
     name: plan.beats[i]?.name ?? `Scene ${i + 1}`,
     ...(options.content?.beats[i] ? { beat: options.content.beats[i]!.id } : {}),
     startFrame: ranges[i]!.start,
     durationFrames: plan.durations[i]!,
     ...(i > 0 ? { transitionIn: { type: plan.contract.transition, durationFrames: overlaps[i] } } : {}),
-    camera: scene.camera ?? houseCamera(plan.durations[i]!),
+    ...(camera ? { camera } : {}),
     layers: (scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })),
-  }));
+    };
+  });
   return {
     version: '1.0',
     $schema: './composition.schema.json',

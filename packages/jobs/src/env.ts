@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, resolve } from 'node:path';
-import { ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type NarrateOptions, type NarrateResult, type RevisionMeta, type SmartMode, type SmartResult } from '@ove/ai';
+import { assertSourcesConfined, ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type NarrateOptions, type NarrateResult, type RevisionMeta, type SmartMode, type SmartResult } from '@ove/ai';
 import { attachCaptions, loadComposition, type Composition } from '@ove/core';
 import type { FsProjectStore, Principal, StoredAsset } from '@ove/storage';
 import { folderName, optionalText, textOf } from './input';
@@ -47,8 +47,12 @@ export type JobEnv = {
   local?: { inputFile(value: unknown, label: string, extensions: string[]): string };
 };
 
-/** Paths for the folder store: every name is resolved inside the principal's space. */
-export function createFsPaths(store: FsProjectStore, who: Principal, info: () => { provider?: string; model?: string } = () => ({})): JobPaths {
+/**
+ * Paths for the folder store: every name is resolved inside the principal's space. With `confine`, a composition may only
+ * use files from its own project: it is refused before anything is drawn, because a render reads whatever a source names.
+ * Hosted use sets it; the local studio, where people reference files anywhere on their own machine, does not.
+ */
+export function createFsPaths(store: FsProjectStore, who: Principal, info: () => { provider?: string; model?: string } = () => ({}), options: { confine?: boolean } = {}): JobPaths {
   const relative = (file: string) => store.relative(who, file);
   const resolveIn = (value: string, label: string, base?: string) => store.resolve(who, value, label, base);
   const readJson = async (file: string) => JSON.parse((await readFile(file, 'utf8')).replace(/^﻿/, ''));
@@ -62,8 +66,11 @@ export function createFsPaths(store: FsProjectStore, who: Principal, info: () =>
     resultFile: file => ({ file, relative: relative(file), url: paths.urlFor(file) }),
     readJson,
     async loadForRender(file) {
-      const raw = await readJson(file), baseDir = dirname(file);
-      return { raw, composition: await attachCaptions(loadComposition(raw), baseDir) as Composition, baseDir };
+      const raw = await readJson(file), baseDir = dirname(file), loaded = loadComposition(raw);
+      if (options.confine) assertSourcesConfined(loaded);
+      const composition = await attachCaptions(loaded, baseDir) as Composition;
+      if (options.confine) assertSourcesConfined(composition);
+      return { raw, composition, baseDir };
     },
     // With `meta`, the change is kept as a numbered revision (and what was there before, the first time).
     async writeComposition(file, composition, meta) {

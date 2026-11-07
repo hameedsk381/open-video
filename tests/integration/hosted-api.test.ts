@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { request, createServer } from 'node:http';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AddressInfo } from 'node:net';
@@ -159,6 +159,23 @@ describe('hosted limits and closed doors', () => {
     expect((await c.post('/api/transcribe', { audio: 'C:/Windows/x.wav' })).json.error).toMatch(/your own machine/);
     expect((await c.post('/api/batch', { rows: 'x.json', brief: 'b' })).json.error).toMatch(/your own machine/);
   });
+  it('keeps a video to the files of its own project, even when a template variable is the one carrying the path', async () => {
+    const c = new Client(); await c.post('/api/auth/signup', { email: 'paths@example.com', password });
+    const template = { version: '1.0', id: 't', name: 'T', width: 100, height: 100, fps: 30, durationFrames: 30,
+      variables: { photo: { type: 'string', default: 'assets/logo.png' } },
+      scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 30, layers: [{ id: 'i', type: 'image', src: '{{photo}}', width: 50, height: 50 }] }] };
+    // A template project keeps "{{photo}}" in its saved file (an import would flatten it), so the variable is what a person edits later.
+    const id = (await c.post('/api/project/blank', { name: 'Paths' })).json.id as string, tenant = (await c.get('/api/auth/me')).json.user.id as string;
+    await writeFile(join(root, '_tenants', tenant, id, 'composition.json'), JSON.stringify(template));
+
+    for (const value of ['/etc/hostname', 'C:/Windows/win.ini', '../../_tenants/someone-else/p/assets/logo.png', '..\\..\\x.png', 'https://example.com/a.png', '\\\\server\\share\\a.png']) {
+      const refused = await c.post('/api/variables', { id, values: { photo: value } });
+      expect(refused.status, value).toBe(400); expect(refused.json.error, value).toMatch(/outside its own project/);
+    }
+    expect((await c.post('/api/variables', { id, values: { photo: 'assets/other.png' } })).status).toBe(200);
+    expect((await c.get(`/api/project?id=${id}`)).json.source.raw.variables.photo.default).toBe('assets/other.png');
+  });
+
   it('enforces the per-person limits with plain sentences', async () => {
     const c = new Client(); await c.post('/api/auth/signup', { email: 'quota@example.com', password });
     const ids = []; for (let i = 0; i < 3; i++) ids.push((await c.post('/api/project/blank', { name: `p${i}` })).json.id);

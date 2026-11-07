@@ -1,7 +1,7 @@
 // The creative direction stage: before any code is written, the model decides what the video is and what it looks,
 // sounds and moves like. The result guides the coding pass — a concept, an art direction, type, palette, motion and
 // a beat structure — and is never a template or a house style.
-import { fontFamilies, fontIds } from '@ove/schema';
+import { describeStyleFamilies, fontGuide, fontIds } from '@ove/schema';
 import type { BrandPack } from './agent';
 import { extractJson } from './json';
 import type { BuildPlan } from './plan';
@@ -138,8 +138,6 @@ export function directionSection(direction: CreativeDirection): string {
   return lines.join('\n');
 }
 
-const fontGuide = fontFamilies.map(font => `${font.id} (${font.description})`).join('; ');
-
 const brandText = (brand: BrandPack): string => {
   const parts: string[] = [];
   if (brand.name) parts.push(`name ${brand.name}`);
@@ -174,6 +172,8 @@ Reply with ONE JSON object and nothing else:
 }
 - The direction is yours to invent. There is no house style: a luxury watch, a documentary opener, a children's story and a developer tool must not share a composition, palette, type or motion.
 - Do not reach for defaults. Glass cards, bento grids, neon glow, floating dark gradients and a slow continuous zoom are not starting points; use one only if this brief genuinely earns it.
+- These worlds are starting points, listed in no order of preference. Name the one this subject belongs to, or invent a different one, and then make it specific to this brief rather than copying its tokens:
+${describeStyleFamilies(options.brief)}
 - Type must be a family bundled with the renderer: ${fontGuide}. Pair a distinct display face with a readable body face, and say how the type is set, spaced and moved.
 - Palette: derive it from the subject and its industry, keep strong contrast between text and background, and give every colour a role.
 - Motion: describe entrances, timing, camera behaviour and transitions as one coherent language. Name the move, not the mood.

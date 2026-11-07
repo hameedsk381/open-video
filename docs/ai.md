@@ -89,6 +89,18 @@ export OVE_AI_MODEL_DIRECT=<your strongest model>
 export OVE_AI_MODEL_VISION=<a model that reads images>
 ```
 
+### Looks that differ from one video to the next
+
+The planner and the creative direction are shown ten style families, each with real tokens (fonts, palette, texture, motion, transition, layout) and cues: `editorial-print`, `swiss-grid`, `brutalist-poster`, `cinematic-night`, `warm-craft`, `playful-pastel`, `tech-console`, `data-clarity`, `avant-gallery` and `gradient-product`. They are starting points to pick from by subject or depart from, listed in an order that depends on the brief so none is always first. The dark gradient with glass cards is one of the ten and is marked as fitting software products only. Twelve fonts ship with the renderer (Inter, Space Grotesk, Fraunces, Archivo, Source Sans 3, Playfair Display, DM Sans, Manrope, Syne, JetBrains Mono, Bebas Neue, Instrument Serif); `@ove/schema`'s `fontFamilies` is the one list the prompts and the renderer share.
+
+Nothing forces a kinetic headline or a camera move any more. In scene-by-scene composing the style contract chooses `motion` (`none` sets type still) and `camera` (`none` holds the frame, `push` adds a slow zoom); in plan mode the only craft checks are 3 scenes of unequal length and that something moves.
+
+When the planner may choose React (the local studio and CLI), it is told React is the default for a video that should look designed rather than assembled. `json` is for plainly structured pieces and `template` for a strong match.
+
+### A brand in the brief
+
+A compose job accepts `brand`: `{ name, style, colors: { primary, secondary, accent, background, text }, fonts: { heading, body } }`, which is what `/api/brand/scrape` returns. Colours must be hex and text is cut short; a logo path or URL is never kept. The planner is told the brand is fixed, and the brand's colours and fonts replace the planner's field by field on the template, JSON and React routes (the planner still decides texture, motion, transition, layout and density). A brand font the renderer does not ship is dropped, because renders are offline and it would draw as a fallback.
+
 ### The art director (React videos)
 
 After a React video builds and passes the design review, the engine renders a still from each scene (or four spread through a one-scene video) and a vision model judges them against the brief and the direction: is it distinctive or the generic default, is there a focal point, is the frame used, is the type deliberate. Up to two rewrites follow while it finds problems that matter. A rewrite that does not build, or fails the review, is dropped for the version that did, so the pass can only improve a result; unresolved notes are reported as warnings.

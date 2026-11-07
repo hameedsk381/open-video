@@ -41,6 +41,7 @@ export type BuiltinFontFace = { family: string; file: string; weight: string; st
 const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
 const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
 const INTER = '@fontsource-variable/inter', GROTESK = '@fontsource-variable/space-grotesk', FRAUNCES = '@fontsource-variable/fraunces', ARCHIVO = '@fontsource-variable/archivo', SOURCE = '@fontsource-variable/source-sans-3';
+const PLAYFAIR = '@fontsource-variable/playfair-display', DMSANS = '@fontsource-variable/dm-sans', MANROPE = '@fontsource-variable/manrope', SYNE = '@fontsource-variable/syne', JETBRAINS = '@fontsource-variable/jetbrains-mono', BEBAS = '@fontsource/bebas-neue', INSTRUMENT = '@fontsource/instrument-serif';
 // What the canvas runtime reports about a frame drawn with payload.report (see createCanvasRuntime).
 export type TextNote = { id: string; kind: 'text'|'captions'; x0: number; y0: number; x1: number; y1: number; size: number; baseSize: number; alpha: number; color: string; truncated: boolean; shrunk: boolean; text: string; words: number };
 export type FrameReport = { texts: TextNote[]; thumb: { width: number; height: number; pixels: number[] } };
@@ -68,6 +69,25 @@ export const builtinFontFaces: BuiltinFontFace[] = [
   { family: 'Archivo', file: 'archivo-latin-ext-standard-normal.woff2', weight: '100 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: ARCHIVO },
   { family: 'Source Sans 3', file: 'source-sans-3-latin-wght-normal.woff2', weight: '200 900', style: 'normal', unicodeRange: LATIN, pkg: SOURCE },
   { family: 'Source Sans 3', file: 'source-sans-3-latin-ext-wght-normal.woff2', weight: '200 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: SOURCE },
+  // Latin and Latin Extended only for the later additions, to keep the payload every render page loads small.
+  { family: 'Playfair Display', file: 'playfair-display-latin-wght-normal.woff2', weight: '400 900', style: 'normal', unicodeRange: LATIN, pkg: PLAYFAIR },
+  { family: 'Playfair Display', file: 'playfair-display-latin-ext-wght-normal.woff2', weight: '400 900', style: 'normal', unicodeRange: LATIN_EXT, pkg: PLAYFAIR },
+  { family: 'Playfair Display', file: 'playfair-display-latin-wght-italic.woff2', weight: '400 900', style: 'italic', unicodeRange: LATIN, pkg: PLAYFAIR },
+  { family: 'Playfair Display', file: 'playfair-display-latin-ext-wght-italic.woff2', weight: '400 900', style: 'italic', unicodeRange: LATIN_EXT, pkg: PLAYFAIR },
+  { family: 'DM Sans', file: 'dm-sans-latin-wght-normal.woff2', weight: '100 1000', style: 'normal', unicodeRange: LATIN, pkg: DMSANS },
+  { family: 'DM Sans', file: 'dm-sans-latin-ext-wght-normal.woff2', weight: '100 1000', style: 'normal', unicodeRange: LATIN_EXT, pkg: DMSANS },
+  { family: 'Manrope', file: 'manrope-latin-wght-normal.woff2', weight: '200 800', style: 'normal', unicodeRange: LATIN, pkg: MANROPE },
+  { family: 'Manrope', file: 'manrope-latin-ext-wght-normal.woff2', weight: '200 800', style: 'normal', unicodeRange: LATIN_EXT, pkg: MANROPE },
+  { family: 'Syne', file: 'syne-latin-wght-normal.woff2', weight: '400 800', style: 'normal', unicodeRange: LATIN, pkg: SYNE },
+  { family: 'Syne', file: 'syne-latin-ext-wght-normal.woff2', weight: '400 800', style: 'normal', unicodeRange: LATIN_EXT, pkg: SYNE },
+  { family: 'JetBrains Mono', file: 'jetbrains-mono-latin-wght-normal.woff2', weight: '100 800', style: 'normal', unicodeRange: LATIN, pkg: JETBRAINS },
+  { family: 'JetBrains Mono', file: 'jetbrains-mono-latin-ext-wght-normal.woff2', weight: '100 800', style: 'normal', unicodeRange: LATIN_EXT, pkg: JETBRAINS },
+  { family: 'Bebas Neue', file: 'bebas-neue-latin-400-normal.woff2', weight: '400', style: 'normal', unicodeRange: LATIN, pkg: BEBAS },
+  { family: 'Bebas Neue', file: 'bebas-neue-latin-ext-400-normal.woff2', weight: '400', style: 'normal', unicodeRange: LATIN_EXT, pkg: BEBAS },
+  { family: 'Instrument Serif', file: 'instrument-serif-latin-400-normal.woff2', weight: '400', style: 'normal', unicodeRange: LATIN, pkg: INSTRUMENT },
+  { family: 'Instrument Serif', file: 'instrument-serif-latin-ext-400-normal.woff2', weight: '400', style: 'normal', unicodeRange: LATIN_EXT, pkg: INSTRUMENT },
+  { family: 'Instrument Serif', file: 'instrument-serif-latin-400-italic.woff2', weight: '400', style: 'italic', unicodeRange: LATIN, pkg: INSTRUMENT },
+  { family: 'Instrument Serif', file: 'instrument-serif-latin-ext-400-italic.woff2', weight: '400', style: 'italic', unicodeRange: LATIN_EXT, pkg: INSTRUMENT },
 ];
 export const fontStack = (family: string) => family.split(',').map(f => f.trim()).filter(Boolean).map(f => /^["']/.test(f) || genericFamilies.has(f.toLowerCase()) ? f : `"${f.replace(/"/g, '')}"`).join(', ');
 export const cssFont = (layer: { fontStyle?: string; fontWeight?: number | string; fontFamily: string }, fontSize: number) => `${layer.fontStyle ?? 'normal'} ${layer.fontWeight ?? 400} ${fontSize}px ${fontStack(layer.fontFamily)}`;

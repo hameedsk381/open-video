@@ -1,9 +1,10 @@
 // The prompt is the product here: a compact, accurate description of the composition format is what makes an LLM
 // emit JSON that validates on the first or second try. The exact JSON Schema can be appended for hard cases (--schema).
-import { compositionJsonSchema } from '@ove/schema';
+import { compositionJsonSchema, describeStyleFamilies, fontGuide, fontIds } from '@ove/schema';
 import type { DesignLook, VideoContent } from '@ove/schema';
 import { safeZoneBands } from '@ove/core';
 import { movesGlossary } from './registry';
+import type { BrandPack } from './agent';
 
 export type PromptOptions = {
   width: number; height: number; fps: number; durationSeconds: number;
@@ -14,6 +15,8 @@ export type PromptOptions = {
   narration?: boolean;
   /** Beats and look from the planning pass; the composition must follow them. */
   motionPlan?: MotionPlan;
+  /** A brand whose colours and fonts are fixed: it reaches the planner, the templates and the React route as part of the look. */
+  brand?: BrandPack;
 };
 
 export type MotionBeat = { name: string; takeaway?: string; onScreen?: string; seconds?: number; motion?: string };
@@ -63,7 +66,7 @@ Layer common fields: "id" (unique), "type", "startFrame" (0), "endFrame" (exclus
 
 Layer types and their required fields:
 - text: "content" (string, \\n for a line break), "fontSize", "color". Optional "fontFamily" (bundled families:
-  Inter, Space Grotesk, Fraunces, Archivo, Source Sans 3; default Inter),
+  ${fontIds.join(", ")}; default Inter),
   "fontWeight" (100-900 or "bold"), "fontStyle", "textAlign" ("left"|"center"|"right"), "maxWidth", "maxLines",
   "minFontSize", "lineHeight" (multiple of fontSize, default 1.2), "letterSpacing", "stroke", "strokeWidth".
   "y" is the top of the first line; "x" is the left/centre/right edge according to textAlign.
@@ -128,32 +131,24 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
   density exactly; it is the design, not a suggestion. When no look is supplied, choose one that fits this specific brief
   before writing: a display/body font pairing, a palette drawn from the subject, one texture, one entrance style, one
   transition style and one layout.
-- Bundled fonts: Inter (neutral tech/product), Space Grotesk (engineering/AI), Fraunces (editorial/craft/culture),
-  Archivo (bold sports/news), Source Sans 3 (calm humanist). Pair a distinct display face with a readable body face.
+- Bundled fonts: ${fontGuide}. Pair a distinct display face with a readable body face.
 - Layouts: left = a straight left edge; center = symmetric; split = two-column tension (headline one side, support the
   other); editorial = asymmetric, oversized type and generous margins.
 - Texture is a composition-level field. A grid suits engineered/technical pieces, dots suit print/editorial, scanlines
   suit broadcast/games, paper suits warm/organic, none suits clean graphic fields.
 - A flat colour background is valid. A gradient, glow or grain is a choice, not a requirement.
 
-# Motion-graphics craft (this is a designed piece, not slides)
-- Structure: pick one short-video shape (problem → solution → proof → CTA; step-by-step around a held hero; question then answers; or a list of 3–5 beats then a payoff). One idea per scene. Scene lengths must differ; equal-length scenes read as a slideshow.
+# Craft (what every style shares; the look decides the rest)
+- Structure: one idea per scene, and scene lengths that differ (equal lengths read as a slideshow). The shape follows the subject: problem, solution, proof, call to action; or step by step around a held hero; or a question then its answers; or a list of beats then a payoff; or a single held image.
 - Open with the subject in the first second. End on the idea (or a small logo hold), not a fade of the whole frame to black.
-- Carry something across cuts: a colour, a held element, a shape that morphs, or motion that continues. Use the transition
-  style from the look for every cut and overlap scenes by that length.
-- Type scale at 1920 wide (scale down for smaller canvases): display 160–220, headings 72–96, card titles 44–60, body 28–36, labels 20–24. Headings weight 700–800 with letterSpacing about -3% of size; body 400. Use the palette's text, muted and accent colours, declared once and reused.
-- Kinetic type: headlines use "split" { "by": "words", "stagger": 4, "preset": <the look's motion preset> }. One split style per video. Keep body and captions whole.
-- Depth: glows, grain and motionBlur are tools, not a recipe. If they serve the concept, use them; otherwise a flat or
-  textured background with strong type is the better design. Cards: faint fill, 1–2px stroke, radius from the look.
-- Camera: only if the look calls for movement — a slow zoom or pan on content scenes. Captions and logos stay put with "fixed": true.
+- Carry something across cuts: a colour, a held element, a shape that morphs, or motion that continues. Use the transition style from the look for every cut and overlap scenes by that length.
+- Type scale at 1920 wide (scale down for smaller canvases): labels 20-24, body 28-36, card titles 44-60, headings 72-96, display 160-220. Keep strong contrast between the largest and smallest sizes, and declare colours once and reuse them. Weight, tracking and case come from the look: a condensed poster, a quiet serif and a monospace console do not share them.
+- Kinetic type is one tool, not a requirement: "split" { "by": "words", "stagger": 4, "preset": <the look's motion preset> } suits energetic looks; calm, print and poster looks may set type still or reveal it with one move. Use one split style per video, and keep body copy and captions whole.
+- Depth: glows, grain, shadows and motionBlur are tools, not a recipe; use them when they serve the concept. A flat field with strong type is often the better design.
+- Camera: only if the look calls for movement; a held frame is a valid choice. Captions and logos stay put with "fixed": true.
 - Sound: put sfx:whoosh / pop / thump / tick on hits, not on every layer. export.loudness -14 (or -16 if a voiceover will be added).
-- Draw icons as path layers, not letters in circles. Animate groups, stagger siblings 4–8 frames, land in / exit out.
-
-# Design defaults that look good
-- Canvas: fill it; keep content aligned to the chosen layout and at a consistent margin.
-- Type: fontWeight 700-800 for headings with letterSpacing about -2% of fontSize; body 400.
-- Motion: stagger related items by 4-8 frames; animate groups rather than each child separately.
-- Finish on a clean hold; do not fade the whole frame to black at the end unless asked.`;
+- Draw icons as path layers, not letters in circles. Animate groups, stagger siblings 4-8 frames, land in and exit out.
+- Fill the canvas: keep content aligned to the chosen layout at a consistent margin, and finish on a clean hold.`;
 
 export function systemPrompt(options: Partial<PromptOptions> = {}): string {
   const parts = ['You write MotionRender motion-graphics compositions as strict JSON. You think like a motion designer: beats, type, camera and crafted motion — not a slide deck. You are precise about field names, frame timing and the design rules below. Output JSON only.', CHEATSHEET, movesGlossary];
@@ -174,7 +169,7 @@ Reply with JSON only:
          "density":1},
  "beats":[{"name":"kebab-id","takeaway":"one idea","onScreen":"exact words on screen","seconds":4,"motion":"how it enters; what is carried into the next beat"}]}
 Decide the design: choose the fonts, palette, texture, motion, transition, layout and density this specific brief calls for. There is no house style.
-Fonts must be one of Inter (neutral tech/product), Space Grotesk (engineering/AI), Fraunces (editorial/craft/culture), Archivo (bold sports/news), Source Sans 3 (calm humanist); pair a distinct display face with a readable body face.
+Fonts must be one of ${fontGuide}; pair a distinct display face with a readable body face.
 Derive the palette from the subject and its industry; a warm artisan brand should not look like a dark tech gradient. Keep text high-contrast against the background.
 Rules: one idea per beat; lengths must differ; open with the subject in the first second; end on the idea, not a credit fade; onScreen is real copy, not a description of the shot; do not invent facts, prices or claims that are not in the brief.`;
 }
@@ -240,7 +235,9 @@ export function userPrompt(brief: string, options: PromptOptions): string {
     lines.push('The palette sets the top-level background and every fill and colour. Set the top-level "texture" when the look names one. Use the display font for headlines and the body font for supporting text. Use the motion preset as the kinetic-text split preset and the transition style on every scene cut, overlapping scenes by that length. Place content according to the layout and scale spacing by density.');
     lines.push('');
   } else {
-    lines.push('No look was fixed: choose an art direction before writing — a display/body font pairing from Inter, Space Grotesk, Fraunces, Archivo or Source Sans 3, a palette drawn from the subject, one texture, one motion preset, one transition style and one layout — then keep it consistent for the whole video.');
+    lines.push(`No look was fixed: choose an art direction before writing — a display/body font pairing from ${fontIds.join(", ")}, a palette drawn from the subject, one texture, one motion preset, one transition style and one layout — then keep it consistent for the whole video.`);
+    lines.push(`Style worlds to start from (pick the one this subject belongs to, or invent another; none is a default):
+${describeStyleFamilies(brief)}`);
     lines.push('');
   }
   if (options.fields?.length) {

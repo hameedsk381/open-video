@@ -184,7 +184,9 @@ describe('stitchScenes', () => {
     expect(raw.scenes.map((scene: any) => scene.durationFrames)).toEqual([105, 135, 60]);
     expect(raw.durationFrames).toBe(284);            // 105 + (135-8) + (60-8)
     expect(raw.scenes[1]!.transitionIn).toEqual({ type: 'fade', durationFrames: 8 });
-    expect(raw.scenes.every((scene: any) => scene.camera?.animations?.length)).toBe(true);  // house camera injected
+    expect(raw.scenes.every((scene: any) => scene.camera === undefined)).toBe(true);  // the frame is held unless the contract chose a push
+    const pushed = stitchScenes(scenes, { ...plan, contract: parseContract({ ...JSON.parse(contractReply), camera: 'push' }) }, options);
+    expect(pushed.scenes.every((scene: any) => scene.camera?.animations?.length)).toBe(true);
     expect(raw.scenes.every((scene: any) => scene.layers.every((layer: any) => /^s\d+-l\d+$/.test(layer.id)))).toBe(true);
     // The split backstop: the biggest headline of the longest scene carries the split even if a scene omitted it.
     const noSplit = parseScene({ layers: [{ type: 'text', text: 'PLAIN', x: 540, y: 900, fontSize: 170 }] }, 135);
@@ -225,7 +227,29 @@ describe('composeByScenes', () => {
     expect(state.plan.durations.reduce((sum, frames) => sum + frames, 0)).toBe(316);
     expect(state.raw.durationFrames).toBe(300);      // the brief asked for 10 s, and 10 s is what it is
     expect(state.plan.sceneRanges[1]!.start).toBe(state.raw.scenes[1]!.startFrame);
-    expect(state.raw.scenes.every((scene: any) => scene.camera?.animations?.length)).toBe(true);
+    expect(state.raw.scenes.some((scene: any) => scene.camera)).toBe(false);
+  });
+
+  it('lets the look be still: no camera, no forced kinetic headline, and a scene prompt that says so', async () => {
+    const still = JSON.stringify({ ...JSON.parse(contractReply), motion: 'none', camera: 'none' });
+    const plain = (headline: string) => JSON.stringify({ background: { type: 'color', color: '#1a120b' }, layers: [{ type: 'text', text: headline, x: 540, y: 860, fontSize: 170, color: '#f5efe6', animations: [{ property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 12, value: 1 }] }] }] });
+    const provider = scriptedProvider([still, plain('SLOW COFFEE'), plain('THE POUR'), plain('20% OFF')]);
+    const state = await composeByScenes(provider, options);
+    expect(state.plan.contract).toMatchObject({ motion: 'none', camera: 'none' });
+    expect(state.raw.scenes.some((scene: any) => scene.camera)).toBe(false);
+    expect(state.raw.scenes.some((scene: any) => scene.layers.some((layer: any) => layer.split))).toBe(false);
+    const sceneSystem = String(provider.calls[1]!.messages[0]!.content);
+    expect(sceneSystem).toContain('Set the headline still');
+    expect(sceneSystem).not.toContain('carries "split"');
+  });
+
+  it('asks for the camera and for still type in the contract call, and still defaults to a kinetic headline', async () => {
+    const provider = scriptedProvider([contractReply, sceneReply('SLOW COFFEE', 'a'), sceneReply('THE POUR', 'b'), sceneReply('20% OFF', 'c')]);
+    await composeByScenes(provider, options);
+    const contractAsk = provider.calls[0]!.messages.map(message => message.content).join('\n');
+    expect(contractAsk).toContain('"camera"'); expect(contractAsk).toContain('none (none sets type still');
+    expect(parseContract(JSON.parse(contractReply))).toMatchObject({ motion: 'rise', camera: 'none' });
+    expect(String(provider.calls[1]!.messages[0]!.content)).toContain('carries "split"');
   });
 
   it('retries a failed scene once with the error fed back, and throws when it fails again', async () => {

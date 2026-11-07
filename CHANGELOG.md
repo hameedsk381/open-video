@@ -4,11 +4,19 @@ All notable changes to MotionRender (formerly Open Video Engine). The published 
 
 ## Unreleased
 
+### Security
+- **Hosted: a video may only use files of its own project.** A source that was an absolute path, a drive or UNC path, a `..` step or a network address was read by the render worker from the shared volume, so an account could point a picture, clip or sound at another account's file, including through a template variable or a production plan. Such sources are now refused when a project is saved and again before any render, review or thumbnail. `docs/hosting.md` also now says accurately that the render worker runs code layers (two catalogue templates use them).
+
 ### Added
 - **An art director looks at React videos before they ship.** After a build passes the design review, stills from each scene go to a vision model that judges distinctiveness, hierarchy, composition and type against the brief and direction, and asks for up to two rewrites. A rewrite that fails to build or review is dropped for the version that worked. Needs a model that reads images; `OVE_AI_CRITIQUE=0` turns it off.
 - **`OVE_AI_MODEL_<TASK>`** routes one kind of call (`DIRECT`, `COMPOSE`, `VISION`, …) to its own model on any provider, so the planner and direction can use a stronger model than the bulk work.
 
+- **Ten style families and seven more fonts.** The planner and direction are shown starting points from very different visual worlds, in an order that depends on the brief, so the dark-gradient look stops being the answer to everything. Playfair Display, DM Sans, Manrope, Syne, JetBrains Mono, Bebas Neue and Instrument Serif join the five existing fonts (about 400 KB more font data per render page).
+- **A brand in a compose job.** `brand` (colours and fonts, as `/api/brand/scrape` returns them) replaces the planner's palette and fonts on the template, JSON and React routes.
+
 ### Changed
+- **React is the planner's default for designed videos** where the host can run it (the local studio and CLI).
+- Kinetic headlines and a camera move are no longer required. The style contract chooses `motion: none` and `camera: none|push`; plan mode checks only for three scenes of unequal length and that something moves.
 - The planner and creative direction run as their own `direct` task, with more headroom (2,200 tokens) and a higher first-attempt temperature for the planner (0.7), so two briefs are less likely to get the same plan.
 
 ## 0.3.15 (2026-11-07)

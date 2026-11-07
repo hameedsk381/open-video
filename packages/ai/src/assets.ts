@@ -61,6 +61,28 @@ export function refinePolicy(current: unknown, supplied: { id: string; src: stri
   return { assets, srcs };
 }
 
+/**
+ * The sources in a composition that point outside the project folder it is rendered from: absolute paths, drive letters,
+ * UNC paths, ".." steps, and network addresses. The renderer reads what a source names from the machine it runs on, so on a
+ * shared volume such a source is another person's file. Built-in sounds and inline data are fine. Pass the *resolved*
+ * composition: a template variable can carry a path into a "src" that the saved JSON only shows as "{{photo}}".
+ */
+export function escapingSources(composition: unknown): string[] {
+  const found = new Set<string>();
+  collectSources(composition, found);
+  const audio = (composition as any)?.export?.audio;
+  if (typeof audio === 'string') found.add(audio);
+  return [...found].filter(src => !isBuiltinSound(src) && !/^data:/i.test(src) && !staysInside(src));
+}
+
+/** Throws, in words a person can act on, when the composition refers to files outside its own project. */
+export function assertSourcesConfined(composition: unknown): void {
+  const escaping = escapingSources(composition);
+  if (!escaping.length) return;
+  const shown = escaping.slice(0, 3).map(src => `"${src.length > 60 ? `${src.slice(0, 57)}...` : src}"`).join(', ');
+  throw new Error(`This video refers to files outside its own project (${shown}${escaping.length > 3 ? `, and ${escaping.length - 3} more` : ''}). Here a video can use only the pictures, clips and sounds uploaded to it.`);
+}
+
 /** A declared asset that is one of the supplied ones gets the supplied src, however the model spelled it. */
 export function restoreSuppliedSources(raw: any, supplied: { id: string; type?: string; src: string }[] = []): void {
   if (!Array.isArray(raw?.assets)) return;

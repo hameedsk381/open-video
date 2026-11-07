@@ -11,6 +11,7 @@ import type { AiProvider } from './providers';
 import { writeContent } from './content';
 import { composeVideo, type ComposeOptions, type ComposeResult } from './compose';
 import { planBuild, type BuildPlan } from './plan';
+import { brandLook, mergeLook } from './brand-look';
 import { composeFromTemplate, type TemplateChoice, type ThemeChoice } from './template';
 import { retimeComposition } from './retime';
 import type { Registry } from './registry';
@@ -110,9 +111,12 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
   let plan: BuildPlan | undefined;
   if (!mode.noPlan && !mode.full && !mode.template && (mode.registry || source.registry)) {
     const registry = mode.registry ?? await source.registry!();
-    try { plan = await planBuild(provider, { ...scripted, registry, allowReact: Boolean(source.react), maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
+    try { plan = await planBuild(provider, { ...scripted, registry, allowReact: Boolean(source.react), brand: options.brand, maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
     catch (error) { options.onProgress?.(`Planning skipped (${(error as Error).message.split('\n')[0]}); using the built-in routing.`); }
   }
+  // A brand's colours and fonts are not a suggestion: they replace the planner's, field by field, on every route.
+  const brandStyle = brandLook(options.brand);
+  if (plan && brandStyle) plan = { ...plan, look: mergeLook(plan.look, brandStyle) };
   // The planner found no template or block composition that fits and the host can author code: this is the video the
   // brief describes. A failed authoring attempt falls back to a written composition rather than losing the job; an
   // explicit template or full composition still outranks the plan.
@@ -146,7 +150,7 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
         ...scripted,
         ...(forced ? { width: forced.width, height: forced.height, chosen: true } : {}),
         themes: themes.length ? themes : allThemes,
-        look: plan?.look,
+        look: plan?.look ?? brandStyle,
       });
       if (filled) {
         // A template keeps its own length unless the brief asked for another: stretch or trim the resolved
@@ -188,7 +192,7 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
   }
   // The planner's beats and art direction become the motion plan the composition must follow, so planning is never
   // wasted — including when a template was planned but could not be filled and the video is written from scratch.
-  const motionPlan = plan ? { idea: plan.idea, beats: plan.beats, look: plan.look, ...(content ? { content } : {}) } : (content ? { beats: content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })), content } : undefined);
+  const motionPlan = plan ? { idea: plan.idea, beats: plan.beats, look: plan.look, ...(content ? { content } : {}) } : (content ? { beats: content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })), ...(brandStyle ? { look: brandStyle } : {}), content } : undefined);
   return { ...(await composeVideo(provider, { ...scripted, plan: options.plan || motionPlan !== undefined, motionPlan })), route: 'json' };
 }
 

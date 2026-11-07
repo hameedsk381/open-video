@@ -4,7 +4,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
-  sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
+  readBrand, sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
 } from '@ove/ai';
 import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
@@ -97,7 +97,7 @@ export function createHandlers(env: JobEnv) {
         content: input.content && typeof input.content === 'object' && !Array.isArray(input.content) ? input.content as any : undefined,
         sources: sources.length ? sources : undefined,
         research: input.research === false ? false : undefined,
-        includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
+        brand: readBrand(input.brand), includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(cleanProgressMessage(message)),
       };
       const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;

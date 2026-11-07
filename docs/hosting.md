@@ -58,7 +58,9 @@ All through environment variables.
 
 - **Accounts.** Passwords are hashed with scrypt (N=32768, per-password salt). Sessions are random tokens kept only as hashes, in an HttpOnly, SameSite=Lax cookie (Secure over https). Wrong passwords are counted per account (five, then a 15-minute lock) and per address and email. A missing account takes as long to answer as a wrong password, and sign-in errors do not say which was wrong. Password reset and email links are single-use, expire, and end every session on reset.
 - **Changing things.** Every request that changes something must carry JSON (or an upload) and come from the studio's own origin.
-- **Rendering other people's compositions.** The render worker has no network (Docker `internal` network), no Linux capabilities, a read-only root, memory, CPU and process limits, and a per-job time limit. When a job runs past it, the worker process exits and the container restarts. Code layers do not run (`allowCode` is never set). Chromium's own sandbox is off inside the container because the container is the sandbox.
+- **Rendering other people's compositions.** The render worker has no network (Docker `internal` network), no Linux capabilities, a read-only root, memory, CPU and process limits, and a per-job time limit. When a job runs past it, the worker process exits and the container restarts. Chromium's own sandbox is off inside the container because the container is the sandbox.
+- **Files a video may use.** A video can use only files of its own project, uploaded pictures, clips and sounds, inline data and the built-in sounds. A source that is an absolute path, a drive or UNC path, a `..` step or a network address is refused when the project is saved (including a path carried in by a template variable or a production plan) and again before any render, review or thumbnail, so a render never reads another account's files from the shared volume.
+- **Code layers.** Two catalogue templates (`kinetic-reel`, `saas-launch`) use code and React layers, so the render worker does run code layers (`allowCode`). People cannot author them here: pasted JSON and AI-written compositions that contain them are refused, and a render page has no network and no file access of its own. Model-written React videos are not offered on hosted jobs yet: building one executes its code in Node, which needs its own sandbox first.
 - **Server paths** are removed from every error and result a person sees.
 - **Limits** keep one account from using the machine up. Thumbnails are not counted.
 
@@ -69,6 +71,7 @@ All through environment variables.
 - **Billing, plans, teams, an admin screen.** Limits are flat per account. An account can be disabled in the database (`users.disabled`).
 - **Rate limiting across API processes.** Sign-in rate limits are kept in each API process's memory; run one API process, or put a limiter in the proxy.
 - **Media from uploads is read in the API.** The API measures uploaded video and audio with ffprobe, in its own locked-down container. A malicious file could target ffprobe there.
+- **Model-written React videos.** Building one executes its code in Node, so it is offered on local runs only. Hosting it needs the build to run in the render worker, in a subprocess restricted to the project folder (Node's permission model), plus a job that moves the code and the built bundle between the AI and render lanes.
 - **Backups, metrics and alerts.** Back up the Postgres and data volumes yourself.
 
 ## What has and has not been tested

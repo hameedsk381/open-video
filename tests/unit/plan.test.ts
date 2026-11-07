@@ -83,3 +83,31 @@ describe('planBuild', () => {
     expect(progress.at(-1)).toMatch(/No usable plan/);
   });
 });
+
+describe('what the planner is told about design', () => {
+  const systemOf = async (extra: Partial<PlanOptions>) => {
+    const provider = scripted({ path: 'json', beats: [beat({ seconds: 6 })] });
+    await planBuild(provider, { ...options, ...extra });
+    return { text: String(provider.seen[0]![0]!.content), ask: provider.seen[0]![0]! };
+  };
+
+  it('offers every bundled font and the style families, with the gradient default named as one world among several', async () => {
+    const { text } = await systemOf({});
+    for (const family of ['Playfair Display', 'Bebas Neue', 'JetBrains Mono', 'Instrument Serif']) expect(text).toContain(family);
+    for (const id of ['editorial-print', 'swiss-grid', 'brutalist-poster', 'cinematic-night', 'gradient-product']) expect(text).toContain(id);
+    expect(text).toContain('fits software products only');
+  });
+
+  it('makes React the default for designed videos only when the host will run it', async () => {
+    expect((await systemOf({ allowReact: true })).text).toContain('React is the default for a video that should look designed');
+    expect((await systemOf({ allowReact: false })).text).not.toContain('React is the default');
+    expect((await systemOf({})).text).not.toContain('React is the default');
+  });
+
+  it('asks for the planner as its own creative stage, not a fast routing call', async () => {
+    const calls: { task?: string; temperature?: number }[] = [];
+    const provider: AiProvider = { id: 'fake', model: 'm', baseUrl: 'fake://', chat: async (_messages, chatOptions) => { calls.push({ task: chatOptions?.task, temperature: chatOptions?.temperature }); return JSON.stringify({ path: 'json', beats: [beat({ seconds: 6 })] }); } };
+    await planBuild(provider, options);
+    expect(calls[0]).toEqual({ task: 'direct', temperature: 0.7 });
+  });
+});

@@ -195,19 +195,17 @@ function craftProblems(composition: Composition, options: ComposeOptions): strin
   if (scenes.length >= 3 && new Set(scenes.map(scene => scene.durationFrames)).size === 1) {
     problems.push('Scene lengths are identical; give each beat a different duration so it does not read as a slideshow.');
   }
-  let split = false, camera = scenes.some(scene => !!scene.camera), motion = scenes.some(scene => (scene.camera?.animations?.length ?? 0) > 0);
+  // Only that it moves at all. Whether the type is kinetic or the camera travels is the look's decision, not a rule.
+  let motion = scenes.some(scene => (scene.camera?.animations?.length ?? 0) > 0);
   const walk = (layers: any[]) => {
     for (const layer of layers ?? []) {
       if (!layer || typeof layer !== 'object') continue;
-      if (layer.type === 'text' && layer.split) split = true;
-      if (Array.isArray(layer.animations) && layer.animations.length) motion = true;
+      if ((Array.isArray(layer.animations) && layer.animations.length) || layer.split) motion = true;
       if (layer.type === 'group') walk(layer.children ?? []);
     }
   };
   for (const scene of scenes) walk(scene.layers as any[]);
-  if (!split) problems.push('Add kinetic type: at least one headline text layer with "split": { "by": "words", "stagger": 4, "preset": "rise" }.');
-  if (!camera) problems.push('Give at least one content scene a camera with a slow zoom or pan.');
-  if (!motion) problems.push('Animate layers: land-in keyframes, drifting glows, or group motion — a static layout is not motion graphics.');
+  if (!motion) problems.push('Animate layers: land-in keyframes, a reveal, drifting shapes or group motion — a static layout is not motion graphics.');
   return problems;
 }
 

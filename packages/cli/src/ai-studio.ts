@@ -54,7 +54,7 @@ export const studioApp = { dir: fileURLToPath(new URL('../studio', import.meta.u
 /** The environment every job runs in on this machine: the store's folders, the provider from the environment, and the local-only inputs. */
 export function jobEnvFor(store: FsProjectStore, requireProvider: () => AiProvider, providerInfo: () => { provider?: string; model?: string }, local: boolean) {
   return (who: Principal): JobEnv => ({
-    who, paths: createFsPaths(store, who, providerInfo), provider: requireProvider, providerInfo, assets: id => store.assets(who, id),
+    who, paths: createFsPaths(store, who, providerInfo, { confine: !local }), provider: requireProvider, providerInfo, assets: id => store.assets(who, id),
     capabilities: { composeSmart, narrateSmart, makeThumbnail },
     ...(local ? { local: { inputFile: localInputFile } } : {}),
   });

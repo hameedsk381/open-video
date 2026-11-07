@@ -5,8 +5,10 @@
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionBeat } from './prompt';
+import { brandLine } from './brand-look';
+import type { BrandPack } from './agent';
 import { describeCapabilities, sameShape, type GenerationPath, type Registry } from './registry';
-import { fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook, type VideoContent } from '@ove/schema';
+import { describeStyleFamilies, fontGuide, fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook, type VideoContent } from '@ove/schema';
 
 export type BuildPlan = {
   path: GenerationPath;
@@ -34,6 +36,8 @@ export type PlanOptions = {
   /** Full JSON compositions and React code can use sounds and clips; templates cannot. */
   assets?: { id: string; type: string; src: string }[];
   allowReact?: boolean;
+  /** Colours and fonts the video must use; the planner designs the rest around them. */
+  brand?: BrandPack;
   maxAttempts?: number;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
@@ -62,8 +66,11 @@ Reply with ONE JSON object and nothing else:
   "reasons": ["why this path and look suit this brief"]
 }
 The design is YOURS to decide. There is no house style: choose the fonts, palette, texture and motion that this specific subject calls for.
-- Fonts must be one of: Inter (neutral tech/product), Space Grotesk (quirky engineering/AI), Fraunces (expressive editorial/craft/food/culture), Archivo (bold condensed/sports/news/launch), Source Sans 3 (calm humanist/education/long-form). Pair a distinct display face with a readable body face; do not default to Inter for both.
+- Fonts must be one of: ${fontGuide}. Pair a distinct display face with a readable body face; do not default to Inter for both.
 - Palette: derive it from the subject and its industry. A warm artisan brand should not look like a dark tech gradient, and a children's topic should not look like a cyberpunk terminal. Ensure strong text contrast on the background.
+- Style families are starting points from very different visual worlds, not a menu to choose from by default. Name the world this subject belongs to, take its tokens or depart from them on purpose, and let the brief's own subject, audience and mood pull the result away from every other video. A dark gradient with glass cards is one family among ten and fits software products only:
+${describeStyleFamilies(options.brief)}${options.brand ? `
+${brandLine(options.brand)}` : ''}
 - Texture: a grid for engineered/technical, dots for editorial/print, scanlines for games/broadcast, paper for warm/organic, none for clean graphic fields.
 - Motion and transition: one entrance style and one transition style for the whole video. Match the energy: pop for playful, slide for product, blur for premium, rise for editorial, fade for calm. Density 0.8-1.2 scales spacing.
 - This look applies to JSON videos directly and refines the chosen theme for a template.
@@ -71,7 +78,8 @@ The design is YOURS to decide. There is no house style: choose the fonts, palett
 Choose the route the brief actually needs, not the most convenient one:
 - "template": only when a listed template already matches the brief's narrative structure AND the look above. A template is chosen because you would make that same video anyway, not because it shares the topic.
 - "json": a tailored composition built from the blocks, effects and moves listed below. Use it for structured, typographic, data-, product- or brand-led videos whose scenes you can describe with those capabilities.
-- "react" (only when listed as an allowed path): hand-written React motion graphics for what blocks cannot express — 3D, WebGL or canvas work, particles or simulations, custom illustration or SVG, real camera moves, UI that looks alive, type set as an image, unusual transitions. Choose it when that level of craft is what the brief is asking for.
+- "react" (only when listed as an allowed path): hand-written React motion graphics — 3D, WebGL or canvas work, particles or simulations, custom illustration or SVG, real camera moves, UI that looks alive, type set as an image, unusual transitions, and any composition the blocks would only approximate.${allowedPaths(options).includes('react') ? `
+React is the default for a video that should look designed rather than assembled: brand films, product stories, launches, explainers with a point of view, anything whose look and motion should be specific to this subject. It is the route that can make a video unlike the last one. Choose "json" instead only for plainly structured pieces (a list, a table of figures, a caption-led clip) that blocks express fully, and "template" only on a strong match.` : ''}
 If no template matches both the structure and the look, write the video ("json" or "react"); never force a near-miss template.
 When a template is the right route, pick the one that specifically fits the brief's narrative style:
 - Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "story-tall" or "quote-card".
