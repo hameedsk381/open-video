@@ -2,7 +2,7 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
-## Unreleased
+## 0.3.14 (2026-11-07)
 
 ### Added
 - **`production.json`: the film's plan, compiled to a composition.** A production manifest records what the video is meant to be — brief, style, script beats, characters, environments, props, a shot list with camera and action, assets, soundtrack, export settings and approvals — and `mr production validate` resolves every character, prop, beat and asset reference at once. `mr production compile` lays the shots end to end as scenes, hands approved takes to the renderer as footage, compiles a shot still in planning into a text card from its on-screen copy, and prints notes for anything it had to fall back on (`mr production compile --output`, MCP `motionrender_production_compile`). Shot metadata (scene, action, emotion, camera, cast, generation provenance) travels in the scene; artwork and the soundtrack carry over with the palette, fonts, texture and transitions. `examples/production-lamp` is a complete ten-second spot built this way.
