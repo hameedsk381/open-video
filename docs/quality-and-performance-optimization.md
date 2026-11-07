@@ -18,7 +18,7 @@ This guide details the primary bottlenecks impacting **Output Quality** and **Re
 | **Node $\rightarrow$ FFmpeg Pipe** | Buffer $\rightarrow$ stdin $\rightarrow$ FFmpeg libpng decode | Double compression/decompression cycle: Chromium encodes PNG $\rightarrow$ FFmpeg decodes PNG $\rightarrow$ FFmpeg encodes x264. |
 | **CPU Contention** | Software SwiftShader + x264 libx264 | SwiftShader (CPU WebGL) and Chromium Canvas 2D compete with FFmpeg encoding threads for CPU cores on multi-core systems. |
 | **Motion Blur** | Unconditional 8-sample subframe accumulation | Multiplies drawing and evaluation work by $8\times$ across all layers, even static elements. |
-| **Layer Invalidation** | Immediate-mode full redrawing per frame | Static backgrounds, logos, cards, and HTML layers are re-evaluated and re-rendered on every single frame. |
+| **Layer Invalidation** | Immediate-mode full redrawing per frame | Static backgrounds, logos, cards, and React layers are re-evaluated and re-rendered on every single frame. |
 
 ### 1.2 Output Quality & Pacing Bottlenecks
 

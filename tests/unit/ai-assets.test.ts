@@ -16,7 +16,6 @@ const brief = { width: 640, height: 360, fps: 30, durationSeconds: 1, brief: 'a 
 describe('compose only uses supplied files', () => {
   it.each([
     ['a layer', base([picture('C:/Users/x/private.png'), words])],
-    ['a picture inside html markup', base([{ id: 'card', type: 'html', width: 200, height: 100, html: '<img src="C:/Users/x/private.png">' }, words])],
     ['a declared asset', base([picture('bg'), words], { assets: [{ id: 'bg', type: 'image', src: '/home/x/secret.png' }] })],
     ['the soundtrack', base([words], { export: { audio: '/home/x/music.wav' } })],
   ])('refuses %s pointing at a file nobody supplied', async (_name, composition) => {

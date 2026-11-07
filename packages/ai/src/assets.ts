@@ -1,7 +1,6 @@
 // Which pictures, clips and sounds an AI-written composition may refer to. A model (or a pasted answer) must not be able to point a
 // layer at a file nobody gave it, such as a private picture elsewhere on the disk: the video would embed it when rendered.
 import { isBuiltinSound, loadComposition, type Composition } from '@ove/core';
-import { htmlReferences } from '@ove/graphics';
 
 /**
  * assets: the supplied assets, id to src. srcs: other sources that are fine as they are (used when changing an existing composition).
@@ -29,7 +28,6 @@ export function assetProblems(composition: Composition, policy: AssetPolicy): st
       if (!layer || typeof layer !== 'object') continue;
       if (layer.type === 'code' || layer.type === 'react') problems.push(`Layer "${layer.id}" is a ${layer.type === 'react' ? 'React' : 'code'} layer; AI-written and pasted compositions cannot contain code, so use text, shapes, html or shader layers instead.`);
       if (['image', 'video', 'audio', 'lottie', 'captions'].includes(layer.type)) check(String(layer.src ?? ''), `Layer "${layer.id}"`);
-      if (layer.type === 'html') for (const reference of htmlReferences(layer)) check(reference, `HTML layer "${layer.id}" (a picture in its markup or CSS)`);
       if (layer.type === 'group') walk(layer.children ?? []);
     }
   };
@@ -38,13 +36,12 @@ export function assetProblems(composition: Composition, policy: AssetPolicy): st
   return problems;
 }
 
-// Every "src" string in a JSON tree, plus the pictures named inside html layers.
+// Every "src" string in a JSON tree.
 function collectSources(value: unknown, into: Set<string>): void {
   if (Array.isArray(value)) { for (const item of value) collectSources(item, into); return; }
   if (!value || typeof value !== 'object') return;
   const object = value as Record<string, unknown>;
   for (const [key, child] of Object.entries(object)) { if (key === 'src' && typeof child === 'string') into.add(child); else collectSources(child, into); }
-  if (typeof object.html === 'string') for (const reference of htmlReferences(object as { html?: string; css?: string })) into.add(reference);
 }
 
 /**

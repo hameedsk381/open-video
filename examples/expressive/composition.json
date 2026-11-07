@@ -75,11 +75,11 @@
             },
             {
               "id": "badge",
-              "type": "html",
+              "type": "rect",
               "width": 220,
               "height": 64,
-              "css": "div{height:64px;display:flex;align-items:center;justify-content:center;border-radius:32px;background:#22d3ee;color:#0b0f1e;font:700 26px Inter}",
-              "html": "<div>html badge</div>"
+              "radius": 32,
+              "fill": "#22d3ee"
             }
           ]
         },

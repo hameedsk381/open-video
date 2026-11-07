@@ -5,9 +5,9 @@ const color = z.string().regex(colorPattern);
 // Kept in step with easingNames in @ove/animation (a unit test checks they match).
 export const easingSchema = z.union([z.enum(['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInQuart','easeOutQuart','easeInOutQuart','easeInExpo','easeOutExpo','easeInOutExpo','easeInBack','easeOutBack','spring','hold','land','snap','glide','pop','move','exit','drift']).describe('land, snap, glide and pop for entries, move within the frame, exit for leaving, drift for slow continuous motion; or a standard curve'), z.tuple([z.number().min(0).max(1), z.number(), z.number().min(0).max(1), z.number()]).describe('Cubic Bézier control points [x1, y1, x2, y2], as in CSS')]);
 export const colorProperties = ['fill','color','stroke'] as const;
-// A CSS custom property name, such as --progress: html layers read their animated values (see htmlLayer).
+// A CSS custom property name, such as --speed: shader layers read their animated values as uniforms.
 export const cssVariableName = /^--[a-zA-Z][\w-]*$/;
-const animation = z.object({ property: z.union([z.enum(['x','y','opacity','rotation','scale','fontSize','width','height','radius','letterSpacing','strokeWidth','trimStart','trimEnd','blur','volume','d',...colorProperties]), z.string().regex(cssVariableName)]).describe('A layer property, or a CSS variable such as --progress (html layers)'), keyframes: z.array(z.object({ frame: z.number().int().nonnegative(), value: z.union([z.number(), z.string()]).describe('A number; a colour for fill, color and stroke; SVG path data for d (shape morphing)'), easing: easingSchema.optional().describe('Curve of the segment arriving at this keyframe') })).min(1), repeat: z.number().int().nonnegative().optional(), reverse: z.boolean().optional() })
+const animation = z.object({ property: z.union([z.enum(['x','y','opacity','rotation','scale','fontSize','width','height','radius','letterSpacing','strokeWidth','trimStart','trimEnd','blur','volume','d',...colorProperties]), z.string().regex(cssVariableName)]).describe('A layer property, or a CSS variable such as --speed (shader layers)'), keyframes: z.array(z.object({ frame: z.number().int().nonnegative(), value: z.union([z.number(), z.string()]).describe('A number; a colour for fill, color and stroke; SVG path data for d (shape morphing)'), easing: easingSchema.optional().describe('Curve of the segment arriving at this keyframe') })).min(1), repeat: z.number().int().nonnegative().optional(), reverse: z.boolean().optional() })
   .superRefine((a, ctx) => { if (a.property.startsWith('--')) { a.keyframes.forEach((k, i) => { if (typeof k.value === 'string' && !colorPattern.test(k.value)) ctx.addIssue({ code: 'custom', path: ['keyframes', i, 'value'], message: `${a.property} keyframes need numbers or colours (they are interpolated)` }); }); return; }
     const wantsColor=(colorProperties as readonly string[]).includes(a.property), wantsPath=a.property === 'd'; a.keyframes.forEach((k, i) => { const ok=wantsPath ? typeof k.value === 'string' && k.value.trim() !== '' : wantsColor ? typeof k.value === 'string' && colorPattern.test(k.value) : typeof k.value === 'number';
     if (!ok) ctx.addIssue({ code: 'custom', path: ['keyframes', i, 'value'], message: wantsPath ? 'd keyframes need SVG path data' : wantsColor ? `${a.property} keyframes need colour values` : `${a.property} keyframes need numbers` }); }); });
@@ -49,7 +49,7 @@ export const gradeSchema = z.object({ look: z.enum(gradeLooks).optional().descri
   temperature: z.number().min(-1).max(1).optional().describe('Negative cooler (blue), positive warmer (orange)'), tint: z.number().min(-1).max(1).optional().describe('Negative greener, positive more magenta'),
   shadows: z.number().min(-1).max(1).optional().describe('Lift (positive) or crush (negative) the dark tones'), highlights: z.number().min(-1).max(1).optional().describe('Boost (positive) or pull back (negative) the bright tones'), fade: z.number().min(0).max(1).optional().describe('Raise the blacks for a faded film look') })
   .describe('Colour grading: exposure, contrast, saturation, white balance, shadows and highlights, or a look. Not animatable; cross-fade two graded layers to change it over time.');
-const baseLayer = z.object({ id: z.string().min(1), type: z.enum(['text','image','video','audio','captions','rect','circle','path','group','html','lottie','shader','code','react']),
+const baseLayer = z.object({ id: z.string().min(1), type: z.enum(['text','image','video','audio','captions','rect','circle','path','group','lottie','shader','code','react']),
   grade: gradeSchema.optional().describe('Colour grading for this layer and everything inside it.'),
   matte: z.object({ src: z.string().min(1).describe('A video or picture, as an asset id or path: made with any tool (rembg, Robust Video Matting, a video editor)'), mode: z.enum(['luma', 'alpha']).default('luma').describe('luma: white keeps the layer, black hides it; alpha: the matte\'s own transparency'), invert: z.boolean().default(false).describe('Keep what the matte hides'), type: z.enum(['video', 'image']).optional().describe('Left out, picture file extensions mean image, anything else video'), trimStart: z.number().int().nonnegative().optional().describe('Frames of a video matte to skip; a video layer\'s matte follows its own trim and speed'), playbackRate: z.number().positive().max(16).optional().describe('Speed of a video matte; a tiny value holds one frame') }).optional().describe('Show this layer only where a matte says so (a cut-out of the speaker, a shape, a gradient). Becomes a masking group when the composition loads.'),
   shadow: z.object({ color, blur: z.number().nonnegative().default(0), offsetX: z.number().default(0), offsetY: z.number().default(0) }).optional().describe('Drop shadow; offsets are in canvas pixels and ignore the layer\'s scale and rotation'),
@@ -69,22 +69,13 @@ export const transitionSchema = z.object({ type: z.enum(['fade','slide','wipe','
 export const layerSchema: z.ZodType<any> = z.discriminatedUnion('type', [
   baseLayer.extend({ type: z.literal('text'), content: z.string().default('').describe('The text; leave out when using spans'), spans: z.array(spanSchema).optional().describe('Rich text: styled pieces laid out together, used instead of content'), fontSize: z.number().positive().default(48), fontFamily: z.string().default('Inter').describe('An installed font, the family of a font asset, or a comma-separated list'), fontWeight: fontWeight.default(400), fontStyle: fontStyle.default('normal'), letterSpacing: z.number().default(0).describe('Extra pixels between characters'), lineHeight: z.number().positive().default(1.2), color: paint.default('#ffffff'), ...strokeFields, lineJoin: strokeFields.lineJoin.removeDefault().default('round').describe('round avoids spikes on letter corners'), textAlign: z.enum(['left','center','right']).default('left'),
     maxWidth: z.number().positive().optional().describe('Wrap lines to this width in pixels'), maxLines: z.number().int().positive().optional().describe('Cut to this many lines, ending in an ellipsis, unless minFontSize lets the text shrink to fit'), minFontSize: z.number().positive().optional().describe('Shrink the text, down to this size, until it fits maxWidth and maxLines without splitting words'), split: splitSchema.optional().describe('Animate the text word by word, letter by letter or line by line') }).superRefine((l, ctx) => { if (l.split?.by === 'letters' && l.spans?.length) ctx.addIssue({ code: 'custom', path: ['split', 'by'], message: 'Rich text (spans) splits by words or lines, not letters' }); }),
-  // HTML and CSS drawn as part of the frame. No scripts run and nothing loads from the web: pictures come from assets (by id or path in
-  // src="…" or url(…)), fonts are Inter and the composition's font assets. vars are CSS custom properties on the root element; animate
-  // them with keyframes on "--name". --t (seconds since the layer started) and --frame are set every frame, so CSS @keyframes can be
-  // placed exactly: animation: rise 0.6s ease-out both paused; animation-delay: calc(var(--t) * -1s).
-  baseLayer.extend({ type: z.literal('html'), html: z.string().describe('Markup, as in an HTML body; scripts and event handlers are removed'), css: z.string().default('').describe('A style sheet for the markup'),
-    width: z.number().positive().describe('The box the markup is laid out in, in pixels'), height: z.number().positive(),
-    vars: z.record(z.string().regex(cssVariableName, 'CSS variable names start with --'), z.union([z.number(), z.string()])).default({}).describe('CSS custom properties set on the root, e.g. { "--accent": "#22d3ee" }'),
-    resolution: z.number().min(0.5).max(4).default(1).describe('Raster detail: 2 keeps it sharp when scaled up or under a camera zoom (slower)') })
-    .superRefine((l, ctx) => { for (const [field, text] of [['html', l.html], ['css', l.css]] as const) if (/(src\s*=\s*["']?|url\(\s*["']?)(https?:)?\/\//i.test(text)) ctx.addIssue({ code: 'custom', path: [field], message: 'html layers cannot load from the web: add the picture or font as an asset and refer to it by id or path' }); }),
   // A Lottie animation (After Effects via Bodymovin, or LottieFiles), seeked to the exact frame. Expressions are not supported (they
   // are JavaScript); pictures must be embedded in the JSON. Timing works like a video layer.
   baseLayer.extend({ type: z.literal('lottie'), src: z.string().min(1).describe('A lottie asset id, or a .json file relative to the composition'), width: z.number().positive(), height: z.number().positive(),
     fit: z.enum(['contain','cover','fill']).default('contain'), trimStart: z.number().nonnegative().default(0).describe('Frames of the animation to skip, at the composition fps'),
     playbackRate: z.number().positive().max(16).default(1), loop: z.boolean().default(false).describe('Start again when it ends; otherwise it holds its last frame') }),
   // A React component drawn every frame: the bundle that `ove build video.tsx` writes renders the component for this frame to markup
-  // (react-dom/server), which is drawn like an html layer. Like code layers it runs the author's JavaScript, so it needs --allow-code.
+  // (react-dom/server), which is drawn as markup. Like code layers it runs the author's JavaScript, so it needs --allow-code.
   baseLayer.extend({ type: z.literal('react'), src: z.string().min(1).describe('The bundle ove build wrote, relative to the composition'), width: z.number().positive(), height: z.number().positive(),
     durationInFrames: z.number().int().positive().describe('The length useVideoConfig() reports to the component'), props: z.record(z.string(), z.unknown()).default({}).describe('Handed to the component as props'),
     resolution: z.number().min(0.5).max(4).default(1).describe('Raster detail: 2 keeps it sharp when scaled up or under a camera zoom (slower)') }),
@@ -189,7 +180,25 @@ export function expandCameraKeyframes(input: unknown): unknown {
   };
   return { ...raw, scenes: raw.scenes.map((scene: any) => scene && typeof scene === 'object' && scene.camera && typeof scene.camera === 'object' ? { ...scene, camera: camera(scene.camera) } : scene) };
 }
-export function parseComposition(input: unknown): Composition { return compositionSchema.parse(expandMattes(expandSceneGrades(expandCameraKeyframes(input)))); }
+/**
+ * The html layer was removed in favour of react layers. A file that still has one (an older composition, or a block added by an older
+ * version) gets a sentence saying what to do, not a dump of what the schema expected instead.
+ */
+function rejectRemovedLayers(input: unknown): void {
+  const found: string[] = [];
+  const walk = (value: unknown, path: string): void => {
+    if (Array.isArray(value)) { value.forEach((item, index) => walk(item, `${path}[${index}]`)); return; }
+    if (!value || typeof value !== 'object') return;
+    const object = value as Record<string, unknown>;
+    if (object.type === 'html' && typeof object.html === 'string') found.push(typeof object.id === 'string' ? object.id : path);
+    for (const [key, child] of Object.entries(object)) walk(child, `${path}.${key}`);
+  };
+  walk((input as any)?.scenes, 'scenes'); walk((input as any)?.components, 'components');
+  if (!found.length) return;
+  const shown = found.slice(0, 3).map(id => `"${id}"`).join(', ') + (found.length > 3 ? `, and ${found.length - 3} more` : '');
+  throw new Error(`This video has html layers (${shown}), which are no longer supported. Draw that content as a react layer (ove build video.tsx) or with text, shape and path layers. A block added by an older version keeps its html layer: remove it and add the block again.`);
+}
+export function parseComposition(input: unknown): Composition { rejectRemovedLayers(input); return compositionSchema.parse(expandMattes(expandSceneGrades(expandCameraKeyframes(input)))); }
 // Measured media, by asset id, for expressions such as {{media['vo-intro'].frames}}: the length, and the stretches of sound between
 // pauses (segments), in seconds and in frames at the composition's fps. Measured in Node by @ove/core (measureMedia).
 export type MediaSegment = { start: number; end: number; startFrame: number; endFrame: number };
@@ -231,7 +240,7 @@ export function sequenceScenes(expanded: unknown): unknown { if (!expanded || ty
   return { ...raw, scenes, durationFrames: raw.durationFrames === 'auto' || raw.durationFrames === undefined ? (latest || raw.durationFrames) : raw.durationFrames }; }
 // Resolves {{variables}} in a raw composition with the given values (strings from a command line are converted to the declared types),
 // places scenes, then parses it. `media` makes measured media available to expressions.
-export function loadComposition(input: unknown, values: Record<string, unknown> = {}, options: LoadOptions = {}): Composition { const declarations=variablesSchema.parse((input as any)?.variables ?? {});
+export function loadComposition(input: unknown, values: Record<string, unknown> = {}, options: LoadOptions = {}): Composition { rejectRemovedLayers(input); const declarations=variablesSchema.parse((input as any)?.variables ?? {});
   return parseComposition(sequenceScenes(substituteVariables(input, resolveVariables(declarations, values), { ...beatFunctions(input), ...canvasNames(input), ...(options.media ? { media: options.media } : {}) }))); }
 export const compositionJsonSchema = z.toJSONSchema(compositionSchema, { target: 'draft-2020-12', io: 'input' });
 // Readable text for any error, used by the CLI and the preview: validation problems become one "✖ message → at path" line each.

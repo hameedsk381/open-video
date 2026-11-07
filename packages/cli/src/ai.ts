@@ -5,9 +5,10 @@ import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
 import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, narrateSmart, planBatch, providerCapabilities,
   refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
-import { describeError, renderMedia, type Composition } from '@ove/core';
+import { describeError, loadComposition, renderMedia, type Composition } from '@ove/core';
 import { composeSmart } from './templates';
 import { readScript } from './script';
+import { convertFileToReact } from './react-compose';
 
 const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
@@ -230,7 +231,18 @@ async function composeCommand(argv: string[]): Promise<number> {
   await ensureBaseline(resolve(dir, 'composition.json'));
   // A template video is saved as the template (still editable by variable and theme), with its narration carried across.
   const source = (result as any).source ? (narration ? mergeNarration((result as any).source, composition) : (result as any).source) : undefined;
-  const files = await writeCompositionProject(dir, composition, { force: flag(argv, '--force'), source });
+  // The React route has already put video.tsx and its bundle in the folder, which the check at the top found empty (or --force allowed).
+  const files = await writeCompositionProject(dir, composition, { force: flag(argv, '--force') || result.route === 'react', source });
+  // Every video is a React video: a composition the catalogue, a template or the scene-by-scene route produced is drawn by the shared
+  // CompositionView, so the saved file is one `react` layer like a model-written one. What the view cannot draw yet keeps its JSON layers,
+  // and the note says why. `--json-layers` keeps the layers on purpose (what the hosted worker renders, or hand-editing the JSON).
+  if (result.route !== 'react' && !flag(argv, '--json-layers')) {
+    try {
+      const converted = await convertFileToReact(files.composition);
+      if (converted.unsupported.length) result.warnings.push(`Kept as JSON layers, because the React view cannot draw yet: ${converted.unsupported.join(', ')}.`);
+      else { result.route = 'react' as typeof result.route; composition = loadComposition(JSON.parse(await readFile(files.composition, 'utf8'))); }
+    } catch (error) { result.warnings.push(`Kept as JSON layers, because converting to React failed: ${describeError(error)}`); }
+  }
   await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: provider.id, model: provider.model, template: (result as any).template, attempts: result.attempts });
   console.log(`\nChecked and wrote ${files.composition} (${composition.durationFrames} frames, ${composition.scenes.length} scenes, ${result.attempts} attempt${result.attempts === 1 ? '' : 's'})`);
   if (result.route === 'react') console.log(`  Written as a React component (${resolve(dir, 'video.tsx')}); rendering it runs that code.`);

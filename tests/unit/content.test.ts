@@ -24,6 +24,17 @@ const fake = (...replies: unknown[]): AiProvider & { seen: ChatMessage[][] } => 
 const options = { brief: briefText, durationSeconds: 10, research: false };
 
 describe('readContent', () => {
+  it('uses the URL it was given for a source, never the one the model claims, so "brief" as a url cannot sink the script', () => {
+    for (const claimed of ['brief', '', 'n/a', 'www.example.com', 42]) {
+      const { content, problems } = readContent({ ...grounded, sources: [{ ...grounded.sources[0]!, url: claimed }] }, [brief]);
+      expect(problems, String(claimed)).toEqual([]);
+      expect(content?.sources[0]?.url).toBeUndefined();
+    }
+    const web = { id: 'web1', title: 'Report', url: 'https://example.com/report', text: briefText };
+    const { content } = readContent({ ...grounded, sources: [{ id: 'web1', quote: 'Our platform processed 4.2 million videos last year', url: 'https://elsewhere.test/x' }], beats: [{ ...grounded.beats[0]!, sourceIds: ['web1'], data: [{ label: 'videos', value: '4.2M', sourceIds: ['web1'] }] }] }, [brief, web]);
+    expect(content?.sources[0]?.url).toBe('https://example.com/report');
+  });
+
   it('keeps a script whose claim and figure are backed by a quote it could find', () => {
     const { content, problems } = readContent(grounded, [brief]);
     expect(problems).toEqual([]);

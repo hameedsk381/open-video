@@ -1,5 +1,6 @@
 import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, textRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
+import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
 import { resolveVariables, variablesSchema } from '@ove/schema';
 import { assertSourcesConfined, distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
@@ -114,6 +115,8 @@ export function projectRoutes(): Route[] {
     { method: 'POST', path: '/api/add-block', handle: async c => {
       const request = parseRequest(addBlockRequest, await c.body()), id = await exists(c, request.id), { store, library } = c.deps, block = await library.readBlock(request.block);
       const added = library.addBlock(await store.readRaw(c.who, id), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });
+      // The bundle goes in first, so the composition that refers to it is never saved without it.
+      for (const file of added.files) await store.putSupportFile(c.who, id, basename(file), await library.blockFile(file));
       await writeRaw(c, id, added.composition, { kind: 'edit', label: `Added ${block.name}` }); c.json(200, { placed: added.placed, where: added.where });
     } },
     { method: 'POST', path: '/api/restore', handle: async c => {

@@ -287,6 +287,9 @@ function taskModelOverride(messages: ChatMessage[], options: ChatOptions): strin
   return process.env[`OVE_AI_MODEL_${inferChatTask(messages, options).toUpperCase()}`]?.trim() || undefined;
 }
 
+/** The most output a single call may be asked for when a reply keeps running out of room. */
+const maxOutputCeiling = 32_768;
+
 const extensionFromMediaType = (mediaType: string) => mediaType.split('/')[1]?.split(';')[0] ?? 'png';
 
 /**
@@ -457,15 +460,43 @@ export class VercelAiProvider implements AiProvider {
       coreMessages.push({ role: 'user', content: 'Generate the JSON now.' });
     }
 
-    const result = await generateText({
+    const run = (maxOutputTokens: number) => generateText({
       model: this.resolveModelInstance(model),
       system: system || undefined,
       messages: coreMessages,
       temperature: options.temperature ?? 0.4,
-      maxOutputTokens: options.maxTokens ?? (this.driver === 'anthropic' ? 16_384 : 4096),
+      maxOutputTokens,
       abortSignal: timeoutSignal(options.signal),
       maxRetries: 2,
     });
+    // A reply cut off by the output limit is never usable JSON. Models that reason before they answer spend part of the limit
+    // thinking, so a cap that suits a plain model truncates them mid-answer: most of this pipeline's failures on one model were
+    // exactly that. When the model reports it ran out of room, ask again with twice as much, up to a ceiling.
+    const fromEnv = Number(process.env.OVE_AI_MAX_TOKENS);
+    let budget = options.maxTokens ?? (fromEnv > 0 ? fromEnv : this.driver === 'anthropic' ? 16_384 : 8192);
+    // Some providers count the room asked for against a per-minute allowance ("Limit 8000, Requested 10333"): the prompt plus the
+    // output reserved for the answer. When one says so, the prompt's own size is Requested minus what was reserved, and the answer
+    // is given what is left; if that is too little to answer in, the error says what the prompt alone weighs.
+    const call = async (wanted: number) => {
+      try { return { result: await run(wanted), used: wanted }; }
+      catch (error) {
+        const found = /Limit (\d+), Requested (\d+)/.exec(String((error as Error)?.message ?? ''));
+        if (!found) throw error;
+        const prompt = Number(found[2]) - wanted, room = Math.floor((Number(found[1]) - prompt) * 0.95);
+        if (room < 1000) throw new Error(`${String((error as Error).message).split('\n')[0]} The prompt alone is about ${prompt} tokens, which leaves too little room to answer: send less, or use a plan with a higher limit.`);
+        if (room >= wanted) throw error;
+        return { result: await run(room), used: room };
+      }
+    };
+    let { result, used } = await call(budget);
+    const capped = used < budget;                                // the provider named a limit: asking for more would be refused again
+    for (let retry = 1; result.finishReason === 'length' && !capped && retry <= 2 && used < maxOutputCeiling; retry++) {
+      const next = Math.min(used * 2, maxOutputCeiling);
+      let again;
+      try { again = await call(next); } catch { break; }       // a limit that will not stretch: hand back what there is
+      ({ result, used } = again);
+      if (used < next) break;                                  // capped by that limit: asking again would change nothing
+    }
 
     const text = result.text.trim();
     if (!text) throw new Error(`${this.id} via Vercel AI SDK returned no text`);

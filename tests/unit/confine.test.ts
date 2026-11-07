@@ -22,12 +22,12 @@ describe('escapingSources', () => {
     expect(escapingSources(layers(...bad)).sort()).toEqual([...bad].sort());
   });
 
-  it('finds sources wherever they sit: assets, nested groups, the soundtrack and pictures inside html layers', () => {
+  it('finds sources wherever they sit: assets, nested groups, the soundtrack and the bundle of a react layer', () => {
     const composition = {
       assets: [{ id: 'font', type: 'font', src: '/usr/share/fonts/a.ttf' }], export: { audio: '../music.mp3' },
-      scenes: [{ layers: [{ type: 'group', children: [{ type: 'video', src: '/data/_tenants/x/p/assets/v.mp4' }] }, { type: 'html', html: '<img src="/etc/logo.png"><div style="background:url(/etc/bg.png)"></div>' }] }],
+      scenes: [{ layers: [{ type: 'group', children: [{ type: 'video', src: '/data/_tenants/x/p/assets/v.mp4' }] }, { type: 'react', src: '/data/_tenants/x/other.bundle.js', width: 10, height: 10, durationInFrames: 30 }] }],
     };
-    expect(escapingSources(composition)).toEqual(expect.arrayContaining(['/usr/share/fonts/a.ttf', '../music.mp3', '/data/_tenants/x/p/assets/v.mp4']));
+    expect(escapingSources(composition)).toEqual(expect.arrayContaining(['/usr/share/fonts/a.ttf', '../music.mp3', '/data/_tenants/x/p/assets/v.mp4', '/data/_tenants/x/other.bundle.js']));
   });
 
   it('says what is wrong in words a person can act on, and caps the list', () => {

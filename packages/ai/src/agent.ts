@@ -128,6 +128,7 @@ Write one complete, standalone, production-ready React video component file (\`v
 1. Runtime: \`@ove/react\` (also importable as \`motionrender/react\`). Every frame is rendered on its own and must be reproducible, so all motion is a pure function of the frame.
    - Primitives: \`AbsoluteFill\`, \`Sequence\`, \`Series\`, \`useCurrentFrame\`, \`useVideoConfig\`, \`interpolate\`, \`spring\`, \`Easing\`, \`random\`, \`delayRender\`, \`continueRender\`, \`Audio\`, \`Img\`, \`staticFile\`.
    - Never animate with CSS transitions or keyframes, \`requestAnimationFrame\`, \`setTimeout\` or \`Date.now()\`; drive every value from the frame.
+   - Inside a \`<Sequence from={N}>\`, \`useCurrentFrame()\` counts from the start of that sequence (0 at its first frame), not from the start of the video. Time everything in a scene from 0; never pass the sequence's absolute start frame to a child as its own start, or the child stays invisible.
    - Do not fetch anything at render time.
 2. Canvas: ${width}x${height} (${format === 'reel' ? '9:16 vertical' : '16:9 landscape'}), ${fps} fps, ${durationFrames} frames (${(durationFrames / fps).toFixed(1)} s).
 3. File shape:
@@ -157,10 +158,15 @@ ${reelNote}${brandNote}
    - Do NOT wrap it in conversational filler. Fenced code blocks (\`\`\`tsx ... \`\`\`) are accepted.`;
 };
 
-function extractCode(text: string): string {
-  const match = text.match(/```(?:tsx|typescript|jsx|javascript)?\s*([\s\S]*?)```/i);
-  if (match && match[1]?.trim()) return match[1].trim();
-  return text.trim();
+/**
+ * The code in a reply. Models open a fence twice, leave one unclosed, or put a sentence around the block, so the code is
+ * whatever lies between the fence lines: the longest such stretch, preferring one that looks like a module.
+ */
+export function extractCode(text: string): string {
+  const stretches = text.split(/^[ \t]*```[a-z]*[ \t]*$/gim).map(part => part.trim()).filter(Boolean);
+  if (stretches.length <= 1) return (stretches[0] ?? text).trim();
+  const modules = stretches.filter(part => /\bexport\b|\bimport\b/.test(part));
+  return (modules.length ? modules : stretches).reduce((longest, part) => (part.length > longest.length ? part : longest));
 }
 
 /**
@@ -250,6 +256,8 @@ export async function runVideoAgent(
     options.onProgress?.(`🎨 Direction: ${direction.concept}`);
   }
 
+  // A long folder path used to eat the whole message: show the project's files by name, and enough of the error to act on.
+  const readable = (text: string, max = 360) => text.split(dir).join('.').split(dir.split('\\').join('/')).join('.').replace(/\s+/g, ' ').trim().slice(0, max);
   const messages: ChatMessage[] = [
     { role: 'system', content: agentSystemPrompt(format, width, height, durationFrames, fps, reelSafeZone, activeBrand, direction, options.content) },
     {
@@ -308,7 +316,7 @@ export async function runVideoAgent(
         options.onProgress?.(`🔍 Running visual design review…`);
         const visualResult = await options.visualCheck(videoPath, compositionPath);
         if (!visualResult.passed) {
-          options.onProgress?.(`⚠️ Visual review failed: ${visualResult.report.slice(0, 140)}…`);
+          options.onProgress?.(`⚠️ Visual review failed: ${readable(visualResult.report)}`);
 
           if (attempts >= maxAttempts) {
             throw new Error(`Video Agent could not produce a passing visual review after ${maxAttempts} attempts.\nLast report:\n${visualResult.report}`);
@@ -323,6 +331,7 @@ export async function runVideoAgent(
             { role: 'user', content: repairContent },
           ];
 
+          messages.splice(2);   // the brief and the latest code only, for the same reason as the build repair below
           // Attach the contact sheet image if the provider supports it (best-effort)
           if (visualResult.sheet) {
             try {
@@ -351,18 +360,20 @@ export async function runVideoAgent(
       break;
     } catch (error: any) {
       const errorMsg = error?.message ?? String(error);
-      options.onProgress?.(`⚠️ Build issue detected: ${errorMsg.slice(0, 140)}…`);
+      options.onProgress?.(`⚠️ Build issue detected: ${readable(errorMsg)}`);
       
       if (attempts >= maxAttempts) {
         throw new Error(`Video Agent could not produce a valid build after ${maxAttempts} attempts.\nLast error:\n${errorMsg}`);
       }
 
-      // Self-correction loop: prompt the model to fix the exact build issue
+      // Self-correction loop: prompt the model to fix the exact build issue. Only the latest code and error go back: the earlier
+      // attempts are what failed, and carrying them made each retry bigger until a provider with a small request limit refused it.
+      messages.splice(2);
       messages.push(
         { role: 'assistant', content: `\`\`\`tsx\n${videoCode}\n\`\`\`` },
         {
           role: 'user',
-          content: `The generated video.tsx failed to build with this error:\n${errorMsg}\n\nPlease fix the error completely and output the full corrected video.tsx.`
+          content: `The generated video.tsx failed to build with this error:\n${errorMsg.slice(0, 1500)}\n\nPlease fix the error completely and output the full corrected video.tsx.`
         }
       );
     }

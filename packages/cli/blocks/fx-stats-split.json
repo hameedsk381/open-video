@@ -32,6 +32,9 @@
       "default": "DEMO DATA"
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "bg",
@@ -174,31 +177,19 @@
     },
     {
       "id": "count",
-      "type": "html",
+      "type": "react",
+      "src": "fx.bundle.js",
       "width": "{{round(canvas.width * 0.4)}}",
       "height": "{{round(min(canvas.width, canvas.height) * 0.11)}}",
+      "durationInFrames": 180,
       "startFrame": 14,
-      "html": "<div class='n'></div>",
-      "css": ".n{font:800 {{round(min(canvas.width, canvas.height) * 0.09)}}px Inter;color:#ffffff;line-height:1}.n::before{counter-reset:n round(var(--n));content:counter(n) ''}",
-      "vars": {
-        "--n": 0
+      "props": {
+        "effect": "counter",
+        "value": "{{value}}",
+        "size": "{{round(min(canvas.width, canvas.height) * 0.09)}}",
+        "weight": 800,
+        "duration": 70
       },
-      "animations": [
-        {
-          "property": "--n",
-          "keyframes": [
-            {
-              "frame": 0,
-              "value": 0
-            },
-            {
-              "frame": 70,
-              "value": "{{value}}",
-              "easing": "land"
-            }
-          ]
-        }
-      ],
       "x": "{{round(canvas.width * 0.06)}}",
       "y": "{{round(canvas.height * 0.035) + round(min(canvas.width, canvas.height) * 0.12)}}"
     },

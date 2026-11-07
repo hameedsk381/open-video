@@ -247,8 +247,8 @@ const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number,
 { "background": { "type": "color", "color": "#hex from the palette" },
   "layers": [ ...2 to 6 layers... ] }
 
-Layer shapes (x and y are the layer's CENTRE in pixels):
-- text: { "type": "text", "text": "...", "x": <centre x>, "y": <centre y>, "fontSize": <px>, "color": "#hex from the palette", "fontFamily": "<the heading or body font>", "align": "center", "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }, "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": <y+80> }, { "frame": 20, "value": <y>, "easing": "land" }] }] }
+Layer shapes (pixels). Where a layer sits: text is anchored at x, y, with y the TOP of its first line and x its left edge, its centre or its right edge according to textAlign; a rect or image has its top-left corner at x, y; a circle is centred on x, y. A text layer of N lines is about N times 1.2 times fontSize tall below y, so keep the next layer clear of it.
+- text: { "type": "text", "text": "...", "x": <x>, "y": <top y>, "maxWidth": <px the text wraps inside>, "fontSize": <px>, "color": "#hex from the palette", "fontFamily": "<the heading or body font>", "textAlign": "left|center|right", "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }, "animations": [{ "property": "y", "keyframes": [{ "frame": 0, "value": <y+80> }, { "frame": 20, "value": <y>, "easing": "land" }] }] }
 - rect: { "type": "rect", "x": ..., "y": ..., "width": ..., "height": ..., "radius": ..., "fill": "#hex from the palette", "opacity": 0.2, "animations": [...] }
 - circle: { "type": "circle", "x": ..., "y": ..., "width": ..., "height": ..., "fill": "#hex from the palette", "opacity": 0.25, "animations": [...] }${assets.length ? `
 - image: { "type": "image", "src": "<one of the asset srcs below, verbatim>", "x": ..., "y": ..., "width": ..., "height": ..., "animations": [...] }` : ''}
@@ -411,6 +411,14 @@ export function parseScene(raw: any, frames: number, notes: string[] = []): any 
     const label = `${layer.type} layer ${index + 1}`;
     const note = (message: string) => notes.push(`${label}: ${message}`);
     if (layer.type === 'text') {
+      // Models keep writing "align" for the text alignment; the schema's field is "textAlign", and an unknown field is dropped without a word.
+      if (layer.textAlign === undefined && typeof layer.align === 'string') {
+        const asked = layer.align.toLowerCase();
+        const mapped = asked === 'start' ? 'left' : asked === 'end' ? 'right' : asked;
+        if (['left', 'center', 'right'].includes(mapped)) layer.textAlign = mapped;
+        else note(`the alignment "${layer.align}" is not one of left, center or right; left was used.`);
+      }
+      delete layer.align;
       if (!layer.content && layer.text) layer.content = layer.text;
       if (!layer.text && layer.content) layer.text = layer.content;
       if (!text(layer.content ?? layer.text)) throw new Error('a text layer has no text');
@@ -471,6 +479,88 @@ const houseCamera = (frames: number) => ({
   animations: [{ property: 'zoom', keyframes: [{ frame: 0, value: 1 }, { frame: Math.max(2, frames), value: 1.06, easing: 'drift' }] }],
 });
 
+/**
+ * Keeps a text layer inside the frame. A layer with no maxWidth never wraps, so a large headline runs off the edge; the
+ * model cannot be relied on to size it, so the width it may use is the room between its anchor and the margin (both
+ * sides, for centred text), never less than a third of the frame, and a width the model asked for is only ever narrowed.
+ */
+export function fitTextWidth(layer: any, width: number, margin: number): void {
+  if (!layer || layer.type !== 'text') return;
+  const x = Number(layer.x) || 0, align = layer.textAlign ?? 'left';
+  const room = align === 'center' ? 2 * Math.min(x - margin, width - margin - x) : align === 'right' ? x - margin : width - margin - x;
+  const limit = Math.max(Math.round(width / 3), Math.round(room));
+  layer.maxWidth = typeof layer.maxWidth === 'number' && layer.maxWidth > 0 ? Math.min(layer.maxWidth, limit) : limit;
+}
+
+// Text cannot be measured without the renderer, so these estimates are deliberately a little pessimistic: a layer that comes out
+// slightly smaller than it could have been is a better result than one that overflows, and the renderer's review still checks.
+const textOf = (layer: any): string => (typeof layer?.content === 'string' ? layer.content : typeof layer?.text === 'string' ? layer.text : '');
+/** Average glyph width as a fraction of the font size: capitals are much wider than lower case. */
+const glyphWidth = (content: string): number => {
+  const letters = content.replace(/[^A-Za-z]/g, '');
+  return letters.length > 3 && letters.replace(/[^A-Z]/g, '').length / letters.length > 0.7 ? 0.72 : 0.56;
+};
+/** How many lines the text wraps to inside `width`. */
+export function estimateLines(content: string, fontSize: number, width: number): number {
+  const factor = glyphWidth(content);
+  return content.split('\n').reduce((sum, paragraph) => sum + Math.max(1, Math.ceil(paragraph.length * factor * fontSize * 1.08 / Math.max(1, width))), 0);
+}
+
+/**
+ * Shrinks a text layer until its longest word fits on a line (a word wider than the line is broken mid-word) and it wraps
+ * to at most three lines when large, four when small. It only ever shrinks, and never below 28 px or the size asked for.
+ * Animated sizes are scaled with it, and a layer needs its maxWidth set first (fitTextWidth does that).
+ */
+export function fitTextSize(layer: any): void {
+  const content = textOf(layer), width = Number(layer?.maxWidth);
+  if (layer?.type !== 'text' || !content.trim() || !(width > 0)) return;
+  const requested = Number(layer.fontSize) || 48, factor = glyphWidth(content);
+  const longest = Math.max(1, ...content.split(/\s+/).map(word => word.length));
+  let size = Math.min(requested, width / (factor * longest));
+  const cap = requested >= 100 ? 3 : 4, floor = Math.min(requested, 28);
+  while (size > floor && estimateLines(content, size, width) > cap) size *= 0.96;
+  size = Math.max(floor, Math.floor(size));
+  if (size >= requested) return;
+  const ratio = size / requested;
+  layer.fontSize = size;
+  for (const animation of Array.isArray(layer.animations) ? layer.animations : []) {
+    if (animation?.property === 'fontSize') for (const keyframe of animation.keyframes ?? []) if (typeof keyframe.value === 'number') keyframe.value = Math.round(keyframe.value * ratio);
+  }
+}
+
+/**
+ * Stacks text so no layer sits on another. The model places each line as if the line above were one row tall, so a headline
+ * that wraps lands on the line below it. Text layers are taken top to bottom and a layer that would start inside one above it
+ * (and overlaps it sideways) is moved down to just below it; the layer's own "y" animation moves by the same amount.
+ */
+export function separateText(layers: any[]): void {
+  const boxes: { layer: any; left: number; right: number; bottom: number }[] = [];
+  const texts = layers.filter(layer => layer?.type === 'text' && textOf(layer).trim()).sort((a, b) => (Number(a.y) || 0) - (Number(b.y) || 0));
+  for (const layer of texts) {
+    const size = Number(layer.fontSize) || 48, width = Number(layer.maxWidth) || 0, x = Number(layer.x) || 0, align = layer.textAlign ?? 'left';
+    const left = align === 'center' ? x - width / 2 : align === 'right' ? x - width : x, right = left + width;
+    const gap = Math.round(Math.min(40, size * 0.25));
+    let top = Number(layer.y) || 0;
+    for (const above of boxes) if (width > 0 && left < above.right && right > above.left && top < above.bottom + gap) top = above.bottom + gap;
+    const delta = top - (Number(layer.y) || 0);
+    if (delta > 0) {
+      layer.y = top;
+      for (const animation of Array.isArray(layer.animations) ? layer.animations : []) {
+        if (animation?.property === 'y') for (const keyframe of animation.keyframes ?? []) if (typeof keyframe.value === 'number') keyframe.value += delta;
+      }
+    }
+    const lines = estimateLines(textOf(layer), size, width || 1e9);
+    boxes.push({ layer, left, right, bottom: top + lines * size * (Number(layer.lineHeight) > 0 ? Number(layer.lineHeight) : 1.2) });
+  }
+}
+
+/** What the stitch does to a scene's layers: text gets a width that fits the frame, a size that fits the width, and room of its own. */
+function laidOut(layers: any[], width: number, margin: number): any[] {
+  for (const layer of layers) { fitTextWidth(layer, width, margin); fitTextSize(layer); }
+  separateText(layers);
+  return layers;
+}
+
 /** The largest-font text layer's content and position, so the next scene knows where the story stands. */
 export function summarizeExit(scene: any): string | undefined {
   const texts = ((scene?.layers ?? []) as any[]).filter((layer: any) => layer.type === 'text' && text(layer.text));
@@ -506,7 +596,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     durationFrames: plan.durations[i]!,
     ...(i > 0 ? { transitionIn: { type: plan.contract.transition, durationFrames: overlaps[i] } } : {}),
     ...(camera ? { camera } : {}),
-    layers: (scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })),
+    layers: laidOut((scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })), options.width, Math.round(options.width * 0.08 * plan.contract.density)),
     };
   });
   return {

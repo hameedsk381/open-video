@@ -36,6 +36,8 @@ export type PlanOptions = {
   /** Full JSON compositions and React code can use sounds and clips; templates cannot. */
   assets?: { id: string; type: string; src: string }[];
   allowReact?: boolean;
+  /** Send the short capability list: for providers with a small request limit. Chosen automatically for Groq and after a "too large" answer. */
+  compact?: boolean;
   /** Colours and fonts the video must use; the planner designs the rest around them. */
   brand?: BrandPack;
   maxAttempts?: number;
@@ -46,7 +48,7 @@ export type PlanOptions = {
 const paths: GenerationPath[] = ['template', 'json', 'react'];
 const allowedPaths = (options: PlanOptions) => (options.paths ?? paths).filter(path => path !== 'react' || options.allowReact);
 
-const systemText = (options: PlanOptions) => `You are the creative director for MotionRender. Decide how the brief below should be produced, and the art direction it deserves, before anything is generated.
+const systemText = (options: PlanOptions, compact: boolean) => `You are the creative director for MotionRender. Decide how the brief below should be produced, and the art direction it deserves, before anything is generated.
 Reply with ONE JSON object and nothing else:
 {
   "path": "template" | "json" | "react",
@@ -99,7 +101,7 @@ ${JSON.stringify(options.content.beats.map(beat => ({ name: beat.name, onScreen:
 Repeat them in "beats" with the same onScreen wording and design around them. Never invent a figure, date, name or claim.` : ''}
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
-${describeCapabilities(options.registry, options)}`;
+${describeCapabilities(options.registry, { ...options, compact })}`;
 
 const colorPattern = /^(#[0-9a-fA-F]{3,8}|rgba?\(.+\)|transparent)$/;
 const canonical = <T extends string>(value: unknown, options: readonly T[]): T | undefined => {
@@ -206,9 +208,9 @@ export function readBuildPlan(reply: unknown, options: PlanOptions): { plan?: Bu
   };
 }
 
-function messages(options: PlanOptions, prior: { text: string; feedback: string } | undefined): ChatMessage[] {
+function messages(options: PlanOptions, prior: { text: string; feedback: string } | undefined, compact: boolean): ChatMessage[] {
   const base: ChatMessage[] = [
-    { role: 'system', content: systemText(options) },
+    { role: 'system', content: systemText(options, compact) },
     { role: 'user', content: `Brief: ${options.brief}\nFormat: ${options.kind ?? 'video'}\nCanvas: ${options.width}x${options.height}, ${options.durationSeconds} s at ${options.fps} fps.${options.assets?.length ? `\nAssets supplied by the user (ids): ${options.assets.map(asset => asset.id).join(', ')}` : ''}` },
   ];
   if (prior) base.push({ role: 'assistant', content: prior.text }, { role: 'user', content: `That plan cannot be used:\n${prior.feedback}\nReply with the corrected plan JSON.` });
@@ -223,10 +225,20 @@ export async function planBuild(provider: AiProvider, options: PlanOptions): Pro
   const maxAttempts = Math.max(1, options.maxAttempts ?? 2);
   let prior: { text: string; feedback: string } | undefined;
   let last = '';
+  // The full capability list is about ten thousand tokens. Groq's on-demand tier allows eight thousand a minute, so it gets the short one.
+  let compact = options.compact ?? (provider.id === 'groq' || process.env.OVE_AI_COMPACT === '1');
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     options.onProgress?.(`Planning the video with ${provider.id} (attempt ${attempt}/${maxAttempts})…`);
-    const conversation = messages(options, prior);
-    const text = await provider.chat(conversation, { json: true, task: 'direct', temperature: attempt === 1 ? 0.7 : 0.3, maxTokens: 2200, signal: options.signal });
+    const conversation = messages(options, prior, compact);
+    let text: string;
+    try { text = await provider.chat(conversation, { json: true, task: 'direct', temperature: attempt === 1 ? 0.7 : 0.3, maxTokens: compact ? 1500 : 2200, signal: options.signal }); }
+    catch (error) {
+      // Any provider can say a request is too large; the short list is the answer, once, without costing an attempt.
+      if (!compact && /too large|reduce your message size|context length|maximum context/i.test((error as Error).message)) {
+        compact = true; options.onProgress?.('That request is too large for this provider; sending a shorter capability list.'); attempt--; continue;
+      }
+      throw error;
+    }
     let reply: unknown;
     try { reply = extractJson(text); } catch (error) { prior = { text, feedback: (error as Error).message }; last = prior.feedback; continue; }
     const { plan, problems } = readBuildPlan(reply, options);

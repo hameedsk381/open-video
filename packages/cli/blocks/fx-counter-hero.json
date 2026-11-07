@@ -23,6 +23,9 @@
       "default": "One engine, endless compositions."
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "shade",
@@ -70,31 +73,22 @@
     },
     {
       "id": "count",
-      "type": "html",
+      "type": "react",
+      "src": "fx.bundle.js",
       "width": "{{round(canvas.width * 0.92)}}",
       "height": "{{round(min(canvas.width, canvas.height) * 0.28)}}",
+      "durationInFrames": 120,
       "startFrame": 6,
-      "html": "<div class='n'></div>",
-      "css": ".n{font:900 {{round(min(canvas.width, canvas.height) * 0.24)}}px Inter;color:#fff;line-height:1;text-align:center;letter-spacing:-0.03em}.n::before{counter-reset:n round(var(--n));content:counter(n) '{{suffix}}'}",
-      "vars": {
-        "--n": 0
+      "props": {
+        "effect": "counter",
+        "value": "{{value}}",
+        "suffix": "{{suffix}}",
+        "size": "{{round(min(canvas.width, canvas.height) * 0.24)}}",
+        "weight": 900,
+        "align": "center",
+        "letterSpacing": "-0.03em",
+        "duration": 70
       },
-      "animations": [
-        {
-          "property": "--n",
-          "keyframes": [
-            {
-              "frame": 0,
-              "value": 0
-            },
-            {
-              "frame": 70,
-              "value": "{{value}}",
-              "easing": "land"
-            }
-          ]
-        }
-      ],
       "x": "{{round(canvas.width * 0.04)}}",
       "y": "{{round(canvas.height * 0.58)}}"
     },

@@ -16,6 +16,7 @@
     "validate:example": "tsx packages/cli/src/index.ts validate examples/typography/composition.json",
     "render:example": "tsx packages/cli/src/index.ts render examples/typography/composition.json --output artifacts/typography.mp4",
     "build:studio": "pnpm --filter @ove/studio build",
+    "build:fx": "node scripts/build-fx.mjs",
     "dev:studio": "pnpm --filter @ove/studio dev",
     "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",

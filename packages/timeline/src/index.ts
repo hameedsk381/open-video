@@ -18,7 +18,7 @@ export function splitPresetAnimations(preset: string, duration: number, fontSize
 // How many pieces split text has at most (lines can only be counted once laid out, so they get one step per word).
 export function splitCount(layer: any): number { const text=layer.spans?.length ? layer.spans.map((s: any) => s.text).join('') : String(layer.content ?? '');
   return Math.max(1, layer.split?.by === 'letters' ? Array.from(text.replace(/\s/g, '')).length : text.split(/\s+/).filter(Boolean).length); }
-function splitUnits(layer: any, own: number): UnitValues[] { const split=layer.split, animations: SplitAnimation[]=split.animations?.length ? split.animations : splitPresetAnimations(split.preset, split.duration, layer.fontSize);
+export function splitUnits(layer: any, own: number): UnitValues[] { const split=layer.split, animations: SplitAnimation[]=split.animations?.length ? split.animations : splitPresetAnimations(split.preset, split.duration, layer.fontSize);
   // Steps past the last one whose animation has finished share its values, so long texts do not cost one entry per piece forever.
   return Array.from({ length: splitCount(layer) }, (_, step) => Object.fromEntries(animations.map(a => [a.property, evaluateAnimation(a as any, own-step*split.stagger)])) as UnitValues); }
 export const frameToSeconds = (frame:number, fps:number) => frame / fps;

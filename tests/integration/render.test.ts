@@ -54,20 +54,6 @@ describe('rendering', () => {
   it('replaces pages that stop answering and fails cleanly after one retry', async () => { const r=await createRenderer(composition, { baseDir: dir, frameTimeoutMs: 1 });
     try { await expect(r.renderFrame(0)).rejects.toThrow(/^Frame 0: the browser page did not answer within 0 s \(failed again on a fresh browser page\)$/); } finally { await r.close(); }
     const healthy=await createRenderer(composition, { baseDir: dir }); try { expect((await healthy.renderFrame(0)).subarray(1, 4).toString()).toBe('PNG'); } finally { await healthy.close(); } });
-  it('draws html layers deterministically, with scripts and handlers removed', async () => { const page=(html: string, extra: any = {}) => loadComposition({ version:'1.0', id:'h', name:'H', width:200, height:120, fps:30, durationFrames:20, background:'#000000',
-      scenes:[{ id:'s', name:'S', startFrame:0, durationFrames:20, layers:[{ id:'h', type:'html', width:200, height:120, html, css:'.c{display:flex;gap:8px;font:700 20px Inter;color:#fff;padding:10px} .bar{height:10px;width:calc(var(--p) * 100%);background:#22d3ee}',
-        animations:[{ property:'--p', keyframes:[{ frame:0, value:0 }, { frame:19, value:1 }] }], ...extra }] }] });
-    const hashes=async (c: Composition, concurrency: number, frames: number[]) => { const r=await createRenderer(c, { baseDir: dir, concurrency }); try { return await Promise.all(frames.map(f => r.renderFrame(f).then(png => createHash('sha256').update(png).digest('hex')))); } finally { await r.close(); } };
-    const clean=page("<div class='c'><b>Flex</b><i>box</i></div><div class='bar'></div>");
-    const one=await hashes(clean, 1, [0, 10, 19]); expect(await hashes(clean, 3, [0, 10, 19])).toEqual(one); expect(new Set(one).size).toBe(3);
-    const hostile=page("<div class='c'><b>Flex</b><i>box</i></div><div class='bar'></div><script>document.body.innerHTML='x'</script><b hidden onclick=\"this.remove()\" onmouseover=\"x()\"></b>");
-    expect(await hashes(hostile, 1, [0, 10, 19])).toEqual(one);
-    const blank=await hashes(loadComposition({ ...(clean as any), scenes: [{ ...clean.scenes[0], layers: [] }] }), 1, [10]); expect(one[1]).not.toBe(blank[0]); });
-  it('places CSS @keyframes with --t, and draws a static html layer the same on every frame', async () => { const page=(css: string) => loadComposition({ version:'1.0', id:'t', name:'T', width:200, height:100, fps:30, durationFrames:30, background:'#000000',
-      scenes:[{ id:'s', name:'S', startFrame:0, durationFrames:30, layers:[{ id:'h', type:'html', width:200, height:100, html:"<div class='box'></div>", css: '.box{width:30px;height:30px;background:#22d3ee;' + css + '} @keyframes slide{from{transform:translateX(0)}to{transform:translateX(120px)}}' }] }] });
-    const hashes=async (c: Composition, concurrency: number, frames: number[]) => { const r=await createRenderer(c, { baseDir: dir, concurrency }); try { return await Promise.all(frames.map(f => r.renderFrame(f).then(png => createHash('sha256').update(png).digest('hex')))); } finally { await r.close(); } };
-    const moving=page('animation:slide 1s linear both paused;animation-delay:calc(var(--t) * -1s)'); const m=await hashes(moving, 1, [0, 15, 29]); expect(new Set(m).size).toBe(3); expect(await hashes(moving, 3, [0, 15, 29])).toEqual(m);
-    const still=page(''); const s=await hashes(still, 1, [0, 15, 29]); expect(new Set(s).size).toBe(1); expect(s[0]).not.toBe(m[0] === s[0] ? '' : m[1]); });
   it('lays out group children exactly as placing them by hand would', async () => { const scene=(layers: any[]) => loadComposition({ version:'1.0', id:'l', name:'L', width:320, height:180, fps:30, durationFrames:2, background:'#000000', scenes:[{ id:'s', name:'S', startFrame:0, durationFrames:2, layers }] });
     const hash=async (c: Composition) => { const r=await createRenderer(c, { baseDir: dir }); try { return createHash('sha256').update(await r.renderFrame(0)).digest('hex'); } finally { await r.close(); } };
     const auto=scene([{ id:'g', type:'group', x:10, y:20, width:300, layout:{ direction:'row', gap:10, align:'center', justify:'space-between', padding:5 }, children:[

@@ -110,7 +110,7 @@ Use them as "{{title}}" inside strings. A string that is exactly one reference t
 expressions, repeat, if or components unless the brief explicitly asks; they are easy to get subtly wrong.
 
 # Non-negotiable rules
-- Use only these layer types. No html, lottie or shader layers unless the brief explicitly asks.
+- Use only these layer types. No lottie or shader layers unless the brief explicitly asks.
 - Never invent asset ids: an image/video/audio layer may only use ids listed under "assets" (and sfx: names).
 - No web URLs, no {{media[...]}}, no JavaScript.
 - When the task supplies a content script, its beats, on-screen lines, figures and names are fixed: render them, never rewrite a figure or add a claim that is not in it.

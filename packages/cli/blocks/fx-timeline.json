@@ -11,6 +11,9 @@
       "default": "ONE COMPOSITION. COMPLETE CONTROL."
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "heading",
@@ -1246,31 +1249,20 @@
         },
         {
           "id": "timecode",
-          "type": "html",
-          "html": "<div class='t'></div>",
-          "css": ".t{font:700 {{round(min(canvas.width, canvas.height) * 0.028)}}px Inter;color:#fff;letter-spacing:.04em}.t::before{counter-reset:n round(var(--n));content:'00:0' counter(n)}",
-          "vars": {
-            "--n": 0
-          },
-          "animations": [
-            {
-              "property": "--n",
-              "keyframes": [
-                {
-                  "frame": 56,
-                  "value": 0
-                },
-                {
-                  "frame": 168,
-                  "value": 5
-                }
-              ]
-            }
-          ],
-          "x": "{{round(canvas.width * 0.9) - round(min(canvas.width, canvas.height) * 0.16)}}",
-          "y": "{{round(min(canvas.width, canvas.height) * 0.02)}}",
+          "type": "react",
+          "src": "fx.bundle.js",
           "width": "{{round(min(canvas.width, canvas.height) * 0.14)}}",
-          "height": "{{round(min(canvas.width, canvas.height) * 0.05)}}"
+          "height": "{{round(min(canvas.width, canvas.height) * 0.05)}}",
+          "durationInFrames": 180,
+          "props": {
+            "effect": "timecode",
+            "size": "{{round(min(canvas.width, canvas.height) * 0.028)}}",
+            "start": 56,
+            "end": 168,
+            "max": 5
+          },
+          "x": "{{round(canvas.width * 0.9) - round(min(canvas.width, canvas.height) * 0.16)}}",
+          "y": "{{round(min(canvas.width, canvas.height) * 0.02)}}"
         }
       ]
     },

@@ -227,20 +227,20 @@ export function sameShape(a: { width?: number; height?: number }, b: { width: nu
 const kindTag: Record<CapabilityKind, string> = { template: 'Templates', theme: 'Themes', block: 'Blocks', component: 'React components', effect: 'Effects', sound: 'Sounds', move: 'Motion moves' };
 
 /** The registry as compact text for the planner prompt, grouped by kind. */
-export function describeCapabilities(registry: Registry, fit: { width: number; height: number; allowReact?: boolean }): string {
+export function describeCapabilities(registry: Registry, fit: { width: number; height: number; allowReact?: boolean; /** Names and one short line each; no parameters, blocks or sounds. For providers with a small request limit. */ compact?: boolean }): string {
   const lines: string[] = [];
   for (const [kind, tag] of Object.entries(kindTag) as [CapabilityKind, string][]) {
     const items = registry.select(kind);
-    if (!items.length) continue;
+    if (!items.length || (fit.compact && (kind === 'block' || kind === 'sound'))) continue;
     lines.push(kind === 'template' ? 'Templates (ready-made layouts: choose one only when its scenes and look match the brief):' : `${tag}:`);
     for (const capability of items) {
       const shape = kind === 'template'
         ? ` (${capability.fit})`
         : capability.fit ? ` (${capability.fit})` : '';
       const usable = sameShape(capability, fit) ? '' : kind === 'template' ? ' [other aspect]' : '';
-      const params = capability.params.length ? `\n    values: ${capability.params.map(param => `${param.name} (${param.type})`).join(', ')}` : '';
+      const params = !fit.compact && capability.params.length ? `\n    values: ${capability.params.map(param => `${param.name} (${param.type})`).join(', ')}` : '';
       const paths = capability.paths.length && !capability.paths.every(path => path === 'json') ? ` [paths: ${capability.paths.join(', ')}]` : '';
-      lines.push(`  - ${capability.id}: ${capability.description}${shape}${paths}${usable}${params}`);
+      lines.push(`  - ${capability.id}: ${fit.compact ? capability.description.slice(0, 90) : capability.description}${shape}${paths}${usable}${params}`);
     }
   }
   if (!fit.allowReact && lines.some(line => line.startsWith('React'))) {

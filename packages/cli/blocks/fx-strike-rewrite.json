@@ -15,51 +15,26 @@
       "default": "Describe the video once"
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "rewrite",
-      "type": "html",
-      "html": "<div class='o'>{{old}}</div><div class='n'>{{corrected}}</div>",
-      "css": ".o{position:relative;display:inline-block;font:700 {{round(min(canvas.width, canvas.height) * 0.055)}}px Inter;color:#fff}.o::after{content:'';position:absolute;left:-2%;top:54%;height:{{round(min(canvas.width, canvas.height) * 0.008)}}px;width:calc(var(--s) * 104%);background:#ff4d4d;border-radius:4px}.n{margin-top:{{round(min(canvas.width, canvas.height) * 0.025)}}px;font:800 {{round(min(canvas.width, canvas.height) * 0.065)}}px Inter;color:var(--accent2);opacity:var(--r);transform:translateY(calc((1 - var(--r)) * 30px))}",
-      "vars": {
-        "--s": 0,
-        "--r": 0,
-        "--accent2": "{{accent2}}"
-      },
-      "animations": [
-        {
-          "property": "--s",
-          "keyframes": [
-            {
-              "frame": 24,
-              "value": 0
-            },
-            {
-              "frame": 44,
-              "value": 1,
-              "easing": "land"
-            }
-          ]
-        },
-        {
-          "property": "--r",
-          "keyframes": [
-            {
-              "frame": 52,
-              "value": 0
-            },
-            {
-              "frame": 72,
-              "value": 1,
-              "easing": "land"
-            }
-          ]
-        }
-      ],
-      "x": "{{round(canvas.width * 0.06)}}",
-      "y": "{{round(canvas.height * 0.5)}}",
+      "type": "react",
+      "src": "fx.bundle.js",
       "width": "{{round(canvas.width * 0.88)}}",
-      "height": "{{round(min(canvas.width, canvas.height) * 0.3)}}"
+      "height": "{{round(min(canvas.width, canvas.height) * 0.3)}}",
+      "durationInFrames": 120,
+      "props": {
+        "effect": "rewrite",
+        "old": "{{old}}",
+        "corrected": "{{corrected}}",
+        "accent2": "{{accent2}}",
+        "unit": "{{round(min(canvas.width, canvas.height))}}"
+      },
+      "x": "{{round(canvas.width * 0.06)}}",
+      "y": "{{round(canvas.height * 0.5)}}"
     },
     {
       "id": "sfx-1",

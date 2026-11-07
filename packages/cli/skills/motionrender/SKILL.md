@@ -107,24 +107,22 @@ What you leave behind in the project folder, every time: the final `composition.
   - Use it for headlines and short statements: words for most headlines, letters for one or two short words, lines for paragraphs. Keep body text and captions whole.
 - `repeat: n` plays the keyframes n more times after the first; add `reverse: true` to play every other cycle backwards (ping-pong).
 
-## HTML layers
+## Rich layouts: react layers
 
-When a layout is easier to say in HTML and CSS than with positioned layers (a card with an icon beside wrapping text, a table, a chart drawn as inline SVG, a UI mock-up, mixed typography), use an `html` layer:
+There is no html layer. When a layout is easier to say as markup and CSS than with positioned layers (a card with an icon beside wrapping text, a table, a chart drawn as inline SVG, a UI mock-up, mixed typography, a live counter), write it as a React component and draw it with a `react` layer. The `ove-react-video` skill covers writing the component; `ove build video.tsx` bundles it. To put one inside a JSON composition, point a layer at a bundle:
 
 ```json
-{ "id": "card", "type": "html", "x": 190, "y": 160, "width": 900, "height": 400,
-  "html": "<div class='card'><img src='logo'><div><h2>Real <em>HTML</em></h2><p>Flexbox, grid and rich text.</p></div><div class='bar'><i></i></div></div>",
-  "css": ".card { display: grid; grid-template-columns: 120px 1fr; gap: 28px; font-family: Inter; color: #f5f7fb } .bar i { display: block; height: 14px; width: calc(var(--progress) * 100%); background: var(--accent) }",
-  "vars": { "--accent": "#22d3ee" },
-  "animations": [{ "property": "--progress", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 45, "value": 0.72, "easing": "land" }] }] }
+{ "id": "card", "type": "react", "src": "card.bundle.js", "x": 190, "y": 160, "width": 900, "height": 400, "durationInFrames": 120,
+  "props": { "title": "Real React" } }
 ```
 
-- The markup is laid out in a `width` × `height` box (overflow hidden) at the layer's `x`, `y`; the layer moves, fades, scales and rotates like any other, and works under the camera, in groups and with transitions.
-- No scripts run: `<script>`, `on…` handlers and `iframe`/`object`/`link` are removed. Nothing loads from the web: refer to pictures by asset id or path (`src="logo"`, `url(./bg.png)`); web URLs are an error. Fonts are Inter and the composition's font assets (`font-family: Inter`, or the asset's family).
-- Motion inside the markup comes from CSS variables. `vars` sets them; animate one with keyframes on `"--name"` (numbers or colours) and use it in the CSS (`width: calc(var(--progress) * 100%)`, `opacity: var(--fade)`). Every frame also gets `--t` (seconds since the layer started) and `--frame`.
-- CSS `@keyframes` work when placed in time with `--t`: `animation: rise 0.6s ease-out both; animation-delay: calc(var(--t) * -1s + 0.3s)` plays `rise` starting 0.3 s into the layer. Animations otherwise stay paused, and transitions are off, so every frame is exact.
-- Each frame where the markup, CSS or variables differ is rasterised again (about 40 ms), so animate the layer itself (x, y, opacity, scale) where you can and keep CSS-variable animation for what changes inside it. `resolution: 2` keeps it sharp when scaled up or under a camera zoom.
-- Prefer ordinary layers for headlines and captions: `ove review` reads their text, but cannot see text inside an html layer.
+- The component is a pure function of the frame: `useCurrentFrame()` counts from the layer's `startFrame`, `props` is handed to it, and `props` may use `{{variables}}` and expressions like any other field.
+- It runs JavaScript while rendering, so a render needs `--allow-code`. AI-written and pasted compositions cannot contain react layers.
+- Every bundled font family works by name in CSS (`font-family: "Fraunces"`): Inter, Space Grotesk, Fraunces, Archivo, Source Sans 3, Playfair Display, DM Sans, Manrope, Syne, JetBrains Mono, Bebas Neue and Instrument Serif. Only the families the markup names are embedded. Any other font has to come with the bundle (an imported `@font-face` stylesheet).
+- Pictures it uses are declared in `assets` and named by id or path in `<img src>`. Nothing loads from the web.
+- The layer moves, fades, scales and rotates like any other, and works under the camera, in groups and with transitions. `resolution: 2` keeps it sharp when scaled up.
+- Prefer ordinary text layers for headlines and captions: `ove review` reads their text, but cannot see text inside a react layer.
+- The `fx-*` blocks are built this way: `ove add fx-counter-hero` copies a shared `fx.bundle.js` beside the composition, and each block's layer picks its effect with `props.effect`.
 
 ## Lottie, shaders and layout
 
@@ -152,7 +150,7 @@ When a layout is easier to say in HTML and CSS than with positioned layers (a ca
 
 ```json
 { "id": "row", "type": "group", "x": 120, "y": 120, "width": 1680, "layout": { "direction": "row", "gap": 24, "align": "center", "justify": "space-between" },
-  "children": [ { "id": "title", "type": "text", "content": "{{title}}", "fontSize": 64 }, { "id": "badge", "type": "html", "width": 220, "height": 64, "html": "…" } ] }
+  "children": [ { "id": "title", "type": "text", "content": "{{title}}", "fontSize": 64 }, { "id": "badge", "type": "rect", "width": 220, "height": 64, "radius": 32, "fill": "#22d3ee" } ] }
 ```
 
 - `direction` `row` or `column`; `gap` between children; `padding` inside the group; `align` across the direction (`start`, `center`, `end`); `justify` along it (`start`, `center`, `end`, `space-between`) within the group's `width` (row) or `height` (column).

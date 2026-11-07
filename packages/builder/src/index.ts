@@ -31,7 +31,6 @@ export const audio = (src: string, options: LayerOptions & { volume?: number } =
 /** A built-in sound effect: whoosh, click, tick, pop, thump, ding or riser. */
 export const sfx = (name: 'whoosh' | 'click' | 'tick' | 'pop' | 'thump' | 'ding' | 'riser', options: LayerOptions & { volume?: number } = {}): Layer => layer('audio', { src: `sfx:${name}`, ...options });
 export const group = (children: Layer[], options: LayerOptions & { width?: Value; height?: Value; layout?: { direction?: 'row' | 'column'; gap?: number; padding?: number; align?: 'start' | 'center' | 'end'; justify?: 'start' | 'center' | 'end' | 'space-between' } } = {}): Layer => layer('group', { ...options, children });
-export const html = (markup: string, options: LayerOptions & { width: number; height: number; css?: string; vars?: Record<string, number | string> }): Layer => layer('html', { html: markup, ...options });
 export const lottie = (src: string, options: LayerOptions & { width: number; height: number; loop?: boolean }): Layer => layer('lottie', { src, ...options });
 export const shader = (fragment: string, options: LayerOptions & { width: number; height: number; vars?: Record<string, number | string> }): Layer => layer('shader', { fragment, ...options });
 export const captions = (src: string, options: LayerOptions = {}): Layer => layer('captions', { src, ...options });

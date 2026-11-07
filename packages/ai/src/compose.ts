@@ -11,6 +11,7 @@ import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, ref
 import { readLook } from './plan';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
 import { composeByScenes, healScenes, normalizeAnimation, type ScenesOptions } from './scenes';
+import { copyProblems, repairCopy } from './copy';
 
 export type ComposeOptions = PromptOptions & {
   brief: string;
@@ -155,6 +156,9 @@ function normalize(raw: any, options: ComposeOptions, notes: string[] = []): any
 
 // Checks the schema cannot express: the thing must actually be renderable from the assets at hand, must cover the
 // video, and template variables must be used or a batch would produce identical videos.
+/** The beats the video was planned around: their names must not reach the screen, and their lines are what a label is replaced with. */
+const plannedBeats = (options: ComposeOptions): { name?: string; onScreen?: string }[] => options.content ? options.content.beats : options.motionPlan?.beats ?? [];
+
 function inspect(composition: Composition, raw: any, options: ComposeOptions): string[] {
   const problems: string[] = [];
   const first = composition.scenes[0];
@@ -184,6 +188,8 @@ function inspect(composition: Composition, raw: any, options: ComposeOptions): s
   for (const scene of composition.scenes) walk(scene.layers as any[]);
   problems.push(...assetProblems(composition, { assets: allowed }));
   problems.push(...craftProblems(composition, options));
+  // What is left after repair: a required line with no text layer to carry it, or a label with nothing to replace it.
+  problems.push(...copyProblems(options.brief, composition, plannedBeats(options).map(beat => beat.name ?? '')).map(problem => problem.message));
   return problems;
 }
 
@@ -224,6 +230,8 @@ async function acceptComposition(rawInput: unknown, options: ComposeOptions, ext
   const current = rawInput;
   const notes: string[] = [];
   const raw = normalize(structuredClone(current), options, notes);
+  // A line the brief required that is missing, or a beat's name printed as copy, is fixed here, not sent back for another model call.
+  notes.push(...repairCopy(raw, options.brief, plannedBeats(options)));
   if (options.content) raw.content = structuredClone(options.content);
   const composition = loadComposition(raw);
   const problems = inspect(composition, raw, options);
@@ -276,7 +284,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
   // Scene-scoped strategy: a style contract plus one small call per scene, deterministic timing, targeted scene heal.
   // Opt-in with strategy: 'scenes' or OVE_COMPOSE_STRATEGY=scenes; freellmapi uses scenes for fast multi-scene speed.
   // Any failure falls through to the single-call loop.
-  const useScenes = composeOptions.strategy === 'scenes' || (composeOptions.strategy === undefined && (process.env.OVE_COMPOSE_STRATEGY === 'scenes' || provider.id === 'freellmapi'));
+  const useScenes = composeOptions.strategy === 'scenes' || (composeOptions.strategy === undefined && (process.env.OVE_COMPOSE_STRATEGY === 'scenes' || provider.id === 'freellmapi' || provider.id === 'groq'));
   if (useScenes) {
     const scenesOptions: ScenesOptions = {
       brief: options.brief,

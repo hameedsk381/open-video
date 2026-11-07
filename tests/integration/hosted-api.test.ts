@@ -176,6 +176,29 @@ describe('hosted limits and closed doors', () => {
     expect((await c.get(`/api/project?id=${id}`)).json.source.raw.variables.photo.default).toBe('assets/other.png');
   });
 
+  it("brings a block's React bundle into the project, renders it, and lets nothing else put a script there", async () => {
+    const c = new Client(); await c.post('/api/auth/signup', { email: 'effects@example.com', password });
+    const id = (await c.post('/api/project/blank', { name: 'Effects' })).json.id as string;
+    const scene = (await c.get('/api/library')).json.blocks.find((b: any) => b.kind === 'scene');
+    expect((await c.post('/api/add-block', { id, block: scene.id })).status).toBe(200);
+    expect((await c.post('/api/add-block', { id, block: 'fx-counter-hero', set: { value: 12 } })).status).toBe(200);
+
+    const bundle = await c.get(`/files/${id}/fx.bundle.js`);
+    expect(bundle.status).toBe(200); expect(bundle.text).toContain('__oveReactMount');
+    expect(JSON.stringify((await c.get(`/api/project?id=${id}`)).json.source.raw)).toContain('"type":"react"');
+
+    // An upload is media only: a script cannot arrive that way, under any name.
+    for (const name of ['evil.js', 'fx.bundle.js', 'evil.html', 'evil.svg']) expect((await c.call('POST', `/api/upload?project=${id}&name=${name}`, undefined, {}, Buffer.from('alert(1)'))).status, name).toBe(400);
+    // Nobody else can read it.
+    const other = new Client(); await other.post('/api/auth/signup', { email: 'effects-other@example.com', password });
+    expect((await other.get(`/files/${id}/fx.bundle.js`)).status).toBeGreaterThanOrEqual(400);
+
+    // And the render worker draws it: a react layer through the hosted job path, confinement and all.
+    const started = await c.post('/api/render', { file: `${id}/composition.json`, scale: 0.1 }); expect(started.status).toBe(202);
+    let job: any; for (let i = 0; i < 400 && !['done', 'failed'].includes((job = (await c.get(`/api/job?id=${started.json.job.id}`)).json.job).status); i++) await new Promise(r => setTimeout(r, 100));
+    expect(job.error, 'the render failed').toBeUndefined(); expect(job.status).toBe('done');
+  }, 120_000);
+
   it('enforces the per-person limits with plain sentences', async () => {
     const c = new Client(); await c.post('/api/auth/signup', { email: 'quota@example.com', password });
     const ids = []; for (let i = 0; i < 3; i++) ids.push((await c.post('/api/project/blank', { name: `p${i}` })).json.id);

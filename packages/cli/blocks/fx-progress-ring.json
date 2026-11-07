@@ -15,6 +15,9 @@
       "default": "RENDER COMPLETE"
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "ring-track",
@@ -66,31 +69,21 @@
     },
     {
       "id": "pct",
-      "type": "html",
+      "type": "react",
+      "src": "fx.bundle.js",
       "width": "{{round(min(canvas.width, canvas.height) * 0.34)}}",
       "height": "{{round(min(canvas.width, canvas.height) * 0.1)}}",
+      "durationInFrames": 120,
       "startFrame": 8,
-      "html": "<div class='n'></div>",
-      "css": ".n{font:800 {{round(min(canvas.width, canvas.height) * 0.09)}}px Inter;color:#fff;line-height:1;text-align:center}.n::before{counter-reset:n round(var(--n));content:counter(n) '%'}",
-      "vars": {
-        "--n": 0
+      "props": {
+        "effect": "counter",
+        "value": "{{value}}",
+        "suffix": "%",
+        "size": "{{round(min(canvas.width, canvas.height) * 0.09)}}",
+        "weight": 800,
+        "align": "center",
+        "duration": 70
       },
-      "animations": [
-        {
-          "property": "--n",
-          "keyframes": [
-            {
-              "frame": 0,
-              "value": 0
-            },
-            {
-              "frame": 70,
-              "value": "{{value}}",
-              "easing": "land"
-            }
-          ]
-        }
-      ],
       "x": "{{round(canvas.width * 0.5) - round(min(canvas.width, canvas.height) * 0.17)}}",
       "y": "{{round(canvas.height * 0.15) - round(min(canvas.width, canvas.height) * 0.05)}}"
     },

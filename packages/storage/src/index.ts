@@ -32,6 +32,8 @@ export interface ProjectStore {
   trash(who: Principal, id: string): Promise<void>;
   assets(who: Principal, id: string): Promise<StoredAsset[]>;
   putAsset(who: Principal, id: string, name: string, bytes: Buffer): Promise<StoredAsset[]>;
+  /** A file the product itself ships that a project's layers draw from (a block's React bundle). Never reachable from an upload: only a named bundle, written by the server. */
+  putSupportFile(who: Principal, id: string, name: string, bytes: Buffer): Promise<void>;
   /** The saved thumbnail, only while it is newer than the composition. */
   thumb(who: Principal, id: string): Promise<Buffer | undefined>;
   putThumb(who: Principal, id: string, png: Buffer): Promise<void>;
@@ -148,6 +150,12 @@ export class FsProjectStore implements ProjectStore {
     for (let n = 2; taken.has(final); n++) final = clean.replace(/(\.[^.]*)?$/, `-${n}$1`);
     await writeFile(join(folder, final), bytes);
     return this.assets(who, id);
+  }
+
+  async putSupportFile(who: Principal, id: string, name: string, bytes: Buffer) {
+    if (!/^[a-z0-9][a-z0-9._-]{0,60}\.bundle\.js$/.test(name)) throw new Error(`"${name}" is not a support file name`);
+    const dir = this.projectDir(who, id); await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, name), bytes);
   }
 
   async thumb(who: Principal, id: string) {

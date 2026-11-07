@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeByScenes, healScenes, parseBeats, parseContract, parseScene, sceneDurations, sceneOverlap, sceneOverlaps, sceneRanges, stitchScenes, summarizeExit, type ScenesOptions } from '@ove/ai';
+import { composeByScenes, estimateLines, fitTextSize, fitTextWidth, healScenes, parseBeats, parseContract, parseScene, sceneDurations, sceneOverlap, sceneOverlaps, sceneRanges, separateText, stitchScenes, summarizeExit, type ScenesOptions } from '@ove/ai';
 import type { AiProvider, ChatMessage, ChatOptions } from '@ove/ai';
 
 // Scene-scoped orchestration: one small call for the style contract, one per scene, deterministic stitch and
@@ -169,6 +169,101 @@ describe('parseScene', () => {
     expect(state.notes).toHaveLength(3);
     expect(state.notes[0]).toEqual(['scene 1 ("Hook"): text layer 1: the animation on "glow" was dropped: "glow" is not an animatable property.']);
     expect(state.notes[1]).toEqual([]);
+  });
+});
+
+describe('text that stays in the frame', () => {
+  const text = (extra: Record<string, unknown>) => ({ type: 'text', text: 'Order the winter box', x: 540, y: 750, fontSize: 173, ...extra });
+
+  it("reads the \"align\" a model writes as the schema's textAlign, and says when it cannot", () => {
+    const notes: string[] = [];
+    const parsed = parseScene({ layers: [text({ align: 'center' }), text({ align: 'end' }), text({ align: 'justify' })] }, 100, notes);
+    expect(parsed.layers.map((layer: any) => [layer.textAlign, layer.align])).toEqual([['center', undefined], ['right', undefined], [undefined, undefined]]);
+    expect(notes.join(' ')).toContain('"justify" is not one of left, center or right');
+    expect(parseScene({ layers: [text({ align: 'center', textAlign: 'right' })] }, 100).layers[0].textAlign).toBe('right');
+  });
+
+  it('limits the width to the room between the anchor and the margin, so a headline wraps instead of running off', () => {
+    const fit = (layer: any) => { fitTextWidth(layer, 1080, 86); return layer.maxWidth; };
+    expect(fit(text({ textAlign: 'left' }))).toBe(454);                       // 1080 - 86 - 540
+    expect(fit(text({ textAlign: 'center' }))).toBe(908);                     // both sides of the centre
+    expect(fit(text({ textAlign: 'right' }))).toBe(454);
+    expect(fit(text({ x: 90, textAlign: 'left' }))).toBe(904);
+    expect(fit(text({ x: 1000, textAlign: 'left' }))).toBe(360);              // never below a third of the frame
+  });
+
+  it('only narrows a width the model chose, and leaves other layers alone', () => {
+    const wide: any = text({ x: 90, maxWidth: 2000 }), narrow: any = text({ x: 90, maxWidth: 400 }), rect: any = { type: 'rect', x: 600, y: 0, width: 900, height: 10 };
+    fitTextWidth(wide, 1080, 86); fitTextWidth(narrow, 1080, 86); fitTextWidth(rect, 1080, 86);
+    expect([wide.maxWidth, narrow.maxWidth, (rect as any).maxWidth]).toEqual([904, 400, undefined]);
+  });
+
+  it('applies it when the scenes are stitched, and tells the model where text and shapes are anchored', () => {
+    const beats = parseBeats(JSON.parse(contractReply).beats), contract = parseContract(JSON.parse(contractReply));
+    const plan = { beats, contract, durations: [105, 135, 60], sceneRanges: sceneRanges([105, 135, 60], sceneOverlaps(3, 30)) };
+    const scenes = [parseScene({ layers: [text({ align: 'center' })] }, 105), parseScene({ layers: [text({})] }, 135), parseScene({ layers: [text({})] }, 60)];
+    const raw = stitchScenes(scenes, plan, options);
+    expect(raw.scenes[0]!.layers[0]).toMatchObject({ textAlign: 'center', maxWidth: 908 });
+    expect(raw.scenes[1]!.layers[0]).toMatchObject({ maxWidth: 454 });
+  });
+
+  it('estimates how many lines text wraps to, counting forced breaks and wider capitals', () => {
+    expect(estimateLines('Pure Icelandic sea salt', 162, 820)).toBe(3);
+    expect(estimateLines('Order', 80, 800)).toBe(1);
+    expect(estimateLines('one\ntwo\nthree', 40, 800)).toBe(3);
+    expect(estimateLines('WINTER BOX SALE', 100, 1000)).toBeGreaterThan(estimateLines('winter box sale', 100, 1000));
+  });
+
+  it('shrinks a headline until its longest word fits, instead of breaking "mass-produced" mid-word', () => {
+    const layer: any = text({ text: 'Most caramel is mass-produced, bland, rushed.', x: 100, fontSize: 173, maxWidth: 790, animations: [{ property: 'fontSize', keyframes: [{ frame: 0, value: 120 }, { frame: 10, value: 173 }] }] });
+    fitTextSize(layer);
+    expect(layer.fontSize).toBeLessThan(110);                                   // 790 / (0.56 * 14 letters)
+    expect(estimateLines(layer.text, layer.fontSize, 790)).toBeLessThanOrEqual(3);
+    expect(layer.animations[0].keyframes[1].value).toBe(layer.fontSize);        // an animated size is scaled with it
+  });
+
+  it('never enlarges text, never goes below a legible size, and leaves a headline that already fits alone', () => {
+    const fits: any = text({ text: 'Order', fontSize: 120, maxWidth: 800 }); fitTextSize(fits); expect(fits.fontSize).toBe(120);
+    const tiny: any = text({ text: 'Extraordinarily long single unbreakable word here', fontSize: 60, maxWidth: 200 }); fitTextSize(tiny); expect(tiny.fontSize).toBeGreaterThanOrEqual(28);
+    const none: any = text({ text: '', fontSize: 60, maxWidth: 200 }); fitTextSize(none); expect(none.fontSize).toBe(60);
+  });
+
+  it('moves a line down to below the headline that wrapped over it, and moves its animation with it', () => {
+    const headline: any = text({ text: 'Pure Icelandic sea salt', x: 96, y: 200, fontSize: 162, maxWidth: 820 });
+    const subtitle: any = text({ text: 'Glimmering salt crystals catch the light', x: 96, y: 450, fontSize: 86, maxWidth: 820, animations: [{ property: 'y', keyframes: [{ frame: 0, value: 530 }, { frame: 20, value: 450 }] }] });
+    separateText([subtitle, headline]);                                          // the order of the array does not matter
+    expect(headline.y).toBe(200);
+    const bottom = 200 + 3 * 162 * 1.2;
+    expect(subtitle.y).toBeGreaterThanOrEqual(bottom);
+    expect(subtitle.animations[0].keyframes.map((keyframe: any) => keyframe.value)).toEqual([subtitle.y + 80, subtitle.y]);
+  });
+
+  it('leaves text alone when it is already clear, or sits in another column, and stacks centred text the same way', () => {
+    const top: any = text({ text: 'Title', x: 100, y: 100, fontSize: 80, maxWidth: 400 }), clear: any = text({ text: 'Below', x: 100, y: 600, fontSize: 40, maxWidth: 400 }), beside: any = text({ text: 'Beside', x: 700, y: 110, fontSize: 40, maxWidth: 300 });
+    separateText([top, clear, beside]);
+    expect([top.y, clear.y, beside.y]).toEqual([100, 600, 110]);
+    const a: any = text({ text: 'PROOF', x: 512, y: 300, fontSize: 173, maxWidth: 800, textAlign: 'center' }), b: any = text({ text: 'Hand-stirred in copper pots.', x: 512, y: 450, fontSize: 86, maxWidth: 800, textAlign: 'center' });
+    separateText([a, b]);
+    expect(b.y).toBeGreaterThan(450);
+  });
+
+  it('lays the stitched scene out so its text neither overflows nor collides', () => {
+    const beats = parseBeats(JSON.parse(contractReply).beats), contract = parseContract(JSON.parse(contractReply));
+    const plan = { beats, contract, durations: [105, 135, 60], sceneRanges: sceneRanges([105, 135, 60], sceneOverlaps(3, 30)) };
+    const crowded = parseScene({ layers: [text({ text: 'Pure Icelandic sea salt', x: 96, y: 200, align: 'left' }), text({ text: 'Glimmering salt crystals catch the light', x: 96, y: 450, fontSize: 86 })] }, 105);
+    const [head, sub] = stitchScenes([crowded, parseScene({ layers: [text({})] }, 135), parseScene({ layers: [text({})] }, 60)], plan, options).scenes[0]!.layers;
+    expect(head.maxWidth).toBeLessThanOrEqual(1080 - 86 - head.x);                 // inside the right margin
+    expect(sub.y).toBeGreaterThan(head.y + head.fontSize * 1.2 * 2);                 // below the headline's three lines, not on them
+  });
+
+  it('describes the real anchors in the scene prompt, not a centre that the renderer does not use', async () => {
+    const provider = scriptedProvider([contractReply, sceneReply('A', 'a'), sceneReply('B', 'b'), sceneReply('C', 'c')]);
+    await composeByScenes(provider, options);
+    const system = String(provider.calls[1]!.messages[0]!.content);
+    expect(system).toContain('y the TOP of its first line');
+    expect(system).toContain('"textAlign": "left|center|right"');
+    expect(system).toContain('a rect or image has its top-left corner at x, y');
+    expect(system).not.toContain("layer's CENTRE");
   });
 });
 

@@ -12,6 +12,7 @@ import { writeContent } from './content';
 import { composeVideo, type ComposeOptions, type ComposeResult } from './compose';
 import { planBuild, type BuildPlan } from './plan';
 import { brandLook, mergeLook } from './brand-look';
+import { copyProblems } from './copy';
 import { composeFromTemplate, type TemplateChoice, type ThemeChoice } from './template';
 import { retimeComposition } from './retime';
 import type { Registry } from './registry';
@@ -120,10 +121,16 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
   // The planner found no template or block composition that fits and the host can author code: this is the video the
   // brief describes. A failed authoring attempt falls back to a written composition rather than losing the job; an
   // explicit template or full composition still outranks the plan.
-  if (!needsFull && !mode.template && plan?.path === 'react' && source.react) {
-    options.onProgress?.('Writing this video as React motion code…');
+  // Which way a designed video is made. The planner chooses, but a weak one answers "json" for nearly everything, and then every video
+  // is a few text cards on a coloured field. Where the host can write React (it will run the code itself), a video the planner did not
+  // give to a template is written as React; a failed build still falls back to a composition. OVE_AI_ROUTE=planner honours the
+  // planner's "json", and OVE_AI_ROUTE=json never writes React.
+  const route = (process.env.OVE_AI_ROUTE ?? '').trim().toLowerCase();
+  const promoted = plan?.path === 'json' && route !== 'planner';
+  if (!needsFull && !mode.template && source.react && route !== 'json' && (plan?.path === 'react' || promoted)) {
+    options.onProgress?.(promoted ? 'Writing this video as React motion code (the default for designed videos)…' : 'Writing this video as React motion code…');
     try {
-      const made = await source.react(plan, scripted, mode);
+      const made = await source.react(plan!, scripted, mode);
       // The script travels in the composition whatever route built it, so narration and captions later derive from it.
       const composition = content ? { ...made.composition, content } : made.composition;
       return { ...made, composition, attempts: made.attempts + 1, route: 'react' };
@@ -181,6 +188,8 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
         // A template is a fixed layout filled with copy the model wrote, so the design review cannot feed corrections back
         // between attempts the way the free-form loop does. It still runs: a bad fill has to reach the caller with its
         // faults rather than pass as a clean job. Files were copied first, so the review sees the pictures the render will.
+        // A template is filled with copy the model wrote; it cannot be repaired here, but a required line it lost is worth saying.
+        warnings.push(...copyProblems(options.brief, composition, (content?.beats ?? []).map(beat => beat.name)).map(problem => `Copy: ${problem.message}`));
         const issues = await reviewTemplate(composition, options, warnings);
         return { composition, source: sourceSaved, attempts: filled.attempts + (plan ? 1 : 0), issues, warnings, template: filled.template, route: 'template' };
       }

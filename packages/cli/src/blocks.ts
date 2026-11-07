@@ -2,8 +2,8 @@
 // (a lower third, a badge…) written as a component with parameters, sized from the canvas so it fits any aspect ratio. `ove add`
 // copies it into a composition as plain JSON (a component plus a placement), so it can be edited afterwards like anything else.
 // A theme is a set of colour and style variables the blocks read ({{bg}}, {{text}}, {{accent}}…); `ove theme` switches them.
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { copyFile, readdir, readFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { coerceVariable, loadComposition, themeTokenNames, themeTokenType, variablesSchema, type VariableDeclaration } from '@ove/schema';
 
@@ -11,7 +11,8 @@ export const blocksDir = fileURLToPath(new URL('../blocks', import.meta.url));
 export const themesDir = fileURLToPath(new URL('../themes', import.meta.url));
 
 export type Block = { id: string; name: string; description: string; category: string; kind: 'scene' | 'overlay'; durationFrames: number;
-  transition?: { type: string; durationFrames: number }; /** Scene settings the block brings along, such as a slow camera push. */ scene?: Record<string, unknown>; params: Record<string, VariableDeclaration>; layers: unknown[] };
+  transition?: { type: string; durationFrames: number }; /** Scene settings the block brings along, such as a slow camera push. */ scene?: Record<string, unknown>; params: Record<string, VariableDeclaration>; layers: unknown[];
+  /** Files in the blocks folder the layers draw from (a React bundle). Adding the block puts a copy beside the composition. */ files?: string[] };
 export type Theme = { id: string; name: string; description: string; variables: Record<string, string | number> };
 
 const idPattern = /^[a-z0-9][a-z0-9-]*$/;
@@ -61,7 +62,7 @@ const uniqueId = (wanted: string, taken: Set<string>) => { let id = wanted, n = 
 
 /** `frames` sets how long a scene lasts, or how long an overlay stays (instead of the block's own length). */
 export type AddOptions = { at?: number; frames?: number; scene?: string; id?: string; set?: Record<string, unknown> };
-export type AddResult = { composition: any; placed: string; where: string };
+export type AddResult = { composition: any; placed: string; where: string; /** Support files the composition now refers to, relative to the blocks folder. */ files: string[] };
 
 /** Adds the block to the raw composition (a new scene, or an overlay inside a scene) and returns the checked result. */
 export function addBlock(input: any, block: Block, options: AddOptions = {}): AddResult {
@@ -98,7 +99,19 @@ export function addBlock(input: any, block: Block, options: AddOptions = {}): Ad
   const resolved = loadComposition({ ...raw, durationFrames: 'auto' });
   if (typeof raw.durationFrames === 'number') raw.durationFrames = Math.max(raw.durationFrames, resolved.durationFrames);
   loadComposition(raw);
-  return { composition: raw, placed: id, where };
+  return { composition: raw, placed: id, where, files: block.files ?? [] };
+}
+
+// A block's support files are read from the blocks folder and written into a project, so only the shapes the product ships are allowed.
+const supportFile = /^support\/[a-z0-9][a-z0-9._-]*\.bundle\.js$/;
+export function blockFilePath(file: string, root = blocksDir): string {
+  if (!supportFile.test(file)) throw new Error(`"${file}" is not a block support file`);
+  return join(root, file);
+}
+export const readBlockFile = (file: string, root = blocksDir): Promise<Buffer> => readFile(blockFilePath(file, root));
+/** Copies each support file next to a composition, under its own name, replacing an older copy. */
+export async function copyBlockFiles(files: readonly string[], destDir: string, root = blocksDir): Promise<void> {
+  for (const file of files) await copyFile(blockFilePath(file, root), join(destDir, basename(file)));
 }
 
 /** A new, empty composition of the given size for the first block to go into. */

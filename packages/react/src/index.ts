@@ -1,6 +1,6 @@
 // Write a video as React components. A component is a pure function of the frame: useCurrentFrame() gives the frame, useVideoConfig() the
 // size and length, and what it renders is drawn for that frame. `ove build video.tsx` bundles the component into a `react` layer, which
-// the renderer mounts it live in a page every frame (real effects, canvas and WebGL work) and draws the result like an html layer, so the output
+// the renderer mounts it live in a page every frame (real effects, canvas and WebGL work) and draws the result as markup, so the output
 // stays frame-exact and goes through the same encoder, audio and review as any other composition. Derive everything from the frame.
 import { Children, createContext, createElement, isValidElement, useContext, type Context, type CSSProperties, type HTMLAttributes, type ImgHTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { interpolate, spring as builderSpring } from '@ove/builder';
@@ -170,3 +170,5 @@ export function Folder({ children }: { name: string; children?: ReactNode }): Re
 export function Still<T = Record<string, unknown>>(props: Omit<CompositionProps<T>, 'durationInFrames'>): ReactElement | null {
   return Composition({ ...props, durationInFrames: 1 });
 }
+
+export * from './composition';

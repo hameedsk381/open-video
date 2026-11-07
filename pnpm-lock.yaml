@@ -329,9 +329,15 @@ importers:
 
   packages/react:
     dependencies:
+      '@ove/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@ove/builder':
         specifier: workspace:*
         version: link:../builder
+      '@ove/timeline':
+        specifier: workspace:*
+        version: link:../timeline
       react:
         specifier: '>=18'
         version: 19.3.1

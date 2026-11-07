@@ -13,7 +13,7 @@ import { createApp, loopbackAuth, type ApiLibrary, type PlayerFiles } from '@ove
 import { InProcessQueue, canvasFor, createFsPaths, createJobRunner, folderName, localInputFile, type JobEnv } from '@ove/jobs';
 import { FsProjectStore, LOCAL_PRINCIPAL, within, type Principal } from '@ove/storage';
 import { aiStudioPage } from './ai-studio-page';
-import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeTokens } from './blocks';
+import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readBlockFile, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
 import { composeSmart, listTemplates } from './templates';
 import { makeThumbnail } from './thumbnail';
@@ -38,7 +38,7 @@ export { canvasFor, folderName, within };
 
 /** What ships with this command and the API shows: blocks, themes, templates. */
 export const studioLibrary: ApiLibrary = {
-  listBlocks, listThemes, readBlock, readTheme, addBlock, applyTheme, emptyComposition, themeTokens,
+  listBlocks, listThemes, readBlock, readTheme, addBlock, blockFile: readBlockFile, applyTheme, emptyComposition, themeTokens,
   listTemplates: async () => (await listTemplates()).map(t => ({ id: t.id, name: t.name, description: t.description, tags: t.tags, width: t.width, height: t.height, fps: t.fps, durationFrames: t.durationFrames, durationSeconds: t.durationSeconds, previewFrame: t.previewFrame })),
 };
 /** The Player and what it loads beside itself (the same files `ove dev` serves). */

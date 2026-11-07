@@ -89,6 +89,12 @@ export OVE_AI_MODEL_DIRECT=<your strongest model>
 export OVE_AI_MODEL_VISION=<a model that reads images>
 ```
 
+### Output limit
+
+A reply that stops because the model ran out of output room is never usable JSON. Models that reason before they answer spend part of the limit thinking, so a cap that suits a plain model cuts them off mid-answer, and every stage that expects JSON then fails. Each call is asked for up to 8,192 tokens (16,384 on Anthropic); when the model reports it was cut off, the call is repeated with twice the room, twice at most, up to 32,768. `OVE_AI_MAX_TOKENS` changes the starting point.
+
+On the FreeLLMAPI gateway the model is read from `FREELLMAPI_MODEL` first and `OVE_AI_MODEL` second, so a `FREELLMAPI_MODEL` in `.env` silently beats `OVE_AI_MODEL`. `ove ai doctor` prints the model that will be used.
+
 ### Looks that differ from one video to the next
 
 The planner and the creative direction are shown ten style families, each with real tokens (fonts, palette, texture, motion, transition, layout) and cues: `editorial-print`, `swiss-grid`, `brutalist-poster`, `cinematic-night`, `warm-craft`, `playful-pastel`, `tech-console`, `data-clarity`, `avant-gallery` and `gradient-product`. They are starting points to pick from by subject or depart from, listed in an order that depends on the brief so none is always first. The dark gradient with glass cards is one of the ten and is marked as fitting software products only. Twelve fonts ship with the renderer (Inter, Space Grotesk, Fraunces, Archivo, Source Sans 3, Playfair Display, DM Sans, Manrope, Syne, JetBrains Mono, Bebas Neue, Instrument Serif); `@ove/schema`'s `fontFamilies` is the one list the prompts and the renderer share.
@@ -100,6 +106,23 @@ When the planner may choose React (the local studio and CLI), it is told React i
 ### A brand in the brief
 
 A compose job accepts `brand`: `{ name, style, colors: { primary, secondary, accent, background, text }, fonts: { heading, body } }`, which is what `/api/brand/scrape` returns. Colours must be hex and text is cut short; a logo path or URL is never kept. The planner is told the brand is fixed, and the brand's colours and fonts replace the planner's field by field on the template, JSON and React routes (the planner still decides texture, motion, transition, layout and density). A brand font the renderer does not ship is dropped, because renders are offline and it would draw as a fallback.
+
+### Which route makes a video
+
+The planner chooses between a template, a JSON composition and React code. A weak planner answers "json" for nearly everything, and the scene-by-scene JSON route can only place text, rectangles, circles and pictures, so each video came out as a few text cards. Where the host can run React (the local studio and CLI, never a hosted worker), a video the planner did not give to a template is now written as React, and a failed build still falls back to a composition. `OVE_AI_ROUTE=planner` honours the planner's "json"; `OVE_AI_ROUTE=json` never writes React; a template, `--full` or a brief with clips and sounds keep their own routes.
+
+### Every video is React
+
+Whichever route made it, `ove ai compose` saves a React video: one `react` layer, plus audio layers for any sound. A template, a scene-by-scene composition or a catalogue block is drawn by `CompositionView` (`@ove/react`), a shared component that reads the composition as data; the generated `video.tsx` holds that data and nothing a model wrote. It reuses the JSON renderer's own text layout, easing, animation and camera code, so the two agree to within anti-aliasing. A composition that uses something the view cannot draw yet (video, Lottie, shader or code layers, captions, rich text spans, gradients, colour grading, mattes, group layout, path trimming) stays as JSON layers, and the compose note says which feature. Pass `--json-layers` to keep JSON layers regardless; the hosted worker renders JSON layers only.
+
+### What the video says
+
+The renderer's review finds broken layout; it cannot know what the brief asked for. Before a composition is accepted, its text layers are checked against the brief:
+
+- A line the brief names ("end on the line: Ride more.", or text quoted after "tagline", "headline" and similar words) has to be said, within one scene. If it is missing, the biggest text layer of the last scene becomes that line.
+- A text layer that only names a part of the video ("Hook", "Problem Proof", "Call to Action", "Scene 2", or one of the plan's own beat names) is replaced with its beat's line when the plan lines up with the scenes one for one, and dropped when another text layer can speak.
+
+Every repair is listed in the result's warnings, and `--strict` refuses a repaired answer. Template results get the same checks as warnings only. A video drawn as React cannot be read this way and is not checked.
 
 ### The art director (React videos)
 
@@ -413,7 +436,7 @@ passed to every video.
 - AI-written and pasted compositions can never contain `code` layers (JavaScript that runs while rendering); the asset check sends them back to the model or rejects the paste.
 
 - API keys are read from the environment; nothing is written to the composition or cache.
-- The model's output is data. It is validated by the schema, and HTML layers still forbid scripts and web URLs.
+- The model's output is data. It is validated by the schema, and react layers, the only layers that run code, are refused in it.
   There is no `eval`, no arbitrary code execution, and no request to a web URL from a composition.
 - Rendering makes no model calls and is byte-identical for the same JSON on the same machine.
 - Distributed rendering does not send the brief anywhere: AI runs before rendering, on the coordinator.
@@ -423,7 +446,7 @@ passed to every video.
 
 - `groq` covers chat, speech and word timings but has no image generation (Groq lists no image model); `mock` supports offline chat and images only. `ove ai doctor` says what is available before a run.
 - Captions need word or segment timings. A provider without transcription produces audio and no captions.
-- The generated composition uses ordinary layers, not HTML/Lottie/shaders, unless the brief explicitly asks for
-  them. `ove review` cannot read text inside an HTML layer, so ordinary text layers are preferred.
+- The generated composition uses ordinary layers, not Lottie or shaders, unless the brief explicitly asks for
+  them. `ove review` cannot read text inside a React layer, so ordinary text layers are preferred.
 - AI is an authoring step, not a runtime feature: the Player and `renderMedia` never call a model.
 - Long-form footage editing remains outside what OVE does, AI-written or not.

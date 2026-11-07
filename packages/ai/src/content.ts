@@ -176,7 +176,7 @@ export function readContent(raw: unknown, sources: WorkingSource[]): { content?:
     if (!quote) problems.push(`source "${id}" needs a quote copied from it`);
     else if (!quoteIn(quote, sourceText.get(id)!.text)) problems.push(`the quote for "${id}" is not in that source; copy an exact sentence from it`);
     const given = sourceText.get(id)!;
-    reported.push({ id, title: (typeof entry.title === 'string' ? entry.title : undefined) ?? given.title, url: (typeof entry.url === 'string' ? entry.url : undefined) ?? given.url, retrievedAt: given.retrievedAt, quote: quote || undefined });
+    reported.push({ id, title: (typeof entry.title === 'string' ? entry.title : undefined) ?? given.title, url: given.url, retrievedAt: given.retrievedAt, quote: quote || undefined });
   }
 
   const rawBeats = Array.isArray(input.beats) ? input.beats : [];

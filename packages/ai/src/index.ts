@@ -25,6 +25,7 @@ export * from './content';
 export * from './registry';
 export * from './edge-tts';
 export * from './plan';
+export * from './copy';
 export * from './smart';
 export { extractJson, sanitizeCompositionJson } from './json';
 export { systemPrompt, userPrompt, planSystemPrompt, planUserPrompt, isMotionPlan, refineUserPrompt, refineOutlinePrompt, compositionOutline, refineOutlineChars, ratioName, type PromptOptions, type MotionPlan, type MotionBeat } from './prompt';

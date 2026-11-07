@@ -4,6 +4,7 @@
 // A .tsx or .jsx file is a React video (see motionrender/react): its component is bundled with esbuild into a file the renderer draws
 // every frame, and the composition holds one `react` layer pointing at it.
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -18,8 +19,17 @@ export async function buildReact(source: string, output: string): Promise<void> 
     ? fileURLToPath(new URL('./react.js', import.meta.url))
     : fileURLToPath(new URL('../../react/src/index.ts', import.meta.url));
 
+  // A video written outside any project (a generated one in a scratch folder) has no node_modules of its own: fall back to the react
+  // this install resolves, so `import 'react'` works wherever the file lives. A project's own copy still wins, as it is looked up first.
+  const nodePaths: string[] = [];
+  // Both are asked for: a pnpm install keeps each package in its own store folder, so one parent does not hold the other.
+  for (const name of ['react', 'react-dom']) {
+    try { const parent = dirname(dirname(createRequire(import.meta.url).resolve(`${name}/package.json`))); if (!nodePaths.includes(parent)) nodePaths.push(parent); } catch { /* not beside the CLI: the project must provide it */ }
+  }
+
   // Fonts, pictures and styles that components import are bundled in (as data), so CSS files and web fonts work like any other library.
   const common = {
+    nodePaths,
     bundle: true,
     jsx: 'automatic' as const,
     write: false,

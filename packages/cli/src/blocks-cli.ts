@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { compositionJsonSchema, loadComposition } from '@ove/schema';
 import { labelKeyframes, type TrackPoint } from './track';
-import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeDefaults } from './blocks';
+import { addBlock, applyTheme, copyBlockFiles, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeDefaults } from './blocks';
 
 const sizes: Record<string, [number, number]> = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const option = (argv: string[], name: string) => { const at = argv.indexOf(name); return at < 0 ? undefined : argv[at + 1]; };
@@ -64,6 +64,7 @@ export async function runAdd(argv: string[]): Promise<void> {
     await mkdir(dirname(file), { recursive: true });
     await writeFile(resolve(dirname(file), 'composition.schema.json'), JSON.stringify(compositionJsonSchema, null, 2) + '\n');
   }
+  await copyBlockFiles(result.files, dirname(file));
   await save(file, result.composition);
   const resolved = loadComposition(result.composition);
   console.log(`${created ? 'Created' : 'Updated'} ${file}\n  added ${block.id} as "${result.placed}" (${result.where}); the video is now ${resolved.durationFrames} frames, ${resolved.scenes.length} scene${resolved.scenes.length === 1 ? '' : 's'}`);

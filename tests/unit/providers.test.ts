@@ -40,6 +40,51 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+// A reply the model cut off because it ran out of room is never usable JSON, and reasoning models spend part of the limit thinking.
+const replyEnding = (content: string, finish: 'stop' | 'length') => json({
+  id: 'chatcmpl-test', object: 'chat.completion', created: Date.now(), model: 'test',
+  choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finish }],
+  usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+});
+
+describe('output limit', () => {
+  const asked = (calls: { init: RequestInit }[]) => calls.map(call => JSON.parse(String(call.init.body)).max_tokens as number);
+  const run = async (replies: ('stop' | 'length')[], options: Record<string, unknown> = {}) => {
+    const calls: { init: RequestInit }[] = []; let at = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string | URL, init: RequestInit = {}) => { calls.push({ init }); return replyEnding(replies[Math.min(at, replies.length - 1)] === 'length' ? 'The user wants a video, so' : '{"ok":true}', replies[Math.min(at++, replies.length - 1)]!); }));
+    const provider = new VercelAiProvider({ provider: 'openai', apiKey: 'k', model: 'm' });
+    const text = await provider.chat([{ role: 'user', content: 'JSON please' }], options);
+    return { text, limits: asked(calls) };
+  };
+
+  it('asks once, with a limit that leaves a model room to think, when the reply is complete', async () => {
+    expect(await run(['stop'])).toEqual({ text: '{"ok":true}', limits: [8192] });
+  });
+
+  it('asks again with twice the room when the reply was cut off, and returns the complete one', async () => {
+    expect(await run(['length', 'stop'])).toEqual({ text: '{"ok":true}', limits: [8192, 16384] });
+    expect(await run(['length', 'length', 'stop'])).toEqual({ text: '{"ok":true}', limits: [8192, 16384, 32768] });
+  });
+
+  it('widens a limit the caller chose, because a small one is what truncated the reply', async () => {
+    expect((await run(['length', 'stop'], { maxTokens: 2200 })).limits).toEqual([2200, 4400]);
+  });
+
+  it('gives up after two widenings and hands back what there is, never asking for more than the ceiling', async () => {
+    const result = await run(['length']);
+    expect(result.limits).toEqual([8192, 16384, 32768]);
+    expect(result.text).toBe('The user wants a video, so');
+    expect((await run(['length'], { maxTokens: 30000 })).limits).toEqual([30000, 32768]);
+  });
+
+  it('takes the default from OVE_AI_MAX_TOKENS, and widens that too', async () => {
+    vi.stubEnv('OVE_AI_MAX_TOKENS', '3000');
+    expect((await run(['length', 'stop'])).limits).toEqual([3000, 6000]);
+    vi.stubEnv('OVE_AI_MAX_TOKENS', 'lots');
+    expect((await run(['stop'])).limits).toEqual([8192]);
+  });
+});
+
 describe('createProvider routing', () => {
   it('routes every network id through the Vercel AI SDK with per-vendor defaults', () => {
     const cases: { config: Record<string, string>; id: string; model: string; baseUrl: string; driver: VercelAiProvider['driver'] }[] = [

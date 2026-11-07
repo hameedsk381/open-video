@@ -24,7 +24,9 @@ export type ApiLibrary = {
   listTemplates(): Promise<{ id: string; name: string; description: string; tags?: string[]; width?: number; height?: number; fps?: number; durationFrames?: number; durationSeconds?: number; previewFrame?: number }[]>;
   readBlock(id: string): Promise<any>;
   readTheme(id: string): Promise<any>;
-  addBlock(raw: any, block: any, options: { at?: number; frames?: number; scene?: string; set?: Record<string, unknown> }): { composition: any; placed: string; where: string };
+  addBlock(raw: any, block: any, options: { at?: number; frames?: number; scene?: string; set?: Record<string, unknown> }): { composition: any; placed: string; where: string; files: string[] };
+  /** The bytes of a support file a block draws from (named in the result of addBlock). */
+  blockFile(file: string): Promise<Buffer>;
   applyTheme(raw: any, theme: any): any;
   emptyComposition(name: string, width: number, height: number, fps: number): any;
   themeTokens: readonly string[];

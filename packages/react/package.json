@@ -1,1 +1,1 @@
-{"name":"@ove/react","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/builder":"workspace:*"},"peerDependencies":{"react":">=18"}}
+{"name":"@ove/react","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/builder":"workspace:*","@ove/animation":"workspace:*","@ove/timeline":"workspace:*"},"peerDependencies":{"react":">=18"}}

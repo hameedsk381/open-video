@@ -181,6 +181,69 @@ describe('composeSmart with React authoring', () => {
 
 // The routing lives in @ove/ai with the host's catalogues injected, so a job queue, an MCP server or a deployed worker
 // gets the same decisions without importing the command line — and a template's files either travel or are reported.
+// A weak planner answers "json" for almost everything, so a host that can write React makes designed videos in React unless asked not to.
+describe('composeSmart route default', () => {
+  const builtByReact = loadComposition({ version: '1.0', id: 'react-video', name: 'React video', width: 1080, height: 1080, fps: 30, durationFrames: 60,
+    scenes: [{ id: 'main', name: 'Main', durationFrames: 60, layers: [{ id: 'react', type: 'react', src: 'video.bundle.js', width: 1080, height: 1080, durationInFrames: 60 }] }] });
+  const choice: TemplateChoice = { id: 'square-card', name: 'Square card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2,
+    variables: [{ name: 'title', type: 'string' }], composition: { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60, scenes: [{ id: 's', name: 'S', layers: [] }] } };
+  const square = { ...base, width: 1080, height: 1080, maxAttempts: 2, content: false as const };
+  const withReact = (calls: string[]) => ({ templates: async () => [choice], react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } });
+  const jsonPlan = { path: 'json', idea: 'Say hello', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] };
+
+  it('writes a video the planner gave to json as React, and says why', async () => {
+    const calls: string[] = [], progress: string[] = [];
+    const result = await composeWithSource(scripted(jsonPlan, composition), { ...square, onProgress: message => progress.push(message) }, withReact(calls), { registry });
+    expect(calls).toEqual(['react']); expect(result.route).toBe('react');
+    expect(progress).toContain('Writing this video as React motion code (the default for designed videos)…');
+  });
+
+  it('keeps json when the planner is to be believed, or when React is not wanted', async () => {
+    for (const setting of ['planner', 'json']) {
+      vi.stubEnv('OVE_AI_ROUTE', setting);
+      const calls: string[] = [];
+      const result = await composeWithSource(scripted(jsonPlan, composition), square, withReact(calls), { registry });
+      expect(calls, setting).toEqual([]); expect(result.route, setting).toBe('json');
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('still honours a planner that chose React under OVE_AI_ROUTE=planner, but never under json', async () => {
+    const reactPlan = { path: 'react', idea: 'Chrome', look: {}, beats: [{ name: 'Hook', onScreen: 'chrome', seconds: 2 }] };
+    vi.stubEnv('OVE_AI_ROUTE', 'planner');
+    const calls: string[] = []; expect((await composeWithSource(scripted(reactPlan), square, withReact(calls), { registry })).route).toBe('react');
+    vi.stubEnv('OVE_AI_ROUTE', 'json');
+    expect((await composeWithSource(scripted(reactPlan, composition), square, withReact([]), { registry })).route).toBe('json');
+    vi.unstubAllEnvs();
+  });
+
+  it('does not take a video away from a template the planner chose', async () => {
+    const card: TemplateChoice = { id: 'intro-card', name: 'Intro card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2, themed: true,
+      variables: [{ name: 'title', type: 'string', default: 'x' }, { name: 'accent', type: 'color', default: '#ffffff' }],
+      composition: { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60,
+        variables: { title: { type: 'string', default: 'x' }, accent: { type: 'color', default: '#ffffff' } },
+        scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: '{{title}}', x: 40, y: 40, fontSize: 64, color: '{{accent}}' }] }] } };
+    const templatePlan = { path: 'template', template: 'intro-card', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] };
+    const calls: string[] = [];
+    const progress: string[] = [];
+    const filled = await composeWithSource(scripted(templatePlan, { template: 'intro-card', values: { title: 'Hello', accent: '#ff0000' } }), { ...square, onProgress: message => progress.push(message) },
+      { templates: async () => [card], react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } }, { registry });
+    expect(progress.filter(message => /failed|skipped/i.test(message)), 'the template route did not run cleanly').toEqual([]);
+    expect(filled.route).toBe('template'); expect(calls).toEqual([]);
+  });
+
+  it('does not take a video away from an explicit full composition', async () => {
+    const calls: string[] = [];
+    const full = await composeWithSource(scripted(composition), square, withReact(calls), { full: true, registry });
+    expect(full.route).toBe('json'); expect(calls).toEqual([]);
+  });
+
+  it('does not offer React to a host that cannot run code', async () => {
+    const noCode = await composeWithSource(scripted(jsonPlan, composition), square, { templates: async () => [choice] }, { registry });
+    expect(noCode.route).toBe('json');
+  });
+});
+
 describe('composeSmart with a host-supplied catalogue', () => {
   const card = { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60,
     variables: { title: { type: 'string', default: 'Hello there' } },

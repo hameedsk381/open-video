@@ -63,7 +63,6 @@ describe('pasted compositions', () => {
 
   it.each([
     ['an image on another drive or folder', [{ id: 'leak', type: 'image', src: 'C:/Users/x/private.png', width: 100, height: 100 }]],
-    ['a picture in html markup', [{ id: 'card', type: 'html', width: 200, height: 100, html: '<img src="../../private.png">' }]],
     ['a web address', [{ id: 'web', type: 'image', src: 'https://x.test/a.png', width: 100, height: 100 }]],
     ['a code layer', [{ id: 'sketch', type: 'code', code: 'function draw(ctx) {}', width: 100, height: 100 }]],
     ['a React layer', [{ id: 'ui', type: 'react', src: 'ui.bundle.js', width: 100, height: 100, durationInFrames: 30 }]],

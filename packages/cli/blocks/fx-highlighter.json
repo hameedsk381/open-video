@@ -11,36 +11,25 @@
       "default": "ENDLESS"
     }
   },
+  "files": [
+    "support/fx.bundle.js"
+  ],
   "layers": [
     {
       "id": "highlight",
-      "type": "html",
-      "html": "<div class='w'><span>{{word}}</span></div>",
-      "css": ".w{font:900 {{round(min(canvas.width, canvas.height) * 0.11)}}px Inter;color:#fff;letter-spacing:-0.02em;display:flex;justify-content:center}.w span{padding:0 .18em;background:linear-gradient(var(--accent),var(--accent)) no-repeat left center;background-size:calc(var(--p) * 100%) 86%}",
-      "vars": {
-        "--p": 0,
-        "--accent": "{{accent}}"
-      },
-      "animations": [
-        {
-          "property": "--p",
-          "keyframes": [
-            {
-              "frame": 8,
-              "value": 0
-            },
-            {
-              "frame": 34,
-              "value": 1,
-              "easing": "land"
-            }
-          ]
-        }
-      ],
-      "x": "{{round(canvas.width * 0.04)}}",
-      "y": "{{round(canvas.height * 0.6)}}",
+      "type": "react",
+      "src": "fx.bundle.js",
       "width": "{{round(canvas.width * 0.92)}}",
-      "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}"
+      "height": "{{round(min(canvas.width, canvas.height) * 0.2)}}",
+      "durationInFrames": 90,
+      "props": {
+        "effect": "highlight",
+        "word": "{{word}}",
+        "accent": "{{accent}}",
+        "size": "{{round(min(canvas.width, canvas.height) * 0.11)}}"
+      },
+      "x": "{{round(canvas.width * 0.04)}}",
+      "y": "{{round(canvas.height * 0.6)}}"
     },
     {
       "id": "sfx-1",
