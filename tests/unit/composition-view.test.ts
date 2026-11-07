@@ -14,7 +14,7 @@ describe('what the React view of a composition cannot draw yet', () => {
       { id: 'r', type: 'rect', width: 100, height: 50, fill: '#fff', animations: [{ property: 'x', keyframes: [{ frame: 0, value: 0 }, { frame: 10, value: 50 }] }] },
       { id: 'c', type: 'circle', width: 40, fill: '#f00' },
       { id: 't', type: 'text', content: 'Hello there', maxWidth: 300, maxLines: 2, minFontSize: 20, split: { by: 'words' } },
-      { id: 'g', type: 'group', children: [{ id: 'i', type: 'image', src: 'logo.png', width: 10, height: 10 }] },
+      { id: 'g', type: 'group', layout: { direction: 'column', gap: 8 }, children: [{ id: 'i', type: 'image', src: 'logo.png', width: 10, height: 10 }] },
       { id: 'a', type: 'audio', src: 'sfx:pop' },
       { id: 'gr', type: 'rect', width: 50, height: 50, fill: { type: 'linear', from: [0, 0], to: [50, 0], stops: [{ offset: 0, color: '#000000' }, { offset: 1, color: '#ffffff' }] }, stroke: { type: 'radial', center: [25, 25], radius: 25, stops: [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }] } },
       { id: 'rich', type: 'text', spans: [{ text: 'a ' }, { text: 'b', color: '#f00', underline: true, background: '#222222' }] },

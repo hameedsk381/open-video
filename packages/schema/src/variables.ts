@@ -32,7 +32,7 @@ export function resolveVariables(declarations: Record<string, VariableDeclaratio
   if (problems.length) throw new VariableError(problems); return values; }
 const wholeReference=/^\{\{((?:(?!\}\})[\s\S])*)\}\}$/, reference=/\{\{((?:(?!\}\})[\s\S])*)\}\}/g;
 // Lists of these keys may contain `if`, `repeat` and `use` entries; everywhere else only {{ }} is expanded.
-const expandableLists=new Set(['layers','children','scenes','each']);
+const expandableLists=new Set(['layers','children','scenes','each','overlay']);
 // Empty lists and text count as false in `if`, unlike JavaScript.
 const truthy=(v: unknown) => Array.isArray(v) ? v.length > 0 : !!v;
 const asText=(v: unknown) => v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v);

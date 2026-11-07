@@ -38,8 +38,10 @@ export function safeZoneBands(width: number, height: number, override?: SafeZone
 }
 
 export async function reviewComposition(composition: Composition, options: ReviewOptions = {}): Promise<ReviewResult> { const { fps, width, height, durationFrames }=composition, baseDir=options.baseDir ?? process.cwd();
-  const every=Math.max(1, Math.round(options.every ?? fps/2)), frames: number[]=[]; for (let f=0; f < durationFrames; f+=every) frames.push(f); if (frames.at(-1) !== durationFrames-1) frames.push(durationFrames-1);
-  const sheetCount=Math.max(1, Math.min(options.sheetFrames ?? 20, durationFrames)), sheetFrames=Array.from({ length: sheetCount }, (_, i) => Math.min(durationFrames-1, Math.round((i+0.5)*durationFrames/sheetCount)));
+  // Half a second apart, but never more than about 400 samples: a long explainer is reviewed at a coarser step instead of for minutes.
+  const every=Math.max(1, Math.round(options.every ?? Math.max(fps/2, durationFrames/400))), frames: number[]=[]; for (let f=0; f < durationFrames; f+=every) frames.push(f); if (frames.at(-1) !== durationFrames-1) frames.push(durationFrames-1);
+  // 20 frames by default, or one per scene for a video with more scenes than that (up to 48), so every panel of a long video is on the sheet.
+  const sheetCount=Math.max(1, Math.min(options.sheetFrames ?? Math.min(48, Math.max(20, composition.scenes.filter(scene => scene.id !== 'overlay').length)), durationFrames)), sheetFrames=Array.from({ length: sheetCount }, (_, i) => Math.min(durationFrames-1, Math.round((i+0.5)*durationFrames/sheetCount)));
   const bands=safeZoneBands(width, height, options.safeZone);
   const safeBands = options.showSafeZones ? bands.map(b => ({ x0: b.x0 / width, y0: b.y0 / height, x1: b.x1 / width, y1: b.y1 / height })) : undefined;
   const renderer=await createRenderer(composition, { baseDir, concurrency: options.concurrency ?? defaultConcurrency(), scale: Math.min(1, 1280/Math.max(width, height)), allowCode: options.allowCode });
@@ -82,9 +84,12 @@ export async function reviewComposition(composition: Composition, options: Revie
   const change=reports.slice(1).map((r, i) => { const a=reports[i]!.thumb.pixels, b=r.thumb.pixels; let sum=0; for (let k=0; k < a.length; k++) sum+=Math.abs(a[k]!-b[k]!); return sum/a.length; });
   let still=-1; for (let i=0; i <= change.length; i++) { const isStill=i < change.length && change[i]! < 0.5; if (isStill && still < 0) still=i; if (!isStill && still >= 0) { const from=frames[still]!, to=frames[i]!; if (to-from >= (to >= durationFrames-1 ? 6 : 4)*fps) issues.push({ severity: 'warning', code: 'frozen', message: `Nothing moves from ${seconds(from, fps)} to ${seconds(to, fps)}: add slow drift or a beat, or shorten the hold`, frame: from }); still=-1; } }
   // Rhythm and transitions across scenes.
-  const lengths=composition.scenes.map(s => s.durationFrames), mean=lengths.reduce((a, b) => a+b, 0)/lengths.length;
-  if (lengths.length >= 4 && lengths.every(l => Math.abs(l-mean) <= 0.1*mean)) issues.push({ severity: 'warning', code: 'uniform-scenes', message: `All ${lengths.length} scenes are about ${seconds(Math.round(mean), fps)} long: vary their length so the video has a rhythm` });
-  const transitions=[...new Set(composition.scenes.flatMap(s => [s.transitionIn?.type, s.transitionOut?.type]).filter(Boolean))];
+  // The overlay scene (persistent layers) is as long as the video and is no part of its rhythm or its cuts.
+  const content=composition.scenes.filter(s => s.id !== 'overlay');
+  const lengths=content.map(s => s.durationFrames), mean=lengths.reduce((a, b) => a+b, 0)/lengths.length;
+  // A long series of equal panels (a dozen or more scenes) is a format, not a lack of rhythm.
+  if (lengths.length >= 4 && lengths.length < 12 && lengths.every(l => Math.abs(l-mean) <= 0.1*mean)) issues.push({ severity: 'warning', code: 'uniform-scenes', message: `All ${lengths.length} scenes are about ${seconds(Math.round(mean), fps)} long: vary their length so the video has a rhythm` });
+  const transitions=[...new Set(content.flatMap(s => [s.transitionIn?.type, s.transitionOut?.type]).filter(Boolean))];
   if (transitions.length >= 3) issues.push({ severity: 'info', code: 'mixed-transitions', message: `${transitions.length} transition styles (${transitions.join(', ')}): one style through a video usually reads as more deliberate` });
   // Continuity across hard cuts: an element that survives a cut should keep its place.
   issues.push(...continuityIssues(composition, reports, frames, fps));
@@ -138,6 +143,7 @@ export function continuityIssues(composition: Composition, reports: FrameReport[
   const issues: ReviewIssue[]=[];
   for (let i=1; i < composition.scenes.length; i++) {
     const incoming=composition.scenes[i]!, previous=composition.scenes[i-1]!;
+    if (incoming.id === 'overlay') continue;
     if (incoming.transitionIn) continue;
     const before=restOf(previous), after=restOf(incoming);
     for (const [text, was] of before) { const now=after.get(text);

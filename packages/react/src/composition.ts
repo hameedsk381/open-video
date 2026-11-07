@@ -27,7 +27,6 @@ export function unsupportedFeatures(composition: CompositionData): string[] {
       if (layer.grade) found.add('colour grading');
       if (layer.matte || layer.masked) found.add('mattes and masks');
       if (layer.clipPath || layer.clip) found.add('group clipping');
-      if (layer.layout) found.add('group layout');
       if (layer.type === 'text' && layer.spans?.length && layer.split) found.add('split rich text');
       if (layer.type === 'path' && ((layer.trimStart ?? 0) > 0 || (layer.trimEnd ?? 1) < 1 || layer.animations?.some((a: any) => a.property === 'd' || a.property === 'trimEnd' || a.property === 'trimStart'))) found.add('path trimming and morphing');
       if (layer.type === 'react') found.add('nested react layers');
@@ -94,7 +93,7 @@ function unitSteps(n: number, order: string | undefined, seed: string): number[]
  * are laid left to right from the aligned start, and a span's highlight and underline are drawn behind and under its words. Split rich
  * text is not drawn here yet. Without a page (the Node scan) it is undefined and the caller shows the plain text.
  */
-function richContent(layer: Layer, size: number): ReactNode[] | undefined {
+function richContent(layer: Layer, size: number, highlight = 1): ReactNode[] | undefined {
   const lay = (globalThis as any).layoutRich as undefined | ((spans: any[], options: Record<string, unknown>, measure: (text: string, span: any, px: number) => number) => { lines: { runs: { text: string; span: number; kind: string; size: number; width: number }[]; width: number }[]; scale: number });
   if (typeof lay !== 'function' || typeof document === 'undefined') return undefined;
   const ctx = (layoutLines as any).ctx ??= document.createElement('canvas').getContext('2d');
@@ -106,6 +105,9 @@ function richContent(layer: Layer, size: number): ReactNode[] | undefined {
   ctx.letterSpacing = `${num(layer.letterSpacing, 0)}px`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   const laid = lay(spans, { fontSize: size, maxWidth: layer.maxWidth, maxLines: layer.maxLines, minFontSize: layer.minFontSize }, (text, span, px) => { ctx.font = font(span, px); return ctx.measureText(text).width; });
   const out: ReactNode[] = []; let top = 0, k = 0;
+  // Highlighter swipe, as in the canvas runtime: `highlight` reveals the span backgrounds left to right, one span after the next.
+  const hl = Math.min(1, Math.max(0, highlight)), bgSpans = spans.map((x, i) => (x.background ? i : -1)).filter(i => i >= 0), spanTotal = spans.map(() => 0), spanSeen = spans.map(() => 0);
+  for (const line of laid.lines) for (const run of line.runs) spanTotal[run.span]! += run.width;
   const lineHeight = num(layer.lineHeight, 1.2), ink = (span: any) => span.color ?? layer.color ?? '#ffffff';
   const stroke = layer.stroke && num(layer.strokeWidth, 0) > 0 && typeof layer.stroke === 'string' ? `${layer.strokeWidth}px ${layer.stroke}` : undefined;
   for (const line of laid.lines) {
@@ -115,7 +117,13 @@ function richContent(layer: Layer, size: number): ReactNode[] | undefined {
     let x = align === 'center' ? -line.width / 2 : align === 'right' ? -line.width : 0;
     line.runs.forEach((run, i) => {
       const span = spans[run.span], m = metrics[i]!, left = x;
-      if (span.background) out.push(createElement('div', { key: k++, style: { position: 'absolute', left: left - run.size * 0.08, top: base - run.size * 0.95, width: run.width + run.size * 0.16, height: run.size * 1.25, borderRadius: run.size * 0.15, background: span.background } }));
+      let cover = run.width + run.size * 0.16;
+      if (span.background && hl < 1) {
+        const index = bgSpans.indexOf(run.span), p = Math.min(1, Math.max(0, hl * bgSpans.length - index)), shown = Math.min(run.width, Math.max(0, p * spanTotal[run.span]! - spanSeen[run.span]!));
+        cover = shown > 0 ? shown + run.size * (shown >= run.width ? 0.16 : 0.08) : 0;
+      }
+      spanSeen[run.span]! += run.width;
+      if (span.background && cover > 0) out.push(createElement('div', { key: k++, style: { position: 'absolute', left: left - run.size * 0.08, top: base - run.size * 0.95, width: cover, height: run.size * 1.25, borderRadius: run.size * 0.15, background: span.background } }));
       if (run.kind === 'word') {
         const textStyle: CSSProperties = { position: 'absolute', left, top: base - m.ascent, whiteSpace: 'pre', fontFamily: stack(span), fontSize: run.size, fontWeight: weight(span), fontStyle: style(span), letterSpacing: `${num(layer.letterSpacing, 0)}px`, lineHeight: `${m.ascent + m.descent}px`, color: ink(span) };
         if (stroke) (textStyle as any).WebkitTextStroke = stroke;
@@ -127,6 +135,48 @@ function richContent(layer: Layer, size: number): ReactNode[] | undefined {
     top += lineSize * lineHeight;
   }
   return out;
+}
+
+// Group layout: children placed one after another, measured as drawn. Mirrors boxOf and layoutPlan in the canvas runtime; a child's own x and y
+// then offset it from its place, so entrance animations still work. Only children that are showing take part.
+type Box = { w: number; h: number; ax: number; ay: number };
+function textBoxOf(layer: Layer, local: number): Box {
+  const size = num(valueOf(layer, 'fontSize', local), 48), lh = num(layer.lineHeight, 1.2), align = layer.textAlign ?? 'left';
+  let w = 0, h = 0;
+  const ctx = (layoutLines as any).ctx ??= typeof document === 'undefined' ? undefined : document.createElement('canvas').getContext('2d');
+  if (layer.spans?.length) {
+    const lay = (globalThis as any).layoutRich;
+    if (typeof lay === 'function' && ctx) {
+      ctx.letterSpacing = `${num(layer.letterSpacing, 0)}px`;
+      const font = (span: any, px: number) => `${span.fontStyle ?? layer.fontStyle ?? 'normal'} ${span.fontWeight ?? layer.fontWeight ?? 400} ${px}px ${fontStack(span.fontFamily ?? layer.fontFamily)}`;
+      const laid = lay(layer.spans, { fontSize: size, maxWidth: layer.maxWidth, maxLines: layer.maxLines, minFontSize: layer.minFontSize }, (text: string, span: any, px: number) => { ctx.font = font(span, px); return ctx.measureText(text).width; });
+      w = Math.max(0, ...laid.lines.map((line: any) => line.width));
+      h = laid.lines.reduce((n: number, line: any) => n + (line.runs.length ? Math.max(...line.runs.map((run: any) => run.size)) : size * laid.scale) * lh, 0);
+    }
+  } else {
+    const lines = layoutLines(layer, size);
+    if (lines) { w = Math.max(0, ...lines.lines.map(line => lines.measure(line))); h = lines.lines.length ? (lines.lines.length - 1) * lines.fontSize * lh + lines.fontSize : 0; }
+  }
+  return { w, h, ax: align === 'center' ? w / 2 : align === 'right' ? w : 0, ay: 0 };
+}
+const showing = (layer: Layer, own: number) => layer.visible !== false && own >= num(layer.startFrame, 0) && (layer.endFrame === undefined || own < layer.endFrame);
+function boxOf(layer: Layer, own: number): Box {
+  const local = own - num(layer.startFrame, 0), w = valueOf(layer, 'width', local), h = valueOf(layer, 'height', local);
+  if (layer.type === 'text') return textBoxOf(layer, local);
+  if (layer.type === 'circle') { const d = num(w, 40); return { w: d, h: d, ax: d / 2, ay: d / 2 }; }
+  if (layer.type === 'group' && layer.layout) { const plan = layoutPlan(layer, own); return { w: num(w, plan.w), h: num(h, plan.h), ax: 0, ay: 0 }; }
+  return { w: w || 0, h: h || 0, ax: 0, ay: 0 };
+}
+function layoutPlan(layer: Layer, own: number): { kids: Layer[]; places: { x: number; y: number }[]; w: number; h: number } {
+  const local = own - num(layer.startFrame, 0), L = layer.layout, kids = (layer.children ?? []).filter((child: Layer) => showing(child, local)).sort((a: Layer, b: Layer) => num(a.zIndex, 0) - num(b.zIndex, 0));
+  const boxes = kids.map((child: Layer) => boxOf(child, local)), row = L.direction === 'row', main = (b: Box) => (row ? b.w : b.h), cross = (b: Box) => (row ? b.h : b.w), pad = num(L.padding, 0), gap = num(L.gap, 0);
+  const content = boxes.reduce((n: number, b: Box) => n + main(b), 0) + gap * Math.max(0, kids.length - 1), crossMax = Math.max(0, ...boxes.map(cross));
+  const W = valueOf(layer, 'width', local), H = valueOf(layer, 'height', local);
+  const innerMain = (row ? W : H) !== undefined ? (row ? W : H) - 2 * pad : content, innerCross = (row ? H : W) !== undefined ? (row ? H : W) - 2 * pad : crossMax;
+  let pos = pad, step = gap;
+  if (L.justify === 'center') pos = pad + (innerMain - content) / 2; else if (L.justify === 'end') pos = pad + innerMain - content; else if (L.justify === 'space-between' && kids.length > 1) step = gap + (innerMain - content) / (kids.length - 1);
+  const places = boxes.map((b: Box) => { const c = L.align === 'center' ? pad + (innerCross - cross(b)) / 2 : L.align === 'end' ? pad + innerCross - cross(b) : pad, place = { x: (row ? pos : c) + b.ax, y: (row ? c : pos) + b.ay }; pos += main(b) + step; return place; });
+  return { kids, places, w: row ? content + 2 * pad : crossMax + 2 * pad, h: row ? crossMax + 2 * pad : content + 2 * pad };
 }
 
 function layerBox(layer: Layer, frame: number) {
@@ -199,7 +249,7 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
     const shift = align === 'center' ? '-50%' : align === 'right' ? '-100%' : '0';
     const style: CSSProperties = { position: 'absolute', left: 0, top: 0, whiteSpace: textWidth ? 'normal' : 'pre', width: textWidth, textAlign: align, transform: textWidth ? `translateX(${align === 'center' ? -textWidth / 2 : align === 'right' ? -textWidth : 0}px)` : `translateX(${shift})`, color: valueOf(layer, 'color', local) ?? '#ffffff', fontFamily: fontStack(layer.fontFamily), fontSize: size, fontWeight: layer.fontWeight ?? 400, fontStyle: layer.fontStyle ?? 'normal', letterSpacing: `${num(valueOf(layer, 'letterSpacing', local), 0)}px`, lineHeight: num(layer.lineHeight, 1.2), overflowWrap: 'normal' };
     if (layer.stroke && num(layer.strokeWidth, 0) > 0) (style as any).WebkitTextStroke = `${layer.strokeWidth}px ${layer.stroke}`;
-    const rich = layer.spans?.length ? richContent(layer, size) : undefined, lines = layer.spans?.length ? undefined : layoutLines(layer, size);
+    const rich = layer.spans?.length ? richContent(layer, size, num(valueOf(layer, 'highlight', local), 1)) : undefined, lines = layer.spans?.length ? undefined : layoutLines(layer, size);
     if (lines) {
       const lh = lines.fontSize * num(layer.lineHeight, 1.2);
       content = lines.lines.map((line: string, i: number) => createElement('div', { key: i, style: { ...style, width: undefined, whiteSpace: 'pre', fontSize: lines.fontSize, top: i * lh + lines.shift, transform: `translateX(${shift})`, lineHeight: `${lh}px` } }, line));
@@ -228,7 +278,10 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
     const src = assets.get(layer.src) ?? layer.src;
     content = createElement('img', { src, style: { width: width || undefined, height: height || undefined, objectFit: layer.objectFit ?? 'cover', borderRadius: num(layer.radius, 0), display: 'block' } });
   } else if (layer.type === 'group') {
-    content = (layer.children ?? []).slice().sort((a: Layer, b: Layer) => num(a.zIndex, 0) - num(b.zIndex, 0)).map((child: Layer, i: number) => drawLayer(child, local, i, assets));
+    if (layer.layout) {
+      const plan = layoutPlan(layer, local);
+      content = plan.kids.map((child: Layer, i: number) => createElement('div', { key: i, style: { position: 'absolute', left: 0, top: 0, transform: `translate(${plan.places[i]!.x}px, ${plan.places[i]!.y}px)` } }, drawLayer(child, local, i, assets)));
+    } else content = (layer.children ?? []).slice().sort((a: Layer, b: Layer) => num(a.zIndex, 0) - num(b.zIndex, 0)).map((child: Layer, i: number) => drawLayer(child, local, i, assets));
   } else return null;
   return createElement('div', { key, style: wrapperStyle(layer, local, w, h) }, content);
 }
