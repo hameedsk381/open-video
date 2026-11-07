@@ -206,7 +206,7 @@ export async function writeDirection(provider: AiProvider, options: DirectionOpt
     options.onProgress?.(`Directing the video with ${provider.id} (attempt ${attempt}/${maxAttempts})…`);
     let text: string;
     try {
-      text = await provider.chat(messages(options, prior), { json: true, task: 'compose', temperature: attempt === 1 ? 0.8 : 0.5, maxTokens: 1600, signal: options.signal });
+      text = await provider.chat(messages(options, prior), { json: true, task: 'direct', temperature: attempt === 1 ? 0.8 : 0.5, maxTokens: 2200, signal: options.signal });
     } catch (error) {
       if (options.signal?.aborted) throw error;
       last = (error as Error).message;

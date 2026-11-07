@@ -79,6 +79,22 @@ Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_U
 `FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
 `ove ai doctor` prints what is configured, which speech engine is wired up, and what it can do.
 
+### A stronger model for the stages that decide the look
+
+`OVE_AI_MODEL_<TASK>` sends one kind of call to its own model on any provider, so the few calls that decide how a video looks can run on your best model while bulk work stays on a cheap one. Tasks: `DIRECT` (the planner and the creative direction), `COMPOSE` (writing the composition or the React code), `VISION` (any call that carries images, including the art director below), `FAST`, `TEMPLATE`, `HEAL`, `BRAND`, `BATCH`.
+
+```sh
+export OVE_AI_MODEL=openai/gpt-oss-120b        # the everyday model
+export OVE_AI_MODEL_DIRECT=<your strongest model>
+export OVE_AI_MODEL_VISION=<a model that reads images>
+```
+
+### The art director (React videos)
+
+After a React video builds and passes the design review, the engine renders a still from each scene (or four spread through a one-scene video) and a vision model judges them against the brief and the direction: is it distinctive or the generic default, is there a focal point, is the frame used, is the type deliberate. Up to two rewrites follow while it finds problems that matter. A rewrite that does not build, or fails the review, is dropped for the version that did, so the pass can only improve a result; unresolved notes are reported as warnings.
+
+The pass needs a model that reads images. A provider that cannot is skipped with a note, and an answer that does not describe what is on screen is refused, so a model that ignored the images cannot drive a rewrite. `OVE_AI_CRITIQUE=0` turns it off. Each round costs one vision call, one code rewrite and a few stills.
+
 ## Content first: the script and the data behind it
 
 Every `ove ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, template fill, scene writer, narration and captions all derive from that script instead of inventing copy on the way.

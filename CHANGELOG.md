@@ -2,6 +2,15 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## Unreleased
+
+### Added
+- **An art director looks at React videos before they ship.** After a build passes the design review, stills from each scene go to a vision model that judges distinctiveness, hierarchy, composition and type against the brief and direction, and asks for up to two rewrites. A rewrite that fails to build or review is dropped for the version that worked. Needs a model that reads images; `OVE_AI_CRITIQUE=0` turns it off.
+- **`OVE_AI_MODEL_<TASK>`** routes one kind of call (`DIRECT`, `COMPOSE`, `VISION`, …) to its own model on any provider, so the planner and direction can use a stronger model than the bulk work.
+
+### Changed
+- The planner and creative direction run as their own `direct` task, with more headroom (2,200 tokens) and a higher first-attempt temperature for the planner (0.7), so two briefs are less likely to get the same plan.
+
 ## 0.3.15 (2026-11-07)
 
 ### Added

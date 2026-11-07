@@ -5,7 +5,7 @@
 // worker that offered it would execute code a prompt chose.
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderStill, reviewComposition, type ReviewIssue } from '@ove/core';
-import { runVideoAgent, type AiProvider, type BuildPlan, type ComposeOptions, type SmartMode, type SmartResult } from '@ove/ai';
+import { critiqueFrameNumbers, runVideoAgent, type AiProvider, type BuildPlan, type ComposeOptions, type CritiqueFrame, type SmartMode, type SmartResult } from '@ove/ai';
 import { buildReact } from './build';
 
 type VisualCheck = (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
@@ -33,6 +33,20 @@ export function reactVisualCheck(baseDir: string, onReview?: (issues: ReviewIssu
 }
 
 /**
+ * Renders the stills the art director looks at: a settled moment in each scene (or evenly spread moments for a video that
+ * is one scene). `OVE_AI_CRITIQUE=0` turns the pass off, for models that cannot read images or runs that must stay cheap.
+ */
+export function reactCritiqueFrames(baseDir: string): ((compositionPath: string) => Promise<CritiqueFrame[]>) | undefined {
+  if (process.env.OVE_AI_CRITIQUE === '0') return undefined;
+  return async compositionPath => {
+    const composition = loadComposition(JSON.parse(await readFile(compositionPath, 'utf8')));
+    const frames: CritiqueFrame[] = [];
+    for (const { frame, label } of critiqueFrameNumbers(composition)) frames.push({ label, png: await renderStill(composition, { frame, baseDir, allowCode: true }) });
+    return frames;
+  };
+}
+
+/**
  * Writes a planned video as a React component and returns the composition it was built into. The plan is the planner's
  * first pass (idea, look, beats), which the direction stage refines, and a written script fixes the beats on top of
  * that. A failure throws, and the router writes a plain composition instead of losing the job.
@@ -52,13 +66,16 @@ export async function reactFromPlan(provider: AiProvider, plan: BuildPlan, optio
     onProgress: options.onProgress,
     signal: options.signal,
     visualCheck: reactVisualCheck(options.baseDir, issues => { checked = issues; }),
+    critiqueFrames: reactCritiqueFrames(options.baseDir),
   }, buildReact);
   if (!result.composition) throw new Error('The React video was written but produced no composition');
   const issues = options.review ? checked : [];
+  // An art director's notes that were never resolved travel with the result, so no surface presents the video as approved.
+  const notes = result.critique && !result.critique.ready ? result.critique.problems.map(problem => `Art director: ${problem}`) : [];
   return {
     composition: result.composition,
     attempts: result.attempts,
     issues,
-    warnings: issues.filter(issue => issue.severity === 'warning').map(issue => issue.message),
+    warnings: [...issues.filter(issue => issue.severity === 'warning').map(issue => issue.message), ...notes],
   };
 }

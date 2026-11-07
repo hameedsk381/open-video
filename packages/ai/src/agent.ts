@@ -5,6 +5,7 @@ import type { VideoContent } from '@ove/schema';
 import type { AiProvider, ChatMessage } from './providers';
 import { distillBrandPack, scrapeWebsiteBrand } from './brand-scraper';
 import { directionSection, writeDirection, type CreativeDirection, type DirectionBeat, type DirectionPlanInput } from './direction';
+import { critiqueVideo, polishRequest, type Critique, type CritiqueFrame } from './critique';
 
 export type VideoFormat = 'reel' | 'landscape';
 
@@ -40,6 +41,10 @@ export type AgentOptions = {
   /** The planner's first pass, when it ran: the direction stage refines it instead of inventing a second one. */
   plan?: DirectionPlanInput;
   visualCheck?: (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
+  /** Renders stills of the built video for the art-director pass. Without it the pass does not run. */
+  critiqueFrames?: (compositionPath: string) => Promise<CritiqueFrame[]>;
+  /** How many rewrites the art director may ask for after a clean build (default 2). Each costs a vision call and a rewrite. */
+  polishRounds?: number;
 };
 
 export type AgentResult = {
@@ -55,6 +60,10 @@ export type AgentResult = {
   code: string;
   /** The composition the last successful build wrote, with the script attached when one was supplied. */
   composition?: Composition;
+  /** The art director's last verdict on the finished video, when that pass ran. */
+  critique?: Critique;
+  /** How many rewrites the art director's findings led to. */
+  polished?: number;
 };
 
 /**
@@ -258,6 +267,18 @@ export async function runVideoAgent(
   const compositionPath = join(dir, 'composition.json');
   const bundlePath = join(dir, 'video.bundle.js');
 
+  // The composition file is the project's deliverable, so the script travels in it like it does on every other route.
+  // A build helper that writes no composition is not a build failure: it just leaves the video without one here.
+  const finishBuild = async (): Promise<Composition | undefined> => {
+    let raw: Record<string, any> | undefined;
+    try { raw = JSON.parse(await readFile(compositionPath, 'utf8')); } catch { raw = undefined; }
+    if (raw && options.content) {
+      raw = { ...raw, content: options.content };
+      await writeFile(compositionPath, JSON.stringify(raw, null, 2) + '\n', 'utf8');
+    }
+    return raw ? loadComposition(raw) : undefined;
+  };
+
   while (attempts < maxAttempts) {
     attempts++;
     options.onProgress?.(`⚡ Generating React motion code with ${provider.id} (${currentTask}, attempt ${attempts}/${maxAttempts})…`);
@@ -280,15 +301,7 @@ export async function runVideoAgent(
     try {
       await buildHelper(videoPath, compositionPath);
       options.onProgress?.(`✅ Video code compiled and bundled successfully!`);
-      // The composition file is the project's deliverable, so the script travels in it like it does on every other route.
-      // A build helper that writes no composition is not a build failure: it just leaves the video without one here.
-      let raw: Record<string, any> | undefined;
-      try { raw = JSON.parse(await readFile(compositionPath, 'utf8')); } catch { raw = undefined; }
-      if (raw && options.content) {
-        raw = { ...raw, content: options.content };
-        await writeFile(compositionPath, JSON.stringify(raw, null, 2) + '\n', 'utf8');
-      }
-      if (raw) composition = loadComposition(raw);
+      composition = (await finishBuild()) ?? composition;
 
       // Visual self-healing: check the rendered output for design issues
       if (options.visualCheck) {
@@ -355,6 +368,55 @@ export async function runVideoAgent(
     }
   }
 
+  // The art director's pass: look at the finished build, and rewrite it while the critique finds problems that matter.
+  // A rewrite that does not build or fails the review is dropped for the version that did, so this can only improve a result.
+  let critique: Critique | undefined;
+  let polished = 0;
+  const rounds = Math.max(0, options.polishRounds ?? 2);
+  if (buildHelper && options.critiqueFrames && (composition as Composition | undefined)) {
+    for (let round = 0; ; round++) {
+      let frames: CritiqueFrame[];
+      try { frames = await options.critiqueFrames(compositionPath); }
+      catch (error: any) { options.onProgress?.(`⚠️ Could not render frames for the art director: ${String(error?.message ?? error).split('\n')[0]}`); break; }
+      if (!frames.length) break;
+      options.onProgress?.(`🎨 Art director is looking at ${frames.length} frames${round ? ` (after rewrite ${round})` : ''}…`);
+      const verdict = await critiqueVideo(provider, {
+        brief: activeBrief, width, height, direction, content: options.content, frames, signal: options.signal, onProgress: options.onProgress,
+      });
+      if (!verdict) break;
+      critique = verdict;
+      if (verdict.ready) { options.onProgress?.(`✅ Art director approved (${verdict.score}/10).`); break; }
+      if (round >= rounds) { options.onProgress?.(`Art director's notes remain (${verdict.score}/10): ${verdict.problems[0]}`); break; }
+      options.onProgress?.(`✍️ Polishing: ${verdict.problems.length} problem${verdict.problems.length === 1 ? '' : 's'} from the art director (${verdict.score}/10)…`);
+      const previousCode = videoCode;
+      const reply = await provider.chat([
+        messages[0]!, messages[1]!,
+        { role: 'assistant', content: `\`\`\`tsx\n${videoCode}\n\`\`\`` },
+        { role: 'user', content: polishRequest(verdict) },
+      ], { task: 'compose', temperature: 0.3, signal: options.signal });
+      const candidate = extractCode(reply);
+      attempts++;
+      try {
+        await writeFile(videoPath, candidate, 'utf8');
+        await buildHelper(videoPath, compositionPath);
+        composition = (await finishBuild()) ?? composition;
+        if (options.visualCheck) {
+          const check = await options.visualCheck(videoPath, compositionPath);
+          if (!check.passed) throw new Error(`the design review failed: ${check.report.slice(0, 160)}`);
+        }
+        videoCode = candidate;
+        polished++;
+      } catch (error: any) {
+        options.onProgress?.(`⚠️ The rewrite did not hold up (${String(error?.message ?? error).split('\n')[0]}); keeping the version that did.`);
+        videoCode = previousCode;
+        await writeFile(videoPath, previousCode, 'utf8');
+        await buildHelper(videoPath, compositionPath);
+        composition = (await finishBuild()) ?? composition;
+        break;
+      }
+    }
+  }
+
   return {
     dir,
     videoPath,
@@ -365,6 +427,8 @@ export async function runVideoAgent(
     attempts,
     code: videoCode,
     composition,
+    ...(critique ? { critique } : {}),
+    ...(polished ? { polished } : {}),
   };
 }
 

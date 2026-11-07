@@ -14,7 +14,8 @@ import { createGroq } from '@ai-sdk/groq';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 export type ChatMessage = { role: ChatRole; content: string | any[] };
-export type ChatTask = 'compose' | 'template' | 'heal' | 'brand' | 'batch' | 'vision' | 'fast';
+/** `direct` is the creative stages (planner, direction): few calls, and the ones whose taste decides how the video looks. */
+export type ChatTask = 'compose' | 'direct' | 'template' | 'heal' | 'brand' | 'batch' | 'vision' | 'fast';
 export type ChatOptions = {
   json?: boolean;
   temperature?: number;
@@ -213,6 +214,7 @@ export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
   // nemotron (9.7 tok/s), broken stream endpoints (gemini/glm/kilo), and slow routers (free-router 2.6 tok/s) are dropped;
   // 'auto' is the proven fallback.
   compose: ['qwen3.8-27b', 'auto'],
+  direct: ['qwen3.8-27b', 'auto'],
   template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'auto'],
   heal: ['qwen3.8-27b', 'auto'],
   vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
@@ -273,6 +275,16 @@ export function inferChatTask(messages: ChatMessage[], options?: ChatOptions): C
     return 'batch';
   }
   return 'compose';
+}
+
+/**
+ * `OVE_AI_MODEL_<TASK>` (OVE_AI_MODEL_DIRECT, OVE_AI_MODEL_VISION, OVE_AI_MODEL_COMPOSE…) sends one kind of call to its own
+ * model on any provider, so the stages that decide how a video looks can run on a stronger model than the bulk work.
+ * An explicit `options.model` still wins, and nothing is inferred when no such variable is set.
+ */
+function taskModelOverride(messages: ChatMessage[], options: ChatOptions): string | undefined {
+  if (!Object.keys(process.env).some(key => key.startsWith('OVE_AI_MODEL_'))) return undefined;
+  return process.env[`OVE_AI_MODEL_${inferChatTask(messages, options).toUpperCase()}`]?.trim() || undefined;
 }
 
 const extensionFromMediaType = (mediaType: string) => mediaType.split('/')[1]?.split(';')[0] ?? 'png';
@@ -398,9 +410,10 @@ export class VercelAiProvider implements AiProvider {
   }
 
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const chosen = options.model ?? taskModelOverride(messages, options);
     if (this.id === 'freellmapi') {
       const task = inferChatTask(messages, options);
-      const selected = await this.resolveModel(task, options.model, options.signal);
+      const selected = await this.resolveModel(task, chosen, options.signal);
       try {
         return await this.complete(selected, messages, options);
       } catch (error) {
@@ -409,7 +422,7 @@ export class VercelAiProvider implements AiProvider {
         return await this.complete('auto', messages, options);
       }
     }
-    return this.complete(options.model ?? this.model, messages, options);
+    return this.complete(chosen ?? this.model, messages, options);
   }
 
   private async complete(model: string, messages: ChatMessage[], options: ChatOptions): Promise<string> {

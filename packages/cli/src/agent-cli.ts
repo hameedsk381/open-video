@@ -4,7 +4,7 @@ import { loadComposition, renderMedia, renderStill } from '@ove/core';
 import { composeVideo, createProvider, planBuild, writeCompositionProject } from '@ove/ai';
 import { runVideoAgent, type VideoFormat } from '../../ai/src/agent';
 import { buildReact } from './build';
-import { reactVisualCheck } from './react-video';
+import { reactCritiqueFrames, reactVisualCheck } from './react-video';
 import { cliRegistry } from './templates';
 
 const option = (argv: string[], name: string): string | undefined => {
@@ -156,6 +156,7 @@ Examples:
       direction: args.noDirection ? false : undefined,
       onProgress: msg => console.log(msg),
       visualCheck: reactVisualCheck(targetDir),
+      critiqueFrames: reactCritiqueFrames(targetDir),
     },
     buildReact
   );

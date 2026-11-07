@@ -16,6 +16,7 @@ export * from './batch';
 export * from './project';
 export * from './agent';
 export * from './direction';
+export * from './critique';
 export * from './brand-scraper';
 export * from './brand-css';
 export * from './scenes';
