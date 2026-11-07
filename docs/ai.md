@@ -79,11 +79,31 @@ Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_U
 `FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
 `ove ai doctor` prints what is configured, which speech engine is wired up, and what it can do.
 
-## Templates first, full composition when needed
+## Content first: the script and the data behind it
 
-`ove ai compose` first asks the model to pick one of the ready-made templates whose shape matches the video (the same aspect ratio) and to return only the values for its variables: a few hundred tokens instead of a whole composition. The layout, motion and timing come from the template, so the result is faster, cheaper and more consistent. It falls back to writing a full composition when no template has the right shape, the model says none suits the brief, template mode fails, or you supplied `--asset` or `--fields`. A `--duration` that differs from the template's own no longer leaves the template route: the resolved composition is retimed to the requested length (every scene's duration, layer timing, animation keyframes, split entrances, camera moves, transitions and audio fades scale by the same factor, and scene starts are recomputed the way the loader lays them out). Because the timing is then bespoke, the project is saved as a plain composition rather than an editable template. In Studio, tick *Write every layer from scratch* for the old behaviour.
+Every `ove ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, template fill, scene writer, narration and captions all derive from that script instead of inventing copy on the way.
 
-With `--narration`, a template video is cut to the voiceover: the model writes one spoken line per scene from what that scene shows, each line is spoken, and every scene is as long as its line, so what is said and what is on screen change together. Word-timed captions come from transcribing the result, and the export gets a -16 LUFS loudness target. Other videos get one script over the whole video. Pictures you pass with `--asset` (images only) are offered to templates with picture slots: the phone screen, the hero image, the story panel.
+Grounding is checked, not assumed:
+
+- the brief itself is always a source (`brief`);
+- `--source notes.md` (repeatable, files or datasets) adds `src1`, `src2`, … with the file's text;
+- research is on by default and asks the model for a few public pages, fetched only after the SSRF guard at every redirect hop, recorded as `web1`, … (`--no-research` turns it off);
+- every claim and figure must name a source id, and every source must carry a `quote` copied word for word from it. The engine verifies the quote is a literal substring of the source text. A script that fails comes back with the exact problem ("the quote for src1 is not in that source") and is retried; if no trustworthy script survives the attempts, the video continues **without** a script rather than with an invented one.
+
+```sh
+ove ai compose reel --brief "Q4 revenue report" --source data/q4.csv --no-research
+ove ai compose reel --brief "..." --content my-script.json      # use a written script
+ove script reel/composition.json --output script.md             # read it (or script.json for JSON)
+ove script reel/composition.json --set revised.json             # put a revised script back (validated)
+```
+
+With `--narration`, a scripted video speaks its own beats: one line per scene when each scene names its beat (`"beat": "hook"`, which template fills set when scenes and beats line up), otherwise one script over the whole video. MCP exposes the same: `motionrender_create_video` takes `sources`, `research` and `script`, and `motionrender_script` exports or imports the block.
+
+## Templates when they fit, a written video when they don't
+
+When a ready-made template matches the video (the same aspect ratio, the same narrative shape), `ove ai compose` asks the model only for the values of its variables: a few hundred tokens instead of a whole composition. The layout, motion and timing come from the template, so that route is faster, cheaper and more consistent. It writes the video instead when no template has the right shape or narrative, the model says none suits the brief, template mode fails, or you supplied `--asset` or `--fields`, and it writes React code when the brief needs motion graphics no template or block can express (see the planner section below). A `--duration` that differs from the template's own no longer leaves the template route: the resolved composition is retimed to the requested length (every scene's duration, layer timing, animation keyframes, split entrances, camera moves, transitions and audio fades scale by the same factor, and scene starts are recomputed the way the loader lays them out). Because the timing is then bespoke, the project is saved as a plain composition rather than an editable template. In Studio, tick *Write every layer from scratch* for the old behaviour.
+
+With `--narration`, a template video is cut to its content script: the beats' narration is spoken one line per scene where the template has a scene per beat (otherwise the model writes one line per scene from what it shows), each line is spoken, and every scene is as long as its line, so what is said and what is on screen change together. Word-timed captions come from transcribing the result, and the export gets a -16 LUFS loudness target. Other videos get one script over the whole video. Pictures you pass with `--asset` (images only) are offered to templates with picture slots: the phone screen, the hero image, the story panel.
 
 Templates built from blocks (`launch-wide`, `story-tall`, `explainer-square`, `keynote-wide`) take a **theme** too: the model chooses one of `midnight`, `paper`, `neon`, `espresso` to suit the brief, and the colours follow. See the Blocks and themes section of the README.
 
@@ -91,11 +111,11 @@ When a full composition has problems, the model is asked for a patch instead of 
 
 ## The planner decides the route first
 
-Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or React code — and what the video's beats are. Templates are the primary path: the planner is told to prefer one whenever its kind and aspect fit the brief, even when the length differs (`--duration` retimes the filled template), so the composed and React routes are secondary, for briefs no template fits. The plan's answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects, sounds and **motion moves** that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. The moves are the named vocabulary of motion (`ken-burns`, `word-cascade`, `rise-in`, `pop-in`, `blur-in`, `slide-in`, `pulse`, `wipe-reveal`, `parallax`, `camera-shake`, …): the planner names them in a beat's `motion` field, and the composition prompt carries a one-line recipe for each, so a named move always meets the knowledge of how to build it. With a valid plan:
+Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or write React code — with the video's beats and art direction. The route follows what the brief needs, not a default: a template is chosen only when its scenes and look already match the video (a length difference does not disqualify it, since `--duration` retimes the fill), JSON for structured, typographic, data- or product-led videos the blocks can express, and React when the brief asks for 3D, WebGL or canvas work, particles, custom illustration or SVG, real camera moves or other craft no block layout carries. The planner is told never to force a near-miss template. Its answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects, sounds and **motion moves** that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. The moves are the named vocabulary of motion (`ken-burns`, `word-cascade`, `rise-in`, `pop-in`, `blur-in`, `slide-in`, `pulse`, `wipe-reveal`, `parallax`, `camera-shake`, …): the planner names them in a beat's `motion` field, and the composition prompt carries a one-line recipe for each, so a named move always meets the knowledge of how to build it. With a valid plan:
 
-- route **template** → that template id and theme are filled (the primary path; the old template mode, now aimed by the planner);
+- route **template** → that template id and theme are filled (the old template mode, now aimed by the planner);
 - route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
-- route **react** is produced by `ove agent` (below); `compose` never picks it.
+- route **react** → the agent loop (below) writes `video.tsx`, builds it and returns the composition it produced. Only a host that runs generated code itself offers this route: `ove ai compose` on your machine and the local studio do; the hosted workers do not, because the brief would then choose the JavaScript the operator's machine runs. A written script fixes the component's beats, and a failed build falls back to a JSON composition rather than losing the job.
 
 If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to the routing that always worked (template first, then a full composition). Pass `--no-plan` to skip planning entirely.
 
@@ -110,7 +130,7 @@ ove ai capabilities --json     # machine-readable, with ids, descriptions, param
 
 The registry (registry v2, about 140 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
 
-That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, fill a template or write the whole composition, retime a template to the requested length, and move a template's own pictures and sounds next to the project. It takes the catalogues and the file copy from the host (`TemplateSource`), so the CLI, the studio's job queue, the MCP server and a deployed worker all route a brief the same way without any of them depending on the command line's template folder. A copy that fails is reported in `warnings`, never swallowed.
+That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, fill a template, write the whole composition or author React code, retime a template to the requested length, and move a template's own pictures and sounds next to the project. It takes the catalogues, the file copy and (optionally) the React builder from the host (`TemplateSource`), so every host routes a brief the same way without depending on the command line's template folder; a host that supplies no builder never has React offered to its planner. A copy or build that fails is reported in `warnings`, never swallowed.
 
 ## `ove agent`: the planner routes into React code
 
@@ -120,6 +140,14 @@ That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the b
 ove agent "A viral launch reel for an open-source vector database"
 ove agent "Modern SaaS demo" --landscape --duration 9
 ```
+
+### Creative direction
+
+Before any code is written, `ove agent` asks the model to direct the video: a concept, an art direction, a colour palette, a display and body face from the families bundled with the renderer, a motion language, a sound note and the beat structure with seconds. The direction is saved as `direction.json` beside `video.tsx` and becomes the section of the coding prompt the component must realize. When the planner ran, the stage starts from its idea and beats instead of inventing a second art direction.
+
+There is deliberately no house style. The prompt no longer mandates glass cards, bento grids, glow or a three-scene hook/value/CTA shape, and it treats the React component kit as optional resources a custom build can ignore. `KineticText`, `NumberTicker`, `Audio` sound effects and the rest stay available, but nothing in the toolkit is required: the model may write its own components, SVG illustrations or canvas effects.
+
+A direction the model cannot produce is not fatal — the agent says why, writes the video from the brief alone, and still builds and renders. `--no-direction` skips the stage to save one model call. Through the SDK, `direction: false` does the same, and `direction: { … }` supplies a direction you wrote yourself.
 
 ### Brand from a URL (`--url`)
 
@@ -211,8 +239,9 @@ ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudnes
   needing repairs the command fails instead of shipping the repaired version.
 - `--max-attempts 3` (default) bounds the validation loop.
 - `--schema` appends the exact JSON Schema to the prompt. More tokens, fewer format mistakes on small models.
-- `--dry-run` prints the composition without writing; `--render` renders to `<dir>/out.mp4`; `--json` prints a
-  machine-readable summary; `--no-plan` skips the planner (template-first routing, then a straight composition).
+- `--dry-run` prints the composition without writing; `--render` renders to `<dir>/out.mp4` (with code permission when
+  the video was written as React); `--json` prints a machine-readable summary; `--no-plan` skips the planner
+  (template-first routing, then a straight composition); `--no-react` keeps the planner off the React route.
 
 What the loop does:
 

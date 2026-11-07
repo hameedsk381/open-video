@@ -4,6 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { Composition } from '@ove/core';
+import { narrationText, type VideoContent } from '@ove/schema';
 import { probe } from '@ove/ffmpeg';
 import type { AiProvider, Transcript } from './providers';
 import { captionsStyle } from './captions';
@@ -21,6 +22,8 @@ export type NarrateOptions = {
   compositionPath?: string;
   tailSeconds?: number;
   captions?: boolean;
+  /** The script the video was written from; its narration is spoken as-is instead of writing a new script. */
+  content?: VideoContent;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
 };
@@ -92,7 +95,8 @@ export function narrationScene(composition: Composition, options: SceneOptions):
 export async function narrate(provider: AiProvider, options: NarrateOptions): Promise<NarrateResult> {
   if (!provider.speak) throw new Error(`The ${provider.id} provider cannot make speech (or add a speak() adapter)`);
   const brief = options.brief?.trim();
-  let text = options.text?.trim() ?? '';
+  const scripted = options.content ?? options.composition?.content;
+  let text = options.text?.trim() ?? (scripted ? narrationText(scripted) : '');
   if (!text && brief) {
     options.onProgress?.('Writing the narration script…');
     text = await writeNarrationScript(provider, brief, { durationSeconds: options.durationSeconds, language: options.language, signal: options.signal });

@@ -1,9 +1,10 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { loadComposition, renderMedia, renderStill, reviewComposition } from '@ove/core';
+import { loadComposition, renderMedia, renderStill } from '@ove/core';
 import { composeVideo, createProvider, planBuild, writeCompositionProject } from '@ove/ai';
 import { runVideoAgent, type VideoFormat } from '../../ai/src/agent';
 import { buildReact } from './build';
+import { reactVisualCheck } from './react-video';
 import { cliRegistry } from './templates';
 
 const option = (argv: string[], name: string): string | undefined => {
@@ -38,6 +39,7 @@ export function agentArgs(argv: string[]) {
     fps: Number(option(argv, '--fps') ?? 30),
     shouldRender: !flag(argv, '--no-render'),
     noPlan: flag(argv, '--no-plan'),
+    noDirection: flag(argv, '--no-direction'),
     providerName: option(argv, '--provider'),
     model: option(argv, '--model'),
   };
@@ -96,6 +98,7 @@ Options:
   --fps <number>     Frames per second (default: 30)
   --no-render        Generate and compile React code only; skip MP4 rendering
   --no-plan          skip the planner and always run the React agent loop
+  --no-direction     skip the creative-direction stage (one fewer model call)
   --provider <name>  AI provider: freellmapi, mock (default: auto-detected)
   --model <id>       Model ID override
 
@@ -126,10 +129,11 @@ Examples:
   // The shared planner decides the route first: a brief that suits a plain composition is produced there, and only a
   // bespoke motion-graphics brief goes to the React loop. `--no-plan` keeps the React loop as before.
   // Note: If --url is provided, always route to the React agent to leverage bespoke brand tokens & components.
+  let plan: Awaited<ReturnType<typeof planBuild>>;
   if (!args.noPlan && !args.url && args.brief) {
     try {
       const canvas = { width: format === 'reel' ? 1080 : 1920, height: format === 'reel' ? 1920 : 1080 };
-      const plan = await planBuild(provider, {
+      plan = await planBuild(provider, {
         brief: args.brief, ...canvas, fps, durationSeconds: duration,
         kind: format === 'reel' ? 'social reel' : 'landscape motion-graphics video', registry: await cliRegistry(), paths: ['json', 'react'], allowReact: true, maxAttempts: 2,
         onProgress: message => console.log(message),
@@ -148,40 +152,10 @@ Examples:
       format,
       durationSeconds: duration,
       fps,
+      plan,
+      direction: args.noDirection ? false : undefined,
       onProgress: msg => console.log(msg),
-      visualCheck: async (_videoPath, compositionPath) => {
-        // Gracefully handle missing composition file (before first successful build)
-        let raw: string;
-        try {
-          raw = await readFile(compositionPath, 'utf8');
-        } catch {
-          return { passed: true, report: '' };
-        }
-        const composition = loadComposition(JSON.parse(raw));
-        const totalFrames = composition.durationFrames;
-
-        // Render 3 still frames at 20%, 50%, 80% of duration
-        const checkFrames = [0.2, 0.5, 0.8].map(pct => Math.min(totalFrames - 1, Math.round(pct * totalFrames)));
-        for (const frame of checkFrames) {
-          try {
-            await renderStill(composition, { frame, baseDir: targetDir, allowCode: true });
-          } catch {
-            // If still rendering fails, skip — the build may have issues handled by compile check
-          }
-        }
-
-        // Run the full review
-        const review = await reviewComposition(composition, { baseDir: targetDir, allowCode: true, audio: false });
-
-        // Fail on any error-severity issues
-        const errors = review.issues.filter(i => i.severity === 'error');
-        if (errors.length === 0) {
-          return { passed: true, report: '', sheet: review.sheet };
-        }
-
-        const report = errors.map(i => `${i.code}: ${i.message}`).join('\n');
-        return { passed: false, report, sheet: review.sheet };
-      },
+      visualCheck: reactVisualCheck(targetDir),
     },
     buildReact
   );
@@ -190,6 +164,7 @@ Examples:
   console.log(`   Component:   ${result.videoPath}`);
   console.log(`   Composition: ${result.compositionPath}`);
   console.log(`   Bundle:      ${result.bundlePath}`);
+  if (result.directionPath) console.log(`   Direction:   ${result.directionPath}`);
 
   if (shouldRender) {
     console.log(`\n🎥 Rendering video with headless Chromium engine…`);

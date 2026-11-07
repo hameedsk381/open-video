@@ -2,6 +2,8 @@
 // errors back, repeat. Optional review rounds use the same renderer/design checks as `ove review`, so the model is
 // corrected against what the video actually looks like rather than only against the schema.
 import { describeError, loadComposition, reviewComposition, type Composition, type ReviewIssue } from '@ove/core';
+import type { VideoContent } from '@ove/schema';
+import type { ProvidedSource } from './content';
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
@@ -25,6 +27,13 @@ export type ComposeOptions = PromptOptions & {
   strict?: boolean;
   /** How the composition is generated: one big call, or a style contract plus one small call per scene (OVE_COMPOSE_STRATEGY=scenes). */
   strategy?: 'single' | 'scenes';
+  /** The fixed script. Its beats and figures must appear on screen unchanged; the composition carries the block. */
+  content?: VideoContent | false;
+  /** Files, datasets and text the content writer may ground the script in (not used when `content` is supplied). */
+  sources?: ProvidedSource[];
+  /** Let the content writer read public pages for supporting facts (default true). */
+  research?: boolean;
+  language?: string;
   baseDir?: string;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
@@ -217,6 +226,7 @@ async function acceptComposition(rawInput: unknown, options: ComposeOptions, ext
   const current = rawInput;
   const notes: string[] = [];
   const raw = normalize(structuredClone(current), options, notes);
+  if (options.content) raw.content = structuredClone(options.content);
   const composition = loadComposition(raw);
   const problems = inspect(composition, raw, options);
   const repaired = [...extraNotes, ...notes];
@@ -263,6 +273,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
       }
     } catch { /* planning failed; write the composition without a plan */ }
   }
+  if (motionPlan && options.content && !motionPlan.content) motionPlan = { ...motionPlan, content: options.content };
   const composeOptions = motionPlan ? { ...options, motionPlan } : options;
   // Scene-scoped strategy: a style contract plus one small call per scene, deterministic timing, targeted scene heal.
   // Opt-in with strategy: 'scenes' or OVE_COMPOSE_STRATEGY=scenes; freellmapi uses scenes for fast multi-scene speed.
@@ -277,6 +288,7 @@ export async function composeVideo(provider: AiProvider, options: ComposeOptions
       durationSeconds: composeOptions.durationSeconds,
       assets: composeOptions.assets,
       look: motionPlan?.look,
+      content: composeOptions.content || undefined,
       signal: options.signal,
       onProgress: options.onProgress,
     };

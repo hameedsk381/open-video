@@ -7,7 +7,7 @@
 // throws, and the caller falls back to the proven single-call path — so the mock provider and offline runs keep
 // working untouched.
 import { safeZoneBands } from '@ove/core';
-import { layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook } from '@ove/schema';
+import { layoutStyles, motionPresets, textureTypes, transitionStyles, type ContentDatum, type DesignLook, type VideoContent } from '@ove/schema';
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionPlan } from './prompt';
@@ -31,7 +31,7 @@ export type StyleContract = {
   texture?: { type: string; color: string; opacity: number; scale: number };
 };
 
-export type ScenesBeat = { name: string; onScreen?: string; motion?: string; seconds?: number };
+export type ScenesBeat = { name: string; onScreen?: string; motion?: string; seconds?: number; narration?: string; data?: ContentDatum[]; id?: string };
 
 export type ScenesPlan = {
   beats: ScenesBeat[];
@@ -54,6 +54,8 @@ export type ScenesOptions = {
   assets?: { id: string; src: string; type: string }[];
   /** The planner's art direction: palette, fonts, texture, motion, transition, layout and density. */
   look?: DesignLook;
+  /** The fixed script: its beats replace whatever the contract call invents, and their copy is final. */
+  content?: VideoContent;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
 };
@@ -251,7 +253,7 @@ House rules:
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.
 - Decoration (rect/circle) stays subtle: opacity at most 0.35, behind the text.` },
-    { role: 'user', content: `Scene ${index + 1} of ${total} — "${beat.name}"${beat.onScreen ? `: ${beat.onScreen}` : ''}.
+    { role: 'user', content: `Scene ${index + 1} of ${total} — "${beat.name}"${beat.onScreen ? `: ${beat.onScreen}` : ''}.${beat.data?.length ? `\nFigures to show exactly as written (change no number, add none): ${beat.data.map(datum => `${datum.label}: ${datum.value}${datum.unit ? ` ${datum.unit}` : ''}${datum.period ? ` (${datum.period})` : ''}`).join('; ')}.` : ''}${beat.narration ? `\nThe spoken line (do not put it on screen): ${beat.narration}` : ''}
 Motion: ${beat.motion ?? contract.moves[index] ?? 'a clean entrance'}. Scene length: ${frames} frames (~${(frames / options.fps).toFixed(1)} s).${assets.length ? `\nAvailable image assets (use src verbatim): ${assets.map(asset => asset.src).join(' | ')}` : ''}${previous ? `\nThe previous scene ends on: ${previous}. Do not repeat it; continue the story.` : 'This is the opening scene: land the hook fast.'}
 Design this scene. Reply ONLY the scene JSON.` },
   ];
@@ -488,6 +490,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
   const stitched = scenes.map((scene, i) => ({
     id: `scene-${i + 1}`,
     name: plan.beats[i]?.name ?? `Scene ${i + 1}`,
+    ...(options.content?.beats[i] ? { beat: options.content.beats[i]!.id } : {}),
     startFrame: ranges[i]!.start,
     durationFrames: plan.durations[i]!,
     ...(i > 0 ? { transitionIn: { type: plan.contract.transition, durationFrames: overlaps[i] } } : {}),
@@ -505,6 +508,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     durationFrames: ranges[ranges.length - 1]!.end,
     background: plan.contract.background,
     ...(plan.contract.texture ? { texture: plan.contract.texture } : {}),
+    ...(options.content ? { content: structuredClone(options.content) } : {}),
     scenes: stitched,
   };
 }
@@ -524,7 +528,9 @@ export async function composeByScenes(provider: AiProvider, options: ScenesOptio
     }
   }
   if (contractRaw === undefined) throw new Error(`the style contract call failed twice: ${lastError}`);
-  const beats = parseBeats(contractRaw.beats);
+  const beats: ScenesBeat[] = options.content
+    ? options.content.beats.map(beat => ({ id: beat.id, name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion, narration: beat.narration, data: beat.data }))
+    : parseBeats(contractRaw.beats);
   if (!beats.length) throw new Error('the style contract had no usable beats');
   const contract = parseContract(contractRaw, options.look ?? motionPlan?.look);
   const durations = sceneDurations(beats, options.durationSeconds, options.fps);

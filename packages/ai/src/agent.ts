@@ -1,8 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { safeZoneBands } from '@ove/core';
+import { loadComposition, safeZoneBands, type Composition } from '@ove/core';
+import type { VideoContent } from '@ove/schema';
 import type { AiProvider, ChatMessage } from './providers';
 import { distillBrandPack, scrapeWebsiteBrand } from './brand-scraper';
+import { directionSection, writeDirection, type CreativeDirection, type DirectionBeat, type DirectionPlanInput } from './direction';
 
 export type VideoFormat = 'reel' | 'landscape';
 
@@ -28,6 +30,15 @@ export type AgentOptions = {
   onProgress?: (message: string) => void;
   signal?: AbortSignal;
   brand?: BrandPack;
+  /** The written script: its beats fix the structure and its copy is what the video says. */
+  content?: VideoContent;
+  /** An explicit canvas (a square or 4:5 project, say) instead of the reel/landscape default. */
+  width?: number;
+  height?: number;
+  /** A decided direction to follow, or `false` to skip the direction stage (it costs one model call). */
+  direction?: boolean | CreativeDirection;
+  /** The planner's first pass, when it ran: the direction stage refines it instead of inventing a second one. */
+  plan?: DirectionPlanInput;
   visualCheck?: (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
 };
 
@@ -38,8 +49,12 @@ export type AgentResult = {
   bundlePath: string;
   mp4Path?: string;
   previewPath?: string;
+  directionPath?: string;
+  direction?: CreativeDirection;
   attempts: number;
   code: string;
+  /** The composition the last successful build wrote, with the script attached when one was supplied. */
+  composition?: Composition;
 };
 
 /**
@@ -75,81 +90,62 @@ function brandPromptSection(brand: BrandPack): string {
   return lines.join('\n');
 }
 
-const agentSystemPrompt = (format: VideoFormat, width: number, height: number, durationFrames: number, fps: number, reelSafeZone?: boolean, brand?: BrandPack) => {
+/** The written script as prompt text: the beats the video must carry, with the figures each one is allowed to show. */
+function scriptSection(content: VideoContent): string {
+  const beats = content.beats.map(beat => {
+    const figures = beat.data.length ? `; figures: ${beat.data.map(datum => `${datum.label} ${datum.value}${datum.unit ? ` ${datum.unit}` : ''}${datum.period ? ` (${datum.period})` : ''}`).join(', ')}` : '';
+    return `- ${beat.name}${beat.seconds ? ` (${beat.seconds} s)` : ''}: on screen "${beat.onScreen}"${beat.narration ? `; spoken "${beat.narration}"` : ''}${figures}`;
+  });
+  return `\n## Script\nThis video's copy is fixed. Set these beats, in this order, with this timing and this wording: do not rewrite the on-screen lines, do not paraphrase the spoken narration, and never invent a figure, date, name or claim.\n${beats.join('\n')}\n`;
+}
+
+const agentSystemPrompt = (format: VideoFormat, width: number, height: number, durationFrames: number, fps: number, reelSafeZone?: boolean, brand?: BrandPack, direction?: CreativeDirection, content?: VideoContent) => {
   // The same insets the design review measures against, rather than percentages retyped here.
   const reelBands = reelSafeZone ? safeZoneBands(width, height) : [];
   const reelNote = reelBands.length
-    ? `\n## Safe Zone Rules (REQUIRED for Vertical Reel)\nYou MUST respect these areas the platform's own UI covers:\n${reelBands.map(band => `- ${band.name}: ${band.hint}`).join('\n')}\nYou MUST use BentoGrid, KineticText, GlassCard, and AmbientGlow in this composition.\n`
+    ? `\n## Safe zones (the platform's own UI covers these)\n${reelBands.map(band => `- ${band.name}: ${band.hint}`).join('\n')}\nKeep titles, captions and calls to action out of them. This constrains layout, not the visual language.\n`
     : '';
   const brandNote = brand ? brandPromptSection(brand) : '';
+  const directionNote = direction
+    ? `\n## Creative direction\n${directionSection(direction)}\nRealize this direction. Where a specific detail cannot be built in this runtime, keep the concept and choose the closest buildable technique.\n`
+    : '';
+  const scriptNote = content ? scriptSection(content) : '';
 
-  return `You are the lead Motion Graphics Director and React Animation Engineer for MotionRender.
-Your task is to write a complete, standalone, production-ready React video component file (\`video.tsx\`) based on the user's brief.
-${reelNote}
-You MUST follow these strict technical and design rules:
-1. Framework: Use \`@ove/react\` (also importable as \`motionrender/react\`).
-   Available exports:
-   - Primitives: \`AbsoluteFill\`, \`Sequence\`, \`Series\`, \`useCurrentFrame\`, \`useVideoConfig\`, \`interpolate\`, \`spring\`
-   - Motion Helpers: \`springValue({ frame, fps, delay, preset, from, to })\`, \`stagger(index, framesPerItem, startDelay)\`
-     (Presets: 'bouncy', 'snappy', 'smooth', 'wobbly', 'gentle')
-   - High-End Visual Components:
-     - \`<AmbientGlow orbs={[...]} blur={100} />\` (always include for dynamic atmospheric background lighting)
-     - \`<GlassCard delay={n} preset="snappy" style={{...}}>{children}</GlassCard>\` (frosted glass surface with blur and border highlight)
-     - \`<KineticText text="..." delay={n} staggerDelay={3} preset="bouncy" />\` (staggered word-by-word spring entrance)
-     - \`<NumberTicker value={100} decimals={0} prefix="$" suffix="/mo" delay={n} />\` (animated metric counter)
-     - \`<Badge dotColor="#38bdf8" delay={n}>{children}</Badge>\` (SaaS status pill)
-     - \`<DeviceFrame url="example.com" delay={n} style={{...}}>{children}</DeviceFrame>\` (macOS browser window frame)
-     - \`<ProgressBar value={0.85} color="#38bdf8" delay={n} />\` (glowing progress bar)
-     - \`<Audio src="sfx:whoosh" volume={0.6} />\` (supported sound effects: sfx:whoosh, sfx:pop, sfx:ding, sfx:click, sfx:thump, sfx:tick)
-     - \`<BentoGrid columns={3} gap={20}>{children}</BentoGrid>\` (responsive grid container for modular layouts)
-     - \`<BentoCard colSpan={2} title="..." badge="..." delay={n}>{children}</BentoCard>\` (glassmorphic bento card with spring reveal)
-     - \`<Typewriter text="..." delay={n} speed={0.75} cursor={true} />\` (animated typewriter effect with blinking cursor)
-     - \`<Waveform bars={24} height={50} color="#6366f1" delay={n} />\` (animated audio waveform visualizer)
-     - \`<CodeEditor filename="main.ts" code={...} highlightLines={[1,3]} delay={n} />\` (developer code terminal card)
+  return `You are a motion designer and creative developer. You own how this video's idea becomes pixels: composition, type, colour, motion, sound and pacing.
+${directionNote}${scriptNote}
+Write one complete, standalone, production-ready React video component file (\`video.tsx\`) that realizes the brief.
 
-2. Composition Specification:
-   - Width: ${width}
-   - Height: ${height} (${format === 'reel' ? '9:16 Vertical Reel' : '16:9 Landscape'})
-   - FPS: ${fps}
-   - Total Duration in Frames: ${durationFrames} (${Math.round(durationFrames / fps)} seconds)
+## Technical contract
+1. Runtime: \`@ove/react\` (also importable as \`motionrender/react\`). Every frame is rendered on its own and must be reproducible, so all motion is a pure function of the frame.
+   - Primitives: \`AbsoluteFill\`, \`Sequence\`, \`Series\`, \`useCurrentFrame\`, \`useVideoConfig\`, \`interpolate\`, \`spring\`, \`Easing\`, \`random\`, \`delayRender\`, \`continueRender\`, \`Audio\`, \`Img\`, \`staticFile\`.
+   - Never animate with CSS transitions or keyframes, \`requestAnimationFrame\`, \`setTimeout\` or \`Date.now()\`; drive every value from the frame.
+   - Do not fetch anything at render time.
+2. Canvas: ${width}x${height} (${format === 'reel' ? '9:16 vertical' : '16:9 landscape'}), ${fps} fps, ${durationFrames} frames (${(durationFrames / fps).toFixed(1)} s).
+3. File shape:
+   - Export \`config\` with \`id\`, \`name\`, \`width\`, \`height\`, \`fps\`, \`durationInFrames\`, and the strings and numbers the video needs in \`props\`.
+   - Default-export the component, reading the frame with \`useCurrentFrame()\` and the canvas with \`useVideoConfig()\`.
 
-3. File Architecture:
-   - MUST export \`config\`:
-     \`\`\`tsx
-     export const config = {
-       id: 'my-video',
-       name: 'Video Title',
-       width: ${width},
-       height: ${height},
-       fps: ${fps},
-       durationInFrames: ${durationFrames},
-       background: '#070a12',
-       props: {
-         // all custom strings, numbers, and labels
-       }
-     };
-     \`\`\`
-   - MUST default export the React component:
-     \`\`\`tsx
-     export default function Video(props: typeof config.props) {
-       const frame = useCurrentFrame();
-       const { fps, width, height } = useVideoConfig();
-       // return JSX
-     }
-     \`\`\`
+4. Toolkit — optional resources, not a recipe. Use a component only when it makes ${direction ? 'this direction' : 'this video'} better, and write your own components or effects whenever that is the truer build.
+   - Motion helpers: \`springValue({ frame, fps, delay, preset, from, to })\` and \`stagger(index, framesPerItem, startDelay)\` (presets: 'bouncy', 'snappy', 'smooth', 'wobbly', 'gentle').
+   - \`<KineticText text="..." delay={n} staggerDelay={3} preset="bouncy" />\` word-by-word entrance.
+   - \`<AmbientGlow orbs={[...]} blur={100} />\` atmospheric colour fields.
+   - \`<GlassCard delay={n} preset="snappy">…</GlassCard>\` frosted surface with a border highlight.
+   - \`<NumberTicker value={100} decimals={0} prefix="$" suffix="/mo" delay={n} />\` animated figure.
+   - \`<Badge dotColor="#38bdf8" delay={n}>…</Badge>\` status pill.
+   - \`<DeviceFrame url="example.com" delay={n}>…</DeviceFrame>\` browser or device frame.
+   - \`<ProgressBar value={0.85} color="#38bdf8" delay={n} />\`, \`<BentoGrid>\` / \`<BentoCard>\`, \`<Typewriter>\`, \`<Waveform>\`, \`<CodeEditor>\`.
+   - Sound through \`<Audio src="sfx:whoosh" volume={0.6} />\`: sfx:whoosh, sfx:pop, sfx:ding, sfx:click, sfx:thump, sfx:tick. Sound is optional.
 
-4. Design & Motion Quality (The Viral Claude Standard):
-   - Multi-scene structure: split the ${durationFrames} frames into 3 distinct scenes using \`<Sequence from={start} durationInFrames={len}>\`.
-   - Scene 1 (Hook): Eye-catching \`<Badge>\`, massive \`<KineticText>\` headline, and \`<Audio src="sfx:whoosh" />\`.
-   - Scene 2 (Value / Bento): Bento layout with \`<GlassCard>\`, animated metric \`<NumberTicker>\`, and \`<Audio src="sfx:pop" />\`.
-   - Scene 3 (CTA / Showcase): \`<DeviceFrame>\` with product showcase, call-to-action button, and \`<Audio src="sfx:ding" />\`.
-   - Continuous Camera Movement: Wrap the entire contents in subtle drift:
-     \`transform: \\\`scale(\${(1.0 + (frame / ${durationFrames}) * 0.04).toFixed(4)})\\\`\`
-   - Layout: Use Flexbox/Grid with \`AbsoluteFill\` (e.g. \`display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'\`). Never use fragile absolute pixel offsets.
-
-5. Output Format:
+5. Design authorship:
+   - The direction decides the number of scenes, their structure, transitions, camera and sound. There is no required three-act shape, no required hook/value/CTA sequence and no required camera move.
+   - Do not reach for a house style. Glass cards, bento grids, neon glow, floating dark gradients and a slow continuous zoom are not defaults; use one only if the direction calls for it.
+   - Type is designed, not defaulted: set size, weight, tracking, line length and alignment deliberately, and let the type carry meaning where it can.
+   - Keep the video recognisably one piece: one palette, one type system, one motion language, even as scenes change.
+   - A scene must earn its place. If it shows nothing but decoration, cut it or make it say something.
+${reelNote}${brandNote}
+## Output format
    - Output ONLY the clean TypeScript React source code.
-   - Do NOT wrap in conversational filler. Fenced code blocks (\`\`\`tsx ... \`\`\`) are accepted.${brandNote}`;
+   - Do NOT wrap it in conversational filler. Fenced code blocks (\`\`\`tsx ... \`\`\`) are accepted.`;
 };
 
 function extractCode(text: string): string {
@@ -209,10 +205,10 @@ export async function runVideoAgent(
 
   // Determine format: explicit > auto-detect from brief > default landscape
   const format: VideoFormat = options.format ?? (detectReelFormat(activeBrief) ? 'reel' : 'landscape');
-  // The platform bands come from the shape of the video, not from how the shape was chosen.
-  const reelSafeZone = format === 'reel';
-  const width = format === 'reel' ? 1080 : 1920;
-  const height = format === 'reel' ? 1920 : 1080;
+  const width = options.width ?? (format === 'reel' ? 1080 : 1920);
+  const height = options.height ?? (format === 'reel' ? 1920 : 1080);
+  // Platform bands belong to a portrait social video, not to every portrait canvas (a 4:5 feed video has no reel UI).
+  const reelSafeZone = format === 'reel' && height / width > 1.5;
   const fps = options.fps ?? 30;
   const durationSeconds = options.durationSeconds ?? 6;
   const durationFrames = Math.max(30, Math.round(durationSeconds * fps));
@@ -221,16 +217,41 @@ export async function runVideoAgent(
   options.onProgress?.(`🎬 Video Director Agent initializing in ${dir}…`);
   await mkdir(dir, { recursive: true });
 
+  // Decide the creative direction before any code: the brief alone leaves every visually different video looking the
+  // same. A stage failure never blocks the build — the agent still writes the video, just without a fixed direction.
+  let direction: CreativeDirection | undefined = typeof options.direction === 'object' ? options.direction : undefined;
+  if (options.direction !== false && !direction) {
+    const written = await writeDirection(provider, {
+      brief: activeBrief, width, height, fps, durationSeconds,
+      brand: activeBrand, plan: options.plan, signal: options.signal, onProgress: options.onProgress,
+    });
+    direction = written.direction;
+    if (!direction) options.onProgress?.(`⚠️ No fixed direction: ${written.problems[0] ?? 'the model did not answer in direction form'}. Designing from the brief alone.`);
+  }
+  // A written script owns the beats: the direction styles them instead of choosing its own structure.
+  if (direction && options.content) {
+    const each = durationSeconds / options.content.beats.length;
+    const structure: DirectionBeat[] = options.content.beats.map(beat => ({ name: beat.name, seconds: beat.seconds ?? Math.round(each * 10) / 10, idea: beat.onScreen }));
+    direction = { ...direction, structure };
+  }
+  let directionPath: string | undefined;
+  if (direction) {
+    directionPath = join(dir, 'direction.json');
+    await writeFile(directionPath, JSON.stringify(direction, null, 2) + '\n', 'utf8');
+    options.onProgress?.(`🎨 Direction: ${direction.concept}`);
+  }
+
   const messages: ChatMessage[] = [
-    { role: 'system', content: agentSystemPrompt(format, width, height, durationFrames, fps, reelSafeZone, activeBrand) },
+    { role: 'system', content: agentSystemPrompt(format, width, height, durationFrames, fps, reelSafeZone, activeBrand, direction, options.content) },
     {
       role: 'user',
-      content: `Create a broadcast-quality ${format === 'reel' ? '9:16 vertical reel' : '16:9 landscape'} video for this brief:\n"${activeBrief}"\n\nMake it visually stunning, cinematic, and punchy. Write the complete video.tsx file now.`
+      content: `Brief: "${activeBrief}"\n\n${direction ? 'Build the video the direction describes.' : 'Design the video this brief calls for.'}${options.content ? ' Its copy is the script above: use it as written.' : ''} Write the complete video.tsx file now.`
     }
   ];
 
   let videoCode = '';
   let attempts = 0;
+  let composition: Composition | undefined;
   let currentTask: import('./providers').ChatTask = 'compose';
   const maxAttempts = 3;
   const videoPath = join(dir, 'video.tsx');
@@ -259,6 +280,15 @@ export async function runVideoAgent(
     try {
       await buildHelper(videoPath, compositionPath);
       options.onProgress?.(`✅ Video code compiled and bundled successfully!`);
+      // The composition file is the project's deliverable, so the script travels in it like it does on every other route.
+      // A build helper that writes no composition is not a build failure: it just leaves the video without one here.
+      let raw: Record<string, any> | undefined;
+      try { raw = JSON.parse(await readFile(compositionPath, 'utf8')); } catch { raw = undefined; }
+      if (raw && options.content) {
+        raw = { ...raw, content: options.content };
+        await writeFile(compositionPath, JSON.stringify(raw, null, 2) + '\n', 'utf8');
+      }
+      if (raw) composition = loadComposition(raw);
 
       // Visual self-healing: check the rendered output for design issues
       if (options.visualCheck) {
@@ -330,8 +360,11 @@ export async function runVideoAgent(
     videoPath,
     compositionPath,
     bundlePath,
+    directionPath,
+    direction,
     attempts,
     code: videoCode,
+    composition,
   };
 }
 

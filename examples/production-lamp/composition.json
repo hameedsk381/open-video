@@ -1,0 +1,382 @@
+{
+  "version": "1.0",
+  "id": "lumen-one",
+  "name": "Lumen One — Late Nights",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 300,
+  "variables": {},
+  "components": {},
+  "assets": [
+    {
+      "id": "desk-still",
+      "type": "image",
+      "src": "./assets/desk-still.png",
+      "metadata": {}
+    },
+    {
+      "id": "detail-still",
+      "type": "image",
+      "src": "./assets/detail-still.png",
+      "metadata": {}
+    },
+    {
+      "id": "hero-still",
+      "type": "image",
+      "src": "./assets/hero-still.png",
+      "metadata": {}
+    },
+    {
+      "id": "bed",
+      "type": "audio",
+      "src": "./assets/bed.wav",
+      "metadata": {}
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Late desk",
+      "startFrame": 0,
+      "durationFrames": 90,
+      "metadata": {
+        "sceneId": "night-desk",
+        "action": "A pool of warm light holds the lamp at the end of an empty desk.",
+        "emotion": "quiet",
+        "camera": {
+          "shotSize": "wide",
+          "angle": "eye-level",
+          "movement": "push-in"
+        },
+        "characterIds": [
+          "mara"
+        ],
+        "environmentId": "desk",
+        "propIds": [],
+        "generation": {
+          "provider": "local",
+          "model": "still",
+          "prompt": "Wide, low-key photo of a dark studio desk lit only by a warm desk lamp at the far end.",
+          "status": "completed",
+          "assetId": "desk-still",
+          "referenceAssets": []
+        }
+      },
+      "beat": "hook",
+      "layers": [
+        {
+          "id": "s1-media",
+          "type": "image",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 90,
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "src": "desk-still",
+          "objectFit": "cover",
+          "radius": 0
+        },
+        {
+          "id": "s1-copy",
+          "type": "text",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 90,
+          "x": 153.6,
+          "y": 669.6,
+          "width": 1228.8,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "content": "Built for late nights.",
+          "fontSize": 54,
+          "fontFamily": "Fraunces",
+          "fontWeight": 600,
+          "fontStyle": "normal",
+          "letterSpacing": 0,
+          "lineHeight": 1.1,
+          "color": "#f3efe6",
+          "strokeWidth": 1,
+          "lineCap": "butt",
+          "lineJoin": "round",
+          "textAlign": "left",
+          "maxWidth": 1228.8
+        }
+      ],
+      "assetIds": [
+        "desk-still"
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "Warm light",
+      "startFrame": 90,
+      "durationFrames": 120,
+      "metadata": {
+        "sceneId": "detail",
+        "action": "The lamp head turns; the glow stays on the page and never reaches the eyes.",
+        "emotion": "relief",
+        "camera": {
+          "shotSize": "close-up",
+          "angle": "high-angle",
+          "movement": "slow-pan"
+        },
+        "characterIds": [],
+        "environmentId": "desk",
+        "propIds": [
+          "lamp"
+        ],
+        "generation": {
+          "provider": "local",
+          "model": "still",
+          "prompt": "Close-up of a matte-black lamp head throwing warm light onto an open notebook.",
+          "status": "completed",
+          "assetId": "detail-still",
+          "referenceAssets": []
+        }
+      },
+      "beat": "feature",
+      "transitionIn": {
+        "type": "fade",
+        "durationFrames": 12,
+        "direction": "left",
+        "color": "#000000",
+        "easing": "easeInOut"
+      },
+      "layers": [
+        {
+          "id": "s2-media",
+          "type": "image",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 120,
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "src": "detail-still",
+          "objectFit": "cover",
+          "radius": 0
+        },
+        {
+          "id": "s2-copy",
+          "type": "text",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 120,
+          "x": 153.6,
+          "y": 669.6,
+          "width": 1228.8,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "content": "Warm light. No glare.",
+          "fontSize": 54,
+          "fontFamily": "Fraunces",
+          "fontWeight": 600,
+          "fontStyle": "normal",
+          "letterSpacing": 0,
+          "lineHeight": 1.1,
+          "color": "#f3efe6",
+          "strokeWidth": 1,
+          "lineCap": "butt",
+          "lineJoin": "round",
+          "textAlign": "left",
+          "maxWidth": 1228.8
+        }
+      ],
+      "assetIds": [
+        "detail-still"
+      ]
+    },
+    {
+      "id": "s3",
+      "name": "Lumen One",
+      "startFrame": 210,
+      "durationFrames": 90,
+      "metadata": {
+        "sceneId": "hero",
+        "action": "Hero shot: the lamp holds in the warm darkness as the wordmark lands.",
+        "emotion": "confidence",
+        "camera": {
+          "shotSize": "medium",
+          "angle": "low-angle",
+          "movement": "static"
+        },
+        "characterIds": [],
+        "propIds": [
+          "lamp"
+        ],
+        "generation": {
+          "provider": "local",
+          "model": "still",
+          "prompt": "Hero product shot of a matte-black desk lamp in warm amber darkness.",
+          "status": "completed",
+          "assetId": "hero-still",
+          "referenceAssets": []
+        }
+      },
+      "beat": "cta",
+      "transitionIn": {
+        "type": "fade",
+        "durationFrames": 12,
+        "direction": "left",
+        "color": "#000000",
+        "easing": "easeInOut"
+      },
+      "layers": [
+        {
+          "id": "s3-media",
+          "type": "image",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 90,
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "src": "hero-still",
+          "objectFit": "cover",
+          "radius": 0
+        },
+        {
+          "id": "s3-copy",
+          "type": "text",
+          "blur": 0,
+          "blendMode": "normal",
+          "startFrame": 0,
+          "endFrame": 90,
+          "x": 153.6,
+          "y": 669.6,
+          "width": 1228.8,
+          "opacity": 1,
+          "rotation": 0,
+          "scale": 1,
+          "originX": 0,
+          "originY": 0,
+          "zIndex": 0,
+          "visible": true,
+          "fixed": false,
+          "animations": [],
+          "content": "Lumen One — $129",
+          "fontSize": 54,
+          "fontFamily": "Fraunces",
+          "fontWeight": 600,
+          "fontStyle": "normal",
+          "letterSpacing": 0,
+          "lineHeight": 1.1,
+          "color": "#f3efe6",
+          "strokeWidth": 1,
+          "lineCap": "butt",
+          "lineJoin": "round",
+          "textAlign": "left",
+          "maxWidth": 1228.8
+        }
+      ],
+      "assetIds": [
+        "hero-still"
+      ]
+    }
+  ],
+  "background": "#0b0c10",
+  "content": {
+    "audience": "Designers and makers who work after dark",
+    "promise": "A lamp for the hours when the work matters most.",
+    "cta": "See Lumen One in the link below.",
+    "sources": [],
+    "beats": [
+      {
+        "id": "hook",
+        "name": "The hour",
+        "narration": "Some of the best work happens after dark.",
+        "onScreen": "Built for late nights.",
+        "data": [],
+        "sourceIds": []
+      },
+      {
+        "id": "feature",
+        "name": "The light",
+        "narration": "Lumen One keeps the glow on the page, not in your eyes.",
+        "onScreen": "Warm light. No glare.",
+        "data": [],
+        "sourceIds": []
+      },
+      {
+        "id": "cta",
+        "name": "The ask",
+        "narration": "Lumen One. Light that stays out of the way.",
+        "onScreen": "Lumen One — $129",
+        "data": [],
+        "sourceIds": []
+      }
+    ]
+  },
+  "texture": {
+    "type": "paper",
+    "color": "#f3efe6",
+    "opacity": 0.06,
+    "scale": 48
+  },
+  "grain": 0.04,
+  "export": {
+    "format": "mp4",
+    "codec": "h264",
+    "transparent": false,
+    "audio": "bed",
+    "audioVolume": 0.22,
+    "duck": {
+      "amount": 0.3,
+      "attackFrames": 6,
+      "releaseFrames": 15
+    },
+    "loudness": -16,
+    "scale": 1
+  }
+}

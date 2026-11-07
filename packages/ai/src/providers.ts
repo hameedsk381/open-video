@@ -551,6 +551,41 @@ export class MockProvider implements AiProvider {
         } catch { /* fallback to standard mock */ }
       }
     }
+    if (prompt.includes('You find public sources for short videos')) return JSON.stringify({ urls: [] });
+    if (prompt.includes('You are the creative director for this video.')) {
+      // The mock cannot judge a brief, so it returns a plain, honest direction rather than imitating a house style.
+      const seconds = Math.max(2, Number(/at \d+ fps, (\d+) s\./.exec(prompt)?.[1] ?? 6));
+      const a = Math.round(seconds * 0.3 * 10) / 10, b = Math.round(seconds * 0.45 * 10) / 10;
+      return JSON.stringify({
+        concept: 'A deliberately plain motion piece that lets the frame do the talking',
+        art: 'Flat graphic field, one strong colour, generous negative space, a single moving element at a time',
+        type: { display: 'Space Grotesk', body: 'Inter', treatment: 'Large display lines set tight; body copy small and quiet' },
+        palette: { bg: '#0b1020', text: '#f5f7fb', accent: '#22d3ee', accent2: '#a78bfa' },
+        motion: 'Word-by-word rise, one slow lateral drift, cuts on the beat',
+        sound: 'silent',
+        structure: [
+          { name: 'Hook', seconds: a, idea: 'A single line of type lands in an empty field' },
+          { name: 'Turn', seconds: b, idea: 'The line breaks apart and reassembles around a figure' },
+          { name: 'Hold', seconds: Math.max(1, Math.round((seconds - a - b) * 10) / 10), idea: 'Everything settles and holds' },
+        ],
+        avoid: ['glass cards', 'bento grids', 'neon glow'],
+      });
+    }
+    if (prompt.includes('You are the script editor for a')) {
+      // The mock cannot read pages or quote evidence, so it writes a plain script with no claims to ground.
+      const found = /Target length: (\d+) seconds/.exec(prompt);
+      const seconds = Math.max(2, Number(found?.[1] ?? 6));
+      const count = seconds < 8 ? 1 : 3;
+      const lines = ['Here is the idea.', 'It is made of motion, not slides.', 'Hold the idea.'];
+      return JSON.stringify({
+        audience: 'viewers', promise: 'a quick look at MotionRender', cta: 'make your own',
+        sources: [],
+        beats: Array.from({ length: count }, (_, i) => ({
+          id: `beat-${i + 1}`, name: ['Hook', 'Point', 'Payoff'][i]!, seconds: Math.max(2, Math.round(seconds / count)),
+          narration: lines[i]!, onScreen: ['Mock video', 'Designed motion', 'Hold the idea'][i]!,
+        })),
+      });
+    }
     if (/You plan motion-graphics videos/.test(prompt) || /Return the motion plan JSON now/.test(prompt)) {
       const duration = numberFromPrompt(prompt, 'DURATION_SECONDS', 20);
       const a = Math.max(2, Math.round(duration * 0.22)), b = Math.max(3, Math.round(duration * 0.46)), c = Math.max(2, duration - a - b);

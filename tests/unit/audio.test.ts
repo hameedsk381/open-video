@@ -13,7 +13,7 @@ it('builds a trimmed, timed, faded chain per clip and sums them unnormalised',()
   expect(args.slice(0,6)).toEqual(['-stream_loop','-1','-i','a.wav','-i','b.wav']);const graph=args[args.indexOf('-filter_complex')+1]!;
   expect(graph).toContain('[2:a]atrim=start=1.000000,asetpts=PTS-STARTPTS,atempo=0.5,atempo=0.5,atrim=duration=3.000000');
   expect(graph).toContain('volume=0.5,afade=t=in:d=1.000000,afade=t=out:st=0.000000:d=3.000000,adelay=delays=96000S:all=1[a1]');
-  expect(graph).toContain('[a0][a1]amix=inputs=2:duration=longest:normalize=0,apad,atrim=start=0.000000:duration=10.000000,asetpts=PTS-STARTPTS[aout]');expect(args).toEqual(expect.arrayContaining(['-map','0:v','[aout]']));});
+  expect(graph).toContain('[a0][a1]amix=inputs=2:duration=longest:normalize=0,apad=whole_dur=10.000000,atrim=start=0.000000:duration=10.000000,asetpts=PTS-STARTPTS[aout]');expect(args).toEqual(expect.arrayContaining(['-map','0:v','[aout]']));});
 });
 describe('planAudio',()=>{
 it('converts frames to seconds, puts the soundtrack first and skips videos without sound',async()=>{const dir=await mkdtemp(join(tmpdir(),'ove-audio-'));try{for(const f of ['music.wav','clip.mp4','quiet.mp4'])await writeFile(join(dir,f),'');

@@ -27,6 +27,10 @@ Commands:
     (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
   mr inspect <composition.json> [variables]          scenes, timing and measured media
   mr captions <composition.json> [--output captions.srt|.vtt] [variables]   export the captions as a subtitle file
+  mr script <composition.json> [--output script.md|script.json] [--json]   print the script, its figures and their sources
+  mr script <composition.json> --set script.json   replace the script in a video (validated against its sources)
+  mr production validate <production.json> [--json]   check a production manifest: cast, references, shots and script links
+  mr production compile <production.json> [--output composition.json]   compile the shot list into a renderable composition
   mr still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
   mr review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
   mr render <composition.json> [--output output.mp4] [render options] [variables]
@@ -158,13 +162,15 @@ Press Ctrl+C to stop.`);
     }
   }
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
+  else if (command === 'script') await (await import('./script')).runScript(argv);
+  else if (command === 'production') await (await import('./production')).runProduction(argv);
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
     else { const values=await suppliedValues(), targetAspect=option('--aspect');
       let composition=await prepareComposition(raw, values, baseDir);
       if (targetAspect) composition=adaptCompositionAspect(composition, targetAspect);
       if (command === 'validate') console.log(`Valid: ${composition.name} (${composition.durationFrames} frames, ${composition.width}x${composition.height})`);
-      else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
+      else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), script: composition.content, export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
       else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
       else if (command === 'still') {
         const frame=Number(option('--frame') ?? 0);

@@ -82,7 +82,7 @@ describe('describeCapabilities', () => {
 
   it('marks templates of another aspect so the planner does not pick them for this canvas', () => {
     const text = describeCapabilities(registry, { width: 1080, height: 1080 });
-    expect(text).toContain('Templates (the primary path');
+    expect(text).toContain('Templates (ready-made layouts: choose one only when its scenes and look match the brief)');
     expect(text).toContain('  - intro-card: A square title card (1080x1080');
     expect(text).toContain('  - wide-intro: A square title card (1920x1080');
     expect(text).toContain('[other aspect]');
@@ -92,7 +92,7 @@ describe('describeCapabilities', () => {
   it('explains the React kit as reference when react is not allowed', () => {
     const text = describeCapabilities(registry, { width: 1080, height: 1080 });
     expect(text).toContain('React components:');
-    expect(text).toContain('another command produces React videos');
-    expect(describeCapabilities(registry, { width: 1080, height: 1080, allowReact: true })).not.toContain('another command produces React videos');
+    expect(text).toContain('this host will not write React code');
+    expect(describeCapabilities(registry, { width: 1080, height: 1080, allowReact: true })).not.toContain('this host will not write React code');
   });
 });

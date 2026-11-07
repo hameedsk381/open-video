@@ -1,22 +1,28 @@
 // `ove ai` commands. The engine never calls a model: these commands turn a brief into a normal composition file,
 // narration assets and pictures, then hand the result to the same validate/render path as everything else.
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
 import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, narrateSmart, planBatch, providerCapabilities,
   refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, renderMedia, type Composition } from '@ove/core';
 import { composeSmart } from './templates';
+import { readScript } from './script';
 
 const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
   ove ai capabilities [--json]     list every registered capability the AI may use
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
+  ove script <composition.json> [--output script.md|script.json]   the script behind a video (see "mr script")
   ove ai compose <dir> --brief "..." [--kind reel|product|promo|project] [--aspect 9:16] [--duration 20] [--fps 30] [--full]
+      [--source notes.md|data.csv]...   files the script may quote; the brief itself is always a source
+      [--content script.json]           use a written script instead of generating one (checked against its sources)
+      [--no-research]                   do not read public pages the model names for supporting facts
       [--template id] [--theme id] [--typography style] [--motion-pacing snappy|dynamic|smooth] [--audio-mood mood] [--sfx]
       [--narration] [--voice-tone tone] [--cta "headline|link"] [--review] [--strict] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
       [--no-plan]   skip the planner: template-first routing, then a straight composition
+      [--no-react]  never write the video as React code (the planner may, for briefs no template or block layout can serve)
       [--strict]    refuse an answer that only works because we repaired it (invented animation properties, unusable
                     keyframes); by default those repairs are made and listed as notes
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
@@ -113,10 +119,13 @@ function renderSettings(argv: string[]): BatchSettings {
   };
 }
 
-async function renderOne(composition: Composition, baseDir: string, output: string, settings: BatchSettings) {
+async function renderOne(composition: Composition, baseDir: string, output: string, settings: BatchSettings, allowCode = false) {
   console.log(`Rendering ${output}…`);
-  return renderMedia(composition, { ...settings, baseDir, output, onProgress: ({ rendered, total }) => { if (rendered === total || rendered % 30 === 0) process.stderr.write(`  ${rendered}/${total} frames\r`); } });
+  return renderMedia(composition, { ...settings, baseDir, output, allowCode, onProgress: ({ rendered, total }) => { if (rendered === total || rendered % 30 === 0) process.stderr.write(`  ${rendered}/${total} frames\r`); } });
 }
+
+/** A composition with React or code layers executes JavaScript while rendering, so the commands it suggests need --allow-code. */
+const hasCodeLayers = (composition: Composition) => composition.scenes.some(scene => scene.layers.some(layer => layer.type === 'react' || layer.type === 'code'));
 
 // Writes an AI change to a composition file, keeping what was there (the first time) and the result as numbered revisions.
 async function trackedWrite(file: string, composition: Composition, meta: RevisionMeta) {
@@ -149,6 +158,13 @@ async function composeCommand(argv: string[]): Promise<number> {
   const brief = option(argv, '--brief');
   if (!brief) throw new Error('ove ai compose needs --brief "what the video is about"');
   const dir = resolve(target);
+  // The React route writes video.tsx and its bundle while it works, so refuse a folder that is already in use before any
+  // model call happens. writeCompositionProject applies the same rule to the composition at the end.
+  if (!flag(argv, '--force')) {
+    let entries: string[] = [];
+    try { entries = await readdir(dir); } catch { /* a new folder */ }
+    if (entries.some(name => name !== 'assets')) throw new Error(`${dir} is not empty; pass --force to write into it anyway`);
+  }
   const provider = providerFrom(argv);
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
@@ -173,12 +189,24 @@ async function composeCommand(argv: string[]): Promise<number> {
 
   const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
 
+  // The script is written (or supplied) before design. Files named here are the evidence it may quote; the brief itself
+  // is always a source, and research may read public pages the model names unless --no-research says otherwise.
+  const sourceFiles = argv.flatMap((arg, index) => arg === '--source' && argv[index + 1] ? [argv[index + 1]!] : []);
+  const sources = await Promise.all(sourceFiles.map(async source => {
+    const path = resolve(source);
+    return { title: basename(path), text: await readFile(path, 'utf8'), retrievedAt: new Date().toISOString().slice(0, 10) };
+  }));
+  const contentPath = option(argv, '--content');
+  const content = contentPath ? readScript(await readJson(contentPath)) : undefined;
+
   const options: ComposeOptions = { ...canvasOptions, brief: effectiveBrief, maxAttempts: numberOption(argv, '--max-attempts', 3),
     review: flag(argv, '--review'), strict: flag(argv, '--strict'), plan: full, baseDir: dir, narration, fields: fieldsOption(argv), assets: assetOptions(argv, dir),
+    content, sources: sources.length ? sources : undefined, research: flag(argv, '--no-research') ? false : undefined,
+    language: option(argv, '--language') ?? option(argv, '--lang'),
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan'), theme, template });
+    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan'), theme, template }, !flag(argv, '--no-react'));
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }
@@ -205,18 +233,20 @@ async function composeCommand(argv: string[]): Promise<number> {
   const files = await writeCompositionProject(dir, composition, { force: flag(argv, '--force'), source });
   await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: provider.id, model: provider.model, template: (result as any).template, attempts: result.attempts });
   console.log(`\nChecked and wrote ${files.composition} (${composition.durationFrames} frames, ${composition.scenes.length} scenes, ${result.attempts} attempt${result.attempts === 1 ? '' : 's'})`);
+  if (result.route === 'react') console.log(`  Written as a React component (${resolve(dir, 'video.tsx')}); rendering it runs that code.`);
   for (const warning of result.warnings) console.log(`  note: ${warning}`);
   const reviewErrors = result.issues.filter(issue => issue.severity === 'error');
   for (const issue of reviewErrors) console.log(`  review error: ${issue.message}`);
   for (const file of narrationFiles) console.log(`  ${file}`);
+  const code = hasCodeLayers(composition), codeFlag = code ? ' --allow-code' : '';
   if (flag(argv, '--render')) {
     const output = resolve(option(argv, '--output') ?? resolve(dir, 'out.mp4'));
-    const rendered = await renderOne(composition, dir, output, renderSettings(argv));
+    const rendered = await renderOne(composition, dir, output, renderSettings(argv), code);
     console.log(`Created ${rendered.output}`);
   } else {
-    console.log(`\nNext:\n  ove still ${files.composition} --frame 0 --output still.png\n  ove review ${files.composition} --output review.png\n  ove render ${files.composition} --output ${resolve(dir, 'out.mp4')}\n  ove dev ${files.composition}`);
+    console.log(`\nNext:\n  ove still ${files.composition}${codeFlag} --frame 0 --output still.png\n  ove review ${files.composition}${codeFlag} --output review.png\n  ove render ${files.composition}${codeFlag} --output ${resolve(dir, 'out.mp4')}\n  ove dev ${files.composition}`);
   }
-  if (flag(argv, '--json')) console.log(JSON.stringify({ composition: files.composition, attempts: result.attempts, warnings: result.warnings, errors: reviewErrors.map(issue => issue.message), narration: narrationFiles }, null, 2));
+  if (flag(argv, '--json')) console.log(JSON.stringify({ composition: files.composition, route: result.route, attempts: result.attempts, warnings: result.warnings, errors: reviewErrors.map(issue => issue.message), narration: narrationFiles }, null, 2));
   // The video is saved and rendered either way, but a composition the renderer still faults is not a clean run: say so
   // in the exit code, so scripts and agents cannot mistake it for one.
   if (reviewErrors.length) console.log(`\n${reviewErrors.length} review error${reviewErrors.length === 1 ? '' : 's'} left unresolved in ${files.composition}.`);
@@ -443,7 +473,7 @@ async function capabilitiesCommand(argv: string[]): Promise<number> {
   console.log(`Capability registry v${registry.version}: ${Object.values(counts).reduce((total, n) => total + n, 0)} capabilities (${Object.entries(counts).map(([kind, n]) => `${kind} ${n}`).join(', ')})`);
   const kindOf = (kind: string) => registry.capabilities.filter(capability => capability.kind === kind);
   for (const kind of ['template', 'theme', 'block', 'component', 'effect', 'sound'] as const) {
-    console.log(`\n${kind === 'template' ? 'template (the primary path: prefer one whenever its kind and aspect fit the brief)' : kind}:`);
+    console.log(`\n${kind === 'template' ? 'template (ready-made layouts: chosen only when the scenes and look match the brief)' : kind}:`);
     for (const capability of kindOf(kind)) {
       console.log(`  ${capability.id}${capability.fit ? `  (${capability.fit})` : ''}${capability.paths.length && !capability.paths.every(path => path === 'json') ? `  [${capability.paths.join(', ')}]` : ''}`);
       if (capability.description) console.log(`    ${capability.description}`);

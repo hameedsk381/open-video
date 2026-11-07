@@ -28,7 +28,7 @@ export interface JobPaths {
 /** Work the job code does not own: picking a template and drawing a thumbnail depend on files that ship with the command line. */
 export type JobCapabilities = {
   /** The host's router over the shared template catalogue (@ove/ai's composeSmart); it also copies a template's own files. */
-  composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode): Promise<SmartResult>;
+  composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode, allowReact?: boolean): Promise<SmartResult>;
   narrateSmart(provider: AiProvider, composed: { template?: string }, options: NarrateOptions & { brief: string; composition: NonNullable<NarrateOptions['composition']> }): Promise<NarrateResult>;
   makeThumbnail(raw: any, values: Record<string, unknown>, baseDir: string, options: { frame?: number; title?: string; width?: number }): Promise<{ png: Buffer; frame: number; width: number; height: number }>;
 };

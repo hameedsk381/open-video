@@ -5,9 +5,11 @@ import readline from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, type ComposeOptions } from '@ove/ai';
-import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition } from '@ove/core';
+import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, compileProduction, type Composition } from '@ove/core';
 import { composeSmart, templateChoices } from './templates';
 import { listThemes, listBlocks } from './blocks';
+import { readScript, scriptMarkdown } from './script';
+import { readProduction, summaryText } from './production';
 
 const TOOLS = [
   {
@@ -25,8 +27,48 @@ const TOOLS = [
         full: { type: 'boolean', description: 'Set true to design completely from scratch rather than matching a template' },
         review: { type: 'boolean', description: 'Run the renderer design review before answering, and feed its errors back to the model (slower; the default of false leaves the composition unchecked)' },
         strict: { type: 'boolean', description: 'Refuse an answer that only became usable because it was repaired (invented animation property, unusable keyframe value) instead of quietly accepting it' },
+        sources: { type: 'array', description: 'Material the script may quote: pasted notes, a dataset, a report. The prompt itself is always source "brief".', items: { type: 'object', properties: { title: { type: 'string' }, url: { type: 'string' }, text: { type: 'string' } }, required: ['text'] } },
+        research: { type: 'boolean', description: 'Let the script writer read a few public pages it names for supporting facts (default true)' },
+        script: { type: 'object', description: 'A written content script (beats, sources, figures) to use instead of generating one; its claims must cite quotes from the sources' },
       },
       required: ['prompt']
+    }
+  },
+  {
+    name: 'motionrender_script',
+    description: 'Read or replace the content script of a video: the spoken lines, on-screen copy, figures and the sources behind them. Export returns the content block; import validates every claim against its quoted source and writes it into composition.json.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Path to composition.json' },
+        script: { description: 'Content block to import, as an object or a path to a script JSON file. Omit to export the script.' },
+        output: { type: 'string', description: 'Path to write the exported script (omit to return it in the answer)' },
+        format: { type: 'string', enum: ['json', 'markdown'], description: 'Export format (default json)' }
+      },
+      required: ['file']
+    }
+  },
+  {
+    name: 'motionrender_production_validate',
+    description: 'Validate a production.json manifest: the brief, script, cast, locations, shot list and every asset reference. Reports all broken references at once.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Path to production.json' }
+      },
+      required: ['file']
+    }
+  },
+  {
+    name: 'motionrender_production_compile',
+    description: 'Compile a production.json shot list into a renderable composition.json: shots become scenes, approved takes become footage, shots still in planning become text cards. Reports what it had to fall back on.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Path to production.json' },
+        output: { type: 'string', description: 'Destination composition.json (defaults to composition.json beside the manifest)' }
+      },
+      required: ['file']
     }
   },
   {
@@ -275,6 +317,9 @@ async function handleToolCall(name: string, args: Record<string, any>) {
       await mkdir(folderName, { recursive: true });
 
       const provider = createProvider({});
+      const sources = Array.isArray(args.sources)
+        ? args.sources.filter((source: any) => source && typeof source.text === 'string' && source.text.trim()).map((source: any) => ({ title: source.title, url: source.url, text: source.text }))
+        : undefined;
       const options: ComposeOptions = {
         brief: prompt,
         width,
@@ -285,6 +330,9 @@ async function handleToolCall(name: string, args: Record<string, any>) {
         maxAttempts: 3,
         review: Boolean(args.review),
         strict: Boolean(args.strict),
+        content: args.script === undefined ? undefined : readScript(args.script),
+        sources: sources?.length ? sources : undefined,
+        research: args.research === false ? false : undefined,
       };
 
       const result = await composeSmart(provider, options, {
@@ -316,6 +364,7 @@ async function handleToolCall(name: string, args: Record<string, any>) {
 - Duration: ${(result.composition.durationFrames / result.composition.fps).toFixed(1)}s (${result.composition.durationFrames} frames)
 - Resolution: ${result.composition.width}x${result.composition.height} (${kind})
 - Scenes: ${result.composition.scenes.length} scenes
+${result.composition.content ? `- Script: ${result.composition.content.beats.length} beats, ${result.composition.content.sources.length} source${result.composition.content.sources.length === 1 ? '' : 's'} (read it with motionrender_script)` : '- Script: none'}
 ${result.template ? `- Template archetype: ${result.template}` : '- Custom generated composition'}
 ${checked}${notes}
 
@@ -409,6 +458,37 @@ ${result.issues.length ? '\nIssues found:\n' + result.issues.map(i => `[${i.seve
       };
     }
 
+    case 'motionrender_production_validate': {
+      const file = resolve(String(args.file || ''));
+      const production = readProduction(JSON.parse(await readFile(file, 'utf8')));
+      return {
+        content: [{ type: 'text', text: summaryText(production) }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_production_compile': {
+      const file = resolve(String(args.file || ''));
+      const production = readProduction(JSON.parse(await readFile(file, 'utf8')));
+      const { composition, notes } = compileProduction(production);
+      const output = resolve(args.output || resolve(dirname(file), 'composition.json'));
+      if (output === file) throw new Error('output must not overwrite the production manifest');
+      await writeFile(output, JSON.stringify(composition, null, 2) + '\n');
+      return {
+        content: [{
+          type: 'text',
+          text: `${summaryText(production)}Compiled ${composition.scenes.length} scenes, ${composition.durationFrames} frames to "${output}".
+${notes.length ? `Notes:\n${notes.map(note => `- ${note}`).join('\n')}` : 'Notes: none — every shot had footage.'}
+
+Next actions you can take:
+- To inspect visuals: call motionrender_render_still with file="${output}"
+- To run design review: call motionrender_review_video with file="${output}"
+- To render video: call motionrender_render_video with file="${output}"`
+        }],
+        isError: false
+      };
+    }
+
     case 'motionrender_validate': {
       const file = resolve(String(args.file || ''));
       const raw = JSON.parse(await readFile(file, 'utf8'));
@@ -455,6 +535,7 @@ ${result.issues.length ? '\nIssues found:\n' + result.issues.map(i => `[${i.seve
         })),
         variables: composition.variables,
         assets: composition.assets,
+        script: composition.content,
         media: measured
       };
 
@@ -623,6 +704,32 @@ ${res.outputs.map((out, idx) => `[${idx + 1}] ${out}`).join('\n')}`
 - Theme saved: ${outTheme} (${Object.keys(theme.variables).length} tokens: ${Object.keys(theme.variables).join(', ')})
 ${outComp ? `- Composition saved: ${outComp}` : ''}`
         }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_script': {
+      const file = resolve(String(args.file || ''));
+      if (args.script === undefined) {
+        const composition = loadComposition(JSON.parse(await readFile(file, 'utf8')));
+        if (!composition.content) throw new Error(`${file} has no content script. Create the video with a script, or import one with motionrender_script.`);
+        const asJson = args.format !== 'markdown';
+        const text = asJson ? JSON.stringify(composition.content, null, 2) : scriptMarkdown(composition.name, composition.content);
+        if (args.output) {
+          const output = resolve(String(args.output));
+          await writeFile(output, text + '\n');
+          return { content: [{ type: 'text', text: `Wrote the ${asJson ? 'script JSON' : 'script'} of "${composition.name}" to ${output} (${composition.content.beats.length} beats, ${composition.content.sources.length} sources).` }], isError: false };
+        }
+        return { content: [{ type: 'text', text }], isError: false };
+      }
+      const incoming = typeof args.script === 'string' ? JSON.parse(await readFile(resolve(args.script), 'utf8')) : args.script;
+      const content = readScript(incoming);
+      const raw = JSON.parse(await readFile(file, 'utf8'));
+      const next = { ...raw, content };
+      loadComposition(next);
+      await writeFile(file, JSON.stringify(next, null, 2) + '\n');
+      return {
+        content: [{ type: 'text', text: `Imported the script into ${file}: ${content.beats.length} beat${content.beats.length === 1 ? '' : 's'}, ${content.sources.length} source${content.sources.length === 1 ? '' : 's'}, every claim backed by a quote.` }],
         isError: false
       };
     }

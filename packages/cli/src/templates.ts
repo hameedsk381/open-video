@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadComposition, variablesSchema } from '@ove/schema';
 import { listBlocks, listThemes } from './blocks';
+import { reactFromPlan } from './react-video';
 import { buildRegistry, composeSmart as routeComposition, type AiProvider, type ComposeOptions, type Registry, type SmartMode, type SmartResult, type TemplateChoice, type TemplateSource } from '@ove/ai';
 
 export const templatesDir = fileURLToPath(new URL('../templates', import.meta.url));
@@ -148,7 +149,13 @@ export const cliTemplateSource: TemplateSource = {
   },
 };
 
-/** Compose with this CLI's own templates and themes; the routing itself lives in @ove/ai so every host shares it. */
-export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode = {}): Promise<SmartResult> {
-  return routeComposition(provider, options, cliTemplateSource, mode);
+/**
+ * Compose with this CLI's own templates and themes; the routing itself lives in @ove/ai so every host shares it.
+ * `allowReact` adds the React authoring route, and only surfaces that run on the user's own machine may pass it: the
+ * generated component executes JavaScript inside the renderer.
+ */
+export async function composeSmart(provider: AiProvider, options: ComposeOptions, mode: SmartMode = {}, allowReact = false): Promise<SmartResult> {
+  return routeComposition(provider, options, allowReact
+    ? { ...cliTemplateSource, react: (plan, reactOptions, reactMode) => reactFromPlan(provider, plan, reactOptions, reactMode) }
+    : cliTemplateSource, mode);
 }

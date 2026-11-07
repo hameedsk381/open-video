@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "id": "lumen-one",
+  "name": "Lumen One — Late Nights",
+  "productionType": "commercial",
+  "brief": {
+    "prompt": "A ten-second premium spot for a desk lamp built for people who work at night.",
+    "audience": "Designers and makers who work after dark",
+    "goal": "Introduce Lumen One and its warm, glare-free light",
+    "targetDurationSeconds": 10,
+    "notes": "Quiet, warm, low-key. No hard sell."
+  },
+  "format": { "width": 1920, "height": 1080, "fps": 30 },
+  "style": {
+    "genre": "premium product commercial",
+    "visualLanguage": "low-key warmth on deep charcoal, one amber accent",
+    "lighting": "practical warmth, soft falloff, deep shadows",
+    "cameraLanguage": "close, still, patient",
+    "motion": "rise",
+    "transition": "fade",
+    "texture": "paper",
+    "palette": {
+      "bg": "#0b0c10",
+      "surface": "#14161c",
+      "text": "#f3efe6",
+      "muted": "#a8a29a",
+      "accent": "#ffb257",
+      "accent2": "#7a5c3e"
+    },
+    "fonts": { "display": "Fraunces", "body": "Inter" }
+  },
+  "script": {
+    "audience": "Designers and makers who work after dark",
+    "promise": "A lamp for the hours when the work matters most.",
+    "cta": "See Lumen One in the link below.",
+    "beats": [
+      {
+        "id": "hook",
+        "name": "The hour",
+        "onScreen": "Built for late nights.",
+        "narration": "Some of the best work happens after dark."
+      },
+      {
+        "id": "feature",
+        "name": "The light",
+        "onScreen": "Warm light. No glare.",
+        "narration": "Lumen One keeps the glow on the page, not in your eyes."
+      },
+      {
+        "id": "cta",
+        "name": "The ask",
+        "onScreen": "Lumen One — $129",
+        "narration": "Lumen One. Light that stays out of the way."
+      }
+    ]
+  },
+  "characters": [
+    {
+      "id": "mara",
+      "name": "Mara",
+      "role": "Designer working late",
+      "description": "A designer at the end of a long day, still at the desk.",
+      "appearance": "Late thirties, short dark hair, sleeves rolled up.",
+      "wardrobe": ["charcoal overshirt", "wire-frame glasses"],
+      "personality": "Focused, unbothered by the hour."
+    }
+  ],
+  "environments": [
+    {
+      "id": "desk",
+      "name": "The night desk",
+      "description": "A quiet studio desk after hours: one lamp, one notebook, deep shadows.",
+      "referenceAssets": ["desk-still"]
+    }
+  ],
+  "props": [
+    {
+      "id": "lamp",
+      "name": "Lumen One",
+      "description": "A matte-black desk lamp with a warm, shielded LED head.",
+      "referenceAssets": ["detail-still"]
+    }
+  ],
+  "assets": [
+    { "id": "desk-still", "type": "image", "src": "./assets/desk-still.png" },
+    { "id": "detail-still", "type": "image", "src": "./assets/detail-still.png" },
+    { "id": "hero-still", "type": "image", "src": "./assets/hero-still.png" },
+    { "id": "bed", "type": "audio", "src": "./assets/bed.wav" }
+  ],
+  "shots": [
+    {
+      "id": "s1",
+      "sceneId": "night-desk",
+      "name": "Late desk",
+      "action": "A pool of warm light holds the lamp at the end of an empty desk.",
+      "emotion": "quiet",
+      "durationSeconds": 3,
+      "beatId": "hook",
+      "onScreen": "Built for late nights.",
+      "characterIds": ["mara"],
+      "environmentId": "desk",
+      "camera": { "shotSize": "wide", "angle": "eye-level", "movement": "push-in" },
+      "media": { "image": "desk-still", "fit": "cover" },
+      "generation": {
+        "provider": "local",
+        "model": "still",
+        "prompt": "Wide, low-key photo of a dark studio desk lit only by a warm desk lamp at the far end.",
+        "status": "completed",
+        "assetId": "desk-still"
+      }
+    },
+    {
+      "id": "s2",
+      "sceneId": "detail",
+      "name": "Warm light",
+      "action": "The lamp head turns; the glow stays on the page and never reaches the eyes.",
+      "emotion": "relief",
+      "durationSeconds": 4,
+      "beatId": "feature",
+      "onScreen": "Warm light. No glare.",
+      "environmentId": "desk",
+      "propIds": ["lamp"],
+      "camera": { "shotSize": "close-up", "angle": "high-angle", "movement": "slow-pan" },
+      "media": { "image": "detail-still", "fit": "cover" },
+      "generation": {
+        "provider": "local",
+        "model": "still",
+        "prompt": "Close-up of a matte-black lamp head throwing warm light onto an open notebook.",
+        "status": "completed",
+        "assetId": "detail-still"
+      }
+    },
+    {
+      "id": "s3",
+      "sceneId": "hero",
+      "name": "Lumen One",
+      "action": "Hero shot: the lamp holds in the warm darkness as the wordmark lands.",
+      "emotion": "confidence",
+      "durationSeconds": 3,
+      "beatId": "cta",
+      "onScreen": "Lumen One — $129",
+      "propIds": ["lamp"],
+      "camera": { "shotSize": "medium", "angle": "low-angle", "movement": "static" },
+      "media": { "image": "hero-still", "fit": "cover" },
+      "generation": {
+        "provider": "local",
+        "model": "still",
+        "prompt": "Hero product shot of a matte-black desk lamp in warm amber darkness.",
+        "status": "completed",
+        "assetId": "hero-still"
+      }
+    }
+  ],
+  "audio": { "music": "bed", "volume": 0.22, "duck": true },
+  "export": { "format": "mp4", "loudness": -16, "grain": 0.04 }
+}

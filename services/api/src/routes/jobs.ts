@@ -20,7 +20,10 @@ export function jobsRoutes(): Route[] {
     // a request never chooses where results are delivered, where uploads go, or which AI endpoint the worker
     // calls (a caller-supplied baseUrl would make the worker fetch internal addresses). `model` stays: it
     // selects among the operator's gateway models. On your own machine you keep full control.
-    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key', 'provider', 'baseUrl', 'apiKey']) delete input[key]; }
+    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key', 'provider', 'baseUrl', 'apiKey']) delete input[key];
+      // Reading public pages is off for hosted callers unless they ask for it: the worker would otherwise fetch whatever
+      // third-party URLs a prompt makes the model name, on the operator's network, for any account.
+      if (input.research !== true) input.research = false; }
     const request = { kind, input, who: c.who };
     c.deps.validate(request);
     // A job on a project that is not there (or is someone else's, which looks the same) is turned away now, not left to fail later.

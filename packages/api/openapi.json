@@ -29,6 +29,79 @@
                     "type": "string",
                     "description": "Creative brief or description of the video content"
                   },
+                  "sources": {
+                    "type": "array",
+                    "description": "Material the script may quote (pasted notes, datasets, reports). The brief itself is always a source.",
+                    "items": {
+                      "type": "object",
+                      "required": ["text"],
+                      "properties": {
+                        "title": { "type": "string" },
+                        "url": { "type": "string" },
+                        "text": { "type": "string" }
+                      }
+                    }
+                  },
+                  "research": {
+                    "type": "boolean",
+                    "description": "Let the script writer read a few public pages it names for supporting facts (on by default locally; hosted requests must opt in)"
+                  },
+                  "content": {
+                    "type": "object",
+                    "description": "A written content script to use instead of generating one. Claims and figures must cite source ids defined here, each with a verbatim quote.",
+                    "required": ["beats"],
+                    "properties": {
+                      "audience": { "type": "string" },
+                      "promise": { "type": "string" },
+                      "cta": { "type": "string" },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["id"],
+                          "properties": {
+                            "id": { "type": "string" },
+                            "title": { "type": "string" },
+                            "url": { "type": "string" },
+                            "publisher": { "type": "string" },
+                            "retrievedAt": { "type": "string" },
+                            "quote": { "type": "string", "description": "The exact excerpt this source backs" }
+                          }
+                        }
+                      },
+                      "beats": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["id", "name", "onScreen"],
+                          "properties": {
+                            "id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "seconds": { "type": "number" },
+                            "narration": { "type": "string" },
+                            "onScreen": { "type": "string" },
+                            "claim": { "type": "string" },
+                            "sourceIds": { "type": "array", "items": { "type": "string" } },
+                            "motion": { "type": "string" },
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": ["label", "value"],
+                                "properties": {
+                                  "label": { "type": "string" },
+                                  "value": { "type": ["string", "number"] },
+                                  "unit": { "type": "string" },
+                                  "period": { "type": "string" },
+                                  "sourceIds": { "type": "array", "items": { "type": "string" } }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
                   "kind": {
                     "type": "string",
                     "enum": ["reel", "promo", "product", "project"],

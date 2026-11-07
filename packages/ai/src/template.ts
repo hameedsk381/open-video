@@ -2,7 +2,7 @@
 // the values for its variables (a few hundred tokens instead of thousands). The layout, motion and timing come from the
 // template, which is already checked, so the result is faster, cheaper and more consistent than free-form JSON.
 import { describeError, loadComposition, type Composition } from '@ove/core';
-import { themeTokenNames, type DesignLook } from '@ove/schema';
+import { themeTokenNames, type DesignLook, type VideoContent } from '@ove/schema';
 import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import { colorValue } from './project';
@@ -22,6 +22,8 @@ export type TemplateOptions = {
   themes?: ThemeChoice[];
   /** The planner's art direction; it refines the chosen theme (or fills look variables on any template that declares them). */
   look?: DesignLook;
+  /** A script that is already written: the model fills the template's copy from it instead of inventing any. */
+  content?: VideoContent;
   /** The host has already chosen the template: the model fills it and may not answer "none". */
   chosen?: boolean;
   maxAttempts?: number;
@@ -65,7 +67,7 @@ For templates that take a theme, choose the theme whose palette, typography, tex
 - "signal": high-impact, fitness, sports, breaking news, urgency (bold monochrome with alert red; Archivo, push transitions)
 Layout variables (heroVariant, statVariant, closeVariant) are design choices, not copy: pick the arrangement that fits the brief's energy and the subject's place in the frame.
 Picture variables (image, image2…) take the id of one supplied picture, or "" for none; never invent ids. Examples only show the length and kind of text wanted: never reuse their wording (including labels like INTRODUCING); use the brief's own names, numbers and details, and prefer a concrete line over a generic one such as "Ready to start?". Rules: write the words viewers will read, never a description of the video; do not invent dates, prices or claims that are not in the brief; use only the listed variable names; write real copy for the brief, about as long as each example (never much longer); "color" values are hex like "#f4d58d"; list values are arrays of objects with the listed fields.
-If no template suits the brief, reply {"template": "none"}.`;
+When the brief includes a content script, its beats, on-screen lines and figures ARE the copy: fill variables from them in order, keep every number exactly as written, and add no claim or figure that is not in the script.`;
 
 function check(template: TemplateChoice, values: unknown, pictures: string[]): string[] {
   if (!values || typeof values !== 'object' || Array.isArray(values)) return ['"values" must be an object'];
@@ -147,7 +149,7 @@ export async function composeFromTemplate(provider: AiProvider, templates: Templ
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
   const messages: ChatMessage[] = [
     { role: 'system', content: systemText },
-    { role: 'user', content: `Brief: ${options.brief}\n\nTemplates:\n${candidates.map(describe).join('\n')}${options.assets?.length ? `\n\nPictures you can use (ids): ${options.assets.filter(asset => asset.type === 'image').map(asset => asset.id).join(', ') || 'none'}` : '\n\nNo pictures are supplied: leave picture variables empty.'}${options.themes?.length && candidates.some(candidate => candidate.themed) ? `\n\nThemes (for templates that take one; pick the one that suits the brief):\n${options.themes.map(theme => `- ${theme.id}: ${theme.description}`).join('\n')}` : ''}` },
+    { role: 'user', content: `Brief: ${options.brief}\n\nTemplates:\n${candidates.map(describe).join('\n')}${options.assets?.length ? `\n\nPictures you can use (ids): ${options.assets.filter(asset => asset.type === 'image').map(asset => asset.id).join(', ') || 'none'}` : '\n\nNo pictures are supplied: leave picture variables empty.'}${options.themes?.length && candidates.some(candidate => candidate.themed) ? `\n\nThemes (for templates that take one; pick the one that suits the brief):\n${options.themes.map(theme => `- ${theme.id}: ${theme.description}`).join('\n')}` : ''}${options.content ? `\n\nThe script is already written. Fill the template's copy from these beats, in order, keeping figures exactly as written:\n${JSON.stringify({ audience: options.content.audience, promise: options.content.promise, cta: options.content.cta, beats: options.content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, data: beat.data })) })}` : ''}` },
   ];
   let lastError = 'no attempt was made';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -179,7 +181,13 @@ export async function composeFromTemplate(provider: AiProvider, templates: Templ
         .filter(([key]) => filled(template, key))
         .map(([key, value]) => [key, variantValues[key] && typeof value === 'string' ? value.trim().toLowerCase() : value]));
       const source = fillTemplateSource(template, values, theme, options.assets, options.look);
-      return { source, composition: loadComposition(source), attempts: attempt, template: template.id, theme: theme?.id, values, warnings: [] };
+      const composition = loadComposition(source);
+      if (options.content) {
+        composition.content = options.content;
+        // When the template has one scene per beat, point each scene at its beat so narration and captions follow the script.
+        if (composition.scenes.length === options.content.beats.length) composition.scenes.forEach((scene, index) => { scene.beat = options.content!.beats[index]!.id; });
+      }
+      return { source, composition, attempts: attempt, template: template.id, theme: theme?.id, values, warnings: [] };
     } catch (error) {
       lastError = describeError(error);
       messages.push({ role: 'assistant', content: text }, { role: 'user', content: `That cannot be used:\n${lastError}\nReply with the corrected JSON.` });

@@ -1,0 +1,139 @@
+{
+  "$schema": "./composition.schema.json",
+  "version": "1.0",
+  "id": "motion-engineering",
+  "name": "Motion, Engineered",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 450,
+  "background": "#070607",
+  "export": {
+    "loudness": -16
+  },
+  "assets": [
+    {
+      "id": "vo-1",
+      "type": "audio",
+      "src": "./assets/vo-1.wav"
+    },
+    {
+      "id": "vo-2",
+      "type": "audio",
+      "src": "./assets/vo-2.wav"
+    },
+    {
+      "id": "vo-3",
+      "type": "audio",
+      "src": "./assets/vo-3.wav"
+    },
+    {
+      "id": "vo-4",
+      "type": "audio",
+      "src": "./assets/vo-4.wav"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "main",
+      "name": "Main",
+      "startFrame": 0,
+      "durationFrames": 450,
+      "layers": [
+        {
+          "id": "react",
+          "type": "react",
+          "src": "video.bundle.js",
+          "width": 1920,
+          "height": 1080,
+          "durationInFrames": 450,
+          "props": {}
+        },
+        {
+          "id": "open",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 0,
+          "volume": 0.4
+        },
+        {
+          "id": "ignite",
+          "type": "audio",
+          "src": "sfx:thump",
+          "startFrame": 9,
+          "volume": 0.5
+        },
+        {
+          "id": "vo-1",
+          "type": "audio",
+          "src": "vo-1",
+          "startFrame": 8,
+          "volume": 1
+        },
+        {
+          "id": "cut-2",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 94,
+          "volume": 0.35
+        },
+        {
+          "id": "vo-2",
+          "type": "audio",
+          "src": "vo-2",
+          "startFrame": 104,
+          "volume": 1
+        },
+        {
+          "id": "cut-3",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 196,
+          "volume": 0.4
+        },
+        {
+          "id": "vo-3",
+          "type": "audio",
+          "src": "vo-3",
+          "startFrame": 206,
+          "volume": 1
+        },
+        {
+          "id": "riser",
+          "type": "audio",
+          "src": "sfx:riser",
+          "startFrame": 288,
+          "volume": 0.38
+        },
+        {
+          "id": "cut-4",
+          "type": "audio",
+          "src": "sfx:thump",
+          "startFrame": 308,
+          "volume": 0.5
+        },
+        {
+          "id": "vo-4",
+          "type": "audio",
+          "src": "vo-4",
+          "startFrame": 334,
+          "volume": 1
+        },
+        {
+          "id": "land",
+          "type": "audio",
+          "src": "sfx:tick",
+          "startFrame": 340,
+          "volume": 0.25
+        },
+        {
+          "id": "lock",
+          "type": "audio",
+          "src": "sfx:ding",
+          "startFrame": 374,
+          "volume": 0.2
+        }
+      ]
+    }
+  ]
+}

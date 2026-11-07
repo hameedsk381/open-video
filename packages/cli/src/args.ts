@@ -12,7 +12,7 @@ export const commandSpecs: Record<string, Spec> = {
   browser: { positionals: 1 },
   blocks: { flags: ['--json'] },
   build: { values: ['--output'], positionals: 1 },
-  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url', '--aspect'], flags: ['--reel', '--landscape', '--render', '--no-render', '--no-plan'], positionals: 2 },
+  agent: { values: ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url', '--aspect'], flags: ['--reel', '--landscape', '--render', '--no-render', '--no-plan', '--no-direction'], positionals: 2 },
   track: { values: ['--fps', '--output'], positionals: 1 },
   thumbnail: { values: ['--frame', '--title', '--width', '--output', ...variables], flags: ['--allow-code'], positionals: 1 },
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
@@ -26,11 +26,13 @@ export const commandSpecs: Record<string, Spec> = {
   validate: { values: ['--aspect', ...variables], positionals: 1 },
   inspect: { values: ['--aspect', ...variables], positionals: 1 },
   captions: { values: ['--output', ...variables], positionals: 1 },
+  script: { values: ['--output', '--set'], flags: ['--json'], positionals: 1 },
+  production: { values: ['--output'], flags: ['--json'], positionals: 2 },
   still: { values: ['--frame', '--output', '--aspect', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', '--aspect', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
-  ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--speech-engine', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--lang', '--size', '--composition', '--id', '--start', '--output', '--template', '--theme', '--typography', '--motion-pacing', '--pacing', '--audio-mood', '--mood', '--voice-tone', '--cta', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format', '--max-silence', '--width', '--height', '--count', '--min', '--max'],
-    flags: ['--force', '--dry-run', '--json', '--review', '--strict', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--transparent', '--no-motion-blur', '--sfx', '--keep-fillers', '--no-cut'], positionals: 3 },
+  ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--speech-engine', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--lang', '--size', '--composition', '--id', '--start', '--output', '--template', '--theme', '--typography', '--motion-pacing', '--pacing', '--audio-mood', '--mood', '--voice-tone', '--cta', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--source', '--content', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format', '--max-silence', '--width', '--height', '--count', '--min', '--max'],
+    flags: ['--force', '--dry-run', '--json', '--review', '--strict', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--no-react', '--transparent', '--no-motion-blur', '--sfx', '--keep-fillers', '--no-cut', '--research', '--no-research'], positionals: 3 },
 };
 // Edit distance, for "did you mean".
 const distance = (a: string, b: string) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]); for (let j = 1; j <= b.length; j++) d[0]![j] = j;

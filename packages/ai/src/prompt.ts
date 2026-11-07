@@ -1,7 +1,7 @@
 // The prompt is the product here: a compact, accurate description of the composition format is what makes an LLM
 // emit JSON that validates on the first or second try. The exact JSON Schema can be appended for hard cases (--schema).
 import { compositionJsonSchema } from '@ove/schema';
-import type { DesignLook } from '@ove/schema';
+import type { DesignLook, VideoContent } from '@ove/schema';
 import { safeZoneBands } from '@ove/core';
 import { movesGlossary } from './registry';
 
@@ -17,7 +17,7 @@ export type PromptOptions = {
 };
 
 export type MotionBeat = { name: string; takeaway?: string; onScreen?: string; seconds?: number; motion?: string };
-export type MotionPlan = { idea?: string; look?: DesignLook; beats: MotionBeat[]; transition?: string };
+export type MotionPlan = { idea?: string; look?: DesignLook; beats: MotionBeat[]; transition?: string; content?: VideoContent };
 
 export function isMotionPlan(raw: unknown): raw is MotionPlan {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
@@ -110,6 +110,7 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Use only these layer types. No html, lottie or shader layers unless the brief explicitly asks.
 - Never invent asset ids: an image/video/audio layer may only use ids listed under "assets" (and sfx: names).
 - No web URLs, no {{media[...]}}, no JavaScript.
+- When the task supplies a content script, its beats, on-screen lines, figures and names are fixed: render them, never rewrite a figure or add a claim that is not in it.
 - Every scene must have layers; every layer must have a unique id; every text layer must have non-empty content.
 - Text at least 24px; body 28-36px; headings 64-96px; titles 140-200px at 1920 wide.
 - Keep content inside a 6% margin; keep the bottom 12% clear when captions may sit there.
@@ -219,6 +220,13 @@ export function userPrompt(brief: string, options: PromptOptions): string {
   if (bands.length) {
     lines.push('Keep content out of these platform UI areas:');
     for (const band of bands) lines.push(`- ${band.name}: ${band.hint}`);
+    lines.push('');
+  }
+  if (options.motionPlan?.content) {
+    const content = options.motionPlan.content;
+    lines.push('The script is fixed. This is the content layer the video must carry:');
+    lines.push(JSON.stringify(content));
+    lines.push('Render the beats in this order. Each scene names its beat in "beat" (the beat id) and puts that beat\'s "onScreen" line on screen as real copy. Show every datum exactly as written (value, unit, period) and never add a figure, date, name or claim that is not here. Narration is spoken separately: do not write a voiceover script into the composition, and keep the caption area clear.');
     lines.push('');
   }
   if (options.motionPlan) {

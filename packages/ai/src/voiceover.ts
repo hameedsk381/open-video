@@ -99,8 +99,16 @@ export async function narrateScenes(provider: AiProvider, composition: Compositi
   const lead = options.leadFrames ?? 12, pad = options.padFrames ?? 14, tail = options.tailFrames ?? 26;
   const scenes = composition.scenes.filter(scene => scene.id !== 'narration' && scene.id !== 'captions');
   if (!scenes.length) throw new Error('There are no scenes to narrate');
-  options.onProgress?.('Writing one voiceover line per scene…');
-  const lines = await writeSceneLines(provider, options.brief, scenes.map(scene => ({ texts: textOf(scene.layers as any[]), seconds: Number(scene.durationFrames) / fps })), { language: options.language, signal: options.signal });
+  // A scripted video speaks its own beats: the content is the script, so there is nothing left to write.
+  const script = composition.content;
+  const written = scenes.map((scene, i) => {
+    const beat = (scene as any).beat ? script?.beats.find(item => item.id === (scene as any).beat) : script?.beats.length === scenes.length ? script.beats[i] : undefined;
+    return beat?.narration?.trim() || undefined;
+  });
+  options.onProgress?.(written.every(Boolean) ? 'Speaking the script…' : 'Writing one voiceover line per scene…');
+  const lines = written.every(Boolean)
+    ? written.map(line => cleanScript(line!))
+    : (await writeSceneLines(provider, options.brief, scenes.map(scene => ({ texts: textOf(scene.layers as any[]), seconds: Number(scene.durationFrames) / fps })), { language: options.language, signal: options.signal })).map((line, i) => written[i] ?? line);
 
   const parts: Uint8Array[] = [], seconds: number[] = [];
   let like: { channels: number; sampleRate: number; bits: number } | undefined;

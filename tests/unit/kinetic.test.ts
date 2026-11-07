@@ -18,5 +18,5 @@ describe('split text', () => {
 describe('loudness', () => {
   it('accepts a target in LUFS', () => { expect(comp({ content: 'x' }).export.loudness).toBeUndefined(); expect(parseComposition({ ...comp({ content: 'x' }), export: { loudness: -14 } }).export.loudness).toBe(-14); expect(() => parseComposition({ ...comp({ content: 'x' }), export: { loudness: 3 } })).toThrow(); });
   it('applies the master gain and a limiter to the mix', () => { const graph = audioMixArgs({ durationSeconds: 2, gainDb: 6.5, clips: [{ source: 'a.wav', start: 0, duration: 2 }] }).join(' ');
-    expect(graph).toContain('apad,volume=6.50dB,alimiter=limit=0.84'); expect(audioMixArgs({ durationSeconds: 2, clips: [{ source: 'a.wav', start: 0, duration: 2 }] }).join(' ')).not.toContain('alimiter'); });
+    expect(graph).toContain('apad=whole_dur=2.000000,volume=6.50dB,alimiter=limit=0.84'); expect(audioMixArgs({ durationSeconds: 2, clips: [{ source: 'a.wav', start: 0, duration: 2 }] }).join(' ')).not.toContain('alimiter'); });
 });

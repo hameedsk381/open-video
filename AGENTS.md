@@ -55,7 +55,7 @@ Add to `.cursor/mcp.json`:
 
 | Tool Name | Parameters | Description |
 |---|---|---|
-| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `theme?`, `template?`, `full?`, `review?`, `strict?` | Generates a complete video composition from a natural language brief. `review: true` runs the renderer design check and reports unresolved errors (`isError`); without it the composition is unchecked. `strict: true` refuses an answer that only worked because invented animation properties or unusable keyframes were repaired; by default those repairs are made and listed under Notes. |
+| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `theme?`, `template?`, `full?`, `review?`, `strict?`, `sources?`, `research?`, `script?` | Generates a complete video composition from a natural language brief. It writes the content script first and stores it in `composition.json`; `sources` is material the script may quote, `script` is a written content block to use instead, and research is on unless `research: false`. `review: true` runs the renderer design check and reports unresolved errors (`isError`); without it the composition is unchecked. `strict: true` refuses an answer that only worked because invented animation properties or unusable keyframes were repaired; by default those repairs are made and listed under Notes. |
 | `motionrender_render_video` | `file`, `output?`, `format?`, `scale?` | Renders a `composition.json` to MP4, WebM, or PNG sequence. |
 | `motionrender_render_still` | `file`, `frame?`, `output?` | Renders a single frame still as a PNG image for visual inspection. |
 | `motionrender_review_video` | `file`, `output?`, `showSafeZones?` | Automated design, type scale, safe-zone, and contrast checks with contact sheet. |
@@ -63,6 +63,9 @@ Add to `.cursor/mcp.json`:
 | `motionrender_inspect` | `file` | Returns structured summary of duration, scenes, layers, and assets. |
 | `motionrender_list_templates` | *(none)* | Lists available templates, themes, and scene blocks. |
 | `motionrender_refine_video` | `file`, `instruction`, `review?` | Applies natural language edits to an existing `composition.json`. |
+| `motionrender_script` | `file`, `script?`, `output?`, `format?` | Reads the video's content script (spoken lines, on-screen copy, figures and their sources) or, when `script` is given, validates and imports a replacement. Claims must cite quotes that appear in the cited source. |
+| `motionrender_production_validate` | `file` | Validates a `production.json` manifest: brief, script, cast, locations, shot list, and every asset reference, reporting all broken references at once. |
+| `motionrender_production_compile` | `file`, `output?` | Compiles a `production.json` shot list into a renderable `composition.json`: shots become scenes, approved takes become footage, planned shots become text cards from their on-screen copy, and the notes say what it fell back on. |
 
 ---
 

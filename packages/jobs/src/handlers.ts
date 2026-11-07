@@ -82,13 +82,27 @@ export function createHandlers(env: JobEnv) {
 
       const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
 
+      // Evidence the caller already has, and an optional written script; either travels into the compose exactly as the
+      // command line hands it over, so the hosted studio and the CLI produce the same content-first video.
+      const sources = Array.isArray(input.sources)
+        ? input.sources.filter((source: any) => source && typeof source.text === 'string' && source.text.trim()).map((source: any) => ({
+          title: typeof source.title === 'string' && source.title.trim() ? source.title.trim() : undefined,
+          url: typeof source.url === 'string' && source.url.trim() ? source.url.trim() : undefined,
+          text: source.text as string,
+        }))
+        : [];
+
       const options: ComposeOptions = {
         ...canvas, brief: effectiveBrief, baseDir: dir, ...(pictures.length ? { assets: pictures } : {}), review: boolOf(input.review), strict: boolOf(input.strict), narration: boolOf(input.narration),
+        content: input.content && typeof input.content === 'object' && !Array.isArray(input.content) ? input.content as any : undefined,
+        sources: sources.length ? sources : undefined,
+        research: input.research === false ? false : undefined,
         includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(cleanProgressMessage(message)),
       };
       const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
-      const result = await capabilities.composeSmart(ai, options, { full, theme, template });
+      // React authoring is offered only where the code runs on the user's own machine; hosted jobs stay on data routes.
+      const result = await capabilities.composeSmart(ai, options, { full, theme, template }, Boolean(env.local));
       let composition = result.composition;
 
       if (input.customColors && typeof input.customColors === 'object') {

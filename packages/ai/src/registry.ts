@@ -232,7 +232,7 @@ export function describeCapabilities(registry: Registry, fit: { width: number; h
   for (const [kind, tag] of Object.entries(kindTag) as [CapabilityKind, string][]) {
     const items = registry.select(kind);
     if (!items.length) continue;
-    lines.push(kind === 'template' ? 'Templates (the primary path: prefer one whenever its kind and aspect fit the brief):' : `${tag}:`);
+    lines.push(kind === 'template' ? 'Templates (ready-made layouts: choose one only when its scenes and look match the brief):' : `${tag}:`);
     for (const capability of items) {
       const shape = kind === 'template'
         ? ` (${capability.fit})`
@@ -244,7 +244,7 @@ export function describeCapabilities(registry: Registry, fit: { width: number; h
     }
   }
   if (!fit.allowReact && lines.some(line => line.startsWith('React'))) {
-    lines.push('(React components are listed for reference; another command produces React videos.)');
+    lines.push('(React components are listed for reference; this host will not write React code.)');
   }
   return lines.join('\n');
 }

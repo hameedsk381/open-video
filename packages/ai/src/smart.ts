@@ -6,7 +6,9 @@
 // an MCP server — had to depend on the CLI's template folder to get the same routing. The catalogues and the file
 // copies are injected instead, so the host says where templates come from and the rules stay in one place.
 import { describeError, reviewComposition, type ReviewIssue } from '@ove/core';
+import { contentSchema, type VideoContent } from '@ove/schema';
 import type { AiProvider } from './providers';
+import { writeContent } from './content';
 import { composeVideo, type ComposeOptions, type ComposeResult } from './compose';
 import { planBuild, type BuildPlan } from './plan';
 import { composeFromTemplate, type TemplateChoice, type ThemeChoice } from './template';
@@ -28,6 +30,12 @@ export type TemplateSource = {
    * is how a host says "these files did not travel"; the router reports it rather than shipping a video with holes in it.
    */
   copyAssets?: (templateId: string, destDir: string) => Promise<void>;
+  /**
+   * Writes the video as React code when the plan asks for it. Only a host that will run the generated code itself (the
+   * local CLI and studio) supplies this: a hosted worker must never offer it, because the brief would decide what
+   * JavaScript runs on the operator's machine.
+   */
+  react?: (plan: BuildPlan, options: ComposeOptions, mode: SmartMode) => Promise<SmartResult>;
 };
 
 export type SmartMode = {
@@ -41,7 +49,7 @@ export type SmartMode = {
   template?: string;
 };
 
-export type SmartResult = ComposeResult & { template?: string; source?: Record<string, unknown> };
+export type SmartResult = ComposeResult & { template?: string; source?: Record<string, unknown>; /** How the video was produced, for surfaces that explain the result. */ route?: 'template' | 'json' | 'react' };
 
 /** A template was named and the catalogue has no such id. Thrown past the template fallback: a named template that
  *  cannot be filled must not be quietly replaced by a different video. */
@@ -78,13 +86,46 @@ async function reviewTemplate(composition: ComposeResult['composition'], options
  * composition must follow. Planning failure or `noPlan` keeps the same template-first routing.
  */
 export async function composeSmart(provider: AiProvider, options: ComposeOptions, source: TemplateSource, mode: SmartMode = {}): Promise<SmartResult> {
-  // Templates take pictures but not sounds or clips, and have no batch fields; anything else needs a full composition.
+  // Content first: the script and its evidence are written (or supplied) before design. Templates take pictures but not
+  // sounds or clips, and have no batch fields; anything else needs a full composition.
+  let content: VideoContent | undefined = options.content === false ? undefined : options.content && contentSchema.parse(options.content);
+  if (!content && options.content !== false) {
+    options.onProgress?.('Writing the script and checking its sources…');
+    content = await writeContent(provider, {
+      brief: options.brief,
+      durationSeconds: options.durationSeconds,
+      kind: options.kind,
+      language: options.language,
+      sources: options.sources,
+      research: options.research,
+      maxAttempts: Math.min(options.maxAttempts ?? 2, 2),
+      signal: options.signal,
+      onProgress: options.onProgress,
+    });
+    if (content) options.onProgress?.(`Script ready: ${content.beats.length} beats, ${content.sources.length} source${content.sources.length === 1 ? '' : 's'}.`);
+  }
+  const { content: _requested, ...withoutContent } = options;
+  const scripted = content ? { ...withoutContent, content } : withoutContent;
   const needsFull = mode.full || !!options.fields?.length || (options.assets ?? []).some(asset => asset.type !== 'image');
   let plan: BuildPlan | undefined;
   if (!mode.noPlan && !mode.full && !mode.template && (mode.registry || source.registry)) {
     const registry = mode.registry ?? await source.registry!();
-    try { plan = await planBuild(provider, { ...options, registry, maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
+    try { plan = await planBuild(provider, { ...scripted, registry, allowReact: Boolean(source.react), maxAttempts: Math.min(options.maxAttempts ?? 2, 2) }); }
     catch (error) { options.onProgress?.(`Planning skipped (${(error as Error).message.split('\n')[0]}); using the built-in routing.`); }
+  }
+  // The planner found no template or block composition that fits and the host can author code: this is the video the
+  // brief describes. A failed authoring attempt falls back to a written composition rather than losing the job; an
+  // explicit template or full composition still outranks the plan.
+  if (!needsFull && !mode.template && plan?.path === 'react' && source.react) {
+    options.onProgress?.('Writing this video as React motion code…');
+    try {
+      const made = await source.react(plan, scripted, mode);
+      // The script travels in the composition whatever route built it, so narration and captions later derive from it.
+      const composition = content ? { ...made.composition, content } : made.composition;
+      return { ...made, composition, attempts: made.attempts + 1, route: 'react' };
+    } catch (error) {
+      options.onProgress?.(`React authoring failed (${(error as Error).message.split('\n')[0]}); writing a full composition instead.`);
+    }
   }
   // A refusal to plan keeps the safest pre-planner behaviour: try the template catalogue first, else write from scratch.
   const templatePath = (plan ? plan.path === 'template' : !needsFull) || Boolean(mode.template);
@@ -102,7 +143,7 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
       const targetThemeId = mode.theme ?? plan?.theme;
       const themes = targetThemeId ? allThemes.filter(theme => theme.id === targetThemeId) : allThemes;
       const filled = await composeFromTemplate(provider, picked.length ? picked : choices, {
-        ...options,
+        ...scripted,
         ...(forced ? { width: forced.width, height: forced.height, chosen: true } : {}),
         themes: themes.length ? themes : allThemes,
         look: plan?.look,
@@ -137,7 +178,7 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
         // between attempts the way the free-form loop does. It still runs: a bad fill has to reach the caller with its
         // faults rather than pass as a clean job. Files were copied first, so the review sees the pictures the render will.
         const issues = await reviewTemplate(composition, options, warnings);
-        return { composition, source: sourceSaved, attempts: filled.attempts + (plan ? 1 : 0), issues, warnings, template: filled.template };
+        return { composition, source: sourceSaved, attempts: filled.attempts + (plan ? 1 : 0), issues, warnings, template: filled.template, route: 'template' };
       }
       options.onProgress?.('No template suits this brief; writing a full composition.');
     } catch (error) {
@@ -147,8 +188,8 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
   }
   // The planner's beats and art direction become the motion plan the composition must follow, so planning is never
   // wasted — including when a template was planned but could not be filled and the video is written from scratch.
-  const motionPlan = plan ? { idea: plan.idea, beats: plan.beats, look: plan.look } : undefined;
-  return composeVideo(provider, { ...options, plan: options.plan || motionPlan !== undefined, motionPlan });
+  const motionPlan = plan ? { idea: plan.idea, beats: plan.beats, look: plan.look, ...(content ? { content } : {}) } : (content ? { beats: content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })), content } : undefined);
+  return { ...(await composeVideo(provider, { ...scripted, plan: options.plan || motionPlan !== undefined, motionPlan })), route: 'json' };
 }
 
 /**

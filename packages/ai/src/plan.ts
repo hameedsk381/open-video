@@ -6,7 +6,7 @@ import type { AiProvider, ChatMessage } from './providers';
 import { extractJson } from './json';
 import type { MotionBeat } from './prompt';
 import { describeCapabilities, sameShape, type GenerationPath, type Registry } from './registry';
-import { fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook } from '@ove/schema';
+import { fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook, type VideoContent } from '@ove/schema';
 
 export type BuildPlan = {
   path: GenerationPath;
@@ -27,6 +27,8 @@ export type PlanOptions = {
   durationSeconds: number;
   kind?: string;
   registry: Registry;
+  /** A script that is already written: the planner designs around its beats instead of inventing copy. */
+  content?: VideoContent;
   /** Which routes the caller will actually act on (default: all; react additionally needs allowReact). */
   paths?: GenerationPath[];
   /** Full JSON compositions and React code can use sounds and clips; templates cannot. */
@@ -44,7 +46,7 @@ const systemText = (options: PlanOptions) => `You are the creative director for 
 Reply with ONE JSON object and nothing else:
 {
   "path": "template" | "json" | "react",
-  "template": "<template id>",            // only with "template": the one template that best suits the brief's structure and topic
+  "template": "<template id>",            // only with "template": the one template whose scenes and look already match the brief
   "theme": "<theme id>",                  // optional, only with a template that takes a theme
   "idea": "<what the video says, in one line>",
   "look": {
@@ -65,13 +67,17 @@ The design is YOURS to decide. There is no house style: choose the fonts, palett
 - Texture: a grid for engineered/technical, dots for editorial/print, scanlines for games/broadcast, paper for warm/organic, none for clean graphic fields.
 - Motion and transition: one entrance style and one transition style for the whole video. Match the energy: pop for playful, slide for product, blur for premium, rise for editorial, fade for calm. Density 0.8-1.2 scales spacing.
 - This look applies to JSON videos directly and refines the chosen theme for a template.
-Templates provide proven layouts, but pick the template that specifically fits the brief's narrative style:
+
+Choose the route the brief actually needs, not the most convenient one:
+- "template": only when a listed template already matches the brief's narrative structure AND the look above. A template is chosen because you would make that same video anyway, not because it shares the topic.
+- "json": a tailored composition built from the blocks, effects and moves listed below. Use it for structured, typographic, data-, product- or brand-led videos whose scenes you can describe with those capabilities.
+- "react" (only when listed as an allowed path): hand-written React motion graphics for what blocks cannot express — 3D, WebGL or canvas work, particles or simulations, custom illustration or SVG, real camera moves, UI that looks alive, type set as an image, unusual transitions. Choose it when that level of craft is what the brief is asking for.
+If no template matches both the structure and the look, write the video ("json" or "react"); never force a near-miss template.
+When a template is the right route, pick the one that specifically fits the brief's narrative style:
 - Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "story-tall" or "quote-card".
 - Multi-feature tours, app UI cards, feature lists, and product showcases: choose "showcase-tall", "product-wide" or "product-card".
 - Quick tips, 3-step processes, how-to guides, and numbered reels: choose "social-reel".
 - Company keynotes, presentations, and product launch films: choose "keynote-wide", "launch-wide" or "case-study".
-- Choose "json" when the brief requires a bespoke kinetic video with custom motion graphics, camera moves, and scene architecture.
-- Choose "react" only when allowed: it writes React code for bespoke high-end motion graphics.
 
 Themes are named presets of the same look (palette, type, texture, motion). For a template that takes a theme, name the closest theme AND still give the look you actually want; the look refines the theme:
 - "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue).
@@ -80,6 +86,9 @@ Themes are named presets of the same look (palette, type, texture, motion). For 
 - "paper": clean editorial, education, publishing, thought leadership (clean light aesthetic, deep ink).
 - "signal": high-impact, fitness, sports, breaking news, urgency (bold monochrome with alert red).
 Every beat needs a concrete picture, not a mood. In "motion", name the move — use a motion move from the capability list below (such as "word-cascade" or "ken-burns") and say what carries into the next beat.
+${options.content ? `A content script is already written. Its beats are fixed (do not rewrite their copy, numbers or order):
+${JSON.stringify(options.content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds })))}
+Repeat them in "beats" with the same onScreen wording and design around them. Never invent a figure, date, name or claim.` : ''}
 Reply with "path" set to one of: ${allowedPaths(options).join(' | ')}.
 Available capabilities:
 ${describeCapabilities(options.registry, options)}`;
@@ -170,7 +179,9 @@ export function readBuildPlan(reply: unknown, options: PlanOptions): { plan?: Bu
       else if (!options.registry.find('theme', raw.theme)) problems.push(`"theme" must be a listed theme, not "${raw.theme}"`);
     }
   }
-  const { beats, problems: beatProblems } = beatsOf(raw, options.durationSeconds);
+  const { beats, problems: beatProblems } = beatsOf(options.content
+    ? { beats: options.content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })) }
+    : raw, options.durationSeconds);
   problems.push(...beatProblems);
   if (problems.length) return { problems };
   const reasons = Array.isArray(raw.reasons) ? raw.reasons.filter((reason: unknown): reason is string => typeof reason === 'string' && reason.trim() !== '').slice(0, 4) : [];
