@@ -14,8 +14,13 @@ type LivePlayer = {
 
 export type PlayerHandle = { seek(frame: number): void; frame(): number };
 
-export const PlayerView = forwardRef<PlayerHandle, { detail: Detail; startFrame: number }>(function PlayerView(
-  { detail, startFrame },
+export const PlayerView = forwardRef<PlayerHandle, {
+  detail: Detail;
+  startFrame: number;
+  selectedSceneId?: string | null;
+  onSelectScene?: (sceneId: string) => void;
+}>(function PlayerView(
+  { detail, startFrame, selectedSceneId = null, onSelectScene },
   ref
 ) {
   const host = useRef<HTMLDivElement>(null);
@@ -219,6 +224,8 @@ export const PlayerView = forwardRef<PlayerHandle, { detail: Detail; startFrame:
         onTogglePlay={toggle}
         onSeek={seekTo}
         onToggleSafeZone={() => setShowSafeZone(v => !v)}
+        selectedSceneId={selectedSceneId}
+        onSelectScene={onSelectScene}
       />
     </>
   );

@@ -289,7 +289,7 @@ export function Showcase() {
     });
   };
 
-  const customizeInStudio = (item: ShowcaseItem, e?: React.MouseEvent) => {
+  const useThisBrief = (item: ShowcaseItem, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const params = new URLSearchParams();
     if (item.templateId) params.set('template', item.templateId);
@@ -317,7 +317,7 @@ export function Showcase() {
             Motion Graphics Prompt Library
           </h1>
           <p className="showcase-subtitle">
-            A curated showcase of broadcast-grade motion videos conceptualized with Claude Opus 5.5 and rendered frame-deterministically with MotionRender. Copy prompts or render directly in one click.
+            A curated showcase of broadcast-grade motion videos conceptualized with Claude Opus 5.5 and rendered frame-deterministically with MotionRender. Use any brief as your starting point, or copy it.
           </p>
 
           {/* Search bar */}
@@ -441,11 +441,11 @@ export function Showcase() {
 
                       <button
                         className="customize-btn"
-                        title="Create this video in MotionRender Studio"
-                        onClick={e => customizeInStudio(item, e)}
+                        title="Start a new video from this brief"
+                        onClick={e => useThisBrief(item, e)}
                       >
                         <WandIcon size={13} />
-                        <span>Render Video</span>
+                        <span>Use this brief</span>
                       </button>
                     </div>
                   </div>
@@ -530,9 +530,9 @@ export function Showcase() {
                   <CopyIcon size={14} />
                   <span>Copy Prompt</span>
                 </Button>
-                <Button variant="primary" onClick={() => customizeInStudio(activeModalItem)}>
+                <Button variant="primary" onClick={() => useThisBrief(activeModalItem)}>
                   <WandIcon size={14} />
-                  <span>Customize & Render Video</span>
+                  <span>Use this brief</span>
                 </Button>
               </div>
             </div>

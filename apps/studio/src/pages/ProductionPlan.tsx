@@ -13,7 +13,7 @@ import {
   type SaveProductionResult,
 } from '../api';
 import { editorPath, go, planPath } from '../router';
-import { groupShots, issuesBySection, newShot, planSeconds, planSections, sectionLabels, shotMedia, type PlanSection } from '../productionPlan';
+import { groupShots, issuesBySection, newShot, planReview, planSeconds, planSections, sectionLabels, sectionOf, shotMedia, shotTake, type PlanReview, type PlanSection } from '../productionPlan';
 import {
   ArrowLeftIcon,
   Badge,
@@ -27,6 +27,7 @@ import {
   Notice,
   PlayIcon,
   SlidersIcon,
+  SparklesIcon,
   Spinner,
   TypeIcon,
   useUi,
@@ -55,6 +56,14 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
   const [busy, setBusy] = useState<'' | 'init' | 'save' | 'check' | 'compile'>('');
   const [report, setReport] = useState<CompileProductionResult | null>(null);
   const [missing, setMissing] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [rail, setRail] = useState(() => {
+    try { return localStorage.getItem('ove-plan-copilot') !== 'off'; } catch { return true; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('ove-plan-copilot', rail ? 'on' : 'off'); } catch { /* private mode */ }
+  }, [rail]);
 
   const load = useCallback(async () => {
     setError('');
@@ -174,7 +183,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
       <div className="center">
         <h2>Could not open project</h2>
         <Notice tone="error">There is no project “{id}”.</Notice>
-        <Button onClick={() => go('#/')}>Back to Projects</Button>
+        <Button onClick={() => go('#/projects')}>Back to Projects</Button>
       </div>
     );
   }
@@ -190,6 +199,8 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
 
   const active: PlanSection = (planSections as readonly string[]).includes(section) ? (section as PlanSection) : 'brief';
   const counts = issuesBySection(issues);
+  const review = plan ? planReview(plan) : null;
+  const selectedShot = plan && selected ? (plan.shots ?? []).find(shot => shot.id === selected) ?? null : null;
   const badge = !plan
     ? { tone: 'neutral' as const, text: 'Not started' }
     : issues.length
@@ -210,14 +221,19 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
         <Badge tone={badge.tone} dot>{badge.text}</Badge>
         {plan && dirty ? <span className="saved">Not saved yet</span> : null}
         {plan ? (
-          <Button size="sm" variant="primary" loading={busy === 'save'} disabled={!dirty || busy === 'save'} icon={<CheckIcon size={14} />} onClick={() => void save()}>
-            Save plan
-          </Button>
+          <>
+            <Button size="sm" variant="ghost" className={rail ? 'on' : ''} icon={<SparklesIcon size={14} />} onClick={() => setRail(value => !value)} title={rail ? 'Hide the plan co-pilot' : 'Show the plan co-pilot'}>
+              Co-pilot
+            </Button>
+            <Button size="sm" variant="primary" loading={busy === 'save'} disabled={!dirty || busy === 'save'} icon={<CheckIcon size={14} />} onClick={() => void save()}>
+              Save plan
+            </Button>
+          </>
         ) : null}
       </div>
 
       {plan ? (
-        <div className="plan-wrap">
+        <div className={`plan-wrap${rail ? '' : ' rail-off'}`}>
           <nav className="plan-nav">
             {planSections.map(key => {
               const Icon = sectionIcons[key];
@@ -256,7 +272,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
 
             {active === 'brief' ? <Brief plan={plan} edit={edit} /> : null}
             {active === 'script' ? <Script plan={plan} edit={edit} /> : null}
-            {active === 'storyboard' ? <Storyboard plan={plan} base={base} /> : null}
+            {active === 'storyboard' && review ? <Storyboard plan={plan} base={base} edit={edit} review={review} selected={selected} onSelect={setSelected} onCompile={() => go(planPath(id, 'compile'))} /> : null}
             {active === 'shots' ? <Shots plan={plan} edit={edit} /> : null}
             {active === 'compile' ? (
               <Compile
@@ -271,6 +287,22 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
               />
             ) : null}
           </div>
+
+          {rail && review ? (
+            <CoPilot
+              plan={plan}
+              review={review}
+              issues={issues}
+              dirty={dirty}
+              busy={busy}
+              active={active}
+              selected={selectedShot}
+              edit={edit}
+              save={() => void save()}
+              onClose={() => setRail(false)}
+              goSection={key => go(planPath(id, key))}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="plan-empty">
@@ -563,49 +595,268 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
 
 /* ==================== storyboard ==================== */
 
-function Storyboard({ plan, base }: { plan: Production; base: string }) {
+function approveTake(edit: Edit, shot: ProductionShot, assetId: string) {
+  edit(draft => {
+    const target = (draft.shots ?? []).find((candidate: any) => candidate.id === shot.id);
+    if (!target) return;
+    target.generation ??= {};
+    target.generation.status = 'approved';
+    target.generation.assetId = assetId;
+  });
+}
+
+function rejectTake(edit: Edit, shot: ProductionShot) {
+  edit(draft => {
+    const target = (draft.shots ?? []).find((candidate: any) => candidate.id === shot.id);
+    if (!target?.generation) return;
+    target.generation.status = 'rejected';
+  });
+}
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+function Storyboard({ plan, base, edit, review, selected, onSelect, onCompile }: {
+  plan: Production;
+  base: string;
+  edit: Edit;
+  review: PlanReview;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+  onCompile: () => void;
+}) {
+  const { toast } = useUi();
   const shots: ProductionShot[] = Array.isArray(plan.shots) ? plan.shots : [];
   const groups = groupShots(plan);
 
+  const approve = (shot: ProductionShot) => {
+    const take = shotTake(plan, shot);
+    if (!take.assetId) return;
+    approveTake(edit, shot, take.assetId);
+    toast(`Take approved · ${shot.name || shot.id}`, 'success');
+  };
+
+  const reject = (shot: ProductionShot) => {
+    rejectTake(edit, shot);
+    toast(`Take rejected · ${shot.name || shot.id}`, 'info');
+  };
+
   return (
     <>
-      <h2>Storyboard</h2>
-      <p className="sub">The shot list as cards, in the order the viewer sees them. {shots.length} shot{shots.length === 1 ? '' : 's'}, {planSeconds(plan)} seconds planned.</p>
-
-      {groups.length ? groups.map((group, index) => (
-        <div key={`${group.sceneId}-${index}`}>
-          <div className="scene-head">
-            <b>{group.sceneId}</b>
-            <small>{group.shots.length} shot{group.shots.length === 1 ? '' : 's'} · {Math.round(group.shots.reduce((total, shot) => total + (Number(shot.durationSeconds) || 0), 0) * 10) / 10}s</small>
-          </div>
-          <div className="storyboard">
-            {group.shots.map(shot => <StoryCard key={shot.id} plan={plan} base={base} shot={shot} />)}
-          </div>
+      <div className="plan-section-head storyboard-head">
+        <div>
+          <h2>Storyboard</h2>
+          <p className="sub">The shot list in the order the viewer sees them. {plural(shots.length, 'shot')}, {planSeconds(plan)} seconds planned. Select a card to review its take.</p>
         </div>
-      )) : <Empty icon={<FilmIcon size={32} />} title="This plan has no shots"><p>Add shots in the Shots section.</p></Empty>}
+        <div className="storyboard-actions">
+          <span className="storyboard-ready">{review.ready}/{review.total} with footage</span>
+          <Button size="sm" variant="primary" icon={<PlayIcon size={13} />} onClick={onCompile}>Review &amp; compile</Button>
+        </div>
+      </div>
+
+      {groups.length ? (
+        <div className="storyboard-groups">
+          {groups.map((group, index) => (
+            <div key={`${group.sceneId}-${index}`}>
+              <div className="scene-head">
+                <b>{group.sceneId}</b>
+                <small>{plural(group.shots.length, 'shot')} · {Math.round(group.shots.reduce((total, shot) => total + (Number(shot.durationSeconds) || 0), 0) * 10) / 10}s</small>
+              </div>
+              <div className="storyboard">
+                {group.shots.map(shot => (
+                  <StoryCard key={shot.id} plan={plan} base={base} shot={shot} selected={selected === shot.id} onSelect={onSelect} approve={approve} reject={reject} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <Empty icon={<FilmIcon size={32} />} title="This plan has no shots"><p>Add shots in the Shots section.</p></Empty>}
     </>
   );
 }
 
-function StoryCard({ plan, base, shot }: { plan: Production; base: string; shot: ProductionShot }) {
+function StoryCard({ plan, base, shot, selected, onSelect, approve, reject }: {
+  plan: Production;
+  base: string;
+  shot: ProductionShot;
+  selected: boolean;
+  onSelect: (id: string | null) => void;
+  approve: (shot: ProductionShot) => void;
+  reject: (shot: ProductionShot) => void;
+}) {
   const media = shotMedia(plan, base, shot);
+  const take = shotTake(plan, shot);
+  const toggle = () => onSelect(selected ? null : shot.id);
+
   return (
-    <div className="story-card">
+    <div
+      className={`story-card${selected ? ' on' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={toggle}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+      }}
+    >
       <div className="story-media">
         {media?.kind === 'image' ? <img src={media.url} alt="" loading="lazy" /> : media?.kind === 'video' ? <video src={media.url} muted loop preload="metadata" /> : <span className="story-placeholder"><FilmIcon size={22} />No media yet</span>}
+        <span className="story-take"><Badge tone={take.tone} dot>{take.label}</Badge></span>
         <Badge tone="neutral">{Number(shot.durationSeconds) || 0}s</Badge>
-        {shot.onScreen ? <span className="story-onscreen">{shot.onScreen}</span> : null}
+        {media && shot.onScreen ? <span className="story-onscreen">{shot.onScreen}</span> : null}
       </div>
       <div className="story-copy">
         <b>{shot.name || shot.id}</b>
         <small>{shot.action}</small>
+        {!media && shot.onScreen ? <p className="story-line">{shot.onScreen}</p> : null}
         <div className="story-meta">
           <code>{shot.id}</code>
           {shot.beatId ? <code>{shot.beatId}</code> : null}
           <span>{shot.transition ?? 'cut'}</span>
         </div>
+        <div className="story-actions">
+          {take.canApprove ? (
+            <Button size="sm" variant="ghost" icon={<CheckIcon size={12} />} onClick={event => { event.stopPropagation(); approve(shot); }}>Approve take</Button>
+          ) : null}
+          {take.canReject ? (
+            <Button size="sm" variant="ghost" onClick={event => { event.stopPropagation(); reject(shot); }}>Reject</Button>
+          ) : null}
+        </div>
       </div>
     </div>
+  );
+}
+
+/* ==================== co-pilot ==================== */
+
+type CopilotStep = { key: string; title: string; detail?: string; section: PlanSection; tone: 'neutral' | 'amber' | 'red' | 'green' };
+
+function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIssue[], dirty: boolean): CopilotStep[] {
+  const steps: CopilotStep[] = [];
+  const first = issues[0];
+  if (issues.length) {
+    steps.push({
+      key: 'issues',
+      title: `${plural(issues.length, 'problem')} to fix`,
+      detail: first ? `${first.path || 'plan'} — ${first.message}` : undefined,
+      section: first ? sectionOf(first.path) : 'brief',
+      tone: 'red',
+    });
+  }
+  if (!plan.brief?.prompt?.trim()) steps.push({ key: 'brief', title: 'Say what the video is for', detail: 'One sentence in the brief keeps every shot honest.', section: 'brief', tone: 'amber' });
+  if (!plan.script?.beats?.length) steps.push({ key: 'script', title: 'Write the script beats', detail: 'Every shot renders one beat.', section: 'script', tone: 'amber' });
+  if (!review.total) steps.push({ key: 'shots', title: 'Add shots to the plan', detail: 'A plan needs at least one shot to compile.', section: 'shots', tone: 'amber' });
+  if (review.unusedBeats.length) {
+    steps.push({ key: 'beats', title: `${plural(review.unusedBeats.length, 'beat')} no shot renders`, detail: review.unusedBeats.slice(0, 4).join(', '), section: 'storyboard', tone: 'amber' });
+  }
+  if (review.unreviewed) {
+    steps.push({ key: 'review', title: `${plural(review.unreviewed, 'take')} to approve`, detail: 'Approving picks the take the timeline uses.', section: 'storyboard', tone: 'neutral' });
+  }
+  if (review.pending) {
+    steps.push({ key: 'pending', title: `${plural(review.pending, 'shot')} will compile as text cards`, detail: 'Add media or approve a take to show footage.', section: 'storyboard', tone: 'neutral' });
+  }
+  if (review.missingCopy.length) {
+    steps.push({ key: 'copy', title: `${plural(review.missingCopy.length, 'shot')} without on-screen copy`, detail: review.missingCopy.slice(0, 4).join(', '), section: 'storyboard', tone: 'neutral' });
+  }
+  if (dirty) steps.push({ key: 'dirty', title: 'Save the plan before compiling', detail: 'Compile reads the saved plan.', section: 'compile', tone: 'amber' });
+  if (!steps.length) {
+    steps.push({ key: 'ready', title: 'The plan is ready to compile', detail: `${plural(review.total, 'shot')} · ${review.approved} approved`, section: 'compile', tone: 'green' });
+  }
+  return steps;
+}
+
+function CoPilot({ plan, review, issues, dirty, busy, active, selected, edit, save, onClose, goSection }: {
+  plan: Production;
+  review: PlanReview;
+  issues: ProductionIssue[];
+  dirty: boolean;
+  busy: string;
+  active: PlanSection;
+  selected: ProductionShot | null;
+  edit: Edit;
+  save: () => void;
+  onClose: () => void;
+  goSection: (key: PlanSection) => void;
+}) {
+  const { toast } = useUi();
+  const steps = copilotSteps(plan, review, issues, dirty);
+  const percent = review.total ? Math.round((review.ready / review.total) * 100) : 0;
+  const take = selected ? shotTake(plan, selected) : null;
+
+  return (
+    <aside className="plan-copilot" aria-label="Plan co-pilot">
+      <div className="copilot-head">
+        <SparklesIcon size={15} />
+        <b>Plan co-pilot</b>
+        <span className="grow" />
+        <button className="copilot-close" onClick={onClose} aria-label="Hide the co-pilot">×</button>
+      </div>
+      <p className="copilot-intro">Readiness checks that update as you edit. Nothing leaves this page.</p>
+
+      <div className="copilot-meter">
+        <div className="copilot-meter-row"><b>{review.ready}/{review.total}</b><span>shots with footage</span></div>
+        <div className="meter"><span style={{ width: `${percent}%` }} /></div>
+        <div className="copilot-counts">
+          <span><b>{review.approved}</b> approved</span>
+          <span><b>{review.pending}</b> pending</span>
+          <span><b>{review.unreviewed}</b> to review</span>
+        </div>
+      </div>
+
+      <div className="copilot-section-title">Next steps</div>
+      <div className="copilot-steps">
+        {steps.map(step => (
+          <button key={step.key} className={`copilot-step${active === step.section ? ' on' : ''}`} onClick={() => goSection(step.section)}>
+            <span className={`copilot-dot ${step.tone}`} />
+            <span className="copilot-step-copy">
+              <b>{step.title}</b>
+              {step.detail ? <small>{step.detail}</small> : null}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {selected && take ? (
+        <div className="copilot-shot">
+          <div className="copilot-section-title">Selected shot</div>
+          <div className="copilot-shot-head">
+            <b>{selected.name || selected.id}</b>
+            <Badge tone={take.tone} dot>{take.label}</Badge>
+          </div>
+          <small>{selected.action}</small>
+          <div className="copilot-shot-meta">
+            <span>{selected.id}</span>
+            <span>{selected.sceneId}</span>
+            <span>{Number(selected.durationSeconds) || 0}s</span>
+            {selected.beatId ? <span>{selected.beatId}</span> : null}
+          </div>
+          {selected.onScreen ? <blockquote className="copilot-quote">{selected.onScreen}</blockquote> : <p className="copilot-hint">No on-screen copy yet; compile uses the action line.</p>}
+          {selected.generation?.error ? <p className="copilot-hint is-error">{selected.generation.error}</p> : null}
+          <div className="copilot-actions">
+            {take.canApprove ? (
+              <Button size="sm" variant="primary" icon={<CheckIcon size={12} />} onClick={() => { approveTake(edit, selected, take.assetId!); toast(`Take approved · ${selected.name || selected.id}`, 'success'); }}>
+                Approve take
+              </Button>
+            ) : null}
+            {take.canReject ? (
+              <Button size="sm" variant="ghost" onClick={() => { rejectTake(edit, selected); toast(`Take rejected · ${selected.name || selected.id}`, 'info'); }}>
+                Reject
+              </Button>
+            ) : null}
+            <Button size="sm" variant="ghost" onClick={() => goSection('shots')}>Edit shot</Button>
+          </div>
+          {!take.canApprove && selected.media ? <p className="copilot-hint">This footage is a path, not a registered asset, so it can play but not be approved as a take.</p> : null}
+        </div>
+      ) : (
+        <div className="copilot-empty">
+          <p>Select a shot on the storyboard to review its take, copy and status.</p>
+        </div>
+      )}
+
+      <div className="copilot-foot">
+        {dirty ? <Button size="sm" variant="primary" loading={busy === 'save'} onClick={save}>Save plan</Button> : null}
+        <Button size="sm" variant={dirty ? 'ghost' : 'primary'} icon={<PlayIcon size={12} />} onClick={() => goSection('compile')}>Compile</Button>
+      </div>
+    </aside>
   );
 }
 

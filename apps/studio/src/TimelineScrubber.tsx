@@ -19,6 +19,8 @@ export type TimelineScrubberProps = {
   onTogglePlay: () => void;
   onSeek: (frame: number) => void;
   onToggleSafeZone: () => void;
+  selectedSceneId?: string | null;
+  onSelectScene?: (sceneId: string) => void;
 };
 
 // Scene color palette accents for visual track differentiation
@@ -40,6 +42,8 @@ export function TimelineScrubber({
   onTogglePlay,
   onSeek,
   onToggleSafeZone,
+  selectedSceneId = null,
+  onSelectScene,
 }: TimelineScrubberProps) {
   const total = Math.max(1, detail.durationFrames);
   const fps = detail.fps || 30;
@@ -280,6 +284,7 @@ export function TimelineScrubber({
             const leftPct = (scene.startFrame / total) * 100;
             const color = SCENE_COLORS[idx % SCENE_COLORS.length]!;
             const isActive = activeSceneIndex === idx;
+            const isSelected = selectedSceneId === scene.id;
 
             return (
               <div
@@ -287,6 +292,7 @@ export function TimelineScrubber({
                 onClick={e => {
                   e.stopPropagation();
                   onSeek(scene.startFrame);
+                  onSelectScene?.(scene.id);
                 }}
                 title={`${scene.name || scene.id} (${dur(scene.durationFrames / fps)})`}
                 style={{
@@ -294,7 +300,8 @@ export function TimelineScrubber({
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
                   height: '100%',
-                  background: isActive ? color.active : color.bg,
+                  background: isSelected || isActive ? color.active : color.bg,
+                  boxShadow: isSelected ? `inset 0 0 0 2px ${color.text}` : undefined,
                   borderRight: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',

@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ago, api, cleanUserStatus, dur, useJobs, type Job, type Library, type Project } from '../api';
+import { ago, api, cleanUserStatus, dur, useJobs, type Job, type Library, type Project, type TemplateSummary } from '../api';
 import { discoverPath, editorPath, go } from '../router';
 import {
   Badge,
   Button,
   CompassIcon,
   FilmIcon,
+  ImagesIcon,
   LayersIcon,
   PlusIcon,
   SlidersIcon,
   SparklesIcon,
   Skeleton,
+  TypeIcon,
   useUi,
 } from '../ui';
 
@@ -19,6 +21,21 @@ const examples = [
   'Vertical reel announcing our design conference in Berlin, kinetic type',
   '30-second product story for a ceramic mug brand, warm and tactile',
 ];
+
+const presetOrder = ['social-reel', 'product-card', 'case-study', 'logo-reveal', 'slideshow', 'quote-card'];
+const presetIcons: Record<string, typeof FilmIcon> = {
+  'social-reel': FilmIcon,
+  'product-card': ImagesIcon,
+  'case-study': LayersIcon,
+  'logo-reveal': SparklesIcon,
+  slideshow: LayersIcon,
+  'quote-card': TypeIcon,
+};
+const presetMeta = (template: TemplateSummary) => {
+  const ratio = template.width && template.height ? (template.width === template.height ? '1:1' : template.width > template.height ? '16:9' : '9:16') : '';
+  const seconds = template.durationSeconds ? `${Math.round(template.durationSeconds)}s` : '';
+  return [ratio, seconds].filter(Boolean).join(' · ') || 'Template';
+};
 
 const jobLabels: Record<string, string> = {
   compose: 'Composing the video',
@@ -57,6 +74,9 @@ export function Home({ email }: { email?: string }) {
   const recent = [...active, ...ordered.filter(job => job.status === 'done' || job.status === 'error')].slice(0, 5);
   const scenes = projects?.reduce((total, project) => total + project.scenes, 0) ?? 0;
   const name = email?.split('@')[0];
+  const allTemplates = library?.templates ?? [];
+  const curated = presetOrder.map(id => allTemplates.find(template => template.id === id)).filter((template): template is TemplateSummary => !!template);
+  const presets = curated.length >= 4 ? curated : allTemplates.slice(0, 6);
 
   const start = () => {
     const brief = prompt.trim();
@@ -98,6 +118,32 @@ export function Home({ email }: { email?: string }) {
             </button>
           ))}
         </div>
+
+        {presets.length ? (
+          <div className="home-presets">
+            <span className="home-presets-label">Or start from a preset</span>
+            <div className="home-preset-grid">
+              {presets.map(template => {
+                const Icon = presetIcons[template.id] ?? FilmIcon;
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="home-preset"
+                    title={template.description}
+                    onClick={() => go(`#/new?template=${encodeURIComponent(template.id)}`)}
+                  >
+                    <span className="home-preset-icon"><Icon size={14} /></span>
+                    <span className="home-preset-copy">
+                      <b>{template.name}</b>
+                      <small>{presetMeta(template)}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <div className="home-columns">

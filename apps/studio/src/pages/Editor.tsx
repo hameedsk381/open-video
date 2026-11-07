@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type TextLayer, type Variable } from '../api';
+import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
 import { PlayerView, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
@@ -38,8 +38,13 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [composeNotes, setComposeNotes] = useState<string[]>([]);
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [aiDraft, setAiDraft] = useState('');
+  const [aiRevert, setAiRevert] = useState<{ n: number; label: string } | null>(null);
+  const [exportIntent, setExportIntent] = useState<{ kind: 'review' | 'render'; nonce: number } | null>(null);
   const frameAt = useRef(0);
   const player = useRef<PlayerHandle>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   const file = `${id}/composition.json`;
   const planFile = `${id}/production.json`;
 
@@ -62,6 +67,16 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     } catch { setComposeNotes([]); }
   }, [id]);
 
+  // A selected scene that no longer exists after a reload stops being selected.
+  useEffect(() => {
+    if (detail && selectedSceneId && !detail.scenes.some(scene => scene.id === selectedSceneId)) setSelectedSceneId(null);
+  }, [detail, selectedSceneId]);
+
+  // The tab row scrolls sideways in the 420px pane; keep the open tab in view.
+  useEffect(() => {
+    tabsRef.current?.querySelector<HTMLElement>('button.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [tab]);
+
   const dismissComposeNotes = () => {
     setComposeNotes([]);
     try { sessionStorage.removeItem(composeNotesKey(id)); } catch {}
@@ -72,7 +87,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
       <div className="center">
         <h2>Could not open project</h2>
         <Notice tone="error">{error}</Notice>
-        <Button onClick={() => go('#/')}>Back to Projects</Button>
+        <Button onClick={() => go('#/projects')}>Back to Projects</Button>
       </div>
     );
   }
@@ -101,6 +116,23 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   };
 
   const props = { detail, file, planFile, save, reload: load, setNote };
+  const focusScene = (scene: Scene | null) => {
+    setSelectedSceneId(scene?.id ?? null);
+    if (scene) player.current?.seek(scene.startFrame);
+  };
+  const selectedScene = selectedSceneId ? detail.scenes.find(scene => scene.id === selectedSceneId) ?? null : null;
+  const selectedIndex = selectedScene ? detail.scenes.indexOf(selectedScene) : -1;
+  // The instruction names the scene so the AI edits that beat rather than the whole video.
+  const askScene = () => {
+    if (!selectedScene) return;
+    const span = `${dur(selectedScene.durationFrames / detail.fps)}`;
+    setAiDraft(`Focus on scene ${selectedIndex + 1} (“${selectedScene.name}”, ${span}): `);
+    go(editorPath(id, 'ai'));
+  };
+  const openExport = (kind: 'review' | 'render') => {
+    setExportIntent({ kind, nonce: Date.now() });
+    go(editorPath(id, 'export'));
+  };
 
   return (
     <div className="editor">
@@ -113,34 +145,71 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           </Notice>
         ) : null}
         <div className="etop">
-          <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go('#/')}>
+          <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go('#/projects')}>
             Projects
           </Button>
           <TitleInput detail={detail} save={name => save('/api/project/rename', { id, name }, 'Renamed')} />
           <Button size="sm" variant="secondary" icon={<LayersIcon size={14} />} onClick={() => go(planPath(id))}>
             Production plan
           </Button>
+          <span className="grow" />
           {note ? (
             <span className="saved" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>
               <CheckIcon size={12} /> {note}
             </span>
           ) : null}
+          <div className="etop-actions">
+            <Button size="sm" variant="ghost" icon={<ShieldIcon size={14} />} onClick={() => openExport('review')}>
+              Review
+            </Button>
+            <Button size="sm" variant="primary" icon={<DownloadIcon size={14} />} onClick={() => openExport('render')}>
+              Export
+            </Button>
+          </div>
         </div>
 
-        <PlayerView ref={player} detail={detail} startFrame={frameAt.current} />
+        <PlayerView
+          ref={player}
+          detail={detail}
+          startFrame={frameAt.current}
+          selectedSceneId={selectedSceneId}
+          onSelectScene={setSelectedSceneId}
+        />
 
-        <div className="scenes">
-          {detail.scenes.map((scene, idx) => (
-            <button key={scene.id} onClick={() => player.current?.seek(scene.startFrame)}>
-              <b>Scene {idx + 1} · {scene.name}</b>
-              <small>{dur(scene.durationFrames / detail.fps)}</small>
-            </button>
-          ))}
+        <div className="scene-focus">
+          <select
+            className="input scene-select"
+            aria-label="Scene to edit"
+            value={selectedSceneId ?? ''}
+            onChange={e => focusScene(detail.scenes.find(scene => scene.id === e.target.value) ?? null)}
+          >
+            <option value="">All scenes · {detail.scenes.length}</option>
+            {detail.scenes.map((scene, idx) => (
+              <option key={scene.id} value={scene.id}>
+                Scene {idx + 1} · {scene.name} · {dur(scene.durationFrames / detail.fps)}
+              </option>
+            ))}
+          </select>
+          {selectedScene ? (
+            <>
+              <span className="scene-meta">
+                Scene {selectedIndex + 1} · {selectedScene.name} · {dur(selectedScene.durationFrames / detail.fps)}
+              </span>
+              <Button size="sm" variant="secondary" icon={<SparklesIcon size={13} />} onClick={askScene}>
+                Ask AI about this scene
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedSceneId(null)}>
+                Clear
+              </Button>
+            </>
+          ) : (
+            <span className="scene-meta">Pick a scene on the timeline to edit just that beat.</span>
+          )}
         </div>
       </div>
 
       <div className="side">
-        <div className="tabs">
+        <div className="tabs" ref={tabsRef}>
           {tabs.map(([key, label, Icon]) => (
             <button
               key={key}
@@ -154,13 +223,22 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
         </div>
         <div className="pane">
           {tab === 'ai' ? (
-            <AskAi {...props} />
+            <AskAi
+              {...props}
+              draft={aiDraft}
+              onDraft={setAiDraft}
+              scene={selectedScene}
+              sceneIndex={selectedIndex}
+              onClearScene={() => setSelectedSceneId(null)}
+              revert={aiRevert}
+              onApplied={setAiRevert}
+            />
           ) : tab === 'look' ? (
             <Look {...props} />
           ) : tab === 'history' ? (
             <History {...props} />
           ) : tab === 'export' ? (
-            <Export {...props} />
+            <Export {...props} intent={exportIntent} onIntentDone={() => setExportIntent(null)} />
           ) : (
             <Edit {...props} />
           )}
@@ -315,32 +393,64 @@ function Edit({ detail, save, reload, setNote }: PaneProps) {
   );
 }
 
-function AskAi({ detail, file, reload, setNote }: PaneProps) {
-  const [text, setText] = useState('');
+type AskAiProps = PaneProps & {
+  draft: string;
+  onDraft: (text: string) => void;
+  scene: Scene | null;
+  sceneIndex: number;
+  onClearScene: () => void;
+  revert: { n: number; label: string } | null;
+  onApplied: (revision: { n: number; label: string } | null) => void;
+};
+
+function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneIndex, onClearScene, revert, onApplied }: AskAiProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notes, setNotes] = useState<string[]>([]);
+  const [reverting, setReverting] = useState(false);
+  const { toast } = useUi();
 
   const run = async () => {
-    if (!text.trim()) return;
+    if (!draft.trim()) return;
     setError('');
     setNotes([]);
     setBusy(true);
+    // The revision that is active now is what this change replaces, so it is what Revert goes back to.
     try {
+      const history = await api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(file)}`);
+      const active = history.revisions.at(-1);
       const result = await runJob<{ warnings?: string[] }>(
         '/api/refine',
-        { file, instruction: text.trim() },
+        { file, instruction: draft.trim() },
         (j: Job) => setNote(cleanUserStatus(j.messages.at(-1)))
       );
       const warnings = result?.warnings ?? [];
       setNotes(warnings);
       setNote(warnings.length ? `AI refinement applied · ${warnings.length} note${warnings.length === 1 ? '' : 's'}` : 'AI refinement applied');
-      setText('');
-      await reload(false);
+      onDraft('');
+      onApplied(active ? { n: active.n, label: active.label } : null);
+      await reload(true);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const undo = async () => {
+    if (!revert) return;
+    setReverting(true);
+    try {
+      await api('/api/restore', { file, n: revert.n });
+      setNote(`Reverted to version #${revert.n}`);
+      setNotes([]);
+      setError('');
+      onApplied(null);
+      await reload(true);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setReverting(false);
     }
   };
 
@@ -359,17 +469,28 @@ function AskAi({ detail, file, reload, setNote }: PaneProps) {
         Describe any change in natural language. The AI will recalculate typography, timings, and visual balance.
       </p>
 
+      {scene ? (
+        <div className="ai-scene">
+          <SparklesIcon size={14} />
+          <div>
+            <b>Scene {sceneIndex + 1} · {scene.name}</b>
+            <small>{dur(scene.durationFrames / detail.fps)} · frames {scene.startFrame}–{scene.startFrame + scene.durationFrames}</small>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClearScene}>Clear</Button>
+        </div>
+      ) : null}
+
       <textarea
         className="input"
         style={{ minHeight: 120 }}
         placeholder="e.g. Make the pacing 20% faster, emphasize our 99.9% guarantee, and give the closing beat more punch…"
-        value={text}
-        onChange={e => setText(e.target.value)}
+        value={draft}
+        onChange={e => onDraft(e.target.value)}
       />
 
       <div className="chips">
         {chips.map(chipText => (
-          <button key={chipText} className="chip" onClick={() => setText(chipText.slice(3))}>
+          <button key={chipText} className="chip" onClick={() => onDraft(chipText.slice(3))}>
             {chipText}
           </button>
         ))}
@@ -389,6 +510,16 @@ function AskAi({ detail, file, reload, setNote }: PaneProps) {
             {notes.map(n => <li key={n}>{n}</li>)}
           </ul>
         </Notice>
+      ) : null}
+
+      {revert ? (
+        <div className="ai-revert">
+          <div>
+            <b>Newest change is live.</b>
+            <small>Version #{revert.n} · {revert.label}</small>
+          </div>
+          <Button size="sm" loading={reverting} onClick={undo}>Revert to #{revert.n}</Button>
+        </div>
       ) : null}
 
       <Button variant="primary" loading={busy} icon={<SparklesIcon size={14} />} onClick={run}>
@@ -535,7 +666,10 @@ function History({ detail, file, planFile, reload, setNote }: PaneProps) {
   );
 }
 
-function Export({ detail, file }: PaneProps) {
+function Export({ detail, file, intent, onIntentDone }: PaneProps & {
+  intent: { kind: 'review' | 'render'; nonce: number } | null;
+  onIntentDone: () => void;
+}) {
   const [scale, setScale] = useState('1');
   const [busy, setBusy] = useState('');
   const [label, setLabel] = useState('');
@@ -558,6 +692,40 @@ function Export({ detail, file }: PaneProps) {
 
   const progress = (j: Job) => setLabel(cleanUserStatus(j.messages.at(-1)));
 
+  const render = () =>
+    run('render', async () => {
+      const r = await runJob('/api/render', { file, output: 'out.mp4', scale: Number(scale) }, progress);
+      setPicture(null);
+      setVideo(r);
+    });
+
+  const check = () =>
+    run('check', async () => {
+      const r = await runJob('/api/review', { file }, progress);
+      setVideo(null);
+      setPicture({
+        title: r.issues.length ? `${r.issues.length} design recommendations found` : 'Design quality audit passed',
+        url: r.url,
+        items: r.issues.slice(0, 12).map((i: any) => i.message ?? String(i)),
+      });
+    });
+
+  const thumb = () =>
+    run('thumb', async () => {
+      const r = await runJob('/api/thumbnail', { file }, progress);
+      setVideo(null);
+      setPicture({ title: 'Video Poster Cover', url: r.url });
+    });
+
+  // The top bar's Review and Export buttons land here already meaning to start; the nonce stops a rerun.
+  const handled = useRef(0);
+  useEffect(() => {
+    if (!intent || intent.nonce === handled.current) return;
+    handled.current = intent.nonce;
+    onIntentDone();
+    void (intent.kind === 'render' ? render() : check());
+  }, [intent]);
+
   return (
     <>
       <h2>Export Video</h2>
@@ -578,13 +746,7 @@ function Export({ detail, file }: PaneProps) {
         loading={busy === 'render'}
         disabled={!!busy}
         icon={<DownloadIcon size={14} />}
-        onClick={() =>
-          run('render', async () => {
-            const r = await runJob('/api/render', { file, output: 'out.mp4', scale: Number(scale) }, progress);
-            setPicture(null);
-            setVideo(r);
-          })
-        }
+        onClick={() => void render()}
       >
         {busy === 'render' ? label || 'Rendering video…' : 'Render Video (MP4)'}
       </Button>
@@ -594,17 +756,7 @@ function Export({ detail, file }: PaneProps) {
           loading={busy === 'check'}
           disabled={!!busy}
           icon={<ShieldIcon size={14} />}
-          onClick={() =>
-            run('check', async () => {
-              const r = await runJob('/api/review', { file }, progress);
-              setVideo(null);
-              setPicture({
-                title: r.issues.length ? `${r.issues.length} design recommendations found` : 'Design quality audit passed',
-                url: r.url,
-                items: r.issues.slice(0, 12).map((i: any) => i.message ?? String(i)),
-              });
-            })
-          }
+          onClick={() => void check()}
         >
           Design Quality Audit
         </Button>
@@ -612,13 +764,7 @@ function Export({ detail, file }: PaneProps) {
           loading={busy === 'thumb'}
           disabled={!!busy}
           icon={<FilmIcon size={14} />}
-          onClick={() =>
-            run('thumb', async () => {
-              const r = await runJob('/api/thumbnail', { file }, progress);
-              setVideo(null);
-              setPicture({ title: 'Video Poster Cover', url: r.url });
-            })
-          }
+          onClick={() => void thumb()}
         >
           Poster Cover
         </Button>

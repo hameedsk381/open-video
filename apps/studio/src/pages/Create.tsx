@@ -39,6 +39,12 @@ const examples = [
 
 export function Create({ initialTemplate, initialKind, initialPrompt }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string } = {}) {
   const hostMode = useHostMode();
+  // Autopilot hides everything; Guided exposes the choices that matter; Pro is the full engine.
+  const [mode, setMode] = useState<'autopilot' | 'guided' | 'pro'>(() => {
+    try { const saved = localStorage.getItem('ove-create-mode'); return saved === 'guided' || saved === 'pro' ? saved : 'autopilot'; } catch { return 'autopilot'; }
+  });
+  const [templateOpen, setTemplateOpen] = useState(Boolean(initialTemplate));
+  useEffect(() => { try { localStorage.setItem('ove-create-mode', mode); } catch {} }, [mode]);
   const [kind, setKind] = useState<string>(initialKind || 'reel');
   const [brief, setBrief] = useState(initialPrompt || '');
   const [name, setName] = useState('');
@@ -236,621 +242,454 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
     return t.width > t.height;
   });
 
+  const templateName = templates.find(template => template.id === selectedTemplate)?.name;
+  const ratio = aspect || (kind === 'product' ? '1:1' : kind === 'reel' ? '9:16' : '16:9');
+  const length = duration ? `${duration}s` : 'Auto length';
+  const engine = effectivePreset === 'auto' ? 'Auto engine' : effectivePreset;
+
   return (
     <Page
-      title="Create New Video"
-      subtitle="Craft broadcast-grade motion graphics with customizable typography, pacing, color palette, and audio design."
-      narrow
+      title="What are we making?"
+      subtitle="Describe it once. The studio writes the script, designs the look and opens an editable timeline."
+      actions={
+        <div className="segmented create-modes" aria-label="How much control to show">
+          {([['autopilot', 'Autopilot'], ['guided', 'Guided'], ['pro', 'Pro']] as const).map(([id, label]) => (
+            <button key={id} className={mode === id ? 'on' : ''} onClick={() => setMode(id)} title={id === 'autopilot' ? 'The engine decides everything' : id === 'guided' ? 'Set format, length, theme and voice' : 'Every model and creative control'}>
+              {label}
+            </button>
+          ))}
+        </div>
+      }
     >
-      {/* Brand Ingestion Card */}
-      <Field label={<span><GlobeIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Import from Brand or Website (optional)</span>} hint="Automatically imports brand colors, logo, and core messaging">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            className="input"
-            placeholder="e.g. acme.com, linear.app, or your company domain"
-            value={urlInput}
-            onChange={e => setUrlInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleScrapeUrl(); } }}
-          />
-          <Button variant="secondary" loading={scraping} icon={<SparklesIcon size={14} />} onClick={handleScrapeUrl}>
-            {scraping ? 'Analyzing…' : 'Extract Brand'}
-          </Button>
+      <div
+        className={`create-composer ${over ? 'over' : ''}`}
+        onDragOver={event => { event.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={event => { event.preventDefault(); setOver(false); addFiles(event.dataTransfer.files); }}
+      >
+        <textarea
+          autoFocus
+          className="create-brief"
+          placeholder="What is the video about? Name the product, the benefit and who it is for — or paste a brief."
+          value={brief}
+          onChange={event => setBrief(event.target.value)}
+          onKeyDown={event => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); void submit(); }
+          }}
+        />
+
+        <div className="create-examples">
+          {examples.slice(0, 3).map(example => (
+            <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>
+              {example.length > 54 ? example.slice(0, 52) + '…' : example}
+            </button>
+          ))}
         </div>
 
-        {scrapedBrand ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 12, padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-            {scrapedBrand.logo ? (
-              <img src={scrapedBrand.logo} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain', background: '#000', padding: 2 }} />
-            ) : (
-              <GlobeIcon size={24} style={{ color: 'var(--muted)' }} />
-            )}
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <b>{scrapedBrand.name || 'Brand Identity'}</b>
-                <Badge tone="green" dot>Active Brand Pack</Badge>
-              </div>
-              <span style={{ color: 'var(--muted)', fontSize: 12 }}>Brand colors auto-populated into Custom Brand Palette below</span>
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              {scrapedBrand.colors?.primary ? (
-                <span title={`Primary: ${scrapedBrand.colors.primary}`} style={{ width: 20, height: 20, borderRadius: '50%', background: scrapedBrand.colors.primary, border: '2px solid var(--border)' }} />
-              ) : null}
-              {scrapedBrand.colors?.accent ? (
-                <span title={`Accent: ${scrapedBrand.colors.accent}`} style={{ width: 20, height: 20, borderRadius: '50%', background: scrapedBrand.colors.accent, border: '2px solid var(--border)' }} />
-              ) : null}
-            </div>
+        {files.length ? (
+          <div className="create-refs">
+            {files.map((file, index) => (
+              <button key={index} type="button" title="Remove" onClick={() => setFiles(list => list.filter((_, i) => i !== index))}>
+                {file.name} ×
+              </button>
+            ))}
           </div>
         ) : null}
-      </Field>
 
-      {/* Format Selection */}
-      <Field label="Choose format & aspect ratio">
-        <div className="tiles">
-          {kinds.map(([id, title, hint]) => (
-            <button key={id} type="button" className={`tile ${kind === id ? 'on' : ''}`} onClick={() => setKind(id)}>
-              <b>{title}</b>
-              <span>{hint}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
-
-      {/* Template & Motion Archetype Picker */}
-      <Field
-        label={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <span><FilmIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Motion Archetype & Template</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                className={`btn ghost sm ${templateFilter === 'match' ? 'active' : ''}`}
-                style={{ fontSize: 11, padding: '2px 8px', height: 24, fontWeight: templateFilter === 'match' ? 600 : 400 }}
-                onClick={() => setTemplateFilter('match')}
-              >
-                Matching Format
-              </button>
-              <button
-                type="button"
-                className={`btn ghost sm ${templateFilter === 'all' ? 'active' : ''}`}
-                style={{ fontSize: 11, padding: '2px 8px', height: 24, fontWeight: templateFilter === 'all' ? 600 : 400 }}
-                onClick={() => setTemplateFilter('all')}
-              >
-                All Archetypes
-              </button>
-            </div>
-          </div>
-        }
-        hint="Pick a motion style archetype, or leave on Auto for AI generative composition"
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 10 }}>
-          {/* Auto Card */}
-          <div
-            onClick={() => setSelectedTemplate('')}
-            style={{
-              cursor: 'pointer',
-              padding: '12px 14px',
-              borderRadius: 'var(--radius)',
-              border: selectedTemplate === '' ? '2px solid var(--accent)' : '1px solid var(--border)',
-              background: selectedTemplate === '' ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: selectedTemplate === '' ? 'var(--accent)' : 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <SparklesIcon size={13} /> Auto (AI Decides)
-              </span>
-              <Badge tone="blue">Adaptive</Badge>
-            </div>
-            <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.35 }}>
-              Synthesizes optimal scene layouts, camera moves, and kinetic type from your brief.
-            </span>
-          </div>
-
-          {/* Template Cards */}
-          {matchingTemplates.map(t => {
-            const active = selectedTemplate === t.id;
-            const aspectStr = t.width && t.height ? (t.width > t.height ? '16:9' : t.width < t.height ? '9:16' : '1:1') : '';
-            return (
-              <div
-                key={t.id}
-                onClick={() => setSelectedTemplate(t.id)}
-                style={{
-                  cursor: 'pointer',
-                  padding: '12px 14px',
-                  borderRadius: 'var(--radius)',
-                  border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  background: active ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
-                  transition: 'all 0.15s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <b style={{ fontSize: 13, color: active ? 'var(--accent)' : 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.name}
-                  </b>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {aspectStr ? <Badge tone="blue">{aspectStr}</Badge> : null}
-                    {t.durationSeconds ? <Badge tone="purple">{Math.round(t.durationSeconds)}s</Badge> : null}
-                  </div>
-                </div>
-                <span style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {t.description}
-                </span>
-                {t.tags?.length ? (
-                  <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                    {t.tags.slice(0, 2).map(tag => (
-                      <span key={tag} style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface-sunken)', padding: '1px 5px', borderRadius: 3 }}>
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </Field>
-
-      {/* Prompt / Brief */}
-      <Field label="Describe your video">
-        <textarea
-          className="input"
-          style={{ minHeight: 110 }}
-          placeholder="What is your video about? Mention your product name, core benefit, and audience…"
-          value={brief}
-          onChange={e => setBrief(e.target.value)}
-        />
-      </Field>
-
-      <div style={{ margin: '-10px 0 20px' }}>
-        <span style={{ fontSize: 12, color: 'var(--faint)', display: 'block', marginBottom: 6 }}>Need inspiration? Try an example:</span>
-        <div className="chips">
-          {examples.map(example => (
-            <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>
-              {example.length > 56 ? example.slice(0, 54) + '…' : example}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Key Takeaways & Call to Action */}
-      <div className="two" style={{ marginBottom: 20 }}>
-        <Field label="Key message beats (optional)" hint="Bullet points to feature across video scenes">
-          <input
-            className="input"
-            placeholder="e.g. 10x faster rendering, zero setup, free tier"
-            value={keyPoints}
-            onChange={e => setKeyPoints(e.target.value)}
-          />
-        </Field>
-        <Field label="Call-To-Action (CTA)" hint="Headline and link shown in the closing scene">
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              className="input"
-              style={{ flex: 1.2 }}
-              placeholder="e.g. Get Started Today"
-              value={ctaHeadline}
-              onChange={e => setCtaHeadline(e.target.value)}
-            />
-            <input
-              className="input"
-              style={{ flex: 1 }}
-              placeholder="e.g. motionrender.dev"
-              value={ctaSubline}
-              onChange={e => setCtaSubline(e.target.value)}
-            />
-          </div>
-        </Field>
-      </div>
-
-      {/* Visual Styling: Typography, Motion Pacing & Aesthetic */}
-      <Field label={<span><TypeIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Typography & Motion Dynamics</span>}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-          {/* Typography */}
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', marginBottom: 4 }}>Font Pair</span>
-            <select className="input" value={typography} onChange={e => setTypography(e.target.value)}>
-              <option value="sans">Modern Sans (Inter / Geist) · SaaS & Clean</option>
-              <option value="bold">Bold Kinetic (Space Grotesk / Syne) · Impact</option>
-              <option value="serif">Editorial Serif (Playfair / Instrument) · Luxury</option>
-              <option value="mono">Terminal Monospace (JetBrains Mono) · Dev</option>
-            </select>
-          </div>
-
-          {/* Motion Pacing */}
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', marginBottom: 4 }}>Motion Pacing</span>
-            <select className="input" value={motionPacing} onChange={e => setMotionPacing(e.target.value)}>
-              <option value="dynamic">Balanced Dynamic (3–4s scenes, smooth curves)</option>
-              <option value="snappy">Snappy & Fast (1.5–2.5s cuts, punchy springs)</option>
-              <option value="cinematic">Cinematic Flow (4.5s+ slow zooms, spatial moves)</option>
-            </select>
-          </div>
-
-          {/* Visual Treatment */}
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', marginBottom: 4 }}>Visual Treatment</span>
-            <select className="input" value={visualTreatment} onChange={e => setVisualTreatment(e.target.value)}>
-              <option value="clean">Modern Vector & Crisp Contrast</option>
-              <option value="glass">Glassmorphic Glow & Blur Accents</option>
-              <option value="paper">Editorial Halftone & Paper Cutout</option>
-              <option value="cyber">Cyber Neon & Gridlines</option>
-            </select>
-          </div>
-        </div>
-      </Field>
-
-      {/* Visual Theme & Mood Palette */}
-      <Field
-        label={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <span><PaletteIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Color System & Theme</span>
-            <label className="check" style={{ margin: 0, fontSize: 12 }}>
-              <input type="checkbox" checked={customColorsEnabled} onChange={e => setCustomColorsEnabled(e.target.checked)} />
-              <span>Use Custom Brand Palette</span>
-            </label>
-          </div>
-        }
-        hint={customColorsEnabled ? 'Fine-tune your brand colors directly' : 'Select a designer color palette or toggle custom brand colors'}
-      >
-        {customColorsEnabled ? (
-          <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Primary Brand</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="color" value={brandPrimary} onChange={e => setBrandPrimary(e.target.value)} style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
-                <input className="input" style={{ fontSize: 12, padding: '4px 8px', height: 32 }} value={brandPrimary} onChange={e => setBrandPrimary(e.target.value)} />
-              </div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Accent / Pop</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="color" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
-                <input className="input" style={{ fontSize: 12, padding: '4px 8px', height: 32 }} value={brandAccent} onChange={e => setBrandAccent(e.target.value)} />
-              </div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Background</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="color" value={brandBg} onChange={e => setBrandBg(e.target.value)} style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
-                <input className="input" style={{ fontSize: 12, padding: '4px 8px', height: 32 }} value={brandBg} onChange={e => setBrandBg(e.target.value)} />
-              </div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Text Contrast</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="color" value={brandText} onChange={e => setBrandText(e.target.value)} style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
-                <input className="input" style={{ fontSize: 12, padding: '4px 8px', height: 32 }} value={brandText} onChange={e => setBrandText(e.target.value)} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
-            {[
-              { id: '', name: 'Auto (AI Decides)', desc: 'Prompt mood', colors: ['#6366f1', '#ec4899', '#06b6d4'] },
-              { id: 'midnight', name: 'Midnight Slate', desc: 'Tech & B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
-              { id: 'neon', name: 'Neon Cyber', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
-              { id: 'espresso', name: 'Warm Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
-              { id: 'paper', name: 'Clean Paper', desc: 'Light Editorial', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
-              { id: 'signal', name: 'High Signal', desc: 'Alerts & Sport', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
-            ].map(t => {
-              const active = theme === t.id;
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  style={{
-                    cursor: 'pointer',
-                    padding: '10px 12px',
-                    borderRadius: 'var(--radius)',
-                    border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
-                    background: active ? 'rgba(99, 102, 241, 0.08)' : 'var(--surface)',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                  }}
-                >
-                  <span style={{ fontSize: 12, fontWeight: 600, color: active ? 'var(--accent)' : 'inherit' }}>{t.name}</span>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {t.colors.map((c, idx) => (
-                      <span key={idx} style={{ width: 14, height: 14, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.1)' }} />
-                    ))}
-                    <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 4 }}>{t.desc}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Field>
-
-      {/* Creative Engine & AI Model (BYOK & Model Picker) */}
-      <Field
-        label={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <span><SparklesIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Creative Engine & AI Model</span>
-            {hostMode !== 'hosted' ? (
-              <label className="check" style={{ margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
-                <input
-                  type="checkbox"
-                  checked={modelPreset === 'custom'}
-                  onChange={e => setModelPreset(e.target.checked ? 'custom' : 'auto')}
-                />
-                <span style={{ fontSize: 12 }}>Custom Gateway / BYOK</span>
-              </label>
-            ) : null}
-          </div>
-        }
-        hint={effectivePreset === 'custom'
-          ? 'Connect any custom OpenAI-compatible API gateway (OpenRouter, LiteLLM, Ollama, etc.)'
-          : hostMode === 'hosted'
-            ? "AI runs on the service's managed gateway — pick a model or leave it on Auto Router"
-            : 'Choose a specialized model or connect your own API gateway'}
-      >
-        {effectivePreset === 'custom' ? (
-          <div style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginRight: 4 }}>Quick Gateway:</span>
-              {[
-                { label: 'LiteLLM Proxy', url: 'http://localhost:4000/v1', model: 'claude-3-7-sonnet' },
-                { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-3.7-sonnet' },
-                { label: 'Ollama (Local)', url: 'http://localhost:11434/v1', model: 'llama3.3' },
-                { label: 'OpenAI Direct', url: 'https://api.openai.com/v1', model: 'gpt-4o' },
-              ].map(gw => (
-                <button
-                  key={gw.label}
-                  type="button"
-                  onClick={() => {
-                    setCustomBaseUrl(gw.url);
-                    if (!customModel) setCustomModel(gw.model);
-                  }}
-                  style={{
-                    fontSize: 11,
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    border: '1px solid var(--border)',
-                    background: customBaseUrl === gw.url ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface-2)',
-                    color: customBaseUrl === gw.url ? 'var(--accent)' : 'var(--muted)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {gw.label}
-                </button>
+        <div className="create-tools">
+          <div className="create-chipgroup">
+            <span>Format</span>
+            <div className="segmented">
+              {kinds.map(([id, title]) => (
+                <button key={id} className={kind === id ? 'on' : ''} onClick={() => setKind(id)} title={title}>{title.replace('Social ', '').replace(' Spotlight', '').replace('Narrative ', '')}</button>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Gateway Base URL</span>
-                <input
-                  className="input"
-                  placeholder="https://openrouter.ai/api/v1 (or LiteLLM :4000)"
-                  value={customBaseUrl}
-                  onChange={e => setCustomBaseUrl(e.target.value)}
-                />
-              </div>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Model Name / ID</span>
-                <input
-                  className="input"
-                  placeholder="anthropic/claude-3.7-sonnet (or any 400+ model)"
-                  value={customModel}
-                  onChange={e => setCustomModel(e.target.value)}
-                />
-              </div>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>API Key (stored securely in browser)</span>
-                <input
-                  className="input"
-                  type="password"
-                  placeholder="sk-..."
-                  value={customApiKey}
-                  onChange={e => setCustomApiKey(e.target.value)}
-                />
-              </div>
+          </div>
+          <div className="create-chipgroup">
+            <span>Ratio</span>
+            <div className="segmented">
+              {(['', '9:16', '1:1', '16:9'] as const).map(value => (
+                <button key={value || 'auto'} className={aspect === value ? 'on' : ''} onClick={() => setAspect(value)}>{value || 'Auto'}</button>
+              ))}
             </div>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 8 }}>
-            {[
-              { id: 'auto', name: 'Auto Router', desc: 'Task-aware gateway routing', badge: 'Default' },
-              { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic', badge: 'Best Quality' },
-              { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Google — Fast Multimodal', badge: 'Google' },
-              { id: 'deepseek-r1', name: 'DeepSeek-R1', desc: 'DeepSeek — Deep Reasoning', badge: 'Reasoning' },
-              { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Gateway favourite — fast & stable', badge: 'Fast' },
-              { id: 'gpt-4o', name: 'OpenAI GPT-4o', desc: 'OpenAI — Multimodal', badge: 'OpenAI' },
-            ].map(m => {
-              const active = effectivePreset === m.id;
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => setModelPreset(m.id)}
-                  style={{
-                    cursor: 'pointer',
-                    padding: '10px 12px',
-                    borderRadius: 'var(--radius)',
-                    border: active ? '2px solid var(--accent)' : '1px solid var(--border)',
-                    background: active ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface)',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: active ? 'var(--accent)' : 'inherit' }}>{m.name}</span>
-                    <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: active ? 'var(--accent)' : 'var(--surface-2)', color: active ? '#fff' : 'var(--muted)' }}>{m.badge}</span>
-                  </div>
-                  <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.desc}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Field>
-
-      {/* Audio & Sound Design Suite */}
-      <Field label={<span><MusicIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Sound Design & Audio Track</span>}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', marginBottom: 4 }}>Audio Track / Mood</span>
-            <select className="input" value={audioMood} onChange={e => setAudioMood(e.target.value)}>
-              <option value="cyber">Kinetic Synth & Cyber Beats (Modern Tech)</option>
-              <option value="lofi">Ambient Lo-Fi & Chill (Product & Explainer)</option>
-              <option value="upbeat">Energetic Funk & Pop (Viral & Social)</option>
-              <option value="cinematic">Cinematic Orchestral (Dramatic & Pitch)</option>
-              <option value="corporate">Clean Acoustic (Professional & B2B)</option>
-              <option value="none">None / Muted (Visual Graphics Only)</option>
-            </select>
-          </div>
-
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', marginBottom: 4 }}>Procedural SFX</span>
-            <label className="check" style={{ marginTop: 6 }}>
-              <input type="checkbox" checked={sfx} onChange={e => setSfx(e.target.checked)} />
-              <span style={{ fontSize: 12 }}>Layer whooshes, impacts, pops & shimmers</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Voiceover Accordion */}
-        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 'var(--radius)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <label className="check" style={{ margin: 0 }}>
-            <input type="checkbox" checked={voice} onChange={e => setVoice(e.target.checked)} />
-            <span style={{ fontWeight: 600, fontSize: 13 }}>Generate AI Voiceover & Synchronized Kinetic Captions</span>
-          </label>
-
-          {voice ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Voice Tone</span>
-                <select className="input" value={voiceTone} onChange={e => setVoiceTone(e.target.value)}>
-                  <option value="confident">Confident & Authoritative (B2B & Pitch)</option>
-                  <option value="warm">Warm & Conversational (Creator & Friendly)</option>
-                  <option value="hype">High-Energy Hype (Viral & Promo)</option>
-                  <option value="calm">Calm & Thoughtful (Explainer & Story)</option>
-                </select>
-              </div>
-
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Captions Style</span>
-                <select className="input" value={captionsStyle} onChange={e => setCaptionsStyle(e.target.value)}>
-                  <option value="kinetic">Dynamic Pop (Word-by-word active highlight)</option>
-                  <option value="pill">Clean Reading Pill (Centered sentence banner)</option>
-                  <option value="lower-third">Subtle Lower-Third (Non-intrusive)</option>
-                </select>
-              </div>
+          <div className="create-chipgroup">
+            <span>Length</span>
+            <div className="segmented">
+              {(['', '15', '30', '45', '60'] as const).map(value => (
+                <button key={value || 'auto'} className={duration === value ? 'on' : ''} onClick={() => setDuration(value)}>{value ? `${value}s` : 'Auto'}</button>
+              ))}
             </div>
-          ) : null}
-        </div>
-      </Field>
-
-      {/* Media Assets Dropper */}
-      <Field label="Brand assets, footage or audio (optional)">
-        <div
-          className={`drop ${over ? 'over' : ''}`}
-          onDragOver={e => { e.preventDefault(); setOver(true); }}
-          onDragLeave={() => setOver(false)}
-          onDrop={e => { e.preventDefault(); setOver(false); addFiles(e.dataTransfer.files); }}
-        >
-          <FilmIcon size={24} style={{ margin: '0 auto 8px', color: 'var(--muted)', display: 'block' }} />
-          <span>Drag and drop assets here, or <a onClick={() => picker.current?.click()}>browse files</a></span>
+          </div>
+          <div className="create-chipgroup">
+            <span>Audio</span>
+            <button className={`chip-toggle ${voice ? 'on' : ''}`} onClick={() => setVoice(!voice)}>
+              <VolumeIcon size={13} /> Voiceover {voice ? 'on' : 'off'}
+            </button>
+          </div>
+          <button type="button" className="chip-toggle" onClick={() => picker.current?.click()}>
+            <FilmIcon size={13} /> References
+          </button>
           <input
             ref={picker}
             type="file"
             multiple
             accept="image/*,video/*,audio/*"
             hidden
-            onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
+            onChange={event => { addFiles(event.target.files); event.target.value = ''; }}
           />
         </div>
-        {files.length ? (
-          <div className="files">
-            {files.map((file, i) => (
-              <span key={i} title="Click to remove" onClick={() => setFiles(list => list.filter((_, j) => j !== i))}>
-                {file.name} ×
-              </span>
-            ))}
+
+        <div className="create-foot">
+          <div className="create-summary">
+            <span>{ratio}</span>
+            <span>{length}</span>
+            <span>{voice ? 'Voiceover' : 'No narration'}</span>
+            <span>{review ? 'Design review' : 'No review'}</span>
+            {templateName ? <span>Template · {templateName}</span> : null}
+            <button type="button" onClick={() => setMode('pro')} title="Change the engine and model">{engine}</button>
           </div>
-        ) : null}
-      </Field>
-
-      {/* Advanced Settings Accordion */}
-      <details>
-        <summary><SlidersIcon size={13} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 6 }} />Advanced Timeline & Quality Settings</summary>
-        <div style={{ marginTop: 12 }}>
-          <Field label="Project title">
-            <input
-              className="input"
-              placeholder="Auto-generated from your brief if left blank"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </Field>
-
-          <div className="three" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <Field label="Duration (seconds)">
-              <input
-                className="input"
-                type="number"
-                min={3}
-                placeholder="Auto (Recommended)"
-                value={duration}
-                onChange={e => setDuration(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Target Scenes">
-              <select className="input" value={sceneCount} onChange={e => setSceneCount(e.target.value)}>
-                <option value="">Auto (AI Decides)</option>
-                <option value="3">3 Scenes (Hook, Feature, CTA)</option>
-                <option value="4">4 Scenes (Hook, 2 Features, CTA)</option>
-                <option value="5">5 Scenes (Hook, 3 Features, CTA)</option>
-                <option value="6">6 Scenes (Narrative Arc)</option>
-              </select>
-            </Field>
-
-            <Field label="Custom Aspect">
-              <select className="input" value={aspect} onChange={e => setAspect(e.target.value)}>
-                <option value="">Format Default</option>
-                <option value="9:16">Vertical 9:16</option>
-                <option value="1:1">Square 1:1</option>
-                <option value="16:9">Widescreen 16:9</option>
-                <option value="4:5">Portrait 4:5</option>
-              </select>
-            </Field>
-          </div>
-
-          <label className="check" style={{ marginTop: 10 }}>
-            <input type="checkbox" checked={review} onChange={e => setReview(e.target.checked)} />
-            <span>Autonomous visual design quality check (verifies readability & safe-zones)</span>
-          </label>
-
-          <label className="check" style={{ marginTop: 6 }}>
-            <input type="checkbox" checked={full} onChange={e => setFull(e.target.checked)} />
-            <span>Bespoke generative synthesis (build every layer from scratch rather than templates)</span>
-          </label>
+          <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={submit}>
+            {busy ? 'Starting…' : 'Make it'}
+          </Button>
         </div>
-      </details>
+      </div>
+
+      {selectedTemplate ? (
+        <div className="create-selected">
+          <span>Starting from <b>{templateName ?? selectedTemplate}</b></span>
+          <button type="button" onClick={() => setSelectedTemplate('')}>Use auto layout</button>
+        </div>
+      ) : null}
 
       {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
 
-      <div style={{ marginTop: 24 }}>
-        <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={submit} style={{ width: '100%' }}>
-          {busy ? 'Preparing Creation Pipeline…' : 'Generate Video'}
-        </Button>
+      <div className="create-row">
+        <button type="button" className="create-more" onClick={() => setTemplateOpen(open => !open)}>
+          <FilmIcon size={14} /> {templateOpen ? 'Hide templates' : 'Start from a template'}
+        </button>
+        <span className="create-hint">
+          {mode === 'autopilot' ? 'Autopilot decides layout, type, palette and pacing from the brief.'
+            : mode === 'guided' ? 'Guided exposes the choices that change the result most.'
+              : 'Pro exposes every engine, brand and timeline control.'}
+        </span>
       </div>
+
+      {templateOpen ? (
+        <section className="create-section">
+          <div className="create-section-head">
+            <div>
+              <h2>Template</h2>
+              <p>Pick a ready-made layout, or leave Auto for a composition designed around this brief.</p>
+            </div>
+            <div className="segmented">
+              <button className={templateFilter === 'match' ? 'on' : ''} onClick={() => setTemplateFilter('match')}>Matching format</button>
+              <button className={templateFilter === 'all' ? 'on' : ''} onClick={() => setTemplateFilter('all')}>All</button>
+            </div>
+          </div>
+          <div className="create-template-grid">
+            <button type="button" className={`create-template ${selectedTemplate === '' ? 'on' : ''}`} onClick={() => setSelectedTemplate('')}>
+              <span className="create-template-head"><b>Auto</b><Badge tone="blue">Adaptive</Badge></span>
+              <small>Layout, type and camera moves designed from your brief.</small>
+            </button>
+            {matchingTemplates.map(template => {
+              const templateAspect = template.width && template.height
+                ? (template.width > template.height ? '16:9' : template.width < template.height ? '9:16' : '1:1')
+                : '';
+              return (
+                <button key={template.id} type="button" className={`create-template ${selectedTemplate === template.id ? 'on' : ''}`} onClick={() => setSelectedTemplate(template.id)}>
+                  <span className="create-template-head">
+                    <b>{template.name}</b>
+                    <span>{templateAspect ? <Badge tone="blue">{templateAspect}</Badge> : null}{template.durationSeconds ? <Badge tone="purple">{Math.round(template.durationSeconds)}s</Badge> : null}</span>
+                  </span>
+                  <small>{template.description}</small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {mode !== 'autopilot' ? (
+        <section className="create-section">
+          <div className="create-section-head">
+            <div>
+              <h2>{mode === 'guided' ? 'Guide the result' : 'Creative direction'}</h2>
+              <p>{mode === 'guided' ? 'These are the choices that change the video most. Everything else is decided for you.' : 'Fine-tune the message, look and voice.'}</p>
+            </div>
+          </div>
+
+          <div className="create-grid">
+            <Field label="Key message beats" hint="Bullet points to feature across scenes">
+              <input className="input" placeholder="e.g. 10x faster rendering, zero setup, free tier" value={keyPoints} onChange={event => setKeyPoints(event.target.value)} />
+            </Field>
+            <Field label="Call to action" hint="Headline and address shown in the closing scene">
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input className="input" placeholder="Get started today" value={ctaHeadline} onChange={event => setCtaHeadline(event.target.value)} />
+                <input className="input" placeholder="motionrender.dev" value={ctaSubline} onChange={event => setCtaSubline(event.target.value)} />
+              </div>
+            </Field>
+          </div>
+
+          <Field label="Palette" hint="Choose a look, or let the engine design one from the brief">
+            <div className="create-themes">
+              {[
+                { id: '', name: 'Auto', desc: 'Designed from the brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
+                { id: 'midnight', name: 'Midnight', desc: 'Tech & B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
+                { id: 'neon', name: 'Neon', desc: 'Social & viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
+                { id: 'espresso', name: 'Espresso', desc: 'Craft & food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
+                { id: 'paper', name: 'Paper', desc: 'Light editorial', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
+                { id: 'signal', name: 'Signal', desc: 'Alerts & sport', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
+              ].map(preset => (
+                <button key={preset.id || 'auto'} type="button" className={`create-theme ${theme === preset.id && !customColorsEnabled ? 'on' : ''}`} onClick={() => { setTheme(preset.id); setCustomColorsEnabled(false); }}>
+                  <span>{preset.colors.map(color => <i key={color} style={{ background: color }} />)}</span>
+                  <b>{preset.name}</b>
+                  <small>{preset.desc}</small>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {voice ? (
+            <div className="create-grid">
+              <Field label="Voice tone">
+                <select className="input" value={voiceTone} onChange={event => setVoiceTone(event.target.value)}>
+                  <option value="confident">Confident & authoritative (B2B & pitch)</option>
+                  <option value="warm">Warm & conversational (creator & friendly)</option>
+                  <option value="hype">High-energy hype (viral & promo)</option>
+                  <option value="calm">Calm & thoughtful (explainer & story)</option>
+                </select>
+              </Field>
+              <Field label="Captions">
+                <select className="input" value={captionsStyle} onChange={event => setCaptionsStyle(event.target.value)}>
+                  <option value="kinetic">Dynamic pop (word-by-word highlight)</option>
+                  <option value="pill">Clean reading pill (sentence banner)</option>
+                  <option value="lower-third">Subtle lower-third</option>
+                </select>
+              </Field>
+            </div>
+          ) : null}
+
+          <label className="check">
+            <input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} />
+            <span>Design review — check readability, contrast and safe zones before opening the editor</span>
+          </label>
+        </section>
+      ) : null}
+
+      {mode === 'pro' ? (
+        <>
+          <section className="create-section">
+            <div className="create-section-head">
+              <div>
+                <h2>Brand</h2>
+                <p>Import colors, logo and messaging from a website.</p>
+              </div>
+            </div>
+            <Field label={<span><GlobeIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Website or brand URL</span>} hint="Fills the palette and suggests a brief; nothing leaves this machine except the page request">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="input"
+                  placeholder="e.g. acme.com, linear.app"
+                  value={urlInput}
+                  onChange={event => setUrlInput(event.target.value)}
+                  onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void handleScrapeUrl(); } }}
+                />
+                <Button variant="secondary" loading={scraping} icon={<SparklesIcon size={14} />} onClick={handleScrapeUrl}>
+                  {scraping ? 'Analysing…' : 'Extract brand'}
+                </Button>
+              </div>
+              {scrapedBrand ? (
+                <div className="create-brand">
+                  {scrapedBrand.logo ? <img src={scrapedBrand.logo} alt="" /> : <GlobeIcon size={20} />}
+                  <div>
+                    <b>{scrapedBrand.name || 'Brand identity'}</b>
+                    <small>Colors added to the palette</small>
+                  </div>
+                  <span>
+                    {[scrapedBrand.colors?.primary, scrapedBrand.colors?.accent].filter(Boolean).map(color => (
+                      <i key={color} style={{ background: color }} />
+                    ))}
+                  </span>
+                </div>
+              ) : null}
+            </Field>
+          </section>
+
+          <section className="create-section">
+            <div className="create-section-head">
+              <div>
+                <h2>Typography & motion</h2>
+                <p>Override the engine's art direction for this video.</p>
+              </div>
+            </div>
+            <div className="create-grid create-grid-three">
+              <Field label="Font pair">
+                <select className="input" value={typography} onChange={event => setTypography(event.target.value)}>
+                  <option value="sans">Modern sans (Inter / Geist)</option>
+                  <option value="bold">Bold kinetic (Space Grotesk / Syne)</option>
+                  <option value="serif">Editorial serif (Playfair / Instrument)</option>
+                  <option value="mono">Terminal mono (JetBrains Mono)</option>
+                </select>
+              </Field>
+              <Field label="Motion pacing">
+                <select className="input" value={motionPacing} onChange={event => setMotionPacing(event.target.value)}>
+                  <option value="dynamic">Balanced dynamic (3–4s scenes)</option>
+                  <option value="snappy">Snappy & fast (1.5–2.5s cuts)</option>
+                  <option value="cinematic">Cinematic flow (4.5s+ moves)</option>
+                </select>
+              </Field>
+              <Field label="Visual treatment">
+                <select className="input" value={visualTreatment} onChange={event => setVisualTreatment(event.target.value)}>
+                  <option value="clean">Modern vector & crisp contrast</option>
+                  <option value="glass">Glassmorphic glow & blur</option>
+                  <option value="paper">Editorial halftone & paper</option>
+                  <option value="cyber">Cyber neon & gridlines</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field
+              label={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span><PaletteIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Brand palette</span>
+                  <label className="check" style={{ margin: 0, fontSize: 12 }}>
+                    <input type="checkbox" checked={customColorsEnabled} onChange={event => setCustomColorsEnabled(event.target.checked)} />
+                    <span>Use custom colors</span>
+                  </label>
+                </div>
+              }
+            >
+              {customColorsEnabled ? (
+                <div className="create-colors">
+                  {[
+                    ['Primary', brandPrimary, setBrandPrimary],
+                    ['Accent', brandAccent, setBrandAccent],
+                    ['Background', brandBg, setBrandBg],
+                    ['Text', brandText, setBrandText],
+                  ].map(([label, value, setter]) => (
+                    <label key={label as string}>
+                      <span>{label as string}</span>
+                      <span>
+                        <input type="color" value={value as string} onChange={event => (setter as (value: string) => void)(event.target.value)} />
+                        <input className="input" value={value as string} onChange={event => (setter as (value: string) => void)(event.target.value)} />
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="sub" style={{ margin: 0 }}>The palette comes from the theme or the engine. Turn this on to pin exact brand colors.</p>
+              )}
+            </Field>
+          </section>
+
+          <section className="create-section">
+            <div className="create-section-head">
+              <div>
+                <h2>Engine & audio</h2>
+                <p>The model that writes the composition, and the sound under it.</p>
+              </div>
+              {hostMode !== 'hosted' ? (
+                <label className="check" style={{ margin: 0 }}>
+                  <input type="checkbox" checked={modelPreset === 'custom'} onChange={event => setModelPreset(event.target.checked ? 'custom' : 'auto')} />
+                  <span>Custom gateway / BYOK</span>
+                </label>
+              ) : null}
+            </div>
+
+            {effectivePreset === 'custom' ? (
+              <div className="create-custom">
+                <div className="create-custom-quick">
+                  {[
+                    { label: 'LiteLLM', url: 'http://localhost:4000/v1', model: 'claude-3-7-sonnet' },
+                    { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-3.7-sonnet' },
+                    { label: 'Ollama', url: 'http://localhost:11434/v1', model: 'llama3.3' },
+                    { label: 'OpenAI', url: 'https://api.openai.com/v1', model: 'gpt-4o' },
+                  ].map(gateway => (
+                    <button key={gateway.label} type="button" className={customBaseUrl === gateway.url ? 'on' : ''} onClick={() => { setCustomBaseUrl(gateway.url); if (!customModel) setCustomModel(gateway.model); }}>
+                      {gateway.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="create-grid create-grid-three">
+                  <Field label="Gateway base URL"><input className="input" placeholder="https://openrouter.ai/api/v1" value={customBaseUrl} onChange={event => setCustomBaseUrl(event.target.value)} /></Field>
+                  <Field label="Model ID"><input className="input" placeholder="anthropic/claude-3.7-sonnet" value={customModel} onChange={event => setCustomModel(event.target.value)} /></Field>
+                  <Field label="API key" hint="Stored in this browser only"><input className="input" type="password" placeholder="sk-…" value={customApiKey} onChange={event => setCustomApiKey(event.target.value)} /></Field>
+                </div>
+              </div>
+            ) : (
+              <div className="create-models">
+                {[
+                  { id: 'auto', name: 'Auto router', desc: 'Task-aware routing', badge: 'Default' },
+                  { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic', badge: 'Quality' },
+                  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Google', badge: 'Fast' },
+                  { id: 'deepseek-r1', name: 'DeepSeek R1', desc: 'Reasoning', badge: 'Reasoning' },
+                  { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Gateway favourite', badge: 'Stable' },
+                  { id: 'gpt-4o', name: 'GPT-4o', desc: 'OpenAI', badge: 'Multimodal' },
+                ].map(model => (
+                  <button key={model.id} type="button" className={`create-model ${effectivePreset === model.id ? 'on' : ''}`} onClick={() => setModelPreset(model.id)}>
+                    <span><b>{model.name}</b><small>{model.desc}</small></span>
+                    <em>{model.badge}</em>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="create-grid">
+              <Field label="Audio mood">
+                <select className="input" value={audioMood} onChange={event => setAudioMood(event.target.value)}>
+                  <option value="cyber">Kinetic synth & cyber beats</option>
+                  <option value="lofi">Ambient lo-fi & chill</option>
+                  <option value="upbeat">Energetic funk & pop</option>
+                  <option value="cinematic">Cinematic orchestral</option>
+                  <option value="corporate">Clean acoustic</option>
+                  <option value="none">No music</option>
+                </select>
+              </Field>
+              <Field label="Sound effects">
+                <label className="check">
+                  <input type="checkbox" checked={sfx} onChange={event => setSfx(event.target.checked)} />
+                  <span>Layer whooshes, impacts, pops and shimmers</span>
+                </label>
+              </Field>
+            </div>
+
+            <details>
+              <summary><SlidersIcon size={13} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 6 }} />Timeline & quality overrides</summary>
+              <div className="create-grid" style={{ marginTop: 10 }}>
+                <Field label="Project title"><input className="input" placeholder="Auto-named from the brief" value={name} onChange={event => setName(event.target.value)} /></Field>
+                <Field label="Exact duration (seconds)"><input className="input" type="number" min={3} placeholder="Auto" value={duration} onChange={event => setDuration(event.target.value)} /></Field>
+                <Field label="Scenes">
+                  <select className="input" value={sceneCount} onChange={event => setSceneCount(event.target.value)}>
+                    <option value="">Auto</option>
+                    <option value="3">3 scenes (hook, feature, CTA)</option>
+                    <option value="4">4 scenes</option>
+                    <option value="5">5 scenes</option>
+                    <option value="6">6 scenes (narrative arc)</option>
+                  </select>
+                </Field>
+                <Field label="Aspect override">
+                  <select className="input" value={aspect} onChange={event => setAspect(event.target.value)}>
+                    <option value="">Format default</option>
+                    <option value="9:16">Vertical 9:16</option>
+                    <option value="1:1">Square 1:1</option>
+                    <option value="16:9">Widescreen 16:9</option>
+                    <option value="4:5">Portrait 4:5</option>
+                  </select>
+                </Field>
+              </div>
+              <label className="check" style={{ marginTop: 10 }}>
+                <input type="checkbox" checked={full} onChange={event => setFull(event.target.checked)} />
+                <span>Bespoke synthesis — build every layer from scratch instead of using templates</span>
+              </label>
+            </details>
+          </section>
+        </>
+      ) : null}
     </Page>
   );
 }
+
 
 /* ==================== Making Screen ==================== */
 const STAGE_SENTENCES: Record<number, string[]> = {
@@ -974,7 +813,7 @@ export function Making({ id, job }: { id: string; job: string }) {
           {report.notes.length ? <Notice tone={report.errors.length ? 'neutral' : 'warn'} title="What the engine had to change"><Bulleted items={report.notes} /></Notice> : null}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
             <Button variant="primary" onClick={() => go(`#/p/${encodeURIComponent(id)}`)}>Open the video</Button>
-            <Button onClick={() => go('#/')}>Back to Projects</Button>
+            <Button onClick={() => go('#/projects')}>Back to Projects</Button>
           </div>
         </>
       ) : error ? (
@@ -986,7 +825,7 @@ export function Making({ id, job }: { id: string; job: string }) {
           <Notice tone="error" title="Notice">{error}</Notice>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
             <Button variant="primary" onClick={() => go('#/new')}>Start New Video</Button>
-            <Button onClick={() => api('/api/project/delete', { id }).then(() => go('#/'))}>Back to Projects</Button>
+            <Button onClick={() => api('/api/project/delete', { id }).then(() => go('#/projects'))}>Back to Projects</Button>
           </div>
         </>
       ) : (
