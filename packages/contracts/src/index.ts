@@ -39,6 +39,59 @@ export const revisionSchema = z.object({
 export type Revision = z.infer<typeof revisionSchema>;
 export const historySchema = z.object({ revisions: z.array(revisionSchema) });
 
+/* Production plan */
+export type { Production, ProductionCharacter, ProductionEnvironment, ProductionShot, ProductionStyle } from '@ove/schema';
+
+/** One reason a manifest cannot be compiled, with the path the studio should point at. */
+export const productionIssueSchema = z.object({ path: z.string(), message: z.string() });
+export type ProductionIssue = z.infer<typeof productionIssueSchema>;
+
+/** What the plan adds up to, before it is compiled. */
+export const productionSummarySchema = z.object({
+  shots: z.number().int().nonnegative(),
+  scenes: z.array(z.string()),
+  characters: z.number().int().nonnegative(),
+  environments: z.number().int().nonnegative(),
+  plannedSeconds: z.number(),
+  targetSeconds: z.number().optional(),
+  readyShots: z.number().int().nonnegative(),
+  approvedShots: z.number().int().nonnegative(),
+  pendingShots: z.number().int().nonnegative(),
+  beats: z.number().int().nonnegative(),
+  unusedBeats: z.array(z.string()),
+});
+export type ProductionSummaryState = z.infer<typeof productionSummarySchema>;
+
+/**
+ * A project's plan as read: the raw file (so an invalid one can be repaired), whether it validates,
+ * every issue when it does not, and the summary only when it does.
+ */
+export const productionStateSchema = z.object({
+  production: z.unknown().nullable(),
+  valid: z.boolean(),
+  issues: z.array(productionIssueSchema),
+  summary: productionSummarySchema.nullable(),
+  modified: z.number(),
+  /** URL prefix the storyboard resolves media against, the same one the Player uses. */
+  base: z.string(),
+});
+export type ProductionState = z.infer<typeof productionStateSchema>;
+
+/** A save returns the canonical plan the server kept, with the revision it recorded. */
+export const saveProductionResultSchema = productionStateSchema.extend({ revision: revisionSchema });
+export type SaveProductionResult = z.infer<typeof saveProductionResultSchema>;
+
+/** A dry run compiles in memory; applying it also writes the timeline and returns that revision. */
+export const compileProductionResultSchema = z.object({
+  dryRun: z.boolean(),
+  summary: productionSummarySchema,
+  notes: z.array(z.string()),
+  changes: z.array(z.string()),
+  composition: z.object({ scenes: z.number().int().nonnegative(), durationFrames: z.number().int().nonnegative(), fps: z.number().positive(), width: z.number().int().positive(), height: z.number().int().positive() }),
+  revision: revisionSchema.optional(),
+});
+export type CompileProductionResult = z.infer<typeof compileProductionResultSchema>;
+
 /* Library */
 export const blockSchema = z.object({ id: z.string(), name: z.string(), description: z.string(), category: z.string(), kind: z.enum(['scene', 'overlay']), durationFrames: z.number() }).passthrough();
 export type Block = z.infer<typeof blockSchema>;
@@ -89,6 +142,16 @@ export const textRequest = z.object({ id, path: z.string().min(1, 'path is requi
 export const addBlockRequest = z.object({ id, block: z.string().min(1, 'block is required'), at: z.union([z.string(), z.number()]).optional(), frames: z.union([z.string(), z.number()]).optional(), scene: z.string().optional(), set: z.record(z.string(), z.unknown()).optional() });
 export const restoreRequest = z.object({ file: z.string().min(1), n: z.number().int().min(1) });
 export type NewProjectRequest = z.infer<typeof newProjectRequest>;
+
+/* Production plan requests */
+export const initProductionRequest = z.object({ id });
+export const saveProductionRequest = z.object({
+  id,
+  production: z.record(z.string(), z.unknown()),
+  /** The plan's modified time when it was read; a mismatch means another tab saved first. */
+  baseModified: z.number().optional(),
+});
+export const compileProductionRequest = z.object({ id, dryRun: z.boolean().default(false) });
 
 /** The first problem in a request, in the words the studio shows. */
 export function parseRequest<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {

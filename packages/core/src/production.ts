@@ -1,4 +1,4 @@
-import { parseComposition, type Composition, type Production } from '@ove/schema';
+import { colorPattern, parseComposition, productionSchema, transitionStyles, type Composition, type Production } from '@ove/schema';
 
 // Compiles a production manifest into the rendering timeline. This is an editing step, not an art-direction step: it
 // places each shot at its start frame, hands footage or a planned text card to the renderer, and carries the script,
@@ -38,6 +38,69 @@ export function productionSummary(production: Production): ProductionSummary {
     beats: beats.length,
     unusedBeats: beats.map(beat => beat.id).filter(id => !used.has(id)),
   };
+}
+
+/**
+ * Reads an existing timeline back into a plan: one shot per scene, keeping its picture, sound, copy and transition.
+ * The plan is deliberately plain — this is a starting point to edit, not a reconstruction of the bespoke design.
+ */
+export function scaffoldProduction(composition: Composition): Production {
+  const scenes = composition.scenes.filter(scene => scene.id !== 'narration' && scene.id !== 'captions');
+  if (!scenes.length) throw new Error('This video has no scenes to plan');
+
+  const first = (layers: any[], type: string): any | undefined => {
+    for (const layer of layers) {
+      if (!layer || typeof layer !== 'object') continue;
+      if (layer.type === type) return layer;
+      if (Array.isArray(layer.children)) { const found = first(layer.children, type); if (found) return found; }
+    }
+    return undefined;
+  };
+  const textOf = (layer: any): string => typeof layer?.content === 'string' ? layer.content : Array.isArray(layer?.spans) ? layer.spans.map((span: any) => span?.text ?? '').join('') : '';
+  const seconds = (frames: number) => Math.max(0.001, Math.round((frames / composition.fps) * 1000) / 1000);
+
+  const shots: any[] = scenes.map(scene => {
+    const text = textOf(first(scene.layers as any[], 'text')).trim();
+    const video = first(scene.layers as any[], 'video'), image = first(scene.layers as any[], 'image'), audio = first(scene.layers as any[], 'audio');
+    const transition = scene.transitionIn?.type;
+    return {
+      id: scene.id, sceneId: scene.id, name: scene.name, action: scene.name, durationSeconds: seconds(scene.durationFrames),
+      ...(text ? { onScreen: text } : {}),
+      ...(transition && (transitionStyles as readonly string[]).includes(transition) ? { transition } : {}),
+      ...(video ? { media: { video: video.src } } : image ? { media: { image: image.src } } : {}),
+      ...(audio ? { audio: { src: audio.src, volume: Number(audio.volume) || 1 } } : {}),
+    };
+  });
+
+  let script: any = composition.content;
+  if (!script) {
+    script = { beats: shots.map(shot => ({ id: shot.id, name: shot.name, onScreen: shot.onScreen ?? shot.action })) };
+    for (const shot of shots) shot.beatId = shot.id;
+  } else if (script.beats?.length === shots.length) {
+    shots.forEach((shot: any, index: number) => { shot.beatId = script.beats[index].id; });
+  }
+
+  const style: any = {};
+  if (typeof composition.background === 'string' && colorPattern.test(composition.background)) style.palette = { bg: composition.background };
+  if (composition.texture && composition.texture.type !== 'none') style.texture = composition.texture.type;
+
+  const format = composition.export?.format;
+  const audio = composition.export?.audio;
+  return productionSchema.parse({
+    id: composition.id, name: composition.name, brief: {
+      prompt: composition.content?.promise ?? composition.name, audience: composition.content?.audience,
+      targetDurationSeconds: seconds(composition.durationFrames), notes: 'Started from the existing timeline.',
+    },
+    format: { width: composition.width, height: composition.height, fps: composition.fps },
+    ...(Object.keys(style).length ? { style } : {}),
+    script, shots, assets: composition.assets,
+    ...(audio ? { audio: { music: audio, volume: composition.export.audioVolume, duck: composition.export.duck !== undefined } } : {}),
+    export: {
+      ...(format === 'mp4' || format === 'webm' || format === 'mov' ? { format } : {}),
+      ...(composition.export.loudness !== undefined ? { loudness: composition.export.loudness } : {}),
+      ...(composition.grain ? { grain: composition.grain } : {}),
+    },
+  });
 }
 
 export function compileProduction(production: Production): CompiledProduction {

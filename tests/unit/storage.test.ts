@@ -50,6 +50,32 @@ describe('projects', () => {
     expect((await store.readRaw(LOCAL_PRINCIPAL, id)).name).toBe('V');
   }, 20000);
 
+  it('keeps a production plan beside the composition, with its own history', async () => {
+    const id = await store.create(LOCAL_PRINCIPAL, 'Planned');
+    await store.writeRaw(LOCAL_PRINCIPAL, id, video);
+    expect(await store.readProduction(LOCAL_PRINCIPAL, id)).toBeUndefined();
+    expect(await store.productionModified(LOCAL_PRINCIPAL, id)).toBeUndefined();
+
+    const plan = { version: '1.0', id: 'p', name: 'Plan', productionType: 'hybrid', brief: { prompt: 'x' }, format: { width: 10, height: 10, fps: 30 },
+      shots: [{ id: 's1', sceneId: 'a', action: 'x', durationSeconds: 2 }, { id: 's2', sceneId: 'b', action: 'y', durationSeconds: 3 }] };
+    await store.writeProduction(LOCAL_PRINCIPAL, id, plan, { kind: 'edit', label: 'started' });
+    expect(await store.readProduction(LOCAL_PRINCIPAL, id)).toMatchObject({ name: 'Plan' });
+    await store.writeProduction(LOCAL_PRINCIPAL, id, { ...plan, name: 'Plan v2', shots: [...plan.shots, { id: 's3', sceneId: 'b', action: 'z', durationSeconds: 6 }] }, { kind: 'edit', label: 'added a shot' });
+
+    const revisions = await store.revisions(LOCAL_PRINCIPAL, id, 'production.json');
+    expect(revisions.map(revision => revision.label)).toEqual(['started', 'added a shot']);
+    expect(revisions[1]).toMatchObject({ n: 2, frames: 330, scenes: 2, changes: expect.arrayContaining(['shots 2 → 3', 'added s3', 'length 5 s → 11 s']) });
+    expect(await store.revisions(LOCAL_PRINCIPAL, id)).toEqual([]);          // the composition still has no history of its own
+
+    const old = new Date(Date.now() - 60_000); await utimes(join(root, id, 'composition.json'), old, old);
+    expect(await store.modified(LOCAL_PRINCIPAL, id)).toBe(await store.productionModified(LOCAL_PRINCIPAL, id));
+
+    await store.restore(LOCAL_PRINCIPAL, id, 1, 'production.json');
+    expect((await store.readProduction(LOCAL_PRINCIPAL, id)).name).toBe('Plan');
+    expect((await store.readRaw(LOCAL_PRINCIPAL, id)).id).toBe('v');          // restoring the plan leaves the timeline alone
+    expect(() => store.revisions(LOCAL_PRINCIPAL, id, '../other.json' as any)).toThrow(/not one of/);
+  });
+
   it('duplicates without history or the saved thumbnail, and trashes into .trash', async () => {
     const copy = await store.duplicate(LOCAL_PRINCIPAL, 'my-video', raw => ({ ...raw, name: 'Copy' }));
     expect(copy).toBe('my-video-copy'); expect((await store.readRaw(LOCAL_PRINCIPAL, copy)).name).toBe('Copy');

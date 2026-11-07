@@ -37,8 +37,9 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: stri
   );
 }
 
-export const Notice = ({ tone = 'neutral', title, children }: { tone?: 'neutral' | 'error' | 'warn' | 'success'; title?: string; children: ReactNode }) => (
+export const Notice = ({ tone = 'neutral', title, children, onDismiss }: { tone?: 'neutral' | 'error' | 'warn' | 'success'; title?: string; children: ReactNode; onDismiss?: () => void }) => (
   <div className={`notice ${tone}`}>
+    {onDismiss ? <button className="notice-close" aria-label="Dismiss" onClick={onDismiss}>×</button> : null}
     {title ? <b className="notice-title">{title}</b> : null}
     <div className="notice-body">{children}</div>
   </div>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ago, api, dur, type Project } from '../api';
-import { editorPath, go } from '../router';
+import { editorPath, go, planPath } from '../router';
 import {
   Badge,
   Button,
   CopyIcon,
   Empty,
   FilmIcon,
+  LayersIcon,
   Notice,
   Page,
   PlusIcon,
@@ -195,6 +196,9 @@ function ProjectCard({
       <div className="card-foot">
         <Button size="sm" variant="secondary" onClick={open}>
           Open Studio
+        </Button>
+        <Button size="sm" variant="ghost" icon={<LayersIcon size={12} />} onClick={() => go(planPath(project.id))} title="Open the production plan">
+          Plan
         </Button>
         <Button size="sm" variant="ghost" icon={<CopyIcon size={12} />} onClick={onDuplicate} title="Duplicate project">
           Duplicate

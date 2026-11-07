@@ -3,6 +3,7 @@ import { connectJobs, useJobs, cleanUserStatus } from './api';
 import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
 import { Library, Settings } from './pages/Library';
+import { ProductionPlan } from './pages/ProductionPlan';
 import { Projects } from './pages/Projects';
 import { Showcase } from './pages/Showcase';
 import { AuthPage, TokenPage, type Me } from './pages/Auth';
@@ -204,6 +205,8 @@ export function App() {
             <Create initialTemplate={route.template} initialKind={route.kind} initialPrompt={route.prompt} />
           ) : route.name === 'making' ? (
             <Making id={route.id} job={route.job} />
+          ) : route.name === 'production' ? (
+            <ProductionPlan key={route.id} id={route.id} section={route.section} />
           ) : route.name === 'editor' ? (
             <Editor key={route.id} id={route.id} tab={route.tab} />
           ) : route.name === 'library' ? (

@@ -37,7 +37,45 @@ export async function listRevisions(compositionFile: string): Promise<Revision[]
 }
 
 const scenesOf = (composition: any): any[] => Array.isArray(composition?.scenes) ? composition.scenes : [];
+const shotsOf = (production: any): any[] => Array.isArray(production?.shots) ? production.shots : [];
+const isProduction = (raw: any): boolean => Array.isArray(raw?.shots);
 const defaults = (composition: any): Record<string, unknown> => Object.fromEntries(Object.entries(composition?.variables ?? {}).map(([name, declaration]: [string, any]) => [name, JSON.stringify(declaration?.default)]));
+
+/** A few short phrases about what changed between two production manifests. */
+export function summarizeProductionChange(previous: any, next: any): string[] {
+  if (!previous) return [];
+  const changes: string[] = [];
+  const [before, after] = [shotsOf(previous), shotsOf(next)];
+  if (before.length !== after.length) changes.push(`shots ${before.length} → ${after.length}`);
+  const ids = (list: any[]) => new Set(list.map(shot => shot?.id));
+  const added = after.filter(shot => !ids(before).has(shot?.id)).map(shot => shot?.id), removed = before.filter(shot => !ids(after).has(shot?.id)).map(shot => shot?.id);
+  if (added.length) changes.push(`added ${added.join(', ')}`);
+  if (removed.length) changes.push(`removed ${removed.join(', ')}`);
+
+  const groups = (list: any[]) => new Set(list.map(shot => shot?.sceneId).filter(id => typeof id === 'string'));
+  const [wasScenes, nowScenes] = [groups(before), groups(after)];
+  if (wasScenes.size !== nowScenes.size) changes.push(`scenes ${wasScenes.size} → ${nowScenes.size}`);
+
+  const seconds = (list: any[]) => list.reduce((total, shot) => total + (Number(shot?.durationSeconds) || 0), 0);
+  const length = (list: any[]) => Number(seconds(list).toFixed(1));
+  if (length(before) !== length(after)) changes.push(`length ${length(before)} s → ${length(after)} s`);
+
+  const format = (production: any) => production?.format ?? {};
+  const [was, now] = [format(previous), format(next)];
+  if (was.width !== now.width || was.height !== now.height) changes.push(`size ${was.width}x${was.height} → ${now.width}x${now.height}`);
+  if (was.fps !== now.fps) changes.push(`fps ${was.fps} → ${now.fps}`);
+
+  const beats = (production: any) => new Set((production?.script?.beats ?? []).map((beat: any) => beat?.id));
+  const [wasBeats, nowBeats] = [beats(previous), beats(next)];
+  if (wasBeats.size !== nowBeats.size) changes.push(`script beats ${wasBeats.size} → ${nowBeats.size}`);
+  else if ([...nowBeats].some(id => !wasBeats.has(id))) changes.push('script beats reordered or renamed');
+
+  const [wasTarget, nowTarget] = [previous?.brief?.targetDurationSeconds, next?.brief?.targetDurationSeconds];
+  if (wasTarget !== nowTarget) changes.push(wasTarget === undefined ? `target ${nowTarget} s` : nowTarget === undefined ? `target removed (was ${wasTarget} s)` : `target ${wasTarget} s → ${nowTarget} s`);
+
+  if (!changes.length && JSON.stringify(previous) !== JSON.stringify(next)) changes.push('plan edited');
+  return changes.slice(0, 6);
+}
 
 /** A few short phrases about what changed between two compositions. */
 export function summarizeChange(previous: any, next: any): string[] {
@@ -66,7 +104,11 @@ export async function saveRevision(compositionFile: string, meta: RevisionMeta):
   const last = list.at(-1);
   const previous = last ? JSON.parse((await readText(join(historyDir(compositionFile), last.file))) ?? 'null') : undefined;
   const n = (last?.n ?? 0) + 1;
-  const revision: Revision = { n, file: `${pad(n)}.json`, at: new Date().toISOString(), ...meta, frames: Number(composition.durationFrames) || 0, scenes: scenesOf(composition).length, changes: summarizeChange(previous, composition) };
+  const production = isProduction(composition);
+  const fps = Number(composition?.format?.fps) || 30;
+  const frames = production ? Math.round(shotsOf(composition).reduce((total, shot) => total + (Number(shot?.durationSeconds) || 0), 0) * fps) : Number(composition?.durationFrames) || 0;
+  const scenes = production ? new Set(shotsOf(composition).map(shot => shot?.sceneId).filter(id => typeof id === 'string')).size : scenesOf(composition).length;
+  const revision: Revision = { n, file: `${pad(n)}.json`, at: new Date().toISOString(), ...meta, frames, scenes, changes: production ? summarizeProductionChange(previous, composition) : summarizeChange(previous, composition) };
   await mkdir(historyDir(compositionFile), { recursive: true });
   await writeFile(join(historyDir(compositionFile), revision.file), text);
   await writeFile(indexFile(compositionFile), JSON.stringify([...list, revision], null, 2) + '\n');

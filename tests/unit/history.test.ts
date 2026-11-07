@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ensureBaseline, listRevisions, restoreRevision, saveRevision, summarizeChange } from '@ove/ai';
+import { ensureBaseline, listRevisions, restoreRevision, saveRevision, summarizeChange, summarizeProductionChange } from '@ove/ai';
 
 // Every AI change to a composition is kept as a numbered revision, so a bad one can be undone and nothing is lost by restoring.
 let dir: string, file: string;
@@ -49,6 +49,32 @@ describe('revision history', () => {
     await write(comp(['a'])); await saveRevision(file, { kind: 'compose', label: 'one' });
     await writeFile(other, JSON.stringify(comp(['z']))); await saveRevision(other, { kind: 'compose', label: 'two' });
     expect((await listRevisions(file)).map(r => r.label)).toEqual(['one']); expect((await listRevisions(other)).map(r => r.label)).toEqual(['two']);
+  });
+
+  it('describes production plans in their own terms', async () => {
+    const productionFile = join(dir, 'production.json');
+    const plan = (shots: [string, string, number][], extra: Record<string, unknown> = {}) => ({
+      version: '1.0', id: 'p', name: 'P', productionType: 'hybrid', brief: { prompt: 'x' }, format: { width: 1920, height: 1080, fps: 30 },
+      shots: shots.map(([id, sceneId, durationSeconds]) => ({ id, sceneId, action: 'a', durationSeconds })), ...extra,
+    });
+    const save = async (value: unknown) => { await writeFile(productionFile, JSON.stringify(value)); return saveRevision(productionFile, { kind: 'edit', label: 'plan' }); };
+
+    const first = await save(plan([['s1', 'a', 2], ['s2', 'b', 3]]));
+    expect(first).toMatchObject({ frames: 150, scenes: 2, changes: [] });
+    const second = await save(plan([['s1', 'a', 2], ['s2', 'b', 3], ['s3', 'b', 6]], {
+      brief: { prompt: 'x', targetDurationSeconds: 10 },
+      script: { beats: [{ id: 'b1', name: 'Hook', onScreen: 'One' }, { id: 'b2', name: 'CTA', onScreen: 'Two' }] },
+    }));
+    expect(second).toMatchObject({ n: 2, frames: 330, scenes: 2 });
+    expect(second.changes).toEqual(expect.arrayContaining(['shots 2 → 3', 'added s3', 'length 5 s → 11 s', 'script beats 0 → 2', 'target 10 s']));
+
+    const restored = await restoreRevision(productionFile, 1);
+    expect(restored).toMatchObject({ kind: 'restore', frames: 150, scenes: 2 });
+    expect(JSON.parse(await readFile(productionFile, 'utf8')).shots).toHaveLength(2);
+
+    expect(summarizeProductionChange(undefined, plan([]))).toEqual([]);
+    const edited = plan([['s1', 'a', 2]]); (edited.shots[0] as any).action = 'changed';
+    expect(summarizeProductionChange(plan([['s1', 'a', 2]]), edited)).toEqual(['plan edited']);
   });
 
   it('describes changes briefly', () => {

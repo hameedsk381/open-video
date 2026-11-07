@@ -10,6 +10,8 @@ export type { Revision, RevisionMeta };
 export type Principal = { userId: string; tenantId: string };
 export const LOCAL_PRINCIPAL: Principal = { userId: 'local', tenantId: 'local' };
 export type StoredAsset = { name: string; path: string; kind: string; bytes: number };
+/** The JSON files a project keeps at its root, each with its own revision history. */
+export type ProjectFile = 'composition.json' | 'production.json';
 
 export interface ProjectStore {
   /** Folder names under the principal's space; not every one is a valid project. */
@@ -20,6 +22,10 @@ export interface ProjectStore {
   readRaw(who: Principal, id: string): Promise<any>;
   /** With `meta`, the change is kept as a numbered revision (and what was there before, the first time). */
   writeRaw(who: Principal, id: string, raw: unknown, meta?: RevisionMeta): Promise<void>;
+  /** The production manifest, or undefined while the project has only a composition. */
+  readProduction(who: Principal, id: string): Promise<any | undefined>;
+  writeProduction(who: Principal, id: string, raw: unknown, meta?: RevisionMeta): Promise<void>;
+  productionModified(who: Principal, id: string): Promise<number | undefined>;
   modified(who: Principal, id: string): Promise<number>;
   duplicate(who: Principal, id: string, rename: (raw: any) => any): Promise<string>;
   /** Moves the project aside so it can be brought back by hand. */
@@ -29,8 +35,8 @@ export interface ProjectStore {
   /** The saved thumbnail, only while it is newer than the composition. */
   thumb(who: Principal, id: string): Promise<Buffer | undefined>;
   putThumb(who: Principal, id: string, png: Buffer): Promise<void>;
-  revisions(who: Principal, id: string): Promise<Revision[]>;
-  restore(who: Principal, id: string, n: number): Promise<Revision>;
+  revisions(who: Principal, id: string, file?: ProjectFile): Promise<Revision[]>;
+  restore(who: Principal, id: string, n: number, file?: ProjectFile): Promise<Revision>;
   /** Bytes this principal's projects take up on disk. */
   usedBytes(who: Principal): Promise<number>;
   /** A local folder with the project's files, for work that needs real files. Call commit() when the work wrote something. */
@@ -72,7 +78,12 @@ export class FsProjectStore implements ProjectStore {
     if (typeof id !== 'string' || !id || id.startsWith('.') || !idPattern.test(id)) throw new Error('That project name is not valid');
     return this.resolve(who, id, 'project');
   }
-  private file(who: Principal, id: string) { return join(this.projectDir(who, id), 'composition.json'); }
+  private file(who: Principal, id: string) { return this.named(who, id, 'composition.json'); }
+  /** One of the project's root JSON files; anything else is refused rather than turned into a path. */
+  private named(who: Principal, id: string, file: ProjectFile) {
+    if (file !== 'composition.json' && file !== 'production.json') throw new Error(`"${file}" is not one of this project's files`);
+    return join(this.projectDir(who, id), file);
+  }
 
   async ids(who: Principal) {
     const entries = await readdir(this.tenantRoot(who), { withFileTypes: true }).catch(() => []);
@@ -87,14 +98,27 @@ export class FsProjectStore implements ProjectStore {
     await mkdir(join(space, id, 'assets'), { recursive: true });
     return id;
   }
-  async readRaw(who: Principal, id: string) { return JSON.parse((await readFile(this.file(who, id), 'utf8')).replace(/^﻿/, '')); }
-  async writeRaw(who: Principal, id: string, raw: unknown, meta?: RevisionMeta) {
-    const file = this.file(who, id);
+  private async readJson(file: string) { return JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, '')); }
+  private async writeJson(file: string, raw: unknown, meta?: RevisionMeta) {
     if (meta) await ensureBaseline(file);
     await writeFile(file, JSON.stringify(raw, null, 2) + '\n');
     if (meta) await saveRevision(file, meta);
   }
-  async modified(who: Principal, id: string) { return (await stat(this.file(who, id))).mtimeMs; }
+  async readRaw(who: Principal, id: string) { return this.readJson(this.file(who, id)); }
+  async writeRaw(who: Principal, id: string, raw: unknown, meta?: RevisionMeta) { await this.writeJson(this.file(who, id), raw, meta); }
+  async readProduction(who: Principal, id: string) {
+    try { return await this.readJson(this.named(who, id, 'production.json')); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
+  }
+  async writeProduction(who: Principal, id: string, raw: unknown, meta?: RevisionMeta) { await this.writeJson(this.named(who, id, 'production.json'), raw, meta); }
+  async productionModified(who: Principal, id: string) {
+    try { return (await stat(this.named(who, id, 'production.json'))).mtimeMs; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
+  }
+  async modified(who: Principal, id: string) {
+    const [composition, production] = await Promise.all([stat(this.file(who, id)).then(info => info.mtimeMs), this.productionModified(who, id)]);
+    return Math.max(composition, production ?? 0);
+  }
 
   async duplicate(who: Principal, id: string, rename: (raw: any) => any) {
     const raw = await this.readRaw(who, id), copy = await this.create(who, `${id.replace(/-\d+$/, '')}-copy`);
@@ -140,8 +164,8 @@ export class FsProjectStore implements ProjectStore {
     const walk = async (dir: string): Promise<number> => { let total = 0; for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) { const path = join(dir, entry.name); total += entry.isDirectory() ? (entry.name === '_tenants' ? 0 : await walk(path)) : (await stat(path).catch(() => ({ size: 0 }))).size; } return total; };
     return walk(this.tenantRoot(who));
   }
-  revisions(who: Principal, id: string) { return listRevisions(this.file(who, id)); }
-  restore(who: Principal, id: string, n: number) { return restoreRevision(this.file(who, id), n); }
+  revisions(who: Principal, id: string, file: ProjectFile = 'composition.json') { return listRevisions(this.named(who, id, file)); }
+  restore(who: Principal, id: string, n: number, file: ProjectFile = 'composition.json') { return restoreRevision(this.named(who, id, file), n); }
   async workdir(who: Principal, id: string) { return { dir: this.projectDir(who, id), commit: async () => {} }; }
 }
 

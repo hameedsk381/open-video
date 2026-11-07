@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type TextLayer, type Variable } from '../api';
+import { composeNotesKey } from '../composeReport';
 import { PlayerView, type PlayerHandle } from '../Player';
-import { editorPath, go } from '../router';
+import { editorPath, go, planPath } from '../router';
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
@@ -12,6 +13,7 @@ import {
   DownloadIcon,
   Field,
   FilmIcon,
+  LayersIcon,
   Notice,
   PaletteIcon,
   ShieldIcon,
@@ -35,9 +37,11 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
+  const [composeNotes, setComposeNotes] = useState<string[]>([]);
   const frameAt = useRef(0);
   const player = useRef<PlayerHandle>(null);
   const file = `${id}/composition.json`;
+  const planFile = `${id}/production.json`;
 
   const load = useCallback((keepFrame: boolean) => {
     if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
@@ -49,6 +53,19 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     setDetail(null);
     load(false);
   }, [load]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(composeNotesKey(id));
+      const notes: unknown = raw ? JSON.parse(raw) : [];
+      setComposeNotes(Array.isArray(notes) ? notes.filter((note): note is string => typeof note === 'string' && note.trim() !== '') : []);
+    } catch { setComposeNotes([]); }
+  }, [id]);
+
+  const dismissComposeNotes = () => {
+    setComposeNotes([]);
+    try { sessionStorage.removeItem(composeNotesKey(id)); } catch {}
+  };
 
   if (error) {
     return (
@@ -83,16 +100,26 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   };
 
-  const props = { detail, file, save, reload: load, setNote };
+  const props = { detail, file, planFile, save, reload: load, setNote };
 
   return (
     <div className="editor">
       <div className="stage">
+        {composeNotes.length ? (
+          <Notice tone="warn" title="What the engine had to change" onDismiss={dismissComposeNotes}>
+            <ul className="issue-list" style={{ margin: '4px 0 0' }}>
+              {composeNotes.map(change => <li key={change}>{change}</li>)}
+            </ul>
+          </Notice>
+        ) : null}
         <div className="etop">
           <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go('#/')}>
             Projects
           </Button>
           <TitleInput detail={detail} save={name => save('/api/project/rename', { id, name }, 'Renamed')} />
+          <Button size="sm" variant="secondary" icon={<LayersIcon size={14} />} onClick={() => go(planPath(id))}>
+            Production plan
+          </Button>
           {note ? (
             <span className="saved" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>
               <CheckIcon size={12} /> {note}
@@ -146,6 +173,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
 type PaneProps = {
   detail: Detail;
   file: string;
+  planFile: string;
   save: (path: string, body: unknown, done?: string) => Promise<void>;
   reload: (keepFrame: boolean) => Promise<void>;
   setNote: (note: string) => void;
@@ -440,14 +468,21 @@ function Look({ detail, save }: PaneProps) {
   );
 }
 
-function History({ detail, file, reload, setNote }: PaneProps) {
-  const [revisions, setRevisions] = useState<Revision[] | null>(null);
+function History({ detail, file, planFile, reload, setNote }: PaneProps) {
+  const [timeline, setTimeline] = useState<Revision[] | null>(null);
+  const [plan, setPlan] = useState<Revision[] | null>(null);
   const [error, setError] = useState('');
   const { toast } = useUi();
 
   const load = () =>
-    api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(file)}`).then(
-      r => setRevisions([...r.revisions].reverse()),
+    Promise.all([
+      api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(file)}`),
+      api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(planFile)}`),
+    ]).then(
+      ([c, p]) => {
+        setTimeline([...c.revisions].reverse());
+        setPlan([...p.revisions].reverse());
+      },
       e => setError(e.message)
     );
 
@@ -455,38 +490,47 @@ function History({ detail, file, reload, setNote }: PaneProps) {
     void load();
   }, [detail]);
 
-  const restore = (n: number) =>
-    api('/api/restore', { file, n }).then(
+  const restore = (target: string, n: number, what: 'timeline' | 'plan') =>
+    api('/api/restore', { file: target, n }).then(
       () => {
-        setNote(`Restored version #${n}`);
-        return reload(false);
+        if (what === 'timeline') {
+          setNote(`Restored version #${n}`);
+          return reload(false);
+        }
+        toast(`Restored plan version #${n}`, 'success');
+        return load();
       },
       e => toast(e.message, 'error')
     );
 
+  const rows = (list: Revision[] | null, what: 'timeline' | 'plan') => list?.map((r, i) => (
+    <div className="row" key={`${what}-${r.n}`}>
+      <div>
+        <b>Version #{r.n} · {r.kind}</b>
+        <small>{r.label}</small>
+        <small>{new Date(r.at).toLocaleString()}</small>
+      </div>
+      {i === 0 ? (
+        <Badge tone="green" dot>Active</Badge>
+      ) : (
+        <Button size="sm" onClick={() => void restore(what === 'plan' ? planFile : file, r.n, what)}>
+          Restore
+        </Button>
+      )}
+    </div>
+  ));
+
   return (
     <>
       <h2>Version History</h2>
-      <p className="sub">Every change is saved automatically. Restore any previous milestone at any time.</p>
+      <p className="sub">Every change is saved automatically. The timeline and the production plan keep separate histories.</p>
       {error ? <Notice tone="error">{error}</Notice> : null}
-      {revisions && revisions.length === 0 ? <p className="sub">No previous revisions yet.</p> : null}
 
-      {revisions?.map((r, i) => (
-        <div className="row" key={r.n}>
-          <div>
-            <b>Version #{r.n} · {r.kind}</b>
-            <small>{r.label}</small>
-            <small>{new Date(r.at).toLocaleString()}</small>
-          </div>
-          {i === 0 ? (
-            <Badge tone="green" dot>Active</Badge>
-          ) : (
-            <Button size="sm" onClick={() => void restore(r.n)}>
-              Restore
-            </Button>
-          )}
-        </div>
-      ))}
+      <h3 className="history-group">Timeline</h3>
+      {timeline === null ? <p className="sub">Loading…</p> : timeline.length === 0 ? <p className="sub">No timeline revisions yet.</p> : rows(timeline, 'timeline')}
+
+      <h3 className="history-group">Production plan</h3>
+      {plan === null ? <p className="sub">Loading…</p> : plan.length === 0 ? <p className="sub">No plan revisions yet. Start a plan from the Production plan workspace.</p> : rows(plan, 'plan')}
     </>
   );
 }

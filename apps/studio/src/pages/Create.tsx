@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type TemplateSummary } from '../api';
-import { composeReport } from '../composeReport';
+import { composeNotesKey, composeOutcome } from '../composeReport';
 import { go } from '../router';
 import {
   AlertCircleIcon,
@@ -898,6 +898,11 @@ const Bulleted = ({ items }: { items: string[] }) => (
   </>
 );
 
+/** Repairs alone do not stop the flow: the editor shows them once as a dismissible banner. */
+function stashComposeNotes(id: string, notes: string[]) {
+  try { sessionStorage.setItem(composeNotesKey(id), JSON.stringify(notes)); } catch {}
+}
+
 export function Making({ id, job }: { id: string; job: string }) {
   const [messages, setMessages] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -913,10 +918,11 @@ export function Making({ id, job }: { id: string; job: string }) {
     }).then(
       j => {
         if (!live) return;
-        // A video the engine had to repair, or that the design review still faults, is not a plain success: stop here
-        // and say what happened instead of a redirect that buries it inside the player.
-        const reported = composeReport(j.result);
-        if (reported) { setReport(reported); return; }
+        // Unresolved review faults stop here and say what is wrong. Repairs alone open the editor, where the
+        // notes arrive as a dismissible banner instead of an extra click.
+        const outcome = composeOutcome(j.result);
+        if (outcome.stop) { setReport(outcome.report); return; }
+        if (outcome.notes.length) stashComposeNotes(id, outcome.notes);
         go(`#/p/${encodeURIComponent(id)}`);
       },
       e => {

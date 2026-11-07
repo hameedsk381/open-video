@@ -3,7 +3,7 @@ import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { measureMedia, loadComposition } from '@ove/core';
 import { resolveVariables, variablesSchema } from '@ove/schema';
 import { distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
-import type { RevisionMeta } from '@ove/storage';
+import type { ProjectFile, RevisionMeta } from '@ove/storage';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from '../projects';
 import { readBytes } from '../http';
 import { assertPublicHttpUrl } from '../url-guard';
@@ -21,6 +21,12 @@ export function projectRoutes(): Route[] {
   // A project edit writes the file's own JSON (variables, components and all), kept as a revision.
   const writeRaw = async (c: Ctx, id: string, raw: unknown, meta: RevisionMeta) => { loadComposition(raw); await c.deps.store.writeRaw(c.who, id, raw, meta); };
   const exists = async (c: Ctx, value: unknown) => { const id = textOf(value, 'project'); c.deps.store.projectDir(c.who, id); if (!await c.deps.store.exists(c.who, id)) throw new Error(`There is no project "${id}"`); return id; };
+  // Only the two root documents have histories; a request naming anything else is refused rather than guessed at.
+  const projectFile = (file: string): ProjectFile => {
+    const name = file.split('/').slice(1).join('/');
+    if (name !== 'composition.json' && name !== 'production.json') throw new Error(`"${file}" is not a project file with a history`);
+    return name;
+  };
 
   const detail = async (c: Ctx, id: string) => {
     const { store, library } = c.deps, { dir } = await store.workdir(c.who, id), raw = await store.readRaw(c.who, id), composition = loadComposition(raw), mode = projectMode(raw);
@@ -54,7 +60,7 @@ export function projectRoutes(): Route[] {
     { method: 'GET', path: '/api/thumb', handle: async c => thumb(c, await exists(c, c.url.searchParams.get('id'))) },
     { method: 'GET', path: '/api/history', handle: async c => {
       const file = c.url.searchParams.get('file') ?? '', id = await exists(c, file.split('/')[0]);
-      c.json(200, { revisions: await c.deps.store.revisions(c.who, id) });
+      c.json(200, { revisions: await c.deps.store.revisions(c.who, id, projectFile(file)) });
     } },
     { method: 'GET', path: '/api/library', handle: async c => {
       const { library } = c.deps;
@@ -111,7 +117,7 @@ export function projectRoutes(): Route[] {
     } },
     { method: 'POST', path: '/api/restore', handle: async c => {
       const request = parseRequest(restoreRequest, await c.body()), id = await exists(c, request.file.split('/')[0]);
-      c.json(200, { revision: await c.deps.store.restore(c.who, id, request.n) });
+      c.json(200, { revision: await c.deps.store.restore(c.who, id, request.n, projectFile(request.file)) });
     } },
     { method: 'POST', path: '/api/brand/scrape', handle: async c => {
       const body = await c.body(), url = textOf(body.url, 'url');

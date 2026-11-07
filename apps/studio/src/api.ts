@@ -1,7 +1,15 @@
 import { useSyncExternalStore } from 'react';
 
-export type { Asset, Block, Detail, Job, Library, Project, Revision, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
+export type { Asset, Block, CompileProductionResult, Detail, Job, Library, Production, ProductionIssue, ProductionShot, ProductionState, ProductionSummaryState, Project, Revision, SaveProductionResult, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
 import type { Job } from '@ove/contracts';
+
+/** A failed request, with the server's body: plan saves carry field-level issues and conflicts there. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly body: any) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, body === undefined ? undefined : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -9,7 +17,7 @@ export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   let json: any = {};
   try { json = JSON.parse(text); } catch { json = { error: text }; }
   if (response.status === 401 && !path.startsWith('/api/auth/')) window.dispatchEvent(new Event('ove-signed-out'));
-  if (!response.ok) throw new Error(json.error || response.statusText);
+  if (!response.ok) throw new ApiError(json.error || response.statusText, response.status, json);
   return json;
 }
 
