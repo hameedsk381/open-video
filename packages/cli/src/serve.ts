@@ -50,7 +50,8 @@ export async function runJobWorker(env: NodeJS.ProcessEnv = process.env): Promis
   if (lane !== 'render' && lane !== 'ai') throw new Error('JOB_LANE must be render or ai');
   const root = resolve(env.DATA_DIR ?? 'data'), store = new FsProjectStore(root);
   // A job runs with the connection its own person saved in Settings; the worker has no AI key of its own.
-  const aiSettings = new AiSettingsStore(store, need(env, 'SETTINGS_SECRET'));
+  // Only the AI lane reads saved connections; a render worker never touches them and needs no secret.
+  const aiSettings = new AiSettingsStore(store, lane === 'ai' ? need(env, 'SETTINGS_SECRET') : env.SETTINGS_SECRET);
   const requireProvider = (who: Principal): AiProvider => {
     const own = aiSettings.get(who);
     if (!own) throw new Error('Add your AI model in Settings first: choose a provider, a model and your API key.');
