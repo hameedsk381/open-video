@@ -1,9 +1,14 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { loadComposition, renderStill } from '@ove/core';
+import { ffmpegPath, loadComposition, renderStill } from '@ove/core';
 import { convertToReact } from '../../packages/cli/src/react-compose';
+
+const pixel = async (png: Buffer, x: number, y: number, dir: string) => { await writeFile(join(dir, 'probe.png'), png);
+  const r = spawnSync(ffmpegPath(), ['-v', 'error', '-i', join(dir, 'probe.png'), '-vf', `crop=1:1:${x}:${y}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']);
+  const [red, green, blue] = r.stdout; return { red: red!, green: green!, blue: blue! }; };
 
 // Any composition becomes one react layer drawn by the shared view. The proof is the picture: the same frame through both renderers.
 describe('a composition converted to a React video', () => {
@@ -53,6 +58,30 @@ describe('a composition converted to a React video', () => {
       expect(built.background).toBe('#102030');
     } finally { await rm(dir, { recursive: true, force: true }); }
   }, 60_000);
+
+  it('fades a shadowed layer as one piece, so the shadow does not show through the fill', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ove-view-'));
+    try {
+      const composition = loadComposition({
+        version: '1.0', id: 'shadow', name: 'shadow', width: 240, height: 160, fps: 30, durationFrames: 10, background: '#F4EDE1',
+        scenes: [{ id: 's', name: 's', durationFrames: 10, layers: [
+          { id: 'card', type: 'rect', x: 20, y: 20, width: 140, height: 90, radius: 12, fill: '#FFFDF8', opacity: 0.5,
+            shadow: { color: '#201C17', blur: 0, offsetX: 8, offsetY: 10 } },
+        ] }],
+      } as any);
+      const output = join(dir, 'composition.json');
+      expect((await convertToReact(composition, output)).unsupported).toEqual([]);
+      const react = loadComposition(JSON.parse(await readFile(output, 'utf8')));
+      const [json, view] = await Promise.all([
+        renderStill(composition, { frame: 5, baseDir: dir }),
+        renderStill(react, { frame: 5, baseDir: dir, allowCode: true }),
+      ]);
+      // Inside a half-transparent plate over #F4EDE1 the fill reads about 250,245,236; a shadow bleeding through it would read near 197.
+      const a = await pixel(json, 90, 65, dir), b = await pixel(view, 90, 65, dir);
+      expect(a.red).toBeGreaterThan(240);
+      expect(Math.abs(a.red - b.red)).toBeLessThanOrEqual(3);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }, 120_000);
 
   it('refuses what the view cannot draw, and writes nothing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ove-view-'));
