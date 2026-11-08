@@ -19,6 +19,9 @@ async function readManifest(folder: string): Promise<Record<string, UploadRecord
 /** The JSON files a project keeps at its root, each with its own revision history. */
 export type ProjectFile = 'composition.json' | 'production.json';
 
+export type TrashedProject = { key: string; id: string; name: string; trashedAt: number };
+const trashKey = /^(.+)-(\d{13})$/;
+
 export interface ProjectStore {
   /** Folder names under the principal's space; not every one is a valid project. */
   ids(who: Principal): Promise<string[]>;
@@ -36,6 +39,10 @@ export interface ProjectStore {
   duplicate(who: Principal, id: string, rename: (raw: any) => any): Promise<string>;
   /** Moves the project aside so it can be brought back by hand. */
   trash(who: Principal, id: string): Promise<void>;
+  /** What trash() moved aside, newest first. `key` is what untrash() takes. */
+  trashed(who: Principal): Promise<TrashedProject[]>;
+  /** Brings a trashed project back under its old name (-2, -3… if that name is taken again) and gives its id. */
+  untrash(who: Principal, key: string): Promise<string>;
   assets(who: Principal, id: string): Promise<StoredAsset[]>;
   putAsset(who: Principal, id: string, name: string, bytes: Buffer): Promise<StoredAsset[]>;
   /** A file the product itself ships that a project's layers draw from (a block's React bundle). Never reachable from an upload: only a named bundle, written by the server. */
@@ -138,6 +145,23 @@ export class FsProjectStore implements ProjectStore {
   async trash(who: Principal, id: string) {
     const dir = this.projectDir(who, id), trash = join(this.tenantRoot(who), '.trash'); await mkdir(trash, { recursive: true });
     await rename(dir, join(trash, `${id}-${Date.now()}`));
+  }
+  async trashed(who: Principal): Promise<TrashedProject[]> {
+    const trash = join(this.tenantRoot(who), '.trash'), out: TrashedProject[] = [];
+    for (const entry of await readdir(trash, { withFileTypes: true }).catch(() => [])) {
+      const match = entry.isDirectory() ? trashKey.exec(entry.name) : null; if (!match) continue;
+      const name = await this.readJson(join(trash, entry.name, 'composition.json')).then(raw => typeof raw?.name === 'string' ? raw.name : match[1]!, () => match[1]!);
+      out.push({ key: entry.name, id: match[1]!, name, trashedAt: Number(match[2]) });
+    }
+    return out.sort((a, b) => b.trashedAt - a.trashedAt);
+  }
+  async untrash(who: Principal, key: string) {
+    const match = typeof key === 'string' ? trashKey.exec(key) : null; if (!match || !idPattern.test(key)) throw new Error('That is not a trashed project');
+    const space = this.tenantRoot(who), from = join(space, '.trash', key);
+    if (!await stat(from).then(info => info.isDirectory(), () => false)) throw new Error('That project is no longer in the trash');
+    const taken = new Set((await readdir(space).catch(() => [])).map(String)); let id = match[1]!, n = 1; while (taken.has(id)) id = `${match[1]}-${++n}`;
+    await rename(from, join(space, id));
+    return id;
   }
 
   async assets(who: Principal, id: string): Promise<StoredAsset[]> {

@@ -82,6 +82,14 @@ describe('projects', () => {
     expect((await readdir(join(root, copy))).includes('history')).toBe(false);
     await store.trash(LOCAL_PRINCIPAL, copy);
     expect(await store.ids(LOCAL_PRINCIPAL)).not.toContain(copy); expect((await readdir(join(root, '.trash'))).some(name => name.startsWith(copy))).toBe(true);
+    const [item] = await store.trashed(LOCAL_PRINCIPAL);
+    expect(item).toMatchObject({ id: copy, name: 'Copy' });
+    await store.create(LOCAL_PRINCIPAL, 'my-video-copy');                                          // the old name was taken again meanwhile
+    const back = await store.untrash(LOCAL_PRINCIPAL, item!.key);
+    expect(back).toBe('my-video-copy-2'); expect((await store.readRaw(LOCAL_PRINCIPAL, back)).name).toBe('Copy');
+    expect(await store.trashed(LOCAL_PRINCIPAL)).toEqual([]);
+    await expect(store.untrash(LOCAL_PRINCIPAL, '../escape-1700000000000')).rejects.toThrow(/not a trashed/);
+    await expect(store.untrash(LOCAL_PRINCIPAL, item!.key)).rejects.toThrow(/no longer/);
   });
 
   it('stores pictures, video and audio only, under safe unique names', async () => {

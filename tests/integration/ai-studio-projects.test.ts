@@ -79,6 +79,14 @@ describe('Studio projects', () => {
     expect((await post('/api/project/delete', { id: copy })).status).toBe(200);
     expect((await get('/api/projects')).projects).toHaveLength(1);
     expect((await readdir(join(root, '.trash'))).some(name => name.startsWith(copy))).toBe(true);
+
+    const [trashed] = (await get('/api/trash')).projects as { key: string; id: string; name: string }[];
+    expect(trashed).toMatchObject({ id: copy, name: 'Summer Sale copy' });
+    expect((await post('/api/trash/restore', { id: '../x' })).status).toBe(400);
+    expect(json(await post('/api/trash/restore', { id: trashed!.key }))).toEqual({ id: copy });
+    expect((await get('/api/projects')).projects).toHaveLength(2);
+    expect((await get('/api/trash')).projects).toEqual([]);
+    await post('/api/project/delete', { id: copy });
   });
 
   it('accepts pictures only as uploads into a project, from the studio page itself', async () => {

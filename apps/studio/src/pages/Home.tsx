@@ -161,8 +161,8 @@ export function Home({ email }: { email?: string }) {
             <div className="home-empty">
               <FilmIcon size={22} />
               <div>
-                <b>Your first production starts above</b>
-                <small>Or browse <a href={discoverPath}>Discover</a> for a ready-made prompt.</small>
+                <b>No videos yet</b>
+                <small>1. Write a brief above, or copy one from <a href={discoverPath}>Discover</a>. 2. Generate it. 3. Edit scenes and export.</small>
               </div>
               <Button size="sm" variant="secondary" icon={<PlusIcon size={12} />} onClick={() => go('#/new')}>New video</Button>
             </div>

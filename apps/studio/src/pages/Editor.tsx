@@ -78,6 +78,14 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     tabsRef.current?.querySelector<HTMLElement>('button.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [tab]);
 
+  // Edits save on the spot, so the only way to lose one is to close the tab mid-save.
+  useEffect(() => {
+    if (note !== 'Saving changes…') return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [note]);
+
   const dismissComposeNotes = () => {
     setComposeNotes([]);
     try { sessionStorage.removeItem(composeNotesKey(id)); } catch {}

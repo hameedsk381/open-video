@@ -3,6 +3,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 export type Route =
   | { name: 'home' | 'showcase' | 'projects' | 'library' | 'settings' | 'generation' }
   | { name: 'new'; template?: string; kind?: string; prompt?: string }
+  | { name: 'notfound'; path: string }
   | { name: 'reset' | 'verify'; token: string }
   | { name: 'making'; id: string; job: string }
   | { name: 'editor'; id: string; tab: string }
@@ -26,7 +27,8 @@ export function parse(hash: string): Route {
   if (parts[0] === 'making' && parts[1]) return { name: 'making', id: parts[1], job: parts[2] ?? '' };
   if (parts[0] === 'p' && parts[1] && parts[2] === 'plan') return { name: 'production', id: parts[1], section: parts[3] ?? 'brief' };
   if (parts[0] === 'p' && parts[1]) return { name: 'editor', id: parts[1], tab: parts[2] ?? 'edit' };
-  return { name: 'home' };
+  if (parts.length === 0) return { name: 'home' };
+  return { name: 'notfound', path: `/${parts.join('/')}` };
 }
 export const useRoute = (): Route => {
   const hash = useSyncExternalStore(subscribe, read);

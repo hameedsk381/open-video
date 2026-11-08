@@ -99,6 +99,12 @@ export function projectRoutes(): Route[] {
       c.json(200, { id: await c.deps.store.duplicate(c.who, source, raw => ({ ...raw, name: `${raw.name ?? source} copy`.slice(0, 120) })) });
     } },
     { method: 'POST', path: '/api/project/delete', handle: async c => { const request = parseRequest(idRequest, await c.body()); await c.deps.store.trash(c.who, await exists(c, request.id)); c.json(200, { ok: true }); } },
+    { method: 'GET', path: '/api/trash', handle: async c => c.json(200, { projects: await c.deps.store.trashed(c.who) }) },
+    { method: 'POST', path: '/api/trash/restore', handle: async c => {
+      const request = parseRequest(idRequest, await c.body());
+      await c.deps.quotas?.beforeProject(c.who, (await c.deps.store.ids(c.who)).length);
+      c.json(200, { id: await c.deps.store.untrash(c.who, request.id) });
+    } },
     { method: 'POST', path: '/api/variables', handle: async c => {
       const request = parseRequest(variablesRequest, await c.body()), id = await exists(c, request.id);
       await writeRaw(c, id, setVariableValues(await c.deps.store.readRaw(c.who, id), request.values), { kind: 'edit', label: 'Edited the text' }); c.json(200, { ok: true });

@@ -317,9 +317,9 @@ export function UiProvider({ children }: { children: ReactNode }) {
   return (
     <UiContext.Provider value={{ toast, ask, confirm }}>
       {children}
-      <div className="toasts">
+      <div className="toasts" aria-live="polite" aria-atomic="false">
         {toasts.map(item => (
-          <div key={item.id} className={`toast ${item.tone}`}>
+          <div key={item.id} className={`toast ${item.tone}`} role={item.tone === 'error' ? 'alert' : 'status'}>
             {item.tone === 'error' ? <AlertCircleIcon size={16} /> : item.tone === 'success' ? <CheckIcon size={16} /> : <SparklesIcon size={16} />}
             <span>{item.message}</span>
           </div>

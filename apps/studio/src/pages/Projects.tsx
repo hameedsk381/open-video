@@ -19,6 +19,7 @@ import {
 } from '../ui';
 
 type Sort = 'recent' | 'name' | 'longest';
+type Trashed = { key: string; id: string; name: string; trashedAt: number };
 
 const shape = (project: Project) => project.width > project.height ? 'Landscape' : project.width < project.height ? 'Vertical' : 'Square';
 
@@ -28,12 +29,15 @@ export function Projects() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('recent');
+  const [trashed, setTrashed] = useState<Trashed[]>([]);
 
-  const load = () =>
-    api<{ projects: Project[] }>('/api/projects').then(
+  const load = () => {
+    api<{ projects: Trashed[] }>('/api/trash').then(result => setTrashed(result.projects), () => {});
+    return api<{ projects: Project[] }>('/api/projects').then(
       result => setProjects(result.projects),
       cause => setError(cause.message)
     );
+  };
 
   useEffect(() => {
     load();
@@ -119,7 +123,7 @@ export function Projects() {
                 project={project}
                 onDuplicate={() => run(api('/api/project/duplicate', { id: project.id }), 'Project duplicated')}
                 onDelete={async () => {
-                  if (await confirm(`Move “${project.name}” to Trash? You can restore it later if needed.`, 'Move to Trash')) {
+                  if (await confirm(`Move “${project.name}” to Trash? You can restore it from Trash below.`, 'Move to Trash')) {
                     run(api('/api/project/delete', { id: project.id }), 'Project moved to trash');
                   }
                 }}
@@ -131,6 +135,21 @@ export function Projects() {
             <p className="empty-note">No projects match “{query}”.</p>
           ) : null}
         </>
+      ) : null}
+
+      {trashed.length ? (
+        <details className="trash-list">
+          <summary>Trash ({trashed.length})</summary>
+          <ul>
+            {trashed.map(item => (
+              <li key={item.key}>
+                <span title={item.name}>{item.name}</span>
+                <small>Deleted {ago(item.trashedAt)}</small>
+                <Button size="sm" variant="secondary" onClick={() => run(api('/api/trash/restore', { id: item.key }), `Restored “${item.name}”`)}>Restore</Button>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
     </Page>
   );

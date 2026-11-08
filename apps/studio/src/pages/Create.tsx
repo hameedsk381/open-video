@@ -226,6 +226,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
       } catch {}
 
       const { job } = await api<{ job: Job }>('/api/compose', body);
+      try { sessionStorage.setItem(`ove-brief-${made.id}`, brief.trim()); } catch {}
       go(`#/making/${encodeURIComponent(made.id)}/${job.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -825,7 +826,11 @@ export function Making({ id, job }: { id: string; job: string }) {
           <h2>Creation Paused</h2>
           <Notice tone="error" title="Notice">{error}</Notice>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
-            <Button variant="primary" onClick={() => go('#/new')}>Start New Video</Button>
+            <Button variant="primary" onClick={() => {
+              let saved = '';
+              try { saved = sessionStorage.getItem(`ove-brief-${id}`) ?? ''; } catch {}
+              go(saved ? `#/new?prompt=${encodeURIComponent(saved)}` : '#/new');
+            }}>Try again with the same brief</Button>
             <Button onClick={() => api('/api/project/delete', { id }).then(() => go('#/projects'))}>Back to Projects</Button>
           </div>
         </>

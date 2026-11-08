@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { modKeyLabel } from './platform';
 import { api, connectJobs, useJobs, cleanUserStatus } from './api';
 import { CommandPalette } from './CommandPalette';
+import { ErrorBoundary, NotFound } from './ErrorBoundary';
 import { desktop, folderName, type DesktopState } from './desktop';
 import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
@@ -19,6 +20,7 @@ import {
   CompassIcon,
   FilmIcon,
   FolderIcon,
+  GlobeIcon,
   HomeIcon,
   ImagesIcon,
   MenuIcon,
@@ -118,6 +120,7 @@ const sections: Record<Route['name'], string> = {
   making: 'Production',
   production: 'Production plan',
   editor: 'Studio',
+  notfound: 'Not found',
 };
 
 type Session = { state: 'loading' } | { state: 'local' } | { state: 'out'; signups: boolean } | { state: 'in'; user: Me };
@@ -213,6 +216,10 @@ function Sidebar({ route, session, onSignOut }: { route: Route; session: Session
           <SlidersIcon size={15} />
           <span>Settings</span>
         </a>
+        <a href="https://github.com/hameedsk381/open-video#readme" target="_blank" rel="noopener noreferrer" className="side-link" title="Documentation (opens in a new tab)">
+          <GlobeIcon size={15} />
+          <span>Docs</span>
+        </a>
         <ProviderBadge />
         <ThemeToggle />
         {session.state === 'in' ? (
@@ -300,6 +307,8 @@ export function App() {
         <Assets />
       ) : route.name === 'settings' ? (
         <Settings />
+      ) : route.name === 'notfound' ? (
+        <NotFound path={route.path} />
       ) : (
         <Projects />
       )}
@@ -311,7 +320,7 @@ export function App() {
   if (standalone) {
     return (
       <UiProvider>
-        <main className="main auth-shell">{screen}</main>
+        <main className="main auth-shell"><ErrorBoundary key={route.name}>{screen}</ErrorBoundary></main>
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       </UiProvider>
     );
@@ -357,7 +366,7 @@ export function App() {
           </header>
 
           <main className={`main ${route.name === 'editor' || route.name === 'production' ? 'fixed' : ''}`}>
-            {screen}
+            <ErrorBoundary key={route.name}>{screen}</ErrorBoundary>
           </main>
         </div>
       </div>
