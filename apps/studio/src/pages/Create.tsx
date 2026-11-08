@@ -31,6 +31,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   });
   const [templateOpen, setTemplateOpen] = useState(Boolean(initialTemplate));
   useEffect(() => { try { localStorage.setItem('ove-create-mode', mode); } catch {} }, [mode]);
+
+  // Progressive 2-Step Creation Stepper (Step 1: Brief & Canvas, Step 2: Style, Voice & Brand)
+  const [step, setStep] = useState<1 | 2>(1);
+
   const [kind, setKind] = useState<string>(initialKind || 'reel');
   const [brief, setBrief] = useState(initialPrompt || '');
   const [name, setName] = useState('');
@@ -132,6 +136,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     setDesignExtra('');
     setDesignError('');
     setShowComposer(Boolean(initialPrompt) || Boolean(initialFrom) || (Boolean(initialTemplate) && !linked));
+    setStep(1);
     if (initialPrompt) setBrief(initialPrompt);
     if (linked) {
       setKind(linked.kind);
@@ -153,6 +158,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     setDesignValues({});
     setDesignError('');
     setShowComposer(true);
+    setStep(1);
     Promise.all([
       api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(initialFrom)}/composition.json`).catch(() => ({ revisions: [] as Revision[] })),
       api<{ name: string; width: number; height: number; durationFrames: number; fps: number }>(`/api/project?id=${encodeURIComponent(initialFrom)}`),
@@ -320,6 +326,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     setFull(false);
     setBrief('');
     setShowComposer(false);
+    setStep(1);
   };
 
   const startFromScratch = () => {
@@ -328,6 +335,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     setSelectedTemplate('');
     setTemplateOpen(false);
     setShowComposer(true);
+    setStep(1);
   };
 
   const submitDesign = async () => {
@@ -360,6 +368,26 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const length = design ? design.length : duration ? `${duration}s` : 'Auto length';
   const engine = effectivePreset === 'auto' ? 'Automatic' : effectivePreset;
 
+  const currentBriefText = design ? designBrief(design, designValues, designExtra) : brief;
+
+  const handleNextToStep2 = () => {
+    if (design) {
+      const missing = missingFields(design, designValues);
+      if (missing.length) {
+        setDesignError(`Add ${missing.map(label => label.toLowerCase()).join(', ')} to continue.`);
+        return;
+      }
+      setDesignError('');
+    } else {
+      if (!brief.trim()) {
+        setError('Please describe your video in the brief before moving to Step 2.');
+        return;
+      }
+      setError('');
+    }
+    setStep(2);
+  };
+
   return (
     <Page
       title={design ? design.title : 'What are we making?'}
@@ -378,6 +406,43 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
         </div>
       }
     >
+      {/* 2-Step Creation Progressive Stepper */}
+      {(design || showComposer) ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '6px 0 20px' }}>
+          <button
+            type="button"
+            className={`btn sm ${step === 1 ? 'primary' : 'secondary'}`}
+            onClick={() => setStep(1)}
+            style={{ borderRadius: 20, padding: '5px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <span style={{ width: 18, height: 18, borderRadius: '50%', background: step === 1 ? '#fff' : 'var(--muted)', color: step === 1 ? 'var(--accent)' : 'var(--surface)', display: 'inline-grid', placeItems: 'center', fontSize: 11, fontWeight: 700 }}>
+              1
+            </span>
+            <span>1. Brief & Canvas</span>
+          </button>
+          <span style={{ width: 32, height: 2, background: step === 2 ? 'var(--accent)' : 'var(--border)' }} />
+          <button
+            type="button"
+            className={`btn sm ${step === 2 ? 'primary' : 'secondary'}`}
+            onClick={handleNextToStep2}
+            style={{ borderRadius: 20, padding: '5px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <span style={{ width: 18, height: 18, borderRadius: '50%', background: step === 2 ? '#fff' : 'var(--muted)', color: step === 2 ? 'var(--accent)' : 'var(--surface)', display: 'inline-grid', placeItems: 'center', fontSize: 11, fontWeight: 700 }}>
+              2
+            </span>
+            <span>2. Style, Voice & Brand</span>
+          </button>
+        </div>
+      ) : null}
+
+      {needsConnection ? (
+        <Notice tone="warn" title="Connect your AI model first">
+          The studio has no AI of its own. <a href="#/settings">Add your provider, model and API key in Settings</a>, then come back to make your video.
+        </Notice>
+      ) : null}
+      {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
+
+      {/* Brand Kit Card */}
       {kit || (!design && !showComposer) ? (
         <div className={`create-brandkit ${activeKit ? '' : 'create-brandkit-off'}`}>
           <span className="create-brandkit-mark">
@@ -412,6 +477,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
         </div>
       ) : null}
 
+      {/* Design Gallery (Home / Selection view) */}
       {!design && !showComposer ? (
         <section className="create-section create-gallery">
           <div className="create-section-head">
@@ -448,7 +514,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
         </section>
       ) : null}
 
-      {design ? (
+      {/* ========================================================================= */}
+      {/* STEP 1: Brief, Format, Canvas & Archetype                                  */}
+      {/* ========================================================================= */}
+      {step === 1 && design ? (
         <section className="create-section create-design-form">
           <button type="button" className="create-back" onClick={() => { setDesignId(''); setDesignError(''); setError(''); }}>
             <ArrowLeftIcon size={14} /> All designs
@@ -478,21 +547,22 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
           <Field label="Anything else? (optional)" hint="Extra details or wording the studio should work in.">
             <textarea className="input create-area" rows={2} placeholder="Anything that does not fit above." value={designExtra} onChange={event => setDesignExtra(event.target.value)} />
           </Field>
-          <label className="check">
-            <input type="checkbox" checked={voice} onChange={event => setVoice(event.target.checked)} />
-            <span>Add a voiceover</span>
-          </label>
           {designError ? <Notice tone="error" title="A few details are missing">{designError}</Notice> : null}
           <div className="create-form-foot">
             <span className="create-hint">{ratio} · {length} · {voice ? 'voiceover on' : 'no voiceover'}{activeKit ? ` · brand ${activeKit.name || 'applied'}` : ''}</span>
-            <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={submitDesign}>
-              {busy ? 'Starting…' : 'Make my video'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Button variant="secondary" size="md" onClick={() => void submitDesign()} loading={busy} title="Create directly with smart defaults">
+                Make it now
+              </Button>
+              <Button variant="primary" size="lg" icon={<SparklesIcon size={14} />} onClick={handleNextToStep2}>
+                Next: Style & Voice →
+              </Button>
+            </div>
           </div>
         </section>
       ) : null}
 
-      {!design && showComposer ? (
+      {step === 1 && !design && showComposer ? (
         <>
           <button type="button" className="create-back" onClick={() => setShowComposer(false)}>
             <ArrowLeftIcon size={14} /> All designs
@@ -503,316 +573,286 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
               <span>Starting from <b>{fromName}</b> — the same brief and layout. Change anything before making a new video.</span>
             </div>
           ) : null}
+
+          {/* Step 1 Composer Box */}
           <div
             className={`create-composer ${over ? 'over' : ''}`}
             onDragOver={event => { event.preventDefault(); setOver(true); }}
             onDragLeave={() => setOver(false)}
             onDrop={event => { event.preventDefault(); setOver(false); addFiles(event.dataTransfer.files); }}
           >
-        <textarea
-          autoFocus
-          className="create-brief"
-          aria-label="Describe your video"
-          placeholder="What is the video about? Name the product, the benefit and who it is for, or paste a brief."
-          value={brief}
-          onChange={event => setBrief(event.target.value)}
-          onKeyDown={event => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); void submit(); }
-          }}
-        />
+            <textarea
+              autoFocus
+              className="create-brief"
+              aria-label="Describe your video"
+              placeholder="What is the video about? Name the product, the benefit and who it is for, or paste a brief."
+              value={brief}
+              onChange={event => setBrief(event.target.value)}
+              onKeyDown={event => {
+                if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); void submit(); }
+              }}
+            />
 
-        <div className="create-examples">
-          {examples.slice(0, 3).map(example => (
-            <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>
-              {example.length > 54 ? example.slice(0, 52) + '…' : example}
-            </button>
-          ))}
-        </div>
-
-        {files.length ? (
-          <div className="create-refs">
-            {files.map((file, index) => (
-              <button key={index} type="button" title="Remove" onClick={() => setFiles(list => list.filter((_, i) => i !== index))}>
-                {file.name} ×
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="create-tools">
-          <div className="create-chipgroup">
-            <span>Format</span>
-            <div className="segmented">
-              {kinds.map(([id, title]) => (
-                <button key={id} className={kind === id ? 'on' : ''} onClick={() => setKind(id)} title={title}>{title.replace('Social ', '').replace(' Spotlight', '').replace('Narrative ', '')}</button>
-              ))}
-            </div>
-          </div>
-          <div className="create-chipgroup">
-            <span>Ratio</span>
-            <div className="segmented">
-              {(['', '9:16', '1:1', '16:9'] as const).map(value => (
-                <button key={value || 'auto'} className={aspect === value ? 'on' : ''} onClick={() => setAspect(value)}>{value || 'Auto'}</button>
-              ))}
-            </div>
-          </div>
-          <div className="create-chipgroup">
-            <span>Length</span>
-            <div className="segmented">
-              {(['', '15', '30', '45', '60'] as const).map(value => (
-                <button key={value || 'auto'} className={duration === value ? 'on' : ''} onClick={() => setDuration(value)}>{value ? `${value}s` : 'Auto'}</button>
-              ))}
-            </div>
-          </div>
-          <div className="create-chipgroup">
-            <span>Audio</span>
-            <button className={`chip-toggle ${voice ? 'on' : ''}`} onClick={() => setVoice(!voice)}>
-              <VolumeIcon size={13} /> Voiceover {voice ? 'on' : 'off'}
-            </button>
-          </div>
-          <button type="button" className="chip-toggle" onClick={() => picker.current?.click()}>
-            <FilmIcon size={13} /> References
-          </button>
-          <input
-            ref={picker}
-            type="file"
-            multiple
-            accept="image/*,video/*,audio/*"
-            hidden
-            onChange={event => { addFiles(event.target.files); event.target.value = ''; }}
-          />
-        </div>
-
-        <div className="create-foot">
-          <div className="create-summary">
-            <span>{ratio}</span>
-            <span>{length}</span>
-            <span>{voice ? 'Voiceover' : 'No narration'}</span>
-            <span>{review ? 'Design review' : 'No review'}</span>
-            {activeKit ? <span>Brand · {activeKit.name || 'your kit'}</span> : null}
-            {templateName ? <span>Template · {templateName}</span> : null}
-            <button type="button" onClick={() => setMode('pro')} title="Change the AI service">{engine}</button>
-          </div>
-          <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={() => void submit()}>
-            {busy ? 'Starting…' : 'Make it'}
-          </Button>
-        </div>
-      </div>
-
-      {selectedTemplate ? (
-        <div className="create-selected">
-          <span>Starting from <b>{templateName ?? selectedTemplate}</b></span>
-          <button type="button" onClick={() => setSelectedTemplate('')}>Use auto layout</button>
-        </div>
-      ) : null}
-
-      <div className="create-row">
-        <button type="button" className="create-more" onClick={() => setTemplateOpen(open => !open)}>
-          <FilmIcon size={14} /> {templateOpen ? 'Hide templates' : 'Start from a template'}
-        </button>
-        <span className="create-hint">
-          {mode === 'autopilot' ? 'Autopilot decides layout, type, palette and pacing from the brief.'
-            : mode === 'guided' ? 'Guided exposes the choices that change the result most.'
-              : 'Pro shows every creative, brand and advanced control.'}
-        </span>
-      </div>
-
-      {templateOpen ? (
-        <section className="create-section">
-          <div className="create-section-head">
-            <div>
-              <h2>Template</h2>
-              <p>Pick a ready-made layout, or leave Auto for a design built around your description.</p>
-            </div>
-            <div className="segmented">
-              <button className={templateFilter === 'match' ? 'on' : ''} onClick={() => setTemplateFilter('match')}>Matching format</button>
-              <button className={templateFilter === 'all' ? 'on' : ''} onClick={() => setTemplateFilter('all')}>All</button>
-            </div>
-          </div>
-          <div className="create-template-grid">
-            <button type="button" className={`create-template ${selectedTemplate === '' ? 'on' : ''}`} onClick={() => setSelectedTemplate('')}>
-              <span className="create-template-head"><b>Auto</b><Badge tone="blue">Adaptive</Badge></span>
-              <small>Layout, type and camera moves designed from your brief.</small>
-            </button>
-            {matchingTemplates.map(template => {
-              const templateAspect = template.width && template.height
-                ? (template.width > template.height ? '16:9' : template.width < template.height ? '9:16' : '1:1')
-                : '';
-              return (
-                <button key={template.id} type="button" className={`create-template ${selectedTemplate === template.id ? 'on' : ''}`} onClick={() => setSelectedTemplate(template.id)}>
-                  <span className="create-template-head">
-                    <b>{template.name}</b>
-                    <span>{templateAspect ? <Badge tone="blue">{templateAspect}</Badge> : null}{template.durationSeconds ? <Badge tone="purple">{Math.round(template.durationSeconds)}s</Badge> : null}</span>
-                  </span>
-                  <small>{template.description}</small>
+            <div className="create-examples">
+              {examples.slice(0, 3).map(example => (
+                <button key={example} type="button" className="chip" title={example} onClick={() => setBrief(example)}>
+                  {example.length > 54 ? example.slice(0, 52) + '…' : example}
                 </button>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-        </>
-      ) : null}
-
-      {needsConnection ? (
-        <Notice tone="warn" title="Connect your AI model first">
-          The studio has no AI of its own. <a href="#/settings">Add your provider, model and API key in Settings</a>, then come back to make your video.
-        </Notice>
-      ) : null}
-      {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
-
-      {mode !== 'autopilot' ? (
-        <section className="create-section">
-          <div className="create-section-head">
-            <div>
-              <h2>{mode === 'guided' ? 'Guide the result' : 'Creative direction'}</h2>
-              <p>{mode === 'guided' ? 'These are the choices that change the video most. Everything else is decided for you.' : 'Fine-tune the message, look and voice.'}</p>
+              ))}
             </div>
-          </div>
 
-          <div className="create-grid">
-            <Field label="Key message points" hint="What the video should say across its scenes">
-              <input className="input" placeholder="e.g. 10x faster rendering, zero setup, free tier" value={keyPoints} onChange={event => setKeyPoints(event.target.value)} />
-            </Field>
-            <Field label="Call to action" hint="Headline and address shown in the closing scene">
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input className="input" placeholder="Get started today" value={ctaHeadline} onChange={event => setCtaHeadline(event.target.value)} />
-                <input className="input" placeholder="motionrender.dev" value={ctaSubline} onChange={event => setCtaSubline(event.target.value)} />
+            {files.length ? (
+              <div className="create-refs">
+                {files.map((file, index) => (
+                  <button key={index} type="button" title="Remove" onClick={() => setFiles(list => list.filter((_, i) => i !== index))}>
+                    {file.name} ×
+                  </button>
+                ))}
               </div>
-            </Field>
+            ) : null}
+
+            <div className="create-tools">
+              <div className="create-chipgroup">
+                <span>Format</span>
+                <div className="segmented">
+                  {kinds.map(([id, title]) => (
+                    <button key={id} className={kind === id ? 'on' : ''} onClick={() => setKind(id)} title={title}>
+                      {title.replace('Social ', '').replace(' Spotlight', '').replace('Narrative ', '')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="create-chipgroup">
+                <span>Ratio</span>
+                <div className="segmented">
+                  {(['', '9:16', '1:1', '16:9'] as const).map(value => (
+                    <button key={value || 'auto'} className={aspect === value ? 'on' : ''} onClick={() => setAspect(value)}>{value || 'Auto'}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="create-chipgroup">
+                <span>Length</span>
+                <div className="segmented">
+                  {(['', '15', '30', '45', '60'] as const).map(value => (
+                    <button key={value || 'auto'} className={duration === value ? 'on' : ''} onClick={() => setDuration(value)}>{value ? `${value}s` : 'Auto'}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="create-chipgroup">
+                <span>Audio</span>
+                <button className={`chip-toggle ${voice ? 'on' : ''}`} onClick={() => setVoice(!voice)}>
+                  <VolumeIcon size={13} /> Voiceover {voice ? 'on' : 'off'}
+                </button>
+              </div>
+              <button type="button" className="chip-toggle" onClick={() => picker.current?.click()}>
+                <FilmIcon size={13} /> References
+              </button>
+              <input
+                ref={picker}
+                type="file"
+                multiple
+                accept="image/*,video/*,audio/*"
+                hidden
+                onChange={event => { addFiles(event.target.files); event.target.value = ''; }}
+              />
+            </div>
+
+            <div className="create-foot">
+              <div className="create-summary">
+                <span>{ratio}</span>
+                <span>{length}</span>
+                <span>{voice ? 'Voiceover' : 'No narration'}</span>
+                <span>{review ? 'Design review' : 'No review'}</span>
+                {activeKit ? <span>Brand · {activeKit.name || 'your kit'}</span> : null}
+                {templateName ? <span>Template · {templateName}</span> : null}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Button variant="secondary" size="md" loading={busy} onClick={() => void submit()} title="Compile immediately with default style">
+                  Make it now
+                </Button>
+                <Button variant="primary" size="lg" icon={<SparklesIcon size={14} />} onClick={handleNextToStep2}>
+                  Next: Style & Voice →
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <Field label="Palette" hint="Choose a look, or let the studio design one from your description">
-            <div className="create-themes">
-              {[
-                { id: '', name: 'Auto', desc: 'Designed from the brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
-                { id: 'midnight', name: 'Midnight', desc: 'Tech & B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
-                { id: 'neon', name: 'Neon', desc: 'Social & viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
-                { id: 'espresso', name: 'Espresso', desc: 'Craft & food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
-                { id: 'paper', name: 'Paper', desc: 'Light editorial', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
-                { id: 'signal', name: 'Signal', desc: 'Alerts & sport', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
-              ].map(preset => (
-                <button key={preset.id || 'auto'} type="button" className={`create-theme ${theme === preset.id && !customColorsEnabled ? 'on' : ''}`} onClick={() => { setTheme(preset.id); setCustomColorsEnabled(false); }}>
-                  <span>{preset.colors.map(color => <i key={color} style={{ background: color }} />)}</span>
-                  <b>{preset.name}</b>
-                  <small>{preset.desc}</small>
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          {voice ? (
-            <div className="create-grid">
-              <Field label="Voice tone">
-                <select className="input" value={voiceTone} onChange={event => setVoiceTone(event.target.value)}>
-                  <option value="confident">Confident & authoritative (B2B & pitch)</option>
-                  <option value="warm">Warm & conversational (creator & friendly)</option>
-                  <option value="hype">High-energy hype (viral & promo)</option>
-                  <option value="calm">Calm (explainer & story)</option>
-                </select>
-              </Field>
-              <Field label="Captions">
-                <select className="input" value={captionsStyle} onChange={event => setCaptionsStyle(event.target.value)}>
-                  <option value="kinetic">Dynamic pop (word-by-word highlight)</option>
-                  <option value="pill">Clean reading pill (sentence banner)</option>
-                  <option value="lower-third">Subtle lower-third</option>
-                </select>
-              </Field>
+          {selectedTemplate ? (
+            <div className="create-selected">
+              <span>Starting from <b>{templateName ?? selectedTemplate}</b></span>
+              <button type="button" onClick={() => setSelectedTemplate('')}>Use auto layout</button>
             </div>
           ) : null}
 
-          <label className="check">
-            <input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} />
-            <span>Design review: check readability, contrast and safe zones before opening the editor</span>
-          </label>
-        </section>
+          {/* Collapsible Template Archetype Explorer */}
+          <div className="create-row">
+            <button type="button" className="create-more" onClick={() => setTemplateOpen(open => !open)}>
+              <FilmIcon size={14} /> {templateOpen ? 'Hide templates' : 'Start from a template'}
+            </button>
+            <span className="create-hint">
+              Step 1 sets the narrative & canvas. Step 2 customizes voiceover, brand tokens & music.
+            </span>
+          </div>
+
+          {templateOpen ? (
+            <section className="create-section">
+              <div className="create-section-head">
+                <div>
+                  <h2>Template</h2>
+                  <p>Pick a ready-made layout, or leave Auto for a design built around your description.</p>
+                </div>
+                <div className="segmented">
+                  <button className={templateFilter === 'match' ? 'on' : ''} onClick={() => setTemplateFilter('match')}>Matching format</button>
+                  <button className={templateFilter === 'all' ? 'on' : ''} onClick={() => setTemplateFilter('all')}>All</button>
+                </div>
+              </div>
+              <div className="create-template-grid">
+                <button type="button" className={`create-template ${selectedTemplate === '' ? 'on' : ''}`} onClick={() => setSelectedTemplate('')}>
+                  <span className="create-template-head"><b>Auto</b><Badge tone="blue">Adaptive</Badge></span>
+                  <small>Layout, type and camera moves designed from your brief.</small>
+                </button>
+                {matchingTemplates.map(template => {
+                  const templateAspect = template.width && template.height
+                    ? (template.width > template.height ? '16:9' : template.width < template.height ? '9:16' : '1:1')
+                    : '';
+                  return (
+                    <button key={template.id} type="button" className={`create-template ${selectedTemplate === template.id ? 'on' : ''}`} onClick={() => setSelectedTemplate(template.id)}>
+                      <span className="create-template-head">
+                        <b>{template.name}</b>
+                        <span>{templateAspect ? <Badge tone="blue">{templateAspect}</Badge> : null}{template.durationSeconds ? <Badge tone="purple">{Math.round(template.durationSeconds)}s</Badge> : null}</span>
+                      </span>
+                      <small>{template.description}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+        </>
       ) : null}
 
-      {mode === 'pro' ? (
-        <>
+      {/* ========================================================================= */}
+      {/* STEP 2: Style, Voiceover, Brand Tokens & Sound Design                      */}
+      {/* ========================================================================= */}
+      {step === 2 ? (
+        <div className="create-step-two" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <button type="button" className="create-back" onClick={() => setStep(1)}>
+            <ArrowLeftIcon size={14} /> Back to Step 1: Brief & Canvas
+          </button>
+
+          {/* Live Concept Summary Banner */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '12px 16px',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 240, flex: 1 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent)' }}>
+                Target Concept & Canvas
+              </span>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentBriefText ? (currentBriefText.length > 90 ? currentBriefText.slice(0, 90) + '…' : currentBriefText) : 'Auto Narrative'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Badge tone="blue">{ratio} Format</Badge>
+              <Badge tone="purple">{length}</Badge>
+              {templateName ? <Badge tone="neutral">{templateName}</Badge> : <Badge tone="neutral">Auto Layout</Badge>}
+            </div>
+          </div>
+
+          {/* Voiceover & Narration Card */}
           <section className="create-section">
             <div className="create-section-head">
               <div>
-                <h2>Brand</h2>
-                <p>Import colors, logo and messaging from a website.</p>
+                <h2>Voiceover & Speech Direction</h2>
+                <p>Spoken audio synchronized to scene cuts and kinetic typography captions.</p>
               </div>
+              <label className="check" style={{ margin: 0 }}>
+                <input type="checkbox" checked={voice} onChange={event => setVoice(event.target.checked)} />
+                <span style={{ fontWeight: 600 }}>Enable Voiceover</span>
+              </label>
             </div>
-            <Field label={<span><GlobeIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Website or brand URL</span>} hint="Fills the palette and suggests a brief; nothing leaves this machine except the page request">
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  className="input"
-                  placeholder="e.g. acme.com, linear.app"
-                  value={urlInput}
-                  onChange={event => setUrlInput(event.target.value)}
-                  onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void handleScrapeUrl(); } }}
-                />
-                <Button variant="secondary" loading={scraping} icon={<SparklesIcon size={14} />} onClick={handleScrapeUrl}>
-                  {scraping ? 'Analysing…' : 'Extract brand'}
-                </Button>
+
+            {voice ? (
+              <div className="create-grid" style={{ marginTop: 12 }}>
+                <Field label="Voice tone">
+                  <select className="input" value={voiceTone} onChange={event => setVoiceTone(event.target.value)}>
+                    <option value="confident">Confident & authoritative (B2B, SaaS & pitch)</option>
+                    <option value="warm">Warm & conversational (creator, friendly & lifestyle)</option>
+                    <option value="hype">High-energy hype (viral reels, product drops)</option>
+                    <option value="calm">Calm & measured (documentary, explainer)</option>
+                  </select>
+                </Field>
+                <Field label="Kinetic captions style">
+                  <select className="input" value={captionsStyle} onChange={event => setCaptionsStyle(event.target.value)}>
+                    <option value="kinetic">Dynamic pop (word-by-word highlight on canvas)</option>
+                    <option value="pill">Clean reading pill (smooth subtitle banner)</option>
+                    <option value="lower-third">Subtle lower-third (broadcast style)</option>
+                  </select>
+                </Field>
               </div>
-              {scrapedBrand ? (
-                <div className="create-brand">
-                  {scrapedBrand.logo ? <img src={scrapedBrand.logo} alt="" /> : <GlobeIcon size={20} />}
-                  <div>
-                    <b>{scrapedBrand.name || 'Brand identity'}</b>
-                    <small>Colors added to the palette</small>
-                  </div>
-                  <span>
-                    {[scrapedBrand.colors?.primary, scrapedBrand.colors?.accent].filter(Boolean).map(color => (
-                      <i key={color} style={{ background: color }} />
-                    ))}
-                  </span>
-                </div>
-              ) : null}
-            </Field>
+            ) : (
+              <p className="sub" style={{ margin: '6px 0 0' }}>
+                Voiceover is turned off. The video will focus on visual titles, B-roll, and background sound.
+              </p>
+            )}
           </section>
 
+          {/* Brand Identity & Color Palette */}
           <section className="create-section">
             <div className="create-section-head">
               <div>
-                <h2>Typography & motion</h2>
-                <p>Override the studio's art direction for this video.</p>
+                <h2>Brand Identity & Palette</h2>
+                <p>Choose an instant art-directed color theme or pin exact brand swatches.</p>
               </div>
             </div>
-            <div className="create-grid create-grid-three">
-              <Field label="Font pair">
-                <select className="input" value={typography} onChange={event => setTypography(event.target.value)}>
-                  <option value="sans">Modern sans (Inter / Geist)</option>
-                  <option value="bold">Bold kinetic (Space Grotesk / Syne)</option>
-                  <option value="serif">Editorial serif (Playfair / Instrument)</option>
-                  <option value="mono">Terminal mono (JetBrains Mono)</option>
-                </select>
-              </Field>
-              <Field label="Motion pacing">
-                <select className="input" value={motionPacing} onChange={event => setMotionPacing(event.target.value)}>
-                  <option value="dynamic">Balanced dynamic (3–4s scenes)</option>
-                  <option value="snappy">Snappy & fast (1.5–2.5s cuts)</option>
-                  <option value="cinematic">Cinematic flow (4.5s+ moves)</option>
-                </select>
-              </Field>
-              <Field label="Visual treatment">
-                <select className="input" value={visualTreatment} onChange={event => setVisualTreatment(event.target.value)}>
-                  <option value="clean">Modern vector & crisp contrast</option>
-                  <option value="glass">Glassmorphic glow & blur</option>
-                  <option value="paper">Editorial halftone & paper</option>
-                  <option value="cyber">Cyber neon & gridlines</option>
-                </select>
-              </Field>
-            </div>
+
+            <Field label="Art-directed themes">
+              <div className="create-themes">
+                {[
+                  { id: '', name: 'Auto', desc: 'Designed from brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
+                  { id: 'midnight', name: 'Midnight', desc: 'Tech & Modern B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
+                  { id: 'neon', name: 'Neon', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
+                  { id: 'espresso', name: 'Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
+                  { id: 'paper', name: 'Paper', desc: 'Editorial Minimal', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
+                  { id: 'signal', name: 'Signal', desc: 'High Impact Alert', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
+                ].map(preset => (
+                  <button
+                    key={preset.id || 'auto'}
+                    type="button"
+                    className={`create-theme ${theme === preset.id && !customColorsEnabled ? 'on' : ''}`}
+                    onClick={() => { setTheme(preset.id); setCustomColorsEnabled(false); }}
+                  >
+                    <span>{preset.colors.map(color => <i key={color} style={{ background: color }} />)}</span>
+                    <b>{preset.name}</b>
+                    <small>{preset.desc}</small>
+                  </button>
+                ))}
+              </div>
+            </Field>
 
             <Field
               label={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <span><PaletteIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Brand palette</span>
+                  <span><PaletteIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Custom brand colors</span>
                   <label className="check" style={{ margin: 0, fontSize: 12 }}>
                     <input type="checkbox" checked={customColorsEnabled} onChange={event => setCustomColorsEnabled(event.target.checked)} />
-                    <span>Use custom colors</span>
+                    <span>Override with custom colors</span>
                   </label>
                 </div>
               }
             >
               {customColorsEnabled ? (
-                <div className="create-colors">
+                <div className="create-colors" style={{ marginTop: 8 }}>
                   {[
                     ['Primary', brandPrimary, setBrandPrimary],
                     ['Accent', brandAccent, setBrandAccent],
@@ -829,46 +869,134 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
                   ))}
                 </div>
               ) : (
-                <p className="sub" style={{ margin: 0 }}>The palette comes from the theme or the studio. Turn this on to pin exact brand colors.</p>
+                <p className="sub" style={{ margin: 0 }}>Color accents will be automatically balanced using the selected palette theme.</p>
               )}
+            </Field>
+
+            {/* Quick URL Brand Scraper */}
+            <Field label={<span><GlobeIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />Extract from website URL</span>} hint="Pulls color palette and brand name directly from your site">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="input"
+                  placeholder="e.g. acme.com, linear.app"
+                  value={urlInput}
+                  onChange={event => setUrlInput(event.target.value)}
+                  onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void handleScrapeUrl(); } }}
+                />
+                <Button variant="secondary" loading={scraping} icon={<SparklesIcon size={14} />} onClick={handleScrapeUrl}>
+                  {scraping ? 'Extracting…' : 'Extract'}
+                </Button>
+              </div>
+              {scrapedBrand ? (
+                <div className="create-brand" style={{ marginTop: 10 }}>
+                  {scrapedBrand.logo ? <img src={scrapedBrand.logo} alt="" /> : <GlobeIcon size={20} />}
+                  <div>
+                    <b>{scrapedBrand.name || 'Brand identity'}</b>
+                    <small>Palette populated from domain</small>
+                  </div>
+                  <span>
+                    {[scrapedBrand.colors?.primary, scrapedBrand.colors?.accent].filter(Boolean).map(color => (
+                      <i key={color} style={{ background: color }} />
+                    ))}
+                  </span>
+                </div>
+              ) : null}
             </Field>
           </section>
 
+          {/* Sound Design & Music */}
           <section className="create-section">
             <div className="create-section-head">
               <div>
-                <h2>AI service & audio</h2>
-                <p>Which AI writes the video, and the sound under it.</p>
+                <h2>Sound Design & Music</h2>
+                <p>Background music mood and cinematic sound effects.</p>
               </div>
-              {hostMode !== 'hosted' ? (
-                <label className="check" style={{ margin: 0 }}>
-                  <input type="checkbox" checked={modelPreset === 'custom'} onChange={event => setModelPreset(event.target.checked ? 'custom' : 'auto')} />
-                  <span>Use my own AI service</span>
-                </label>
-              ) : null}
             </div>
 
-            {effectivePreset === 'custom' ? (
-              <div className="create-custom">
-                <div className="create-custom-quick">
-                  {[
-                    { label: 'LiteLLM', url: 'http://localhost:4000/v1', model: 'claude-3-7-sonnet' },
-                    { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-3.7-sonnet' },
-                    { label: 'Ollama', url: 'http://localhost:11434/v1', model: 'llama3.3' },
-                    { label: 'OpenAI', url: 'https://api.openai.com/v1', model: 'gpt-4o' },
-                  ].map(gateway => (
-                    <button key={gateway.label} type="button" className={customBaseUrl === gateway.url ? 'on' : ''} onClick={() => { setCustomBaseUrl(gateway.url); if (!customModel) setCustomModel(gateway.model); }}>
-                      {gateway.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="create-grid create-grid-three">
-                  <Field label="Service address"><input className="input" placeholder="https://openrouter.ai/api/v1" value={customBaseUrl} onChange={event => setCustomBaseUrl(event.target.value)} /></Field>
-                  <Field label="Model name"><input className="input" placeholder="anthropic/claude-3.7-sonnet" value={customModel} onChange={event => setCustomModel(event.target.value)} /></Field>
-                  <Field label="API key" hint="Stored in this browser only"><input className="input" type="password" placeholder="sk-…" value={customApiKey} onChange={event => setCustomApiKey(event.target.value)} /></Field>
+            <div className="create-grid">
+              <Field label="Music track mood">
+                <select className="input" value={audioMood} onChange={event => setAudioMood(event.target.value)}>
+                  <option value="cyber">Kinetic synth & cyber beats (Tech & fast paced)</option>
+                  <option value="lofi">Ambient lo-fi & chill (Minimal & thoughtful)</option>
+                  <option value="upbeat">Energetic funk & pop (Commercial & dynamic)</option>
+                  <option value="cinematic">Cinematic orchestral (Dramatic & expansive)</option>
+                  <option value="corporate">Clean acoustic (Warm & trustworthy)</option>
+                  <option value="none">No background music</option>
+                </select>
+              </Field>
+              <Field label="Motion SFX">
+                <label className="check" style={{ marginTop: 8 }}>
+                  <input type="checkbox" checked={sfx} onChange={event => setSfx(event.target.checked)} />
+                  <span>Layer whooshes, impacts, pops and transition shimmers</span>
+                </label>
+              </Field>
+            </div>
+          </section>
+
+          {/* Creative Details & Pacing (if guided or pro) */}
+          {mode !== 'autopilot' ? (
+            <section className="create-section">
+              <div className="create-section-head">
+                <div>
+                  <h2>Creative Details & Pacing</h2>
+                  <p>Message structure, typography and motion speed.</p>
                 </div>
               </div>
-            ) : (
+
+              <div className="create-grid">
+                <Field label="Key message points" hint="Key benefits or points to highlight across scenes">
+                  <input className="input" placeholder="e.g. 10x faster, zero setup, free tier" value={keyPoints} onChange={event => setKeyPoints(event.target.value)} />
+                </Field>
+                <Field label="Call to action" hint="Closing card text and URL">
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input className="input" placeholder="Get started today" value={ctaHeadline} onChange={event => setCtaHeadline(event.target.value)} />
+                    <input className="input" placeholder="motionrender.dev" value={ctaSubline} onChange={event => setCtaSubline(event.target.value)} />
+                  </div>
+                </Field>
+              </div>
+
+              <div className="create-grid create-grid-three" style={{ marginTop: 12 }}>
+                <Field label="Font pairing">
+                  <select className="input" value={typography} onChange={event => setTypography(event.target.value)}>
+                    <option value="sans">Modern sans (Inter / Geist)</option>
+                    <option value="bold">Bold kinetic (Space Grotesk / Syne)</option>
+                    <option value="serif">Editorial serif (Playfair / Instrument)</option>
+                    <option value="mono">Terminal mono (JetBrains Mono)</option>
+                  </select>
+                </Field>
+                <Field label="Motion pacing">
+                  <select className="input" value={motionPacing} onChange={event => setMotionPacing(event.target.value)}>
+                    <option value="dynamic">Balanced dynamic (3–4s scenes)</option>
+                    <option value="snappy">Snappy & fast (1.5–2.5s cuts)</option>
+                    <option value="cinematic">Cinematic flow (4.5s+ moves)</option>
+                  </select>
+                </Field>
+                <Field label="Visual treatment">
+                  <select className="input" value={visualTreatment} onChange={event => setVisualTreatment(event.target.value)}>
+                    <option value="clean">Modern vector & crisp contrast</option>
+                    <option value="glass">Glassmorphic glow & blur</option>
+                    <option value="paper">Editorial halftone & paper</option>
+                    <option value="cyber">Cyber neon & gridlines</option>
+                  </select>
+                </Field>
+              </div>
+
+              <label className="check" style={{ marginTop: 14 }}>
+                <input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} />
+                <span>Run automated design review (check readability, safe zones and contrast)</span>
+              </label>
+            </section>
+          ) : null}
+
+          {/* Advanced / Pro overrides */}
+          {mode === 'pro' ? (
+            <section className="create-section">
+              <div className="create-section-head">
+                <div>
+                  <h2>AI Service & Overrides</h2>
+                  <p>Choose the model provider and exact frame overrides.</p>
+                </div>
+              </div>
               <div className="create-models">
                 {[
                   { id: 'auto', name: 'Automatic', desc: 'Chooses for you', badge: 'Recommended' },
@@ -884,58 +1012,51 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
                   </button>
                 ))}
               </div>
-            )}
+            </section>
+          ) : null}
 
-            <div className="create-grid">
-              <Field label="Audio mood">
-                <select className="input" value={audioMood} onChange={event => setAudioMood(event.target.value)}>
-                  <option value="cyber">Kinetic synth & cyber beats</option>
-                  <option value="lofi">Ambient lo-fi & chill</option>
-                  <option value="upbeat">Energetic funk & pop</option>
-                  <option value="cinematic">Cinematic orchestral</option>
-                  <option value="corporate">Clean acoustic</option>
-                  <option value="none">No music</option>
-                </select>
-              </Field>
-              <Field label="Sound effects">
-                <label className="check">
-                  <input type="checkbox" checked={sfx} onChange={event => setSfx(event.target.checked)} />
-                  <span>Layer whooshes, impacts, pops and shimmers</span>
-                </label>
-              </Field>
+          {/* Step 2 Final Action Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '14px 18px',
+              gap: 14,
+              flexWrap: 'wrap',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
+              <span><b>{ratio}</b></span>
+              <span>·</span>
+              <span>{length}</span>
+              <span>·</span>
+              <span>{voice ? 'Voiceover ON' : 'No voiceover'}</span>
+              <span>·</span>
+              <span>Theme: <b>{theme || 'Auto'}</b></span>
+              {activeKit ? <span>· Brand: {activeKit.name || 'Set'}</span> : null}
             </div>
 
-            <details>
-              <summary><SlidersIcon size={13} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 6 }} />Timeline & quality overrides</summary>
-              <div className="create-grid" style={{ marginTop: 10 }}>
-                <Field label="Project title"><input className="input" placeholder="Auto-named from the brief" value={name} onChange={event => setName(event.target.value)} /></Field>
-                <Field label="Exact duration (seconds)"><input className="input" type="number" min={3} placeholder="Auto" value={duration} onChange={event => setDuration(event.target.value)} /></Field>
-                <Field label="Scenes">
-                  <select className="input" value={sceneCount} onChange={event => setSceneCount(event.target.value)}>
-                    <option value="">Auto</option>
-                    <option value="3">3 scenes (hook, feature, CTA)</option>
-                    <option value="4">4 scenes</option>
-                    <option value="5">5 scenes</option>
-                    <option value="6">6 scenes (narrative arc)</option>
-                  </select>
-                </Field>
-                <Field label="Aspect override">
-                  <select className="input" value={aspect} onChange={event => setAspect(event.target.value)}>
-                    <option value="">Format default</option>
-                    <option value="9:16">Vertical 9:16</option>
-                    <option value="1:1">Square 1:1</option>
-                    <option value="16:9">Widescreen 16:9</option>
-                    <option value="4:5">Portrait 4:5</option>
-                  </select>
-                </Field>
-              </div>
-              <label className="check" style={{ marginTop: 10 }}>
-                <input type="checkbox" checked={full} onChange={event => setFull(event.target.checked)} />
-                <span>Build every layer from scratch instead of starting from a template</span>
-              </label>
-            </details>
-          </section>
-        </>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Button size="md" variant="ghost" onClick={() => setStep(1)}>
+                ← Back to Brief
+              </Button>
+              <Button
+                size="lg"
+                variant="primary"
+                loading={busy}
+                icon={<WandIcon size={16} />}
+                onClick={() => void (design ? submitDesign() : submit())}
+              >
+                {busy ? 'Starting generation…' : '✨ Make My Video'}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </Page>
   );
