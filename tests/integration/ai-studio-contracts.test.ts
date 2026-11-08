@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { detailSchema, errorSchema, historySchema, jobEnvelopeSchema, jobSchema, librarySchema, projectListSchema, resultFileSchema, statusSchema } from '@ove/contracts';
+import { detailSchema, errorSchema, historySchema, jobEnvelopeSchema, jobSchema, librarySchema, projectListSchema, resultFileSchema, revisionRawSchema, statusSchema } from '@ove/contracts';
 import { startAiStudio, type AiStudioServer } from '../../packages/cli/src/ai-studio';
 
 // What the studio server sends is what @ove/contracts says it sends, which is also what the web app's types are.
@@ -35,6 +35,12 @@ describe('studio API follows @ove/contracts', () => {
     expect(projectListSchema.parse(await get('/api/projects')).projects).toHaveLength(1);
     expect(detailSchema.parse(await get(`/api/project?id=${id}`))).toMatchObject({ id, mode: 'template' });
     expect(historySchema.parse(await get(`/api/history?file=${id}/composition.json`)).revisions.length).toBeGreaterThan(0);
+    const first = revisionRawSchema.parse(await get(`/api/revision?file=${id}/composition.json&n=1`));
+    expect(first.revision.n).toBe(1);
+    expect(first.raw).toMatchObject({ scenes: expect.any(Array) });
+    expect((await send('GET', `/api/revision?file=${id}/composition.json&n=999`)).status).toBe(404);
+    expect((await send('GET', `/api/revision?file=${id}/composition.json&n=0`)).status).toBe(400);
+    expect((await send('GET', `/api/revision?file=${id}/../secret.json&n=1`)).status).toBeGreaterThanOrEqual(400);
     expect(statusSchema.parse(await get('/api/status')).provider?.id).toBe('mock');
   });
 

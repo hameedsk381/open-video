@@ -38,6 +38,9 @@ export const revisionSchema = z.object({
 });
 export type Revision = z.infer<typeof revisionSchema>;
 export const historySchema = z.object({ revisions: z.array(revisionSchema) });
+/** One revision as it was saved: the file's own JSON (`raw`, whatever it holds) and the revision's record. */
+export const revisionRawSchema = z.object({ raw: z.unknown(), revision: revisionSchema });
+export type RevisionRaw = z.infer<typeof revisionRawSchema>;
 
 /* Production plan */
 export type { Production, ProductionCharacter, ProductionEnvironment, ProductionShot, ProductionStyle } from '@ove/schema';

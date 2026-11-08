@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react';
 import { type Detail } from './api';
 import { TimelineScrubber } from './TimelineScrubber';
-import { Badge, Button, SparklesIcon, SlidersIcon } from './ui';
+import { Badge, Button } from './ui';
 import { CanvasDirectOverlay } from './CanvasDirectOverlay';
 
 type LivePlayer = {

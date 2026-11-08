@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readRevisionRaw } from '@ove/storage';
 import { ensureBaseline, listRevisions, restoreRevision, saveRevision, summarizeChange, summarizeProductionChange } from '@ove/ai';
 
 // Every AI change to a composition is kept as a numbered revision, so a bad one can be undone and nothing is lost by restoring.
@@ -42,6 +43,18 @@ describe('revision history', () => {
     expect(JSON.parse(await readFile(file, 'utf8')).scenes).toHaveLength(1);
     expect(JSON.parse(await readFile(join(dir, 'history', 'composition', '0002.json'), 'utf8')).scenes).toHaveLength(3);
     await expect(restoreRevision(file, 9)).rejects.toThrow(/no revision 9/);
+  });
+
+  it('reads one revision back as parsed JSON with its record, and nothing for a missing or damaged one', async () => {
+    await write(comp(['a'])); await saveRevision(file, { kind: 'compose', label: 'one' });
+    await write(comp(['a', 'b'])); await saveRevision(file, { kind: 'refine', label: 'two' });
+    const first = await readRevisionRaw(file, 1);
+    expect(first?.revision).toMatchObject({ n: 1, label: 'one' });
+    expect(first?.raw.scenes).toHaveLength(1);
+    expect((await readRevisionRaw(file, 2))?.raw.scenes).toHaveLength(2);
+    expect(await readRevisionRaw(file, 7)).toBeUndefined();
+    await writeFile(join(dir, 'history', 'composition', '0001.json'), '{ not json');
+    expect(await readRevisionRaw(file, 1)).toBeUndefined();
   });
 
   it('keeps a separate history for each composition file in a folder', async () => {

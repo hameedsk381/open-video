@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { slotName } from '../slotName';
-import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionResult, type Detail, type Job, type Library, type ProductionState, type Revision, type SaveProductionResult, type Scene, type TextLayer, type Variable } from '../api';
+import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionResult, type Detail, type Job, type Library, type ProductionState, type Revision, type RevisionRaw, type SaveProductionResult, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
 import { PlayerView, type CompareTarget, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
@@ -63,7 +63,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
 
   const openCompare = useCallback(async (n: number, label: string) => {
     try {
-      const data = await api<{ raw: any; revision: Revision }>(`/api/revision?file=${encodeURIComponent(file)}&n=${n}`);
+      const data = await api<RevisionRaw>(`/api/revision?file=${encodeURIComponent(file)}&n=${n}`);
       setCompareTarget({ n, label, raw: data.raw });
       toast(`Comparing version #${n} with live draft`, 'info');
     } catch (e) {
@@ -748,7 +748,7 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
 }
 
 type CompDiffItem = {
-  type: 'duration' | 'scene_time' | 'text' | 'theme' | 'scene_count';
+  type: 'duration' | 'scene_time' | 'text' | 'theme' | 'scene_count' | 'layers' | 'scene_other' | 'background';
   title: string;
   before: string;
   after: string;
@@ -861,6 +861,43 @@ function computeCompositionDiff(beforeRaw: any, afterRaw: any, fps: number): Com
     });
   }
 
+  // 5. Background
+  if (JSON.stringify(beforeRaw.background) !== JSON.stringify(afterRaw.background)) {
+    const show = (v: unknown) => (typeof v === 'string' ? v : v === undefined ? 'Default' : 'Gradient');
+    diffs.push({ type: 'background', title: 'Background', before: show(beforeRaw.background), after: show(afterRaw.background), badge: 'Background update', tone: 'accent' });
+  }
+
+  // 6. Layers added or removed, and any other edit to a scene (position, colour, animation, effects).
+  // Copy and timing are reported above, so they are left out of the comparison here.
+  const layerIds = (layers: any, out: string[] = []): string[] => {
+    if (!Array.isArray(layers)) return out;
+    for (const l of layers) {
+      if (!l) continue;
+      if (l.id) out.push(String(l.id));
+      if (l.type === 'group') layerIds(l.children, out);
+    }
+    return out;
+  };
+  const skip = (key: string, value: unknown) => (key === 'content' || key === 'spans' || key === 'durationFrames' || key === 'name' ? undefined : value);
+  for (let i = 0; i < Math.min(bScenes.length, aScenes.length); i++) {
+    const bs = bScenes[i], sc = aScenes[i];
+    const bIds = new Set(layerIds(bs.layers)), aIds = new Set(layerIds(sc.layers));
+    const added = [...aIds].filter(x => !bIds.has(x)), removed = [...bIds].filter(x => !aIds.has(x));
+    const label = `Scene ${i + 1} (${sc.name || bs.name || 'Beat'})`;
+    if (added.length || removed.length) {
+      diffs.push({
+        type: 'layers',
+        title: `${label} Layers`,
+        before: removed.length ? `${removed.length} removed: ${removed.slice(0, 3).join(', ')}${removed.length > 3 ? '…' : ''}` : `${bIds.size} layers`,
+        after: added.length ? `${added.length} added: ${added.slice(0, 3).join(', ')}${added.length > 3 ? '…' : ''}` : `${aIds.size} layers`,
+        badge: [added.length ? `+${added.length}` : '', removed.length ? `−${removed.length}` : ''].filter(Boolean).join(' '),
+        tone: 'accent',
+      });
+    } else if (JSON.stringify(bs, skip) !== JSON.stringify(sc, skip)) {
+      diffs.push({ type: 'scene_other', title: `${label} Edited`, before: 'Previous version', after: 'Position, colour, animation or effects changed', badge: 'Styling', tone: 'accent' });
+    }
+  }
+
   return diffs;
 }
 
@@ -882,20 +919,24 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
   const [reverting, setReverting] = useState(false);
   const [beforeRaw, setBeforeRaw] = useState<any>(null);
   const [loadingBefore, setLoadingBefore] = useState(false);
+  const [beforeError, setBeforeError] = useState('');
   const { toast } = useUi();
 
   useEffect(() => {
+    setBeforeError('');
     if (!revert) {
       setBeforeRaw(null);
       return;
     }
     let live = true;
     setLoadingBefore(true);
-    api<{ raw: any; revision: Revision }>(`/api/revision?file=${encodeURIComponent(file)}&n=${revert.n}`)
+    api<RevisionRaw>(`/api/revision?file=${encodeURIComponent(file)}&n=${revert.n}`)
       .then(res => {
         if (live) setBeforeRaw(res.raw);
       })
-      .catch(() => {})
+      .catch(e => {
+        if (live) { setBeforeRaw(null); setBeforeError((e as Error).message || 'Could not load the earlier version'); }
+      })
       .finally(() => {
         if (live) setLoadingBefore(false);
       });
@@ -912,10 +953,9 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
     setError('');
     setNotes([]);
     setBusy(true);
-    // The revision that is active now is what this change replaces, so it is what Revert goes back to.
     try {
-      const history = await api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(file)}`);
-      const active = history.revisions.at(-1);
+      const historyUrl = `/api/history?file=${encodeURIComponent(file)}`;
+      const before = (await api<{ revisions: Revision[] }>(historyUrl)).revisions.length;
       const result = await runJob<{ warnings?: string[] }>(
         '/api/refine',
         { file, instruction: draft.trim() },
@@ -925,7 +965,14 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
       setNotes(warnings);
       setNote(warnings.length ? `AI refinement applied · ${warnings.length} note${warnings.length === 1 ? '' : 's'}` : 'AI refinement applied');
       onDraft('');
-      onApplied(active ? { n: active.n, label: active.label } : null);
+      // The change is the newest revision, so the one before it is what Revert goes back to. The first AI change to a project also
+      // saves what was there before as revision 1, which is why this reads the history after the job rather than before it.
+      let replaced: Revision | undefined;
+      try {
+        const after = (await api<{ revisions: Revision[] }>(historyUrl)).revisions;
+        if (after.length > before) replaced = after.at(-2);
+      } catch { /* the change is live either way; only the Revert and Compare card is skipped */ }
+      onApplied(replaced ? { n: replaced.n, label: replaced.label } : null);
       await reload(true);
     } catch (e) {
       setError((e as Error).message);
@@ -1071,9 +1118,13 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
                 </div>
               ))}
             </div>
+          ) : beforeError ? (
+            <p className="sub" style={{ margin: 0, color: 'var(--danger, #f87171)' }}>
+              Could not list the changes: {beforeError}. You can still compare or revert.
+            </p>
           ) : (
             <p className="sub" style={{ margin: 0 }}>
-              Refinement applied: animation curves or internal styling adjusted.
+              No differences found against version #{revert.n}.
             </p>
           )}
 

@@ -4,7 +4,7 @@ import { api, upload, useHostMode, type Job, type Library, type Revision, type T
 import { BRAND_KIT_EVENT, brandForCompose, kitIsSet, loadBrandKit, logoFile, type BrandKit } from '../brandKit';
 import { designBrief, designById, designForTemplate, designName, designs, missingFields } from '../designs';
 import { go } from '../router';
-import { ArrowLeftIcon, Badge, Button, Field, FilmIcon, GlobeIcon, Notice, Page, PaletteIcon, SlidersIcon, SparklesIcon, VolumeIcon, WandIcon } from '../ui';
+import { ArrowLeftIcon, Badge, Button, Field, FilmIcon, GlobeIcon, Notice, Page, PaletteIcon, SparklesIcon, VolumeIcon, WandIcon } from '../ui';
 
 const kinds = [
   ['reel', 'Social Reel', 'Vertical 9:16 · TikTok, Instagram Reels & YouTube Shorts'],
@@ -73,7 +73,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const [keyPoints, setKeyPoints] = useState('');
   const [ctaHeadline, setCtaHeadline] = useState('');
   const [ctaSubline, setCtaSubline] = useState('');
-  const [sceneCount, setSceneCount] = useState('');
 
   // Custom Brand Colors
   const [customColorsEnabled, setCustomColorsEnabled] = useState(false);
@@ -86,13 +85,13 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const [modelPreset, setModelPreset] = useState<string>(() => {
     try { return (localStorage.getItem('ove-model-preset') || 'auto').replace('qwen2.5-72b', 'qwen3.8-27b'); } catch { return 'auto'; }
   });
-  const [customModel, setCustomModel] = useState<string>(() => {
+  const [customModel] = useState<string>(() => {
     try { return localStorage.getItem('ove-custom-model') || ''; } catch { return ''; }
   });
-  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
+  const [customBaseUrl] = useState<string>(() => {
     try { return localStorage.getItem('ove-custom-base-url') || ''; } catch { return ''; }
   });
-  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+  const [customApiKey] = useState<string>(() => {
     try { return localStorage.getItem('ove-custom-api-key') || ''; } catch { return ''; }
   });
   // On a hosted service the operator's gateway does the work, so a stored "custom gateway" preference
@@ -269,7 +268,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
       }
       if (ctaHeadline.trim()) body.ctaHeadline = ctaHeadline.trim();
       if (ctaSubline.trim()) body.ctaSubline = ctaSubline.trim();
-      if (sceneCount) body.sceneCount = Number(sceneCount);
       if (chosenDuration) body.duration = chosenDuration;
       if (chosenAspect) body.aspect = chosenAspect;
 
@@ -366,7 +364,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const templateName = templates.find(template => template.id === selectedTemplate)?.name;
   const ratio = aspect || (kind === 'product' ? '1:1' : kind === 'reel' ? '9:16' : '16:9');
   const length = design ? design.length : duration ? `${duration}s` : 'Auto length';
-  const engine = effectivePreset === 'auto' ? 'Automatic' : effectivePreset;
 
   const currentBriefText = design ? designBrief(design, designValues, designExtra) : brief;
 
