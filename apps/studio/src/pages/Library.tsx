@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, useHostMode, type Library as LibraryData, type Status } from '../api';
 import { bundledFont, clearBrandKit, emptyBrandKit, loadBrandKit, readBrandKit, saveBrandKit, type BrandKit } from '../brandKit';
 import { Badge, Button, Field, Notice, Page, useUi } from '../ui';
+import { AiConnectionCard } from './AiConnection';
 
 const colourRoles = [
   ['primary', 'Primary'],
@@ -220,9 +221,7 @@ export function Settings() {
       <BrandKitCard />
 
       {hostMode === 'hosted' ? (
-        <Notice tone="neutral" title="Your AI is included">
-          The studio's AI is part of the service, so there is nothing to set up. It picks the model that suits each video.
-        </Notice>
+        <AiConnectionCard />
       ) : (
       <details className="card" style={{ padding: 20, marginBottom: 20 }}>
         <summary style={{ fontWeight: 600, cursor: 'pointer' }}>Use your own AI service</summary>

@@ -21,7 +21,7 @@ Each account is its own tenant. Every route, file read and job runs as that acco
 
 1. Install [Dokploy](https://dokploy.com) on your VPS.
 2. Create a **Compose** project and connect this GitHub repository. The `docker-compose.yml` at the repo root is the Dokploy compose file.
-3. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `GROQ_API_KEY`.
+3. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `SETTINGS_SECRET`.
 4. In the **Domains** tab, add a domain for the `api` service on port `3100`. Dokploy provisions the TLS certificate.
 5. Set `PUBLIC_ORIGIN` to the `https://` address Dokploy assigned (e.g. `https://studio.yourdomain.com`).
 6. Deploy.
@@ -31,7 +31,7 @@ The compose file joins the API and AI worker to Dokploy's Traefik network for in
 ### Plain Docker / Podman
 
 ```sh
-cp infrastructure/docker/.env.example infrastructure/docker/.env      # fill in the passwords, PUBLIC_ORIGIN and GROQ_API_KEY
+cp infrastructure/docker/.env.example infrastructure/docker/.env      # fill in the passwords, PUBLIC_ORIGIN and SETTINGS_SECRET
 docker compose -f infrastructure/docker/compose.yml --env-file infrastructure/docker/.env up -d --build
 ```
 
@@ -52,7 +52,7 @@ All through environment variables.
 | `SIGNUPS`, `REQUIRE_VERIFIED` | API | Close sign-ups; require the emailed link before sign-in |
 | `LIMIT_PROJECTS`, `LIMIT_UPLOAD_MB`, `LIMIT_STORAGE_MB`, `LIMIT_AI_PER_DAY`, `LIMIT_RENDERS_PER_DAY` | API | Per-account limits (defaults: 25 projects, 50 MB per file, 1 GB, 30 AI requests and 15 renders a day) |
 | `JOB_LANE`, `JOB_TIMEOUT_SECONDS` | workers | `render` or `ai`; how long one job may run (900 and 300 by default) |
-| `GROQ_API_KEY` | AI worker | The AI provider key. The API never sees it. |
+| `SETTINGS_SECRET` | API and AI worker | A long random string that encrypts the AI keys people save in Settings. The service has no AI key of its own: each person connects their own provider, model and key. Keep it stable; changing it makes saved keys unreadable. |
 
 ## What the stack protects, and how
 

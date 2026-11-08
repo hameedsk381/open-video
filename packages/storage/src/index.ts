@@ -7,6 +7,7 @@ import { dirname, extname, isAbsolute, join, relative as relativePath, resolve, 
 import { ensureBaseline, listRevisions, restoreRevision, saveRevision, type Revision, type RevisionMeta } from '@ove/ai';
 
 export type { Revision, RevisionMeta };
+export * from './ai-settings';
 /** Who is asking. Local use has one fixed principal; a hosted API makes one per signed-in user. */
 export type Principal = { userId: string; tenantId: string };
 export const LOCAL_PRINCIPAL: Principal = { userId: 'local', tenantId: 'local' };

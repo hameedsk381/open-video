@@ -1,10 +1,10 @@
 // Hosted use. `ove serve` is the API behind a login, `ove job-worker` runs the jobs it queues. Both read their settings from the environment
 // (containers pass settings that way) and print what they are doing. The same published package serves both; only the command differs.
 import { resolve } from 'node:path';
-import { createProvider, providerCapabilities, type AiProvider } from '@ove/ai';
+import { createProvider, type AiProvider } from '@ove/ai';
 import { createAccounts, createApp, createQuotas, consoleMailer, PgUserStore, type Limits } from '@ove/api';
 import { RedisQueue, createJobRunner, redisConnection, type JobClass } from '@ove/jobs';
-import { FsProjectStore } from '@ove/storage';
+import { AiSettingsStore, FsProjectStore, type Principal } from '@ove/storage';
 import { runWorker } from '@ove/worker';
 import { jobEnvFor, studioApp, studioLibrary, studioPlayer } from './ai-studio';
 import { makeThumbnail } from './thumbnail';
@@ -28,13 +28,12 @@ export async function runServe(env: NodeJS.ProcessEnv = process.env): Promise<vo
   for (const key of Object.keys(limits) as (keyof Limits)[]) if (limits[key] === undefined) delete limits[key];
   const quotas = createQuotas({ users, limits, storageUsed: who => store.usedBytes(who) });
   const publicHost = new URL(publicOrigin).host.replace(/:\d+$/, '');
-  // What the studio's settings page shows: the provider the workers will use (the same environment), not a fixed claim about one gateway.
-  let described: AiProvider | undefined;
-  const describedProvider = () => described ??= createProvider({ provider: env.AI_PROVIDER, model: env.AI_MODEL });
+  // The service holds no AI key. Each person connects their own in Settings; it is stored encrypted under SETTINGS_SECRET.
+  const aiSettings = new AiSettingsStore(store, need(env, 'SETTINGS_SECRET'));
   const app = createApp({
     mode: 'hosted', store, queue, validate: runner.validate, auth, quotas, library: studioLibrary, player: studioPlayer, app: studioApp,
     makeThumbnail: async () => { throw new Error('Thumbnails are drawn by the render workers'); },
-    providerState: () => { const p = describedProvider(); return { provider: { id: p.id, model: p.model, baseUrl: p.baseUrl, capabilities: providerCapabilities(p) }, error: null }; },
+    providerState: () => ({ provider: null, error: null }), aiSettings,
     // 127.0.0.1 and localhost are listed so a container health check can ask; they cannot be reached by a web page on another site.
     allowHosts: [publicHost, '127.0.0.1', 'localhost'], publicOrigin,
   });
@@ -50,9 +49,14 @@ export async function runJobWorker(env: NodeJS.ProcessEnv = process.env): Promis
   const lane = env.JOB_LANE as JobClass;
   if (lane !== 'render' && lane !== 'ai') throw new Error('JOB_LANE must be render or ai');
   const root = resolve(env.DATA_DIR ?? 'data'), store = new FsProjectStore(root);
-  let provider: AiProvider | undefined;
-  const requireProvider = () => provider ??= createProvider({ provider: env.AI_PROVIDER, model: env.AI_MODEL });
-  const providerInfo = () => ({ provider: provider?.id, model: provider?.model });
+  // A job runs with the connection its own person saved in Settings; the worker has no AI key of its own.
+  const aiSettings = new AiSettingsStore(store, need(env, 'SETTINGS_SECRET'));
+  const requireProvider = (who: Principal): AiProvider => {
+    const own = aiSettings.get(who);
+    if (!own) throw new Error('Add your AI model in Settings first: choose a provider, a model and your API key.');
+    return createProvider({ provider: own.provider, model: own.model, baseUrl: own.baseUrl, apiKey: own.apiKey });
+  };
+  const providerInfo = (who: Principal) => { try { const own = aiSettings.get(who); return { provider: own?.provider, model: own?.model }; } catch { return {}; } };
   const runner = createJobRunner(jobEnvFor(store, lane === 'ai' ? requireProvider : () => { throw new Error('This worker does not run AI jobs'); }, providerInfo, false));
   const timeoutSeconds = Number(env.JOB_TIMEOUT_SECONDS ?? (lane === 'render' ? 900 : 300));
   const concurrency = Math.max(1, Number(env.WORKER_CONCURRENCY ?? 1));

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { limitMessage } from '../limitMessage';
+import { useAiConnection } from './AiConnection';
 import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type Revision, type TemplateSummary } from '../api';
 import { BRAND_KIT_EVENT, brandForCompose, kitIsSet, loadBrandKit, logoFile, type BrandKit } from '../brandKit';
 import { composeNotesKey, composeOutcome } from '../composeReport';
@@ -43,6 +44,9 @@ const examples = [
 
 export function Create({ initialTemplate, initialKind, initialPrompt, initialFrom }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string; initialFrom?: string } = {}) {
   const hostMode = useHostMode();
+  // On the hosted service the AI is the person's own: with none connected, sending a brief would only fail later.
+  const connection = useAiConnection(hostMode === 'hosted');
+  const needsConnection = hostMode === 'hosted' && connection.state !== null && connection.state.settings === null;
   // Autopilot hides everything; Guided exposes the choices that matter; Pro is the full engine.
   const [mode, setMode] = useState<'autopilot' | 'guided' | 'pro'>(() => {
     try { const saved = localStorage.getItem('ove-create-mode'); return saved === 'guided' || saved === 'pro' ? saved : 'autopilot'; } catch { return 'autopilot'; }
@@ -233,6 +237,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   // A design fills in what the composer would have been typed: its brief, template, format and a name from its details.
   const submit = async (starter?: { brief: string; kind: string; template?: string; aspect?: string; name?: string; duration?: string }) => {
     setError('');
+    if (needsConnection) {
+      setError('Connect your AI model in Settings first.');
+      return;
+    }
     const text = (starter?.brief ?? brief).trim();
     if (!text) {
       setError('Please provide a brief description of what you want to create.');
@@ -668,6 +676,11 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
         </>
       ) : null}
 
+      {needsConnection ? (
+        <Notice tone="warn" title="Connect your AI model first">
+          The studio has no AI of its own. <a href="#/settings">Add your provider, model and API key in Settings</a>, then come back to make your video.
+        </Notice>
+      ) : null}
       {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
 
       {mode !== 'autopilot' ? (

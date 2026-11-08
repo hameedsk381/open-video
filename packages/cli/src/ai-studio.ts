@@ -52,9 +52,9 @@ export const studioPlayer: PlayerFiles = {
 export const studioApp = { dir: fileURLToPath(new URL('../studio', import.meta.url)), fallbackPage: aiStudioPage };
 
 /** The environment every job runs in on this machine: the store's folders, the provider from the environment, and the local-only inputs. */
-export function jobEnvFor(store: FsProjectStore, requireProvider: () => AiProvider, providerInfo: () => { provider?: string; model?: string }, local: boolean) {
+export function jobEnvFor(store: FsProjectStore, requireProvider: (who: Principal) => AiProvider, providerInfo: (who: Principal) => { provider?: string; model?: string }, local: boolean) {
   return (who: Principal): JobEnv => ({
-    who, paths: createFsPaths(store, who, providerInfo, { confine: !local }), provider: requireProvider, providerInfo, assets: id => store.assets(who, id),
+    who, paths: createFsPaths(store, who, () => providerInfo(who), { confine: !local }), provider: () => requireProvider(who), providerInfo: () => providerInfo(who), assets: id => store.assets(who, id),
     capabilities: { composeSmart, narrateSmart, makeThumbnail },
     ...(local ? { local: { inputFile: localInputFile } } : {}),
   });

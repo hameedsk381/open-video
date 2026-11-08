@@ -5,6 +5,7 @@ import { renderStill, loadComposition, attachCaptions } from '@ove/core';
 import { integerIn } from '@ove/jobs';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { AI_JOB_KINDS } from './ai-settings';
 import type { Ctx, Route } from '../types';
 
 // URL path to job kind. Requests are checked now, so a bad one is refused with its reason before anything is queued.
@@ -20,7 +21,9 @@ export function jobsRoutes(): Route[] {
     // a request never chooses where results are delivered, where uploads go, or which AI endpoint the worker
     // calls (a caller-supplied baseUrl would make the worker fetch internal addresses). `model` stays: it
     // selects among the operator's gateway models. On your own machine you keep full control.
-    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key', 'provider', 'baseUrl', 'apiKey']) delete input[key];
+    if (c.deps.mode !== 'local') { for (const key of ['webhookUrl', 'webhookSecret', 's3Config', 's3Key', 'provider', 'model', 'baseUrl', 'apiKey']) delete input[key];
+      // The AI is the person's own: with none saved there is nothing to run, so say so now instead of failing in a worker.
+      if (c.deps.aiSettings && AI_JOB_KINDS.has(kind) && !c.deps.aiSettings.view(c.who)) throw new Error('Add your AI model in Settings first: choose a provider, a model and your API key.');
       // Reading public pages is off for hosted callers unless they ask for it: the worker would otherwise fetch whatever
       // third-party URLs a prompt makes the model name, on the operator's network, for any account.
       if (input.research !== true) input.research = false; }

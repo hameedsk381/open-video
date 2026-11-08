@@ -55,6 +55,7 @@ services:
       DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/ove"
       REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
       PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN, for example https://studio.example.com}"
+      SETTINGS_SECRET: "${SETTINGS_SECRET:?set SETTINGS_SECRET, a long random string that protects the AI keys people save}"
       DATA_DIR: /data
       TRUST_PROXY: "${TRUST_PROXY:-1}"
       SIGNUPS: "${SIGNUPS:-1}"
@@ -97,13 +98,11 @@ services:
     <<: *worker
     environment:
       JOB_LANE: ai
+      SETTINGS_SECRET: "${SETTINGS_SECRET:?set SETTINGS_SECRET, a long random string that protects the AI keys people save}"
       REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
       DATA_DIR: /data
       JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}"
       WORKER_CONCURRENCY: "${AI_CONCURRENCY:-1}"
-      GROQ_API_KEY: "${GROQ_API_KEY:-}"
-      FREELLMAPI_KEY: "${FREELLMAPI_KEY:-}"
-      FREELLMAPI_API_KEY: "${FREELLMAPI_API_KEY:-}"
       OVE_AI_TTS_PROVIDER: "${OVE_AI_TTS_PROVIDER:-}"
       WEBHOOK_URL: "${WEBHOOK_URL:-}"
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"

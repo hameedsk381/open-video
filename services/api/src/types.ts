@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { JobKind } from '@ove/contracts';
 import type { JobQueue, JobRequest } from '@ove/jobs';
-import type { FsProjectStore, Principal } from '@ove/storage';
+import type { AiSettingsStore, FsProjectStore, Principal } from '@ove/storage';
 
 /** Works out who is asking. Local use is always the one local person; a hosted setup reads a session. */
 export interface Auth {
@@ -49,6 +49,8 @@ export type AppDeps = {
   /** Draws a thumbnail in this process (local mode only). */
   makeThumbnail(raw: any, values: Record<string, unknown>, baseDir: string, options: { width?: number }): Promise<{ png: Buffer }>;
   providerState(): { provider: unknown; error: string | null };
+  /** Hosted: each person's own AI connection. Without it (local use) the machine's own provider is used. */
+  aiSettings?: AiSettingsStore;
   /** The built web app, and the plain page to show when there is none. */
   app: { dir: string; fallbackPage: string };
   /** Host names the server answers to besides loopback, and the one origin that may change things (hosted behind TLS). */
