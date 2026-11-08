@@ -3,6 +3,7 @@ import { api, useHostMode, type Library as LibraryData, type Status } from '../a
 import { bundledFont, clearBrandKit, emptyBrandKit, loadBrandKit, readBrandKit, saveBrandKit, type BrandKit } from '../brandKit';
 import { Badge, Button, Field, Notice, Page, useUi } from '../ui';
 import { AiConnectionCard } from './AiConnection';
+import { StockConnectionCard } from './StockConnection';
 
 const colourRoles = [
   ['primary', 'Primary'],
@@ -219,6 +220,8 @@ export function Settings() {
       {error ? <Notice tone="error" title="Settings could not be loaded">{error}</Notice> : null}
 
       <BrandKitCard />
+
+      <StockConnectionCard />
 
       {hostMode === 'hosted' ? (
         <AiConnectionCard />

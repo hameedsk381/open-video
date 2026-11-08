@@ -9,9 +9,9 @@ import { describeError, sfxFile } from '@ove/core';
 import { builtinFontFaces } from '@ove/graphics';
 import { builtinFontDir } from '@ove/graphics/fonts';
 import { sfxNames } from '@ove/schema';
-import { createApp, loopbackAuth, type ApiLibrary, type PlayerFiles } from '@ove/api';
+import { createApp, loopbackAuth, type ApiLibrary, type PlayerFiles, type StockOptions } from '@ove/api';
 import { InProcessQueue, canvasFor, createFsPaths, createJobRunner, folderName, localInputFile, type JobEnv } from '@ove/jobs';
-import { FsProjectStore, LOCAL_PRINCIPAL, within, type Principal } from '@ove/storage';
+import { FsProjectStore, LOCAL_PRINCIPAL, StockSettingsStore, within, type Principal } from '@ove/storage';
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readBlockFile, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
@@ -19,6 +19,8 @@ import { composeSmart, listTemplates } from './templates';
 import { makeThumbnail } from './thumbnail';
 
 export type AiStudioOptions = {
+  /** Where the stock libraries live; tests point these at a stand-in. */
+  stock?: Partial<StockOptions>;
   /** Interface to listen on. Defaults to 127.0.0.1; anything else exposes a server that has no login. */
   host?: string;
   /** The port people use to reach the studio when it differs from the one it listens on (a container's published port). */
@@ -80,6 +82,8 @@ export async function startAiStudio(options: AiStudioOptions = {}): Promise<AiSt
       ? { provider: { id: provider.id, model: provider.model, baseUrl: provider.baseUrl, capabilities: providerCapabilities(provider) }, error: null }
       : { provider: null, error: providerError ?? 'No AI provider is configured' },
     allowHosts: options.allowHosts, publicPort: options.publicPort,
+    // Stock keys are saved by the person in Settings, in a file only they can read.
+    stockSettings: new StockSettingsStore(store), stock: options.stock,
   });
   void LOCAL_PRINCIPAL;
   const { server, port } = await app.listen({ host: options.host, port: options.port });

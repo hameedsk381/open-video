@@ -18,7 +18,11 @@ export const variableSchema = z.object({ name: z.string(), type: z.enum(['string
 export type Variable = z.infer<typeof variableSchema>;
 export const textLayerSchema = z.object({ path: z.string(), scene: z.string(), id: z.string(), content: z.string(), fontSize: z.number() });
 export type TextLayer = z.infer<typeof textLayerSchema>;
-export const assetSchema = z.object({ name: z.string(), path: z.string(), kind: z.string(), bytes: z.number(), sha256: z.string().optional(), addedAt: z.string().optional(), uses: z.number().optional().describe('How many times the video refers to this file') });
+export const stockProviderSchema = z.enum(['pexels', 'pixabay']);
+/** Where a stock file came from: who made it, where it is credited, and the licence it is under. */
+export const stockCreditSchema = z.object({ provider: z.string(), author: z.string(), authorUrl: z.string().optional(), pageUrl: z.string(), license: z.string() });
+export type StockCredit = z.infer<typeof stockCreditSchema>;
+export const assetSchema = z.object({ name: z.string(), path: z.string(), kind: z.string(), bytes: z.number(), sha256: z.string().optional(), addedAt: z.string().optional(), uses: z.number().optional().describe('How many times the video refers to this file'), credit: stockCreditSchema.optional() });
 export type Asset = z.infer<typeof assetSchema>;
 export const sceneSummarySchema = z.object({ id: z.string(), name: z.string(), startFrame: z.number(), durationFrames: z.number(), beat: z.string().optional() });
 export type Scene = z.infer<typeof sceneSummarySchema>;
@@ -160,6 +164,17 @@ export const variablesRequest = z.object({ id, values: z.record(z.string(), z.un
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
 /** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
 export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0), maxWidth: z.number().positive().optional() })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
+/* Stock libraries */
+export const stockStatusSchema = z.object({ providers: z.array(z.object({ id: stockProviderSchema, label: z.string(), keyUrl: z.string(), connected: z.boolean(), keyHint: z.string().optional() })) });
+export type StockStatus = z.infer<typeof stockStatusSchema>;
+export const stockResultSchema = z.object({ provider: stockProviderSchema, id: z.string(), kind: z.enum(['photo', 'video']), thumb: z.string(), width: z.number(), height: z.number(), duration: z.number().optional(), author: z.string(), authorUrl: z.string().optional(), pageUrl: z.string(), file: z.string(), ext: z.string() });
+export type StockResult = z.infer<typeof stockResultSchema>;
+export const stockSearchSchema = z.object({ results: z.array(stockResultSchema), page: z.number(), hasMore: z.boolean(), total: z.number().optional() });
+export type StockSearch = z.infer<typeof stockSearchSchema>;
+export const stockSettingsRequest = z.object({ provider: stockProviderSchema, apiKey: z.string().trim().min(8, 'Enter your API key').max(200, 'That API key is too long') });
+export const stockClearRequest = z.object({ provider: stockProviderSchema });
+/** Bring one search result into a project. The server downloads it itself, and only from the library's own site. */
+export const stockImportRequest = z.object({ id, provider: stockProviderSchema, stockId: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/, 'That is not a file id'), kind: z.enum(['photo', 'video']), file: z.string().url().max(2000), ext: z.string().max(8), author: z.string().min(1).max(160), authorUrl: z.string().url().max(500).optional(), pageUrl: z.string().url().max(500) });
 /** Put an uploaded file into a scene: behind everything, in the middle, as a small logo, or as its sound. */
 export const assetUseRequest = z.object({ id, name: z.string().min(1, 'name is required'), as: z.enum(['background', 'picture', 'logo', 'sound']), scene: z.number().int().min(0).optional() });
 /** Delete an uploaded file; `force` says to do so even while the video still refers to it. */

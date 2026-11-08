@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { api, upload, type Asset, type Detail } from '../api';
-import { Button, ImagesIcon, MusicIcon, Notice, Spinner, TrashIcon, useUi } from '../ui';
+import { Button, CopyIcon, ImagesIcon, MusicIcon, Notice, Spinner, TrashIcon, useUi } from '../ui';
+import { StockSearchPanel } from './StockSearch';
 
 type Use = 'background' | 'picture' | 'logo' | 'sound';
+const SITE: Record<string, string> = { pexels: 'Pexels', pixabay: 'Pixabay' };
 
 const sizeOf = (bytes: number) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/flac,.mkv,.m4a';
@@ -30,10 +32,14 @@ export function MediaPanel({ detail, reload, setNote, sceneIndex }: {
   const { toast } = useUi();
   const [progress, setProgress] = useState('');
   const [over, setOver] = useState(false);
+  const [view, setView] = useState<'files' | 'stock'>('files');
   const [asking, setAsking] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const scene = detail.scenes[sceneIndex];
+  // Stock files the video actually shows must be credited where it is published.
+  const credited = detail.assets.filter(asset => asset.credit && (asset.uses ?? 0) > 0);
+  const creditText = credited.map(asset => `${asset.credit!.author} (${SITE[asset.credit!.provider] ?? asset.credit!.provider}): ${asset.credit!.pageUrl}`).join('\n');
 
   const addFiles = async (files: File[]) => {
     if (!files.length || progress) return;
@@ -78,6 +84,15 @@ export function MediaPanel({ detail, reload, setNote, sceneIndex }: {
       <h2>Media</h2>
       <p className="sub">Pictures, video and sound for this video. Add a file here, then put it into a scene.</p>
 
+      <div className="segmented" role="tablist" aria-label="Where media comes from" style={{ marginBottom: 14 }}>
+        <button role="tab" aria-selected={view === 'files'} className={view === 'files' ? 'on' : ''} onClick={() => setView('files')}>Your files{detail.assets.length ? ` · ${detail.assets.length}` : ''}</button>
+        <button role="tab" aria-selected={view === 'stock'} className={view === 'stock' ? 'on' : ''} onClick={() => setView('stock')}>Stock photos &amp; video</button>
+      </div>
+
+      {view === 'stock' ? (
+        <StockSearchPanel projectId={detail.id} assets={detail.assets} reload={reload} setNote={setNote} onAdded={() => {}} />
+      ) : (
+        <>
       <div
         className={`media-drop${over ? ' over' : ''}`}
         onDragOver={e => { e.preventDefault(); setOver(true); }}
@@ -120,6 +135,11 @@ export function MediaPanel({ detail, reload, setNote, sceneIndex }: {
                   <div className="media-info">
                     <b title={asset.name}>{asset.name}</b>
                     <small>{asset.kind} · {sizeOf(asset.bytes)}{asset.uses ? ` · used ${asset.uses}×` : ''}</small>
+                    {asset.credit ? (
+                      <small className="media-credit">
+                        {asset.credit.pageUrl.startsWith('https://') ? <a href={asset.credit.pageUrl} target="_blank" rel="noreferrer noopener">{asset.credit.author}</a> : asset.credit.author} · {SITE[asset.credit.provider] ?? asset.credit.provider}
+                      </small>
+                    ) : null}
                   </div>
                   {asking === asset.name ? (
                     <div className="media-confirm">
@@ -141,11 +161,21 @@ export function MediaPanel({ detail, reload, setNote, sceneIndex }: {
               );
             })}
           </div>
+          {credited.length ? (
+            <details className="media-credits">
+              <summary>Credits for this video · {credited.length}</summary>
+              <p>Pexels and Pixabay ask for credit. Paste this where the video is published, such as its description.</p>
+              <textarea className="input" readOnly rows={Math.min(6, credited.length + 1)} value={creditText} aria-label="Credits" />
+              <Button size="sm" variant="secondary" icon={<CopyIcon size={13} />} onClick={() => { void navigator.clipboard.writeText(creditText).then(() => toast('Credits copied', 'success'), () => toast('Could not copy. Select the text and copy it instead.', 'error')); }}>Copy credits</Button>
+            </details>
+          ) : null}
         </>
       ) : (
         <Notice tone="neutral" title="No media yet">
           <p style={{ margin: '4px 0 0' }}>Your logo, product photos, a background clip or a voice track all work. Drop them above, or choose files.</p>
         </Notice>
+      )}
+        </>
       )}
     </>
   );

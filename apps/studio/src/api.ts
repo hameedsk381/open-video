@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type { Asset, Block, BlockSlot, CompileProductionResult, Detail, Job, Library, Production, ProductionIssue, ProductionShot, ProductionState, ProductionSummaryState, Project, Revision, RevisionRaw, SaveProductionResult, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
+export type { Asset, Block, BlockSlot, CompileProductionResult, Detail, Job, Library, Production, ProductionIssue, ProductionShot, ProductionState, ProductionSummaryState, Project, Revision, RevisionRaw, SaveProductionResult, StockResult, StockSearch, StockStatus, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
 import type { Job } from '@ove/contracts';
 
 /** A failed request, with the server's body: plan saves carry field-level issues and conflicts there. */

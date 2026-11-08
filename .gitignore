@@ -23,4 +23,6 @@ apps/desktop/resources/tools/
 apps/desktop/release/
 
 scratch/
+.agents/
+skills-lock.json
 !.env.example

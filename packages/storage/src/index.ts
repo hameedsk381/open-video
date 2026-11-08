@@ -8,13 +8,16 @@ import { ensureBaseline, listRevisions, readRevisionRaw, restoreRevision, saveRe
 
 export * from './history';
 export * from './ai-settings';
+export * from './stock-settings';
 /** Who is asking. Local use has one fixed principal; a hosted API makes one per signed-in user. */
 export type Principal = { userId: string; tenantId: string };
 export const LOCAL_PRINCIPAL: Principal = { userId: 'local', tenantId: 'local' };
 /** `sha256` and `addedAt` are recorded when a file is uploaded; files placed in the folder by hand have neither. */
-export type StoredAsset = { name: string; path: string; kind: string; bytes: number; sha256?: string; addedAt?: string };
+/** Where a stock file came from, kept with it so the video can credit it. */
+export type StockCredit = { provider: string; author: string; authorUrl?: string; pageUrl: string; license: string };
+export type StoredAsset = { name: string; path: string; kind: string; bytes: number; sha256?: string; addedAt?: string; credit?: StockCredit };
 /** What an upload records about a file, kept in assets/.manifest.json beside the files so the hash is computed once, not on every listing. */
-type UploadRecord = { sha256: string; bytes: number; addedAt: string; originalName: string };
+type UploadRecord = { sha256: string; bytes: number; addedAt: string; originalName: string; credit?: StockCredit };
 const manifestPath = (folder: string) => join(folder, '.manifest.json');
 async function readManifest(folder: string): Promise<Record<string, UploadRecord>> { try { const parsed = JSON.parse(await readFile(manifestPath(folder), 'utf8')); return parsed && typeof parsed === 'object' ? parsed : {}; } catch { return {}; } }
 /** The JSON files a project keeps at its root, each with its own revision history. */
@@ -46,7 +49,7 @@ export interface ProjectStore {
   /** Brings a trashed project back under its old name (-2, -3… if that name is taken again) and gives its id. */
   untrash(who: Principal, key: string): Promise<string>;
   assets(who: Principal, id: string): Promise<StoredAsset[]>;
-  putAsset(who: Principal, id: string, name: string, bytes: Buffer): Promise<StoredAsset[]>;
+  putAsset(who: Principal, id: string, name: string, bytes: Buffer, credit?: StockCredit): Promise<StoredAsset[]>;
   /** Removes one uploaded media file and returns what is left. */
   deleteAsset(who: Principal, id: string, name: string): Promise<StoredAsset[]>;
   /** A file the product itself ships that a project's layers draw from (a block's React bundle). Never reachable from an upload: only a named bundle, written by the server. */
@@ -177,11 +180,11 @@ export class FsProjectStore implements ProjectStore {
       const kind = assetKinds[extname(name).toLowerCase()]; if (!kind) continue;
       const bytes = (await stat(join(folder, name))).size, record = manifest[name];
       // A file whose size no longer matches its record was replaced by hand: the old hash would be a false statement about it.
-      out.push({ name, path: `assets/${name}`, kind, bytes, ...(record && record.bytes === bytes ? { sha256: record.sha256, addedAt: record.addedAt } : {}) });
+      out.push({ name, path: `assets/${name}`, kind, bytes, ...(record && record.bytes === bytes ? { sha256: record.sha256, addedAt: record.addedAt, ...(record.credit ? { credit: record.credit } : {}) } : {}) });
     }
     return out;
   }
-  async putAsset(who: Principal, id: string, name: string, bytes: Buffer) {
+  async putAsset(who: Principal, id: string, name: string, bytes: Buffer, credit?: StockCredit) {
     const clean = name.split(/[\\/]/).pop()!.replace(/[^A-Za-z0-9._-]+/g, '-');
     if (!assetKinds[extname(clean).toLowerCase()]) throw new Error(`Pictures, video and audio only (${Object.keys(assetKinds).join(' ')})`);
     const folder = join(this.projectDir(who, id), 'assets'); await mkdir(folder, { recursive: true });
@@ -189,7 +192,7 @@ export class FsProjectStore implements ProjectStore {
     for (let n = 2; taken.has(final); n++) final = clean.replace(/(\.[^.]*)?$/, `-${n}$1`);
     await writeFile(join(folder, final), bytes);
     const manifest = await readManifest(folder);
-    manifest[final] = { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, addedAt: new Date().toISOString(), originalName: name };
+    manifest[final] = { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, addedAt: new Date().toISOString(), originalName: name, ...(credit ? { credit } : {}) };
     await writeFile(manifestPath(folder), JSON.stringify(manifest, null, 2) + '\n');
     return this.assets(who, id);
   }

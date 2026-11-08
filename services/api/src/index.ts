@@ -3,6 +3,7 @@ export * from './app';
 export * from './guard';
 export { assertPublicHttpUrl } from './url-guard';
 export * from './projects';
+export { allowStockUrl, defaultStockOptions, searchStock, downloadStock, type StockOptions, type StockResult, type StockPage } from './stock';
 export { mediaTypes, send, sendJson, sendError, readBody, readBytes, serveFile } from './http';
 export * from './auth';
 export * from './accounts/accounts';

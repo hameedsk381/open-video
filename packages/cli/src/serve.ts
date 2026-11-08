@@ -3,7 +3,7 @@
 import { createProvider, type AiProvider } from '@ove/ai';
 import { createAccounts, createApp, createQuotas, consoleMailer, PgUserStore } from '@ove/api';
 import { RedisQueue, createJobRunner, redisConnection } from '@ove/jobs';
-import { AiSettingsStore, FsProjectStore, type Principal } from '@ove/storage';
+import { AiSettingsStore, FsProjectStore, StockSettingsStore, type Principal } from '@ove/storage';
 import { runWorker } from '@ove/worker';
 import { jobEnvFor, studioApp, studioLibrary, studioPlayer } from './ai-studio';
 import { readApiConfig, readWorkerConfig } from './serve-config';
@@ -27,7 +27,7 @@ export async function runServe(env: NodeJS.ProcessEnv = process.env): Promise<vo
   const app = createApp({
     mode: 'hosted', store, queue, validate: runner.validate, auth, quotas, library: studioLibrary, player: studioPlayer, app: studioApp,
     makeThumbnail: async () => { throw new Error('Thumbnails are drawn by the render workers'); },
-    providerState: () => ({ provider: null, error: null }), aiSettings,
+    providerState: () => ({ provider: null, error: null }), aiSettings, stockSettings: new StockSettingsStore(store, config.settingsSecret),
     // 127.0.0.1 and localhost are listed so a container health check can ask; they cannot be reached by a web page on another site.
     allowHosts: [publicHost, '127.0.0.1', 'localhost'], publicOrigin,
   });
