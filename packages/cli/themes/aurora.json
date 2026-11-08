@@ -3,8 +3,8 @@
   "name": "Aurora",
   "description": "Deep space plum with vibrant violet-magenta and glowing emerald mint. Creative showcase & portfolio motion.",
   "variables": {
-    "bg": "#0d0914",
-    "surface": "#191128",
+    "bg": "#140e24",
+    "surface": "#22163d",
     "text": "#fdf4ff",
     "muted": "#c084fc",
     "accent": "#a855f7",
