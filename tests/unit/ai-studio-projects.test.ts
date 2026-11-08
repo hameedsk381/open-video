@@ -31,11 +31,8 @@ describe('Studio project helpers', () => {
 });
 
 describe('Studio page', () => {
-  it('has a script that parses, and the screens it promises', () => {
-    const script = /<script>([\s\S]*)<\/script>/.exec(aiStudioPage)?.[1] ?? '';
-    expect(script.length).toBeGreaterThan(5000);
-    expect(() => new Function(script)).not.toThrow();
-    for (const name of ["'/api/projects'", "'/api/compose'", "'/api/refine'", "'/api/variables'", "'/api/text'", "'/api/theme'", "'/api/add-block'", "'/api/restore'", "'/api/render'", '/player.js', '/api/upload']) expect(script, name).toContain(name);
+  it('tells a source checkout how to build the web app', () => {
     expect(aiStudioPage).toContain('MotionRender Studio');
+    expect(aiStudioPage).toContain('pnpm build:studio');
   });
 });

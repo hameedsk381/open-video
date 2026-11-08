@@ -1,8 +1,7 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderMedia, renderStill } from '@ove/core';
-import { composeVideo, createProvider, planBuild, writeCompositionProject } from '@ove/ai';
-import { runVideoAgent, type VideoFormat } from '../../ai/src/agent';
+import { composeVideo, createProvider, planBuild, runVideoAgent, writeCompositionProject, type VideoFormat } from '@ove/ai';
 import { buildReact } from './build';
 import { reactCritiqueFrames, reactVisualCheck } from './react-video';
 import { cliRegistry } from './templates';
