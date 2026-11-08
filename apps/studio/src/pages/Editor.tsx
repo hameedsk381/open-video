@@ -81,6 +81,18 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   }, [detail, load, setNote, toast]);
 
+  const snapLayer = useCallback(async (path: string, dx: number, dy: number) => {
+    if (!detail) return;
+    try {
+      await api('/api/layer/snap', { id: detail.id, path, dx, dy });
+      setNote('Snapped to safe area');
+      toast('Moved layer into platform safe zone', 'success');
+      await load(true);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }, [detail, load, setNote, toast]);
+
   const load = useCallback((keepFrame: boolean) => {
     if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
     else frameAt.current = 0;
@@ -230,6 +242,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           selectedLayerPath={selectedTextPath}
           onSelectLayerPath={setSelectedTextPath}
           onSaveLayerText={saveDirectText}
+          onSnapLayer={snapLayer}
         />
 
         <div className="scene-focus">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Detail } from './api';
-import { CheckIcon, Spinner } from './ui';
+import { CheckIcon, ShieldIcon, Spinner } from './ui';
 
 export type CanvasTextItem = {
   id: string;
@@ -22,6 +22,83 @@ export type CanvasTextItem = {
   textAlign: 'left' | 'center' | 'right';
   variableName?: string;
 };
+
+export type SafeZoneCollision = {
+  band: 'top' | 'bottom' | 'right' | 'left';
+  name: string;
+  hint: string;
+  dx: number;
+  dy: number;
+};
+
+/** Checks whether a text item intrudes into mobile UI overlay exclusion zones (Reels, TikTok, Shorts). */
+export function checkSafeZoneCollision(
+  item: CanvasTextItem,
+  compWidth: number,
+  compHeight: number
+): SafeZoneCollision | null {
+  if (compHeight < compWidth) return null; // Safe zones apply to vertical / square social formats
+
+  const screen = (compWidth * 16) / 9;
+  const letterbox = Math.max(0, (screen - compHeight) / 2);
+  const topThreshold = Math.max(0, 0.08 * screen - letterbox);
+  const bottomThreshold = compHeight - Math.max(0, 0.18 * screen - letterbox);
+  const rightThreshold = compWidth - 0.11 * compWidth;
+  const leftThreshold = 0.02 * compWidth;
+
+  const itemRight = item.x + item.width;
+  const itemBottom = item.y + item.height;
+
+  // 1. Bottom obstruction (Reels / TikTok caption, account handle & audio tags)
+  if (itemBottom > bottomThreshold) {
+    const dy = Math.round(bottomThreshold - itemBottom - 16);
+    return {
+      band: 'bottom',
+      name: 'Bottom Caption & Feed Zone',
+      hint: 'Obstructed by TikTok/Reels captions & sound tags',
+      dx: 0,
+      dy,
+    };
+  }
+
+  // 2. Top obstruction (Top status bar, search bar, stories/reels header)
+  if (item.y < topThreshold) {
+    const dy = Math.round(topThreshold - item.y + 16);
+    return {
+      band: 'top',
+      name: 'Top Header Zone',
+      hint: 'Obstructed by platform header & search bar',
+      dx: 0,
+      dy,
+    };
+  }
+
+  // 3. Right obstruction (Action buttons: Like, Comment, Share, Audio Disc)
+  if (itemRight > rightThreshold) {
+    const dx = Math.round(rightThreshold - itemRight - 16);
+    return {
+      band: 'right',
+      name: 'Right Action Buttons',
+      hint: 'Obstructed by Like, Comment & Share buttons',
+      dx,
+      dy: 0,
+    };
+  }
+
+  // 4. Left bezel margin
+  if (item.x < leftThreshold) {
+    const dx = Math.round(leftThreshold - item.x + 12);
+    return {
+      band: 'left',
+      name: 'Left Margin',
+      hint: 'Too close to screen bezel',
+      dx,
+      dy: 0,
+    };
+  }
+
+  return null;
+}
 
 /** Traverses composition scenes & layers at currentFrame to extract visible text layers with canvas coordinates. */
 export function extractCanvasTextItems(detail: Detail, currentFrame: number): CanvasTextItem[] {
@@ -132,6 +209,7 @@ export function CanvasDirectOverlay({
   selectedPath,
   onSelectPath,
   onSaveText,
+  onSnapLayer,
   disabled = false,
 }: {
   detail: Detail;
@@ -139,15 +217,36 @@ export function CanvasDirectOverlay({
   selectedPath: string | null;
   onSelectPath: (path: string | null) => void;
   onSaveText: (path: string, content: string, variableName?: string) => Promise<void>;
+  onSnapLayer?: (path: string, dx: number, dy: number) => Promise<void>;
   disabled?: boolean;
 }) {
+  const compWidth = Number(detail.width) || 1080;
+  const compHeight = Number(detail.height) || 1920;
   const items = useMemo(() => extractCanvasTextItems(detail, currentFrame), [detail, currentFrame]);
+
+  // Real-time safe zone collision detection map
+  const collisions = useMemo(() => {
+    const map = new Map<string, SafeZoneCollision | null>();
+    for (const it of items) {
+      map.set(it.path, checkSafeZoneCollision(it, compWidth, compHeight));
+    }
+    return map;
+  }, [items, compWidth, compHeight]);
+
+  const itemsWithViolations = useMemo(
+    () => items.filter(it => collisions.get(it.path) !== null),
+    [items, collisions]
+  );
+
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [snapping, setSnapping] = useState(false);
+  const [snappingAll, setSnappingAll] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedItem = useMemo(() => items.find(i => i.path === selectedPath) ?? null, [items, selectedPath]);
+  const selectedCollision = selectedItem ? collisions.get(selectedItem.path) : null;
 
   useEffect(() => {
     if (selectedItem) {
@@ -174,6 +273,31 @@ export function CanvasDirectOverlay({
     }
   };
 
+  const handleSnap = async () => {
+    if (!selectedItem || !selectedCollision || !onSnapLayer || snapping) return;
+    setSnapping(true);
+    try {
+      await onSnapLayer(selectedItem.path, selectedCollision.dx, selectedCollision.dy);
+    } finally {
+      setSnapping(false);
+    }
+  };
+
+  const handleSnapAll = async () => {
+    if (!onSnapLayer || snappingAll || !itemsWithViolations.length) return;
+    setSnappingAll(true);
+    try {
+      for (const item of itemsWithViolations) {
+        const col = collisions.get(item.path);
+        if (col) {
+          await onSnapLayer(item.path, col.dx, col.dy);
+        }
+      }
+    } finally {
+      setSnappingAll(false);
+    }
+  };
+
   return (
     <div
       className="canvas-direct-overlay"
@@ -184,9 +308,58 @@ export function CanvasDirectOverlay({
         zIndex: 10,
       }}
     >
+      {/* Top Warning Banner when elements intrude into platform UI safe zones */}
+      {itemsWithViolations.length > 0 ? (
+        <div
+          className="safe-zone-alert-pill"
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--surface)',
+            border: '1px solid var(--amber)',
+            borderRadius: 20,
+            padding: '4px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--amber)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            zIndex: 25,
+            pointerEvents: 'auto',
+          }}
+        >
+          <ShieldIcon size={13} />
+          <span>{itemsWithViolations.length} element{itemsWithViolations.length > 1 ? 's' : ''} outside safe area</span>
+          {onSnapLayer ? (
+            <button
+              className="btn sm"
+              style={{
+                height: 22,
+                padding: '0 8px',
+                fontSize: 11,
+                background: 'var(--amber)',
+                color: '#0b0d12',
+                fontWeight: 700,
+                border: 0,
+                cursor: 'pointer',
+              }}
+              disabled={snappingAll}
+              onClick={handleSnapAll}
+            >
+              {snappingAll ? 'Fixing…' : 'Auto-Fix All'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {items.map(item => {
         const isSelected = selectedPath === item.path;
         const isHovered = hoveredPath === item.path;
+        const collision = collisions.get(item.path);
 
         return (
           <div
@@ -202,13 +375,21 @@ export function CanvasDirectOverlay({
               cursor: isSelected ? 'default' : 'pointer',
               border: isSelected
                 ? '2px solid var(--accent)'
+                : collision
+                ? '2px dashed var(--amber)'
                 : isHovered
                 ? '1.5px dashed var(--accent)'
                 : '1px solid transparent',
               borderRadius: 4,
-              boxShadow: isSelected ? '0 0 12px rgba(70, 147, 241, 0.45)' : 'none',
+              boxShadow: isSelected
+                ? '0 0 12px rgba(70, 147, 241, 0.45)'
+                : collision
+                ? '0 0 12px rgba(231, 173, 85, 0.35)'
+                : 'none',
               background: isSelected
                 ? 'rgba(70, 147, 241, 0.08)'
+                : collision
+                ? 'rgba(231, 173, 85, 0.07)'
                 : isHovered
                 ? 'rgba(70, 147, 241, 0.04)'
                 : 'transparent',
@@ -220,7 +401,7 @@ export function CanvasDirectOverlay({
             }}
             onMouseEnter={() => setHoveredPath(item.path)}
             onMouseLeave={() => setHoveredPath(null)}
-            title="Click to edit on canvas"
+            title={collision ? `⚠️ ${collision.hint}` : 'Click to edit on canvas'}
           >
             {/* Corner handles when selected */}
             {isSelected ? (
@@ -240,17 +421,42 @@ export function CanvasDirectOverlay({
                   top: -22,
                   left: 0,
                   background: 'var(--surface)',
-                  color: 'var(--text)',
+                  color: collision ? 'var(--amber)' : 'var(--text)',
                   fontSize: 10,
                   fontWeight: 600,
                   padding: '2px 6px',
                   borderRadius: 4,
-                  border: '1px solid var(--accent)',
+                  border: `1px solid ${collision ? 'var(--amber)' : 'var(--accent)'}`,
                   whiteSpace: 'nowrap',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
               >
-                ✎ {item.id}
+                {collision ? '⚠️' : '✎'} {item.id}
+              </span>
+            ) : null}
+
+            {/* Safe zone violation indicator badge */}
+            {collision && !isSelected ? (
+              <span
+                style={{
+                  position: 'absolute',
+                  bottom: -20,
+                  left: 0,
+                  background: 'var(--amber)',
+                  color: '#0b0d12',
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                  zIndex: 2,
+                }}
+              >
+                ⚠️ {collision.name}
               </span>
             ) : null}
           </div>
@@ -263,11 +469,11 @@ export function CanvasDirectOverlay({
           className="canvas-floating-toolbar"
           style={{
             position: 'absolute',
-            left: `${Math.max(2, Math.min(65, selectedItem.leftPct))}%`,
-            top: selectedItem.topPct > 20 ? `${selectedItem.topPct - 12}%` : `${selectedItem.topPct + selectedItem.heightPct + 2}%`,
+            left: `${Math.max(2, Math.min(60, selectedItem.leftPct))}%`,
+            top: selectedItem.topPct > 20 ? `${selectedItem.topPct - 13}%` : `${selectedItem.topPct + selectedItem.heightPct + 3}%`,
             pointerEvents: 'auto',
             background: 'var(--surface)',
-            border: '1px solid color-mix(in srgb, var(--accent) 50%, var(--border))',
+            border: `1px solid ${selectedCollision ? 'var(--amber)' : 'color-mix(in srgb, var(--accent) 50%, var(--border))'}`,
             borderRadius: 'var(--radius-sm)',
             padding: '6px 10px',
             boxShadow: '0 8px 28px rgba(0,0,0,0.65)',
@@ -276,12 +482,13 @@ export function CanvasDirectOverlay({
             gap: 8,
             zIndex: 30,
             maxWidth: '92%',
-            minWidth: 280,
+            minWidth: 300,
+            flexWrap: 'wrap',
           }}
           onClick={e => e.stopPropagation()}
         >
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-            ✎ {selectedItem.id}
+          <span style={{ fontSize: 11, fontWeight: 600, color: selectedCollision ? 'var(--amber)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
+            {selectedCollision ? '⚠️' : '✎'} {selectedItem.id}
           </span>
 
           <input
@@ -293,6 +500,7 @@ export function CanvasDirectOverlay({
               fontSize: 13,
               padding: '2px 8px',
               background: 'var(--surface-2)',
+              minWidth: 140,
             }}
             value={editingText}
             placeholder="Edit text directly…"
@@ -316,6 +524,32 @@ export function CanvasDirectOverlay({
             {saving ? <Spinner size={12} /> : <CheckIcon size={12} />}
             <span>Save</span>
           </button>
+
+          {/* 1-Click Snap to Safe Area Button */}
+          {selectedCollision && onSnapLayer ? (
+            <button
+              className="btn sm"
+              style={{
+                height: 30,
+                padding: '0 10px',
+                fontSize: 11.5,
+                background: 'var(--amber)',
+                color: '#0b0d12',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                border: 0,
+                cursor: 'pointer',
+              }}
+              disabled={snapping}
+              onClick={() => void handleSnap()}
+              title={selectedCollision.hint}
+            >
+              {snapping ? <Spinner size={12} /> : <ShieldIcon size={12} />}
+              <span>Snap to Safe</span>
+            </button>
+          ) : null}
 
           <button
             className="btn ghost sm"

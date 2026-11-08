@@ -127,6 +127,21 @@ export function projectRoutes(): Route[] {
       setAtPath(composition, request.path, layer => { if (layer.type !== 'text') throw new Error('That layer is not text'); if (typeof layer.content === 'string' && layer.content) layer.content = content; else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }]; else layer.content = content; });
       await writeRaw(c, id, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Edited the text' }); c.json(200, { ok: true });
     } },
+    { method: 'POST', path: '/api/layer/snap', handle: async c => {
+      const body = await c.body();
+      const id = await exists(c, body.id);
+      const path = textOf(body.path, 'path');
+      const dx = typeof body.dx === 'number' ? body.dx : 0;
+      const dy = typeof body.dy === 'number' ? body.dy : 0;
+      const composition = loadComposition(await c.deps.store.readRaw(c.who, id)) as any;
+      setAtPath(composition, path, layer => {
+        if (!layer || typeof layer !== 'object') throw new Error('Layer not found');
+        layer.x = (Number(layer.x) || 0) + dx;
+        layer.y = (Number(layer.y) || 0) + dy;
+      });
+      await writeRaw(c, id, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Snapped to safe zone' });
+      c.json(200, { ok: true });
+    } },
     { method: 'POST', path: '/api/add-block', handle: async c => {
       const request = parseRequest(addBlockRequest, await c.body()), id = await exists(c, request.id), { store, library } = c.deps, block = await library.readBlock(request.block);
       const added = library.addBlock(await store.readRaw(c.who, id), block, { at: optionalNumber(request.at, 'at', 0, 1e7), frames: optionalNumber(request.frames, 'frames', 1, 1e7), scene: optionalText(request.scene), set: request.set ?? {} });

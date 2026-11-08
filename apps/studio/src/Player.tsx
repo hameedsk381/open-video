@@ -34,6 +34,7 @@ export type PlayerViewProps = {
   selectedLayerPath?: string | null;
   onSelectLayerPath?: (path: string | null) => void;
   onSaveLayerText?: (path: string, content: string, variableName?: string) => Promise<void>;
+  onSnapLayer?: (path: string, dx: number, dy: number) => Promise<void>;
 };
 
 export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function PlayerView(
@@ -49,6 +50,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
     selectedLayerPath = null,
     onSelectLayerPath,
     onSaveLayerText,
+    onSnapLayer,
   },
   ref
 ) {
@@ -535,6 +537,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
             selectedPath={selectedLayerPath ?? null}
             onSelectPath={onSelectLayerPath ?? (() => {})}
             onSaveText={onSaveLayerText ?? (async () => {})}
+            onSnapLayer={onSnapLayer}
             disabled={playing}
           />
         ) : null}
