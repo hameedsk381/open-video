@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Detail } from './api';
 import { CheckIcon, ShieldIcon, Spinner } from './ui';
 
-import { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type SafeZoneCollision } from './safeZone';
-export { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type SafeZoneCollision };
+import { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type LayerMove, type SafeZoneCollision } from './safeZone';
+export { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type LayerMove, type SafeZoneCollision };
 
 /** Traverses composition scenes & layers at currentFrame to extract visible text layers with canvas coordinates. */
 export function extractCanvasTextItems(detail: Detail, currentFrame: number): CanvasTextItem[] {
@@ -122,7 +122,7 @@ export function CanvasDirectOverlay({
   selectedPath: string | null;
   onSelectPath: (path: string | null) => void;
   onSaveText: (path: string, content: string, variableName?: string) => Promise<void>;
-  onSnapLayers?: (moves: { path: string; dx: number; dy: number }[]) => Promise<void>;
+  onSnapLayers?: (moves: LayerMove[]) => Promise<void>;
   disabled?: boolean;
 }) {
   const compWidth = Number(detail.width) || 1080;

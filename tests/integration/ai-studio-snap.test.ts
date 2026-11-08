@@ -49,6 +49,13 @@ describe('POST /api/layer/snap', () => {
     expect(labels.filter((label: string) => /safe zone/.test(label))).toEqual(['Moved 2 layers into the safe zone']);
   });
 
+  it('wraps a text layer to a width, and refuses to on anything else', async () => {
+    expect((await send('POST', '/api/layer/snap', { id: 'snap', moves: [{ path: 'scenes[0].layers[0]', dx: -10, dy: 0, maxWidth: 900 }] })).status).toBe(200);
+    const layer = (await read()).scenes[0].layers[0];
+    expect(layer.maxWidth).toBe(900); expect(layer.x).toBe(90);
+    expect((await send('POST', '/api/layer/snap', { id: 'snap', moves: [{ path: 'scenes[0]', dx: 0, dy: 0, maxWidth: 900 }] })).status).toBeGreaterThanOrEqual(400);
+  });
+
   it('still takes one path with dx and dy', async () => {
     expect((await send('POST', '/api/layer/snap', { id: 'snap', path: 'scenes[0].layers[0]', dx: 0, dy: 20 })).status).toBe(200);
     expect((await read()).scenes[0].layers[0].y).toBe(1520);

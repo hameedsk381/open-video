@@ -3,6 +3,7 @@ import { type Detail } from './api';
 import { TimelineScrubber } from './TimelineScrubber';
 import { Badge, Button } from './ui';
 import { CanvasDirectOverlay } from './CanvasDirectOverlay';
+import type { LayerMove } from './safeZone';
 
 type LivePlayer = {
   readonly frame: number;
@@ -34,7 +35,7 @@ export type PlayerViewProps = {
   selectedLayerPath?: string | null;
   onSelectLayerPath?: (path: string | null) => void;
   onSaveLayerText?: (path: string, content: string, variableName?: string) => Promise<void>;
-  onSnapLayers?: (moves: { path: string; dx: number; dy: number }[]) => Promise<void>;
+  onSnapLayers?: (moves: LayerMove[]) => Promise<void>;
 };
 
 export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function PlayerView(

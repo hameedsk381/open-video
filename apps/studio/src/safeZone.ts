@@ -97,13 +97,33 @@ export function checkSafeZoneCollision(
   return null;
 }
 
-/** The whole move that brings an item clear of every platform zone (a corner item crosses two). Null when it already is. */
-export function resolveSafeZone(item: CanvasTextItem, compWidth: number, compHeight: number): { dx: number; dy: number } | null {
-  let dx = 0, dy = 0;
+/** What auto-fix does to one text layer: slide it, and wrap it to `maxWidth` when it is wider than the room between the platform's buttons. */
+export type SafeZoneMove = { dx: number; dy: number; maxWidth?: number };
+/** A safe-zone move for the layer at a path in the composition. */
+export type LayerMove = SafeZoneMove & { path: string };
+
+/**
+ * The whole move that brings an item clear of every platform zone (a corner item crosses two). Null when it already is.
+ * Text wider than the safe room cannot be slid clear, so it is wrapped to that width first; the studio's own estimate of its
+ * height is redone for the wrapped lines.
+ */
+export function resolveSafeZone(item: CanvasTextItem, compWidth: number, compHeight: number): SafeZoneMove | null {
+  if (compHeight < compWidth) return null;
+  const left = 0.02 * compWidth + 12, right = compWidth - 0.11 * compWidth - 16, room = Math.floor(right - left);
+  let cur = item, dx = 0, dy = 0, maxWidth: number | undefined;
+  if (item.width > room + 1) {
+    maxWidth = room;
+    const lines = Math.max(1, Math.ceil((item.content.length * item.fontSize * 0.56) / maxWidth));
+    const anchor = item.textAlign === 'center' ? item.x + item.width / 2 : item.textAlign === 'right' ? item.x + item.width : item.x;
+    const newAnchor = item.textAlign === 'center' ? left + maxWidth / 2 : item.textAlign === 'right' ? left + maxWidth : left;
+    dx = Math.round(newAnchor - anchor);
+    cur = { ...item, x: left, width: maxWidth, height: Math.max(item.fontSize * 1.3, lines * item.fontSize * 1.3) };
+  }
+  const startX = dx;
   for (let pass = 0; pass < 4; pass++) {
-    const hit = checkSafeZoneCollision({ ...item, x: item.x + dx, y: item.y + dy }, compWidth, compHeight);
+    const hit = checkSafeZoneCollision({ ...cur, x: cur.x + (dx - startX), y: cur.y + dy }, compWidth, compHeight);
     if (!hit) break;
     dx += hit.dx; dy += hit.dy;
   }
-  return dx || dy ? { dx, dy } : null;
+  return dx || dy || maxWidth !== undefined ? { dx, dy, ...(maxWidth !== undefined ? { maxWidth } : {}) } : null;
 }

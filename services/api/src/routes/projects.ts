@@ -132,9 +132,10 @@ export function projectRoutes(): Route[] {
       // components and scene timing stay as they were; a layer's animated x and y move with it.
       const request = parseRequest(snapRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
       const moves = request.moves ?? [{ path: request.path ?? '', dx: request.dx ?? 0, dy: request.dy ?? 0 }];
-      for (const { path, dx, dy } of moves) {
+      for (const { path, dx, dy, maxWidth } of moves as { path: string; dx: number; dy: number; maxWidth?: number }[]) {
         if (!path) throw new Error('path is required');
         setAtPath(composition, path, layer => {
+          if (maxWidth !== undefined) { if (layer.type !== 'text') throw new Error('Only text can be wrapped to a width'); layer.maxWidth = maxWidth; }
           for (const [axis, by] of [['x', dx], ['y', dy]] as const) {
             if (!by) continue;
             if (layer[axis] !== undefined && typeof layer[axis] !== 'number') throw new Error(`That layer's ${axis} position is an expression, so it cannot be nudged automatically`);

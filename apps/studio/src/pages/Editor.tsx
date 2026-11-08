@@ -4,6 +4,7 @@ import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionRe
 import { composeNotesKey } from '../composeReport';
 import { PlayerView, type CompareTarget, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
+import type { LayerMove } from '../safeZone';
 import {
   ArrowLeftIcon,
   Badge,
@@ -88,7 +89,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   }, [detail, load, setNote, toast]);
 
-  const snapLayers = useCallback(async (moves: { path: string; dx: number; dy: number }[]) => {
+  const snapLayers = useCallback(async (moves: LayerMove[]) => {
     if (!detail) return;
     try {
       await api('/api/layer/snap', { id: detail.id, moves });
