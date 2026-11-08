@@ -556,6 +556,8 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
         onToggleSafeZone={() => setShowSafeZone(v => !v)}
         selectedSceneId={selectedSceneId}
         onSelectScene={onSelectScene}
+        selectedLayerPath={selectedLayerPath}
+        onSelectLayerPath={onSelectLayerPath}
       />
     </>
   );
