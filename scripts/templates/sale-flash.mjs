@@ -1,5 +1,5 @@
 // A loud vertical sale: a big offer, what is included, a deadline, a code.
-import { aurora, anim, circle, composition, field, fade, frame, headline, label, pop, rect, rise, scene, sfx, grow, text, tokens, vignette } from './kit.mjs';
+import { aurora, anim, circle, composition, field, fade, frame, headline, label, pop, rect, rise, scene, sfx, grow, squashLand, text, tokens, vignette } from './kit.mjs';
 
 const W = 1080, H = 1920;
 export default {
@@ -27,7 +27,7 @@ export default {
         scene('code', 'Code', c, [aurora(W, H, c, { strength: 0.6 }), frame(W, H),
           label('ends', '{{ends}}', 540, 380, { align: 'center', color: '{{text}}', size: 30, anims: [[fade(2)]] }),
           label('codeLabel', '{{codeLabel}}', 540, 620, { align: 'center', color: '{{text}}', anims: [[fade(8)]] }),
-          rect('codebox', 100, 700, 880, 280, { radius: 36, fill: '{{accent}}', originX: 440, originY: 140, anims: [pop(10, 24, 0.7)] }),
+          rect('codebox', 100, 700, 880, 280, { radius: 36, fill: '{{accent}}', originX: 440, originY: 140, anims: [pop(10, 24, 0.7), squashLand(26)] }),
           headline('code', '{{code}}', 540, 760, { size: 180, align: 'center', color: '{{bg}}', maxWidth: 800, maxLines: 1, minSize: 80, ls: -4, split: { by: 'letters', stagger: 2, duration: 18 }, start: 16 }),
           text('url', '{{url}}', 540, 1200, { font: 'JetBrains Mono', size: 36, ls: 4, weight: 700, align: 'center', anims: [rise(1200, 36, 16, 20)] }),
           sfx('ding', 14, 0.6)]),

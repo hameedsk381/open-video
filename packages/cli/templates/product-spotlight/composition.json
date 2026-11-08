@@ -369,6 +369,21 @@
                   "easing": "pop"
                 }
               ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 540
+                }
+              ],
+              "wiggle": {
+                "amount": 7,
+                "every": 45,
+                "seed": 3,
+                "hold": false
+              }
             }
           ]
         },

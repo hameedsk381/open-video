@@ -946,6 +946,44 @@
                   "easing": "pop"
                 }
               ]
+            },
+            {
+              "property": "scaleY",
+              "keyframes": [
+                {
+                  "frame": 26,
+                  "value": 1
+                },
+                {
+                  "frame": 30,
+                  "value": 0.86,
+                  "easing": "easeOut"
+                },
+                {
+                  "frame": 42,
+                  "value": 1,
+                  "easing": "spring"
+                }
+              ]
+            },
+            {
+              "property": "scaleX",
+              "keyframes": [
+                {
+                  "frame": 26,
+                  "value": 1
+                },
+                {
+                  "frame": 30,
+                  "value": 1.1627906976744187,
+                  "easing": "easeOut"
+                },
+                {
+                  "frame": 42,
+                  "value": 1,
+                  "easing": "spring"
+                }
+              ]
             }
           ],
           "originX": 440,

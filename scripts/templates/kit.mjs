@@ -43,6 +43,13 @@ export const leave = (end, dur = 10) => anim('opacity', [end - dur, 1], [end, 0,
 /** Slow continuous drift between two values across the whole scene. */
 export const drift = (property, from, to, frames) => anim(property, [0, from], [frames, to, 'drift']);
 
+/** A wobble added on top of a property, the same in every render: an idle float (every ≈ 40), handheld drift, or with `hold` a hand-redrawn boil. `base` is the value it wobbles around. */
+export const wiggle = (property, base, o = {}) => ({ property, keyframes: [{ frame: 0, value: base }], wiggle: { amount: o.amount ?? 4, every: o.every ?? 12, seed: o.seed ?? 0, hold: o.hold ?? false } });
+/** Squash and stretch on a landing: flattens as it hits, then springs back, keeping its volume (scaleX × scaleY stays 1). Put it on the same frame as the pop or drop it follows. */
+export const squashLand = (delay = 0, o = {}) => { const s = o.squash ?? 0.86, dur = o.dur ?? 16; return [anim('scaleY', [delay, 1], [delay + 4, s, 'easeOut'], [delay + dur, 1, 'spring']), anim('scaleX', [delay, 1], [delay + 4, 1 / s, 'easeOut'], [delay + dur, 1, 'spring'])]; };
+/** A move that winds back first and carries past the target before it settles: anticipation and follow-through in one curve. */
+export const anticipate = (property, from, to, delay = 0, dur = 24) => anim(property, [delay, from], [delay + dur, to, 'anticipate']);
+
 /* ---- layers ---- */
 export const text = (id, content, x, y, o = {}) => ({
   id, type: 'text', content, x, y, fontSize: o.size ?? 48, fontFamily: o.font ?? '{{fontBody}}', fontWeight: o.weight ?? 500, color: o.color ?? '{{text}}',
