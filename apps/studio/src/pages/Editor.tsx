@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { slotName } from '../slotName';
 import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionResult, type Detail, type Job, type Library, type ProductionState, type Revision, type RevisionRaw, type SaveProductionResult, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
+import { MediaPanel } from './Media';
 import { PlayerView, type CompareTarget, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
 import type { LayerMove } from '../safeZone';
@@ -14,6 +15,7 @@ import {
   DownloadIcon,
   Field,
   FilmIcon,
+  ImagesIcon,
   LayersIcon,
   Notice,
   PaletteIcon,
@@ -31,6 +33,7 @@ import {
 // the side panel never needs to scroll sideways. Every older address (…/script, …/history, …/export) still opens its panel.
 const tabs = [
   ['edit', 'Edit', FilmIcon] as const,
+  ['media', 'Media', ImagesIcon] as const,
   ['ai', 'Ask AI', SparklesIcon] as const,
   ['look', 'Style', PaletteIcon] as const,
 ];
@@ -56,7 +59,7 @@ const isBoundText = (detail: Detail, path: string) => {
 const sceneForBeat = (beat: { id?: string }, index: number, scenes: Scene[]): Scene | undefined => scenes.find(s => s.beat && s.beat === beat.id) ?? scenes.find(s => s.id === beat.id) ?? scenes[index];
 const tabOf = (tab: string) => (tab === 'script' ? 'edit' : tab);
 /** Which panel an address opens: anything unknown opens Edit. */
-const paneOf = (tab: string) => (['script', 'ai', 'look', 'history', 'export'].includes(tab) ? tab : 'edit');
+const paneOf = (tab: string) => (['script', 'media', 'ai', 'look', 'history', 'export'].includes(tab) ? tab : 'edit');
 /** Placeholder rows while a panel's data loads. */
 const SkeletonRows = ({ n = 3 }: { n?: number }) => (
   <div aria-hidden="true">{Array.from({ length: n }, (_, i) => <span key={i} className="skel skel-row" />)}</div>
@@ -253,6 +256,9 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     go(editorPath(id, 'export'));
   };
 
+  // Media goes into the scene being edited: the one picked on the timeline, else the one under the playhead.
+  const atFrame = detail.scenes.findIndex(s => currentFrame >= s.startFrame && currentFrame < s.startFrame + s.durationFrames);
+  const mediaScene = selectedIndex >= 0 ? selectedIndex : Math.max(0, atFrame);
   const sceneFocus = (
         <div className="scene-focus">
           <select
@@ -385,6 +391,11 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           {open('edit') ? (
             <div hidden={pane !== 'edit'}>
               <Edit {...props} selectedTextPath={selectedTextPath} onSelectTextPath={setSelectedTextPath} />
+            </div>
+          ) : null}
+          {open('media') ? (
+            <div hidden={pane !== 'media'}>
+              <MediaPanel detail={detail} reload={load} setNote={setNote} sceneIndex={mediaScene} />
             </div>
           ) : null}
           {open('script') ? (
@@ -628,7 +639,7 @@ function Edit({
         </>
       ) : null}
       {(detail.mode === 'template' ? fields.length : 0) + lines.length + detail.blocks.length === 0 ? (
-        <p className="sub">This video has no text yet. Add a scene from Style, or ask the AI director to write some.</p>
+        <p className="sub">This video has no text yet. Add a scene above the timeline, or ask AI to write some.</p>
       ) : null}
 
       {(detail.mode === 'template' ? fields.length : 0) + lines.length + detail.blocks.length ? (

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { existsSync } from 'node:fs';
 import { request } from 'node:http';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startAiStudio, type AiStudioServer } from '../../packages/cli/src/ai-studio';
@@ -119,5 +119,70 @@ describe('Studio projects', () => {
     expect((await send('GET', '/sfx/whoosh.wav')).status).toBeLessThan(500);
     expect((await send('GET', '/sfx/not-a-sound.wav')).status).toBe(404);
     expect((await send('GET', '/fonts/not-a-font.woff2')).status).toBe(404);
+  });
+});
+
+describe('Studio media library', () => {
+  const octet = () => ({ origin: base(), 'content-type': 'application/octet-stream' });
+  const read = async (id: string) => JSON.parse(await readFile(join(root, id, 'composition.json'), 'utf8'));
+  let id = '';
+
+  it('lists uploads with how often the video uses each, then puts one into a scene', async () => {
+    id = (json(await post('/api/project/blank', { name: 'Media Room', aspect: '9:16' })) as { id: string }).id;
+    const scene = (await get('/api/library')).blocks.find((block: any) => block.kind === 'scene');
+    await post('/api/add-block', { id, block: scene.id });
+    for (const name of ['photo.png', 'clip.mp4', 'voice.mp3']) expect((await send('POST', `/api/upload?project=${id}&name=${name}`, octet(), png)).status).toBe(200);
+    const listed = (await get(`/api/project?id=${id}`)).assets;
+    expect(listed.map((asset: any) => [asset.name, asset.kind, asset.uses])).toEqual([['clip.mp4', 'video', 0], ['photo.png', 'image', 0], ['voice.mp3', 'audio', 0]]);
+
+    const block = (await read(id)).scenes[0].layers[0].use;
+    const bg = await post('/api/asset/use', { id, name: 'photo.png', as: 'background', scene: 0 });
+    expect(bg.status).toBe(200);
+    const after = await read(id), first = after.scenes[0].layers[0];
+    expect(first).toMatchObject({ type: 'image', src: 'assets/photo.png', x: 0, y: 0, width: 1080, height: 1920, objectFit: 'cover' });
+    // The block's own backdrop would cover the picture: this scene's block now uses a copy without it, and the original is untouched.
+    expect(after.scenes[0].layers[1].use).toBe(`${block}_over_media`);
+    expect(after.components[`${block}_over_media`].layers.some((layer: any) => layer.id === 'bg')).toBe(false);
+    expect(after.components[block].layers.some((layer: any) => layer.id === 'bg')).toBe(true);
+
+    expect((await post('/api/asset/use', { id, name: 'clip.mp4', as: 'picture', scene: 0 })).status).toBe(200);
+    expect((await post('/api/asset/use', { id, name: 'photo.png', as: 'logo', scene: 0 })).status).toBe(200);
+    expect((await post('/api/asset/use', { id, name: 'voice.mp3', as: 'sound', scene: 0 })).status).toBe(200);
+    const layers = (await read(id)).scenes[0].layers;
+    expect(layers.find((layer: any) => layer.type === 'video')).toMatchObject({ src: 'assets/clip.mp4', muted: true, loop: true, objectFit: 'contain' });
+    expect(layers.find((layer: any) => layer.id.startsWith('logo-'))).toMatchObject({ type: 'image', fixed: true, objectFit: 'contain' });
+    expect(layers.find((layer: any) => layer.type === 'audio')).toMatchObject({ src: 'assets/voice.mp3', volume: 1 });
+    expect(new Set(layers.map((layer: any) => layer.id)).size).toBe(layers.length);
+
+    const listedAfter = (await get(`/api/project?id=${id}`)).assets;
+    expect(Object.fromEntries(listedAfter.map((asset: any) => [asset.name, asset.uses]))).toEqual({ 'clip.mp4': 1, 'photo.png': 2, 'voice.mp3': 1 });
+  });
+
+  it('refuses the wrong kind of file for a use, and a file that is not there, changing nothing', async () => {
+    const before = await readFile(join(root, id, 'composition.json'), 'utf8');
+    for (const body of [
+      { id, name: 'voice.mp3', as: 'background' }, { id, name: 'photo.png', as: 'sound' }, { id, name: 'clip.mp4', as: 'logo' },
+      { id, name: 'ghost.png', as: 'background' }, { id, name: '../x.png', as: 'background' }, { id, name: 'photo.png', as: 'wallpaper' },
+    ]) expect((await post('/api/asset/use', body)).status, JSON.stringify(body)).toBeGreaterThanOrEqual(400);
+    expect(await readFile(join(root, id, 'composition.json'), 'utf8')).toBe(before);
+  });
+
+  it('keeps a scene number that is too big inside the video', async () => {
+    expect((await post('/api/asset/use', { id, name: 'photo.png', as: 'picture', scene: 99 })).status).toBe(200);
+  });
+
+  it('will not delete a file the video uses unless told to, and then removes only that file', async () => {
+    const refused = await post('/api/asset/delete', { id, name: 'photo.png' });
+    expect(refused.status).toBe(409); expect(json(refused).error).toMatch(/used \d+ times? in this video/);
+    expect((await get(`/api/project?id=${id}`)).assets.map((asset: any) => asset.name)).toContain('photo.png');
+
+    const forced = await post('/api/asset/delete', { id, name: 'photo.png', force: true });
+    expect(forced.status).toBe(200); expect(json(forced).assets.map((asset: any) => asset.name)).toEqual(['clip.mp4', 'voice.mp3']);
+    expect(existsSync(join(root, id, 'assets', 'photo.png'))).toBe(false);
+    expect(existsSync(join(root, id, 'assets', 'clip.mp4'))).toBe(true);
+
+    expect((await post('/api/asset/delete', { id, name: 'ghost.png' })).status).toBe(400);
+    expect((await post('/api/asset/delete', { id, name: '../composition.json', force: true })).status).toBe(400);
+    expect(existsSync(join(root, id, 'composition.json'))).toBe(true);
   });
 });

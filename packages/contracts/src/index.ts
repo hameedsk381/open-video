@@ -18,7 +18,7 @@ export const variableSchema = z.object({ name: z.string(), type: z.enum(['string
 export type Variable = z.infer<typeof variableSchema>;
 export const textLayerSchema = z.object({ path: z.string(), scene: z.string(), id: z.string(), content: z.string(), fontSize: z.number() });
 export type TextLayer = z.infer<typeof textLayerSchema>;
-export const assetSchema = z.object({ name: z.string(), path: z.string(), kind: z.string(), bytes: z.number(), sha256: z.string().optional(), addedAt: z.string().optional() });
+export const assetSchema = z.object({ name: z.string(), path: z.string(), kind: z.string(), bytes: z.number(), sha256: z.string().optional(), addedAt: z.string().optional(), uses: z.number().optional().describe('How many times the video refers to this file') });
 export type Asset = z.infer<typeof assetSchema>;
 export const sceneSummarySchema = z.object({ id: z.string(), name: z.string(), startFrame: z.number(), durationFrames: z.number(), beat: z.string().optional() });
 export type Scene = z.infer<typeof sceneSummarySchema>;
@@ -160,6 +160,10 @@ export const variablesRequest = z.object({ id, values: z.record(z.string(), z.un
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
 /** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
 export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0), maxWidth: z.number().positive().optional() })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
+/** Put an uploaded file into a scene: behind everything, in the middle, as a small logo, or as its sound. */
+export const assetUseRequest = z.object({ id, name: z.string().min(1, 'name is required'), as: z.enum(['background', 'picture', 'logo', 'sound']), scene: z.number().int().min(0).optional() });
+/** Delete an uploaded file; `force` says to do so even while the video still refers to it. */
+export const assetDeleteRequest = z.object({ id, name: z.string().min(1, 'name is required'), force: z.boolean().optional() });
 /** New settings for blocks, in one saved change: for each block's path, the settings to change. */
 export const blockPropsRequest = z.object({ id, edits: z.array(z.object({ path: z.string().min(1, 'path is required'), values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])) })).min(1, 'edits is required').max(100) });
 /** Several text edits in one saved change. */

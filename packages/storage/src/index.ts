@@ -2,7 +2,7 @@
 // every call says who is asking (a Principal), so the local folder store here can be replaced by a database and object storage without
 // touching routes or jobs. Jobs that need real files (Chromium, ffmpeg) ask for a workdir: a local folder holding the project's files.
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { ensureBaseline, listRevisions, readRevisionRaw, restoreRevision, saveRevision, type Revision, type RevisionMeta } from './history';
 
@@ -47,6 +47,8 @@ export interface ProjectStore {
   untrash(who: Principal, key: string): Promise<string>;
   assets(who: Principal, id: string): Promise<StoredAsset[]>;
   putAsset(who: Principal, id: string, name: string, bytes: Buffer): Promise<StoredAsset[]>;
+  /** Removes one uploaded media file and returns what is left. */
+  deleteAsset(who: Principal, id: string, name: string): Promise<StoredAsset[]>;
   /** A file the product itself ships that a project's layers draw from (a block's React bundle). Never reachable from an upload: only a named bundle, written by the server. */
   putSupportFile(who: Principal, id: string, name: string, bytes: Buffer): Promise<void>;
   /** The saved thumbnail, only while it is newer than the composition. */
@@ -189,6 +191,17 @@ export class FsProjectStore implements ProjectStore {
     const manifest = await readManifest(folder);
     manifest[final] = { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, addedAt: new Date().toISOString(), originalName: name };
     await writeFile(manifestPath(folder), JSON.stringify(manifest, null, 2) + '\n');
+    return this.assets(who, id);
+  }
+
+  async deleteAsset(who: Principal, id: string, name: string) {
+    // Only a plain file name in this project's assets folder: no paths, and only the kinds an upload accepts.
+    if (name !== name.split(/[\\/]/).pop() || !assetKinds[extname(name).toLowerCase()]) throw new Error(`"${name}" is not a media file in this project`);
+    const folder = join(this.projectDir(who, id), 'assets'), target = join(folder, name);
+    if (!await stat(target).then(info => info.isFile(), () => false)) throw new Error(`There is no media file "${name}" in this project`);
+    await rm(target);
+    const manifest = await readManifest(folder);
+    if (name in manifest) { delete manifest[name]; await writeFile(manifestPath(folder), JSON.stringify(manifest, null, 2) + '\n'); }
     return this.assets(who, id);
   }
 

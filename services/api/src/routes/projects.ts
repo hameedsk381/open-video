@@ -1,4 +1,4 @@
-import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, assetDeleteRequest, assetUseRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
@@ -16,6 +16,9 @@ const setAtPath = (rootValue: any, path: string, apply: (layer: any) => void) =>
   if (!node || typeof node !== 'object') throw new Error('That text is no longer in the video');
   apply(node);
 };
+
+/** How many times the file as written refers to an uploaded file (`assets/<name>`, with or without ./ in front). */
+const assetUses = (raw: unknown, name: string) => (JSON.stringify(raw ?? {}).match(new RegExp(`assets/${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9._-])`, 'g')) ?? []).length;
 
 /** Puts new words in a text layer: its own content, or the first span of rich text. */
 const setText = (layer: any, content: string) => {
@@ -70,7 +73,7 @@ export function projectRoutes(): Route[] {
       id, name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, mode,
       scenes: composition.scenes.map(scene => ({ id: scene.id, name: scene.name, startFrame: scene.startFrame, durationFrames: scene.durationFrames, ...(scene.beat ? { beat: scene.beat } : {}) })),
       variables: mode === 'template' ? projectVariables(raw) : [], theme: Object.fromEntries(library.themeTokens.filter(token => token in declared).map(token => [token, values[token]])),
-      texts: mode === 'finished' ? textLayers(composition) : [], assets: await store.assets(c.who, id), revisions: (await store.revisions(c.who, id)).length, blocks: blockSlots(raw),
+      texts: mode === 'finished' ? textLayers(composition) : [], assets: (await store.assets(c.who, id)).map(asset => ({ ...asset, uses: assetUses(raw, asset.name) })), revisions: (await store.revisions(c.who, id)).length, blocks: blockSlots(raw),
       source: { raw, media: await measureMedia(raw, dir), base: `/files/${id}/` },
     };
   };
@@ -117,6 +120,51 @@ export function projectRoutes(): Route[] {
       const bytes = await readBytes(c.req, 150_000_000);
       await c.deps.quotas?.beforeUpload(c.who, bytes.length);
       c.json(200, { assets: await c.deps.store.putAsset(c.who, id, name, bytes) });
+    } },
+    { method: 'POST', path: '/api/asset/delete', handle: async c => {
+      const request = parseRequest(assetDeleteRequest, await c.body()), id = await exists(c, request.id);
+      const uses = assetUses(await c.deps.store.readRaw(c.who, id), request.name);
+      if (uses && !request.force) return c.json(409, { error: `"${request.name}" is used ${uses} time${uses === 1 ? '' : 's'} in this video. Remove it from the video first, or delete it anyway.` });
+      c.json(200, { assets: await c.deps.store.deleteAsset(c.who, id, request.name) });
+    } },
+    { method: 'POST', path: '/api/asset/use', handle: async c => {
+      // Adds a layer for an uploaded file to one scene of the file as written, so templates and blocks stay as they were.
+      const request = parseRequest(assetUseRequest, await c.body()), id = await exists(c, request.id);
+      const asset = (await c.deps.store.assets(c.who, id)).find(item => item.name === request.name);
+      if (!asset) throw new Error(`There is no media file "${request.name}" in this project`);
+      if (request.as === 'sound' ? asset.kind !== 'audio' : asset.kind === 'audio') throw new Error(request.as === 'sound' ? 'Only sound files can be added as sound' : 'Sound files are added as sound, not as a picture');
+      if (request.as === 'logo' && asset.kind !== 'image') throw new Error('Only pictures can be a logo');
+      const composition = await c.deps.store.readRaw(c.who, id), scenes = Array.isArray(composition.scenes) ? composition.scenes : [];
+      if (!scenes.length) throw new Error('This video has no scene to add it to');
+      const index = Math.min(request.scene ?? 0, scenes.length - 1), scene = scenes[index];
+      scene.layers = Array.isArray(scene.layers) ? scene.layers : [];
+      const width = Number(composition.width) || 1080, height = Number(composition.height) || 1920;
+      const taken = new Set<string>(); const collect = (layers: any) => { for (const layer of Array.isArray(layers) ? layers : []) { if (layer?.id) taken.add(String(layer.id)); collect(layer?.children); } }; collect(scene.layers);
+      const base = asset.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_-]+/g, '-');
+      const unique = (prefix: string) => { let n = 1, name = `${prefix}-${base}`; while (taken.has(name)) name = `${prefix}-${base}-${++n}`; return name; };
+      const media = asset.kind === 'video' ? { type: 'video', src: asset.path, muted: true, loop: true } : { type: 'image', src: asset.path };
+      let layer: any, at = scene.layers.length;
+      // A scene block draws its own full-screen backdrop (a layer named bg), which would hide a background placed behind it. This scene's
+      // blocks switch to a copy without it, named <block>_over_media; the original stays for every other scene that uses it.
+      if (request.as === 'background') {
+        const defs = composition.components && typeof composition.components === 'object' ? composition.components : {};
+        for (const placed of scene.layers) {
+          const def = typeof placed?.use === 'string' ? defs[placed.use] : undefined;
+          const backdrop = Array.isArray(def?.layers) ? def.layers.find((item: any) => item?.id === 'bg' && item?.type === 'rect') : undefined;
+          if (!backdrop) continue;
+          const clear = `${placed.use}_over_media`;
+          if (!defs[clear]) defs[clear] = { ...def, description: `${def.description ?? placed.use}, without its own backdrop`, layers: def.layers.filter((item: any) => item !== backdrop) };
+          placed.use = clear;
+          composition.components = defs;
+        }
+      }
+      if (request.as === 'background') { layer = { id: unique('bg'), ...media, x: 0, y: 0, width, height, objectFit: 'cover' }; at = 0; }
+      else if (request.as === 'picture') { const box = Math.round(Math.min(width, height) * 0.5); layer = { id: unique('pic'), ...media, x: Math.round((width - box) / 2), y: Math.round((height - box) / 2), width: box, height: box, objectFit: 'contain' }; }
+      else if (request.as === 'logo') { const box = Math.round(width * 0.18), margin = Math.round(width * 0.05); layer = { id: unique('logo'), ...media, x: width - box - margin, y: Math.round(height * (height >= width ? 0.1 : 0.05)), width: box, height: box, objectFit: 'contain', fixed: true }; }
+      else layer = { id: unique('sound'), type: 'audio', src: asset.path, volume: 1, startFrame: 0, ...(Number(scene.durationFrames) > 0 ? { endFrame: Number(scene.durationFrames) } : {}) };
+      scene.layers.splice(at, 0, layer);
+      await writeRaw(c, id, composition, { kind: 'edit', label: `Added ${asset.name} to ${scene.name ?? 'a scene'}` });
+      c.json(200, { ok: true, layer: layer.id, scene: index });
     } },
     { method: 'POST', path: '/api/project/new', handle: async c => {
       const body = await c.body(), { name } = parseRequest(newProjectRequest, body); canvasFor(body);
