@@ -75,7 +75,7 @@ describe('AI studio server', () => {
 
   it('fills a matching template unless every layer is asked for', async () => {
     const filled = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'from-template' }));
-    expect(filled.frames).toBe(600); expect(filled.scenes).toBe(3);
+    expect(filled.frames).toBe(600); expect(filled.scenes).toBe(4);
     const written = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', duration: 0.5, fps: 10, full: true, folder: 'full-layers' }));
     expect(written.frames).toBe(5);
   });

@@ -34,12 +34,33 @@ export function integerIn(value: unknown, fallback: number, label: string, min: 
   return number;
 }
 
+/**
+ * What a brief says outright about length and shape: "a 6 second title card", "a vertical reel", "a square post". Only plain statements
+ * count, and only the brief's own words (not the key points the studio appends below it). Anything it does not state is left to the
+ * kind's preset, and a length or format the person chose in the form always wins over this.
+ */
+export function briefHints(brief: unknown): { seconds?: number; aspect?: string } {
+  const text = (typeof brief === 'string' ? brief : '').split(/\n\s*Key Message Points:/i)[0] ?? '';
+  const out: { seconds?: number; aspect?: string } = {};
+  const length = /\b(\d+(?:\.\d+)?)[\s-]*(seconds?|secs?|s|minutes?|mins?)\b/i.exec(text);
+  if (length) {
+    const seconds = Number(length[1]) * (/^m/i.test(length[2]!) ? 60 : 1);
+    if (seconds >= 2 && seconds <= 600) out.seconds = seconds;
+  }
+  if (/\b(9:16|vertical|portrait video|tiktok|reels?|stories|story|shorts)\b/i.test(text)) out.aspect = '9:16';
+  else if (/\b(1:1|square)\b/i.test(text)) out.aspect = '1:1';
+  else if (/\b4:5\b/.test(text)) out.aspect = '4:5';
+  else if (/\b(16:9|landscape|widescreen|horizontal)\b/i.test(text)) out.aspect = '16:9';
+  return out;
+}
+
 /** The canvas from the same presets the CLI uses, so a page and a command produce the same shape. */
 export function canvasFor(input: Record<string, unknown> = {}) {
   const kindName = optionalText(input.kind) ?? 'promo';
   const preset = kinds[kindName];
   if (!preset) throw new Error(`kind must be one of: ${Object.keys(kinds).join(', ')}`);
-  const aspect = optionalText(input.aspect) ?? preset.aspect;
+  const hints = briefHints(input.brief);
+  const aspect = optionalText(input.aspect) ?? hints.aspect ?? preset.aspect;
   const custom = /^(\d+)x(\d+)$/.exec(aspect);
   const dimensions = custom ? [Number(custom[1]), Number(custom[2])] as [number, number] : aspects[aspect];
   if (!dimensions) throw new Error(`aspect must be one of ${Object.keys(aspects).join(', ')}, or WIDTHxHEIGHT`);
@@ -47,7 +68,7 @@ export function canvasFor(input: Record<string, unknown> = {}) {
     kind: preset.label,
     width: dimensions[0],
     height: dimensions[1],
-    durationSeconds: numberIn(input.duration, preset.duration, 'duration', 0.1, 3600),
+    durationSeconds: numberIn(input.duration, hints.seconds ?? preset.duration, 'duration', 0.1, 3600),
     fps: integerIn(input.fps, 30, 'fps', 1, 120),
   };
 }
