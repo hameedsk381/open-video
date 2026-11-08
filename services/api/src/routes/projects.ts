@@ -1,4 +1,4 @@
-import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, snapRequest, textRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
@@ -15,6 +15,14 @@ const setAtPath = (rootValue: any, path: string, apply: (layer: any) => void) =>
   for (const [, name, index] of path.matchAll(/([A-Za-z_]+)|\[(\d+)\]/g)) node = node?.[index === undefined ? name! : Number(index)];
   if (!node || typeof node !== 'object') throw new Error('That text is no longer in the video');
   apply(node);
+};
+
+/** Puts new words in a text layer: its own content, or the first span of rich text. */
+const setText = (layer: any, content: string) => {
+  if (layer.type !== 'text') throw new Error('That layer is not text');
+  if (typeof layer.content === 'string' && layer.content) layer.content = content;
+  else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }];
+  else layer.content = content;
 };
 
 /** Project reading and editing: everything the editor does that is not a job. Every call goes through the store, as the person asking. */
@@ -36,7 +44,7 @@ export function projectRoutes(): Route[] {
     const declared = variablesSchema.parse(raw.variables ?? {}), values = resolveVariables(declared, {});
     return {
       id, name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, mode,
-      scenes: composition.scenes.map(scene => ({ id: scene.id, name: scene.name, startFrame: scene.startFrame, durationFrames: scene.durationFrames })),
+      scenes: composition.scenes.map(scene => ({ id: scene.id, name: scene.name, startFrame: scene.startFrame, durationFrames: scene.durationFrames, ...(scene.beat ? { beat: scene.beat } : {}) })),
       variables: mode === 'template' ? projectVariables(raw) : [], theme: Object.fromEntries(library.themeTokens.filter(token => token in declared).map(token => [token, values[token]])),
       texts: mode === 'finished' ? textLayers(composition) : [], assets: await store.assets(c.who, id), revisions: (await store.revisions(c.who, id)).length,
       source: { raw, media: await measureMedia(raw, dir), base: `/files/${id}/` },
@@ -125,8 +133,15 @@ export function projectRoutes(): Route[] {
     { method: 'POST', path: '/api/text', handle: async c => {
       // The file as written, not the loaded composition: a template keeps its variables and components, and only this layer changes.
       const request = parseRequest(textRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id), content = request.content;
-      setAtPath(composition, request.path, layer => { if (layer.type !== 'text') throw new Error('That layer is not text'); if (typeof layer.content === 'string' && layer.content) layer.content = content; else if (Array.isArray(layer.spans) && layer.spans.length) layer.spans = [{ ...layer.spans[0], text: content }]; else layer.content = content; });
+      setAtPath(composition, request.path, layer => setText(layer, content));
       await writeRaw(c, id, composition, { kind: 'edit', label: 'Edited the text' }); c.json(200, { ok: true });
+    } },
+    { method: 'POST', path: '/api/texts', handle: async c => {
+      // Every edit lands in one saved change, or none does.
+      const request = parseRequest(textsRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
+      for (const edit of request.edits) setAtPath(composition, edit.path, layer => setText(layer, edit.content));
+      await writeRaw(c, id, composition, { kind: 'edit', label: request.edits.length > 1 ? `Edited ${request.edits.length} lines of text` : 'Edited the text' });
+      c.json(200, { ok: true, edited: request.edits.length });
     } },
     { method: 'POST', path: '/api/layer/snap', handle: async c => {
       // Moves layers by the given offsets, all in one saved change. It edits the file as written (not the loaded composition), so variables,

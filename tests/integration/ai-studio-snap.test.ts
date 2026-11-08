@@ -90,3 +90,35 @@ describe('POST /api/text', () => {
     expect(await readFile(file(), 'utf8')).toBe(before);
   });
 });
+
+describe('POST /api/texts and scene beats', () => {
+  const two = (extra: Record<string, unknown> = {}) => ({ ...composition, scenes: [{ ...composition.scenes[0], ...extra, layers: [
+    { id: 'one', type: 'text', content: 'First', x: 100, y: 300, fontSize: 48 },
+    { id: 'two', type: 'text', content: 'Second', x: 100, y: 500, fontSize: 48 },
+  ] }] });
+
+  it('saves several edits as one revision, and none of them when one is wrong', async () => {
+    await writeFile(file(), JSON.stringify(two(), null, 2));
+    const labels = async () => (await send('GET', '/api/history?file=snap/composition.json')).json.revisions.map((r: any) => r.label);
+    const before = await labels();
+    const reply = await send('POST', '/api/texts', { id: 'snap', edits: [{ path: 'scenes[0].layers[0]', content: 'Uno' }, { path: 'scenes[0].layers[1]', content: 'Dos' }] });
+    expect(reply).toMatchObject({ status: 200, json: { edited: 2 } });
+    const layers = (await read()).scenes[0].layers;
+    expect([layers[0].content, layers[1].content]).toEqual(['Uno', 'Dos']);
+    const after = await labels();
+    expect(after.length - before.length).toBeLessThanOrEqual(2);
+    expect(after.filter((label: string) => label === 'Edited 2 lines of text')).toHaveLength(1);
+
+    const saved = await readFile(file(), 'utf8');
+    const bad = await send('POST', '/api/texts', { id: 'snap', edits: [{ path: 'scenes[0].layers[0]', content: 'Changed' }, { path: 'scenes[0].layers[9]', content: 'Nope' }] });
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+    expect(await readFile(file(), 'utf8')).toBe(saved);
+    expect((await send('POST', '/api/texts', { id: 'snap', edits: [] })).status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('names the beat a scene renders, so the script can find its scene', async () => {
+    await writeFile(file(), JSON.stringify(two({ beat: 'intro' }), null, 2));
+    const detail = (await send('GET', '/api/project?id=snap')).json;
+    expect(detail.scenes[0]).toMatchObject({ id: 's1', beat: 'intro' });
+  });
+});

@@ -169,9 +169,9 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'refine', run: async progress => {
       const current = await readJson(file) as Composition;
       const result = await refineVideo(resolveProvider(input), current, { instruction, review, baseDir: dirname(file), onProgress: message => progress(cleanProgressMessage(message)) });
-      await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
+      const saved = await writeComposition(file, result.composition, { kind: 'refine', label: instruction.slice(0, 160), attempts: result.attempts });
       return {
-        ...resultFile(file), frames: result.composition.durationFrames, seconds: result.composition.durationFrames / result.composition.fps, scenes: result.composition.scenes.length,
+        ...resultFile(file), revision: saved?.n, frames: result.composition.durationFrames, seconds: result.composition.durationFrames / result.composition.fps, scenes: result.composition.scenes.length,
         attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(review), issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), instruction,
       };
     } };

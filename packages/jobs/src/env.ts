@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, resolve } from 'node:path';
-import { assertSourcesConfined, ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type NarrateOptions, type NarrateResult, type RevisionMeta, type SmartMode, type SmartResult } from '@ove/ai';
+import { assertSourcesConfined, ensureBaseline, saveRevision, type AiProvider, type ComposeOptions, type Revision, type NarrateOptions, type NarrateResult, type RevisionMeta, type SmartMode, type SmartResult } from '@ove/ai';
 import { attachCaptions, loadComposition, type Composition } from '@ove/core';
 import type { FsProjectStore, Principal, StoredAsset } from '@ove/storage';
 import { folderName, optionalText, textOf } from './input';
@@ -22,7 +22,8 @@ export interface JobPaths {
   resultFile(file: string): { file: string; relative: string; url: string };
   readJson(file: string): Promise<any>;
   loadForRender(file: string): Promise<{ raw: any; composition: Composition; baseDir: string }>;
-  writeComposition(file: string, composition: Composition, meta?: RevisionMeta): Promise<void>;
+  /** With `meta` the change is kept as a numbered revision, which is returned. */
+  writeComposition(file: string, composition: Composition, meta?: RevisionMeta): Promise<Revision | undefined>;
 }
 
 /** Work the job code does not own: picking a template and drawing a thumbnail depend on files that ship with the command line. */
@@ -76,7 +77,7 @@ export function createFsPaths(store: FsProjectStore, who: Principal, info: () =>
     async writeComposition(file, composition, meta) {
       if (meta) await ensureBaseline(file);
       await writeFile(file, JSON.stringify({ $schema: './composition.schema.json', ...composition }, null, 2) + '\n');
-      if (meta) await saveRevision(file, { ...info(), ...meta });
+      return meta ? saveRevision(file, { ...info(), ...meta }) : undefined;
     },
   };
   return paths;

@@ -383,7 +383,7 @@ export function TimelineScrubber({
     [currentFrame, total]
   );
 
-  const handlePointerDown = (e: React.MouseEvent, source: 'main' | 'drawer' = 'main') => {
+  const handlePointerDown = (e: React.PointerEvent, source: 'main' | 'drawer' = 'main') => {
     setIsDragging(true);
     setDragSource(source);
     const targetEl = source === 'drawer' ? multiTrackGridRef.current : trackRef.current;
@@ -391,7 +391,7 @@ export function TimelineScrubber({
     onSeek(f);
   };
 
-  const handlePointerMove = (e: React.MouseEvent, source: 'main' | 'drawer' = 'main') => {
+  const handlePointerMove = (e: React.PointerEvent, source: 'main' | 'drawer' = 'main') => {
     const targetEl = source === 'drawer' ? multiTrackGridRef.current : trackRef.current;
     const f = frameFromPointer(e, targetEl);
     setHoverFrame(f);
@@ -405,7 +405,7 @@ export function TimelineScrubber({
   };
 
   useEffect(() => {
-    const handleGlobalMove = (e: MouseEvent) => {
+    const handleGlobalMove = (e: PointerEvent) => {
       if (!isDragging) return;
       const targetEl = dragSource === 'drawer' ? multiTrackGridRef.current : trackRef.current;
       onSeek(frameFromPointer(e, targetEl));
@@ -418,12 +418,14 @@ export function TimelineScrubber({
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleGlobalMove);
-      window.addEventListener('mouseup', handleGlobalUp);
+      window.addEventListener('pointermove', handleGlobalMove);
+      window.addEventListener('pointerup', handleGlobalUp);
+      window.addEventListener('pointercancel', handleGlobalUp);
     }
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMove);
-      window.removeEventListener('mouseup', handleGlobalUp);
+      window.removeEventListener('pointermove', handleGlobalMove);
+      window.removeEventListener('pointerup', handleGlobalUp);
+      window.removeEventListener('pointercancel', handleGlobalUp);
     };
   }, [isDragging, dragSource, frameFromPointer, onSeek]);
 
@@ -459,11 +461,12 @@ export function TimelineScrubber({
       <div
         ref={trackRef}
         className="timeline-track"
-        onMouseDown={e => handlePointerDown(e, 'main')}
-        onMouseMove={e => handlePointerMove(e, 'main')}
+        onPointerDown={e => handlePointerDown(e, 'main')}
+        onPointerMove={e => handlePointerMove(e, 'main')}
         onMouseLeave={handlePointerLeave}
         style={{
           position: 'relative',
+          touchAction: 'none',
           height: 64,
           background: 'var(--surface-2)',
           border: '1px solid var(--border)',
@@ -937,12 +940,13 @@ export function TimelineScrubber({
             {/* Right Column: Multi-Lane Tracks Grid */}
             <div
               ref={multiTrackGridRef}
-              onMouseDown={e => handlePointerDown(e, 'drawer')}
-              onMouseMove={e => handlePointerMove(e, 'drawer')}
+              onPointerDown={e => handlePointerDown(e, 'drawer')}
+              onPointerMove={e => handlePointerMove(e, 'drawer')}
               onMouseLeave={handlePointerLeave}
               style={{
                 flex: 1,
                 position: 'relative',
+                touchAction: 'none',
                 overflow: 'hidden',
                 background: 'var(--surface-2)',
                 cursor: isDragging ? 'grabbing' : 'pointer',

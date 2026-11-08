@@ -200,14 +200,14 @@ const sizeOf = (aspect: ShowcaseItem['aspect']) => (aspect === '9:16' ? '1080×1
 /** A small picture of the video a brief asks for: a frame in its own shape, on the brief's colours. */
 function Poster({ item, large = false }: { item: ShowcaseItem; large?: boolean }) {
   return (
-    <div className={`disc-media${large ? ' large' : ''}`} style={{ background: item.previewGradient }} aria-hidden="true">
+    <span className={`disc-media${large ? ' large' : ''}`} style={{ background: item.previewGradient }} aria-hidden="true">
       <span className="disc-glow" style={{ background: item.accentColor }} />
-      <div className={`disc-frame a-${item.aspect.replace(':', 'x')}`} style={{ borderColor: `${item.accentColor}66` }}>
+      <span className={`disc-frame a-${item.aspect.replace(':', 'x')}`} style={{ borderColor: `${item.accentColor}66` }}>
         <i style={{ background: item.accentColor }} />
         <b />
         <b className="short" />
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }
 
@@ -286,27 +286,21 @@ export function Showcase() {
       ) : (
         <div className="disc-grid">
           {filtered.map(item => (
-            <article
-              key={item.id}
-              className="disc-card"
-              tabIndex={0}
-              role="button"
-              aria-label={`${item.title}. Open details`}
-              onClick={() => setOpen(item)}
-              onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) setOpen(item); }}
-            >
-              <Poster item={item} />
-              <div className="disc-chip"><i style={{ background: item.accentColor }} />{item.category}</div>
-              <div className="disc-body">
-                <h3>{item.title}</h3>
-                <p>{item.summary}</p>
-                <div className="disc-meta">{item.aspect} · {item.duration} · {item.theme}</div>
-                <div className="disc-actions">
-                  <Button variant="primary" size="sm" icon={<WandIcon size={13} />} onClick={e => useThisBrief(item, e)}>Use this brief</Button>
-                  <button className="disc-icon-btn" title="Copy the prompt" aria-label={`Copy the prompt for ${item.title}`} onClick={e => copyPrompt(item, e)}>
-                    {copiedId === item.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-                  </button>
-                </div>
+            <article key={item.id} className="disc-card">
+              <button className="disc-open" aria-label={`${item.title}. Open details`} onClick={() => setOpen(item)}>
+                <Poster item={item} />
+                <span className="disc-chip"><i style={{ background: item.accentColor }} />{item.category}</span>
+                <span className="disc-body">
+                  <span className="disc-title">{item.title}</span>
+                  <span className="disc-summary">{item.summary}</span>
+                  <span className="disc-meta">{item.aspect} · {item.duration} · {item.theme}</span>
+                </span>
+              </button>
+              <div className="disc-actions">
+                <Button variant="primary" size="sm" icon={<WandIcon size={13} />} onClick={e => useThisBrief(item, e)}>Use this brief</Button>
+                <button className="disc-icon-btn" title="Copy the prompt" aria-label={`Copy the prompt for ${item.title}`} onClick={e => copyPrompt(item, e)}>
+                  {copiedId === item.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+                </button>
               </div>
             </article>
           ))}

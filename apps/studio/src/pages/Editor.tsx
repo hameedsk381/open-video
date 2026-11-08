@@ -33,7 +33,11 @@ const tabs = [
   ['ai', 'AI Director', SparklesIcon] as const,
   ['look', 'Style', PaletteIcon] as const,
 ];
+/** The scene a script beat is shown in: the one that names the beat, then the one with the beat's own id, and only then the one in the same position. */
+const sceneForBeat = (beat: { id?: string }, index: number, scenes: Scene[]): Scene | undefined => scenes.find(s => s.beat && s.beat === beat.id) ?? scenes.find(s => s.id === beat.id) ?? scenes[index];
 const tabOf = (tab: string) => (tab === 'script' ? 'edit' : tab);
+/** Which panel an address opens: anything unknown opens Edit. */
+const paneOf = (tab: string) => (['script', 'ai', 'look', 'history', 'export'].includes(tab) ? tab : 'edit');
 const sideTitles: Record<string, string> = { history: 'Revisions', export: 'Export & review' };
 
 const themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight', 'fontDisplay', 'fontBody', 'texture', 'textureColor', 'textureOpacity', 'motion', 'transition', 'layout', 'density'];
@@ -51,16 +55,36 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
   const [selectedTextPath, setSelectedTextPath] = useState<string | null>(null);
   const [currentFrame, setCurrentFrame] = useState(0);
+  // Panels stay mounted once opened, so what is typed or shown in one (unsaved script lines, an export in progress) survives a switch.
+  const pane = paneOf(tab);
+  const [seen, setSeen] = useState<Set<string>>(() => new Set([pane]));
+  useEffect(() => { setSeen(prev => (prev.has(pane) ? prev : new Set(prev).add(pane))); }, [pane]);
+  const open = (name: string) => pane === name || seen.has(name);
+  // Saves in flight (any kind), so closing the tab mid-save warns; and the one timer that clears the "Saved" note.
+  const [pending, setPending] = useState(0);
+  const track = useCallback(async (work: () => Promise<void>) => { setPending(n => n + 1); try { await work(); } finally { setPending(n => n - 1); } }, []);
+  const noteTimer = useRef<number | undefined>(undefined);
+  const loadSeq = useRef(0);
+  const loaded = useRef(false);
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const frameAt = useRef(0);
   const player = useRef<PlayerHandle>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const file = `${id}/composition.json`;
   const planFile = `${id}/production.json`;
 
+  // Every reload follows an edit, so the AI card (what the last AI change did) is stale by then. A late answer to an older request is dropped,
+  // and a failed refresh of an open project says so without replacing the whole editor with an error page.
   const load = useCallback((keepFrame: boolean) => {
     if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
     else frameAt.current = 0;
-    return api<Detail>(`/api/project?id=${encodeURIComponent(id)}`).then(setDetail, e => setError(e.message));
+    const seq = ++loadSeq.current;
+    setAiRevert(null);
+    return api<Detail>(`/api/project?id=${encodeURIComponent(id)}`).then(
+      next => { if (seq === loadSeq.current) { loaded.current = true; setDetail(next); } },
+      e => { if (seq !== loadSeq.current) return; if (loaded.current) toastRef.current(`Could not refresh the project: ${(e as Error).message}`, 'error'); else setError((e as Error).message); }
+    );
   }, [id]);
 
   const openCompare = useCallback(async (n: number, label: string) => {
@@ -76,30 +100,34 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const saveDirectText = useCallback(async (path: string, content: string, variableName?: string) => {
     if (!detail) return;
     try {
-      if (detail.mode === 'template' && variableName) {
-        await api('/api/variables', { id: detail.id, values: { [variableName]: content } });
-      } else {
-        await api('/api/text', { id: detail.id, path, content });
-      }
-      setNote('Text updated');
-      toast('Text updated on canvas', 'success');
-      await load(true);
+      await track(async () => {
+        if (detail.mode === 'template' && variableName) {
+          await api('/api/variables', { id: detail.id, values: { [variableName]: content } });
+        } else {
+          await api('/api/text', { id: detail.id, path, content });
+        }
+        setNote('Text updated');
+        toast('Text updated on canvas', 'success');
+        await load(true);
+      });
     } catch (e) {
       toast((e as Error).message, 'error');
     }
-  }, [detail, load, setNote, toast]);
+  }, [detail, load, setNote, toast, track]);
 
   const snapLayers = useCallback(async (moves: LayerMove[]) => {
     if (!detail) return;
     try {
-      await api('/api/layer/snap', { id: detail.id, moves });
-      setNote('Snapped to safe area');
-      toast(moves.length > 1 ? `Moved ${moves.length} layers into the safe zone` : 'Moved layer into the safe zone', 'success');
-      await load(true);
+      await track(async () => {
+        await api('/api/layer/snap', { id: detail.id, moves });
+        setNote('Snapped to safe area');
+        toast(moves.length > 1 ? `Moved ${moves.length} layers into the safe zone` : 'Moved layer into the safe zone', 'success');
+        await load(true);
+      });
     } catch (e) {
       toast((e as Error).message, 'error');
     }
-  }, [detail, load, setNote, toast]);
+  }, [detail, load, setNote, toast, track]);
 
   useEffect(() => {
     setDetail(null);
@@ -126,11 +154,11 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
 
   // Edits save on the spot, so the only way to lose one is to close the tab mid-save.
   useEffect(() => {
-    if (note !== 'Saving changes…') return;
+    if (!pending) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [note]);
+  }, [pending]);
 
   const dismissComposeNotes = () => {
     setComposeNotes([]);
@@ -158,11 +186,14 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
 
   const save = async (path: string, body: unknown, done = 'Saved') => {
     setNote('Saving changes…');
+    window.clearTimeout(noteTimer.current);
     try {
-      await api(path, body);
-      setNote(done);
-      await load(true);
-      setTimeout(() => setNote(''), 3000);
+      await track(async () => {
+        await api(path, body);
+        setNote(done);
+        await load(true);
+      });
+      noteTimer.current = window.setTimeout(() => setNote(''), 3000);
     } catch (e) {
       setNote('');
       toast((e as Error).message, 'error');
@@ -184,8 +215,9 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     setAiDraft(`Focus on scene ${selectedIndex + 1} (“${selectedScene.name}”, ${span}): `);
     go(editorPath(id, 'ai'));
   };
+  // Review starts at once; Export only opens the panel, so the quality is chosen before a long render begins.
   const openExport = (kind: 'review' | 'render') => {
-    setExportIntent({ kind, nonce: Date.now() });
+    if (kind === 'review') setExportIntent({ kind, nonce: Date.now() });
     go(editorPath(id, 'export'));
   };
 
@@ -235,10 +267,14 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           compareTarget={compareTarget}
           onCloseCompare={() => setCompareTarget(null)}
           onRestoreCompare={async n => {
-            await api('/api/restore', { file, n });
-            setNote(`Restored version #${n}`);
-            setCompareTarget(null);
-            await load(true);
+            try {
+              await api('/api/restore', { file, n });
+              setNote(`Restored version #${n}`);
+              setCompareTarget(null);
+              await load(true);
+            } catch (e) {
+              toast((e as Error).message, 'error');
+            }
           }}
           onFrame={f => {
             frameAt.current = f;
@@ -297,44 +333,57 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ))}
         </div>
         <div className="pane">
-          {tab === 'edit' || tab === 'script' || !(tab in { ai: 1, look: 1, history: 1, export: 1 }) ? (
+          {pane === 'edit' || pane === 'script' ? (
             <div className="segmented" role="tablist" aria-label="What to edit" style={{ marginBottom: 18 }}>
-              <button role="tab" aria-selected={tab !== 'script'} className={tab !== 'script' ? 'on' : ''} onClick={() => go(editorPath(id))}>Scenes &amp; text</button>
-              <button role="tab" aria-selected={tab === 'script'} className={tab === 'script' ? 'on' : ''} onClick={() => go(editorPath(id, 'script'))}>Script &amp; beats</button>
+              <button role="tab" aria-selected={pane === 'edit'} className={pane === 'edit' ? 'on' : ''} onClick={() => go(editorPath(id))}>Scenes &amp; text</button>
+              <button role="tab" aria-selected={pane === 'script'} className={pane === 'script' ? 'on' : ''} onClick={() => go(editorPath(id, 'script'))}>Script &amp; beats</button>
             </div>
-          ) : tab === 'history' || tab === 'export' ? (
+          ) : pane === 'history' || pane === 'export' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go(editorPath(id))}>Back to editing</Button>
-              <b style={{ fontSize: 13, color: 'var(--muted)' }}>{sideTitles[tab]}</b>
+              <b style={{ fontSize: 13, color: 'var(--muted)' }}>{sideTitles[pane]}</b>
             </div>
           ) : null}
-          {tab === 'script' ? (
-            <ScriptTab
-              {...props}
-              currentFrame={currentFrame}
-              onSeek={f => player.current?.seek(f)}
-            />
-          ) : tab === 'ai' ? (
-            <AskAi
-              {...props}
-              draft={aiDraft}
-              onDraft={setAiDraft}
-              scene={selectedScene}
-              sceneIndex={selectedIndex}
-              onClearScene={() => setSelectedSceneId(null)}
-              revert={aiRevert}
-              onApplied={setAiRevert}
-              onCompare={openCompare}
-            />
-          ) : tab === 'look' ? (
-            <Look {...props} />
-          ) : tab === 'history' ? (
-            <History {...props} onCompare={openCompare} />
-          ) : tab === 'export' ? (
-            <Export {...props} intent={exportIntent} onIntentDone={() => setExportIntent(null)} />
-          ) : (
-            <Edit {...props} selectedTextPath={selectedTextPath} onSelectTextPath={setSelectedTextPath} />
-          )}
+          {open('edit') ? (
+            <div hidden={pane !== 'edit'}>
+              <Edit {...props} selectedTextPath={selectedTextPath} onSelectTextPath={setSelectedTextPath} />
+            </div>
+          ) : null}
+          {open('script') ? (
+            <div hidden={pane !== 'script'}>
+              <ScriptTab {...props} currentFrame={currentFrame} onSeek={f => player.current?.seek(f)} />
+            </div>
+          ) : null}
+          {open('ai') ? (
+            <div hidden={pane !== 'ai'}>
+              <AskAi
+                {...props}
+                draft={aiDraft}
+                onDraft={setAiDraft}
+                scene={selectedScene}
+                sceneIndex={selectedIndex}
+                onClearScene={() => setSelectedSceneId(null)}
+                revert={aiRevert}
+                onApplied={setAiRevert}
+                onCompare={openCompare}
+              />
+            </div>
+          ) : null}
+          {open('look') ? (
+            <div hidden={pane !== 'look'}>
+              <Look {...props} />
+            </div>
+          ) : null}
+          {open('history') ? (
+            <div hidden={pane !== 'history'}>
+              <History {...props} onCompare={openCompare} />
+            </div>
+          ) : null}
+          {open('export') ? (
+            <div hidden={pane !== 'export'}>
+              <Export {...props} intent={exportIntent} onIntentDone={() => setExportIntent(null)} />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -388,9 +437,15 @@ function Edit({
   const [busy, setBusy] = useState(false);
   const { toast } = useUi();
 
+  // A reload brings the saved values in, but a field the person has changed and not saved keeps what they typed.
+  const served = useRef<{ values: Record<string, any>; texts: Record<string, string> }>({ values: {}, texts: {} });
   useEffect(() => {
-    setValues(Object.fromEntries(detail.variables.map(v => [v.name, v.type === 'list' ? JSON.stringify(v.value, null, 2) : v.value])));
-    setTexts(Object.fromEntries(detail.texts.map(t => [t.path, t.content])));
+    const before = served.current;
+    const nextValues: Record<string, any> = Object.fromEntries(detail.variables.map(v => [v.name, v.type === 'list' ? JSON.stringify(v.value, null, 2) : v.value]));
+    const nextTexts: Record<string, string> = Object.fromEntries(detail.texts.map(t => [t.path, t.content]));
+    setValues(cur => Object.fromEntries(Object.entries(nextValues).map(([k, v]) => [k, k in cur && !Object.is(cur[k], before.values[k]) ? cur[k] : v])));
+    setTexts(cur => Object.fromEntries(Object.entries(nextTexts).map(([k, v]) => [k, k in cur && cur[k] !== before.texts[k] ? cur[k] : v])));
+    served.current = { values: nextValues, texts: nextTexts };
   }, [detail]);
 
   const fields = detail.variables.filter(v => !themeNames.includes(v.name));
@@ -407,7 +462,7 @@ function Edit({
         await save('/api/variables', { id: detail.id, values: out });
       } else {
         const changed = detail.texts.filter(t => texts[t.path]?.trim() && texts[t.path] !== t.content);
-        for (const t of changed) await api('/api/text', { id: detail.id, path: t.path, content: texts[t.path] });
+        if (changed.length) await api('/api/texts', { id: detail.id, edits: changed.map(t => ({ path: t.path, content: texts[t.path]! })) });
         setNote(changed.length ? 'Changes saved' : 'No changes detected');
         if (changed.length) await reload(true);
       }
@@ -517,17 +572,20 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
   const [saving, setSaving] = useState(false);
   const [compiling, setCompiling] = useState(false);
   const [beats, setBeats] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState('');
 
   const loadPlan = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const state = await api<ProductionState>(`/api/production?id=${encodeURIComponent(detail.id)}`);
       setPlanState(state);
       const scriptBeats = (state.production as any)?.script?.beats ?? [];
       setBeats(scriptBeats);
       setDirty(false);
-    } catch {
+    } catch (e) {
       setPlanState(null);
+      setLoadError((e as Error).message || 'The script could not be loaded');
     } finally {
       setLoading(false);
     }
@@ -604,7 +662,8 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
         const currentPlan = structuredClone(planState.production) as any;
         currentPlan.script = currentPlan.script ?? {};
         currentPlan.script.beats = beats;
-        await api('/api/production', { id: detail.id, production: currentPlan, baseModified: planState.modified });
+        const res = await api<SaveProductionResult>('/api/production', { id: detail.id, production: currentPlan, baseModified: planState.modified });
+        setPlanState({ production: res.production, valid: true, issues: res.issues, summary: res.summary, modified: res.modified, base: res.base });
       }
       const report = await api<CompileProductionResult>('/api/production/compile', { id: detail.id, apply: true });
       toast(`Video compiled: ${report.changes.length ? report.changes.join(', ') : 'Timeline synced'}`, 'success');
@@ -635,6 +694,18 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
       <div style={{ padding: '20px 0' }}>
         <Spinner size={20} />
         <p className="sub" style={{ marginTop: 8 }}>Loading narrative script…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h2>Script & Narrative Beats</h2>
+        <Notice tone="error" title="The script could not be loaded">
+          <p style={{ margin: '4px 0 12px' }}>{loadError}</p>
+          <Button variant="secondary" onClick={() => void loadPlan()}>Try again</Button>
+        </Notice>
       </div>
     );
   }
@@ -686,7 +757,7 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
         {beats.map((beat, idx) => {
-          const matchingScene = scenes[idx];
+          const matchingScene = sceneForBeat(beat, idx, scenes);
           const startF = matchingScene ? matchingScene.startFrame : idx * 90;
           const durationF = matchingScene ? matchingScene.durationFrames : 90;
           const endF = startF + durationF;
@@ -973,7 +1044,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
     try {
       const historyUrl = `/api/history?file=${encodeURIComponent(file)}`;
       const before = (await api<{ revisions: Revision[] }>(historyUrl)).revisions.length;
-      const result = await runJob<{ warnings?: string[] }>(
+      const result = await runJob<{ warnings?: string[]; revision?: number }>(
         '/api/refine',
         { file, instruction: draft.trim() },
         (j: Job) => setNote(cleanUserStatus(j.messages.at(-1)))
@@ -987,10 +1058,12 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
       let replaced: Revision | undefined;
       try {
         const after = (await api<{ revisions: Revision[] }>(historyUrl)).revisions;
-        if (after.length > before) replaced = after.at(-2);
+        // The job names the revision it saved, and the one before it is what Revert goes back to, even if someone else saved in between.
+        if (typeof result?.revision === 'number') replaced = after.find(r => r.n === result.revision! - 1);
+        else if (after.length > before) replaced = after.at(-2);
       } catch { /* the change is live either way; only the Revert and Compare card is skipped */ }
-      onApplied(replaced ? { n: replaced.n, label: replaced.label } : null);
       await reload(true);
+      onApplied(replaced ? { n: replaced.n, label: replaced.label } : null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -1324,7 +1397,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
   const [video, setVideo] = useState<{ url: string; relative: string } | null>(null);
-  const [picture, setPicture] = useState<{ title: string; url: string; items?: string[] } | null>(null);
+  const [picture, setPicture] = useState<{ title: string; url: string; src: string; items?: string[] } | null>(null);
 
   const run = async (kind: string, work: () => Promise<void>) => {
     setError('');
@@ -1355,6 +1428,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
       setPicture({
         title: r.issues.length ? `${r.issues.length} design recommendations found` : 'Design quality audit passed',
         url: r.url,
+        src: `${r.url}?t=${Date.now()}`,
         items: r.issues.slice(0, 12).map((i: any) => i.message ?? String(i)),
       });
     });
@@ -1363,7 +1437,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
     run('thumb', async () => {
       const r = await runJob('/api/thumbnail', { file }, progress);
       setVideo(null);
-      setPicture({ title: 'Video Poster Cover', url: r.url });
+      setPicture({ title: 'Video Poster Cover', url: r.url, src: `${r.url}?t=${Date.now()}` });
     });
 
   // The top bar's Review and Export buttons land here already meaning to start; the nonce stops a rerun.
@@ -1384,8 +1458,8 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
 
       <Field label="Quality">
         <select className="input" value={scale} onChange={e => setScale(e.target.value)}>
-          <option value="1">High quality (1080p)</option>
-          <option value="0.5">Standard (720p, faster)</option>
+          <option value="1">Full size ({detail.width}×{detail.height})</option>
+          <option value="0.5">Half size ({Math.round(detail.width / 2)}×{Math.round(detail.height / 2)}, faster)</option>
           <option value="0.25">Draft (quick check)</option>
         </select>
       </Field>
@@ -1446,7 +1520,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
               ))}
             </ul>
           ) : null}
-          <img src={`${picture.url}?t=${Date.now()}`} alt="" />
+          <img src={picture.src} alt="" />
           {picture.title === 'Video Poster Cover' ? (
             <div style={{ marginTop: 12 }}>
               <a className="btn primary sm" href={picture.url} download={`${detail.id}.png`}>

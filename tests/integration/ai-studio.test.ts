@@ -109,6 +109,8 @@ describe('AI studio server', () => {
     const composed = await finished(await post('/api/compose', { brief: 'A tiny test video', kind: 'reel', duration: 0.5, fps: 10, full: true }));
     const refined = await finished(await post('/api/refine', { file: composed.relative, instruction: 'Make the title bigger' }));
     expect(refined.relative).toBe(composed.relative);
+    // The job says which revision it saved, so the studio can offer Revert to the one before it.
+    expect(refined.revision).toBeGreaterThan(1);
     const composition = JSON.parse(await readFile(join(root, refined.relative), 'utf8'));
     expect(composition.name).toContain('(refined)');
     const textLayer = composition.scenes[0].layers.find((l: any) => l.type === 'text');

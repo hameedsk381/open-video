@@ -20,7 +20,7 @@ export const textLayerSchema = z.object({ path: z.string(), scene: z.string(), i
 export type TextLayer = z.infer<typeof textLayerSchema>;
 export const assetSchema = z.object({ name: z.string(), path: z.string(), kind: z.string(), bytes: z.number(), sha256: z.string().optional(), addedAt: z.string().optional() });
 export type Asset = z.infer<typeof assetSchema>;
-export const sceneSummarySchema = z.object({ id: z.string(), name: z.string(), startFrame: z.number(), durationFrames: z.number() });
+export const sceneSummarySchema = z.object({ id: z.string(), name: z.string(), startFrame: z.number(), durationFrames: z.number(), beat: z.string().optional() });
 export type Scene = z.infer<typeof sceneSummarySchema>;
 
 export const detailSchema = z.object({
@@ -155,6 +155,8 @@ export const variablesRequest = z.object({ id, values: z.record(z.string(), z.un
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
 /** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
 export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0), maxWidth: z.number().positive().optional() })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
+/** Several text edits in one saved change. */
+export const textsRequest = z.object({ id, edits: z.array(z.object({ path: z.string().min(1, 'path is required'), content: z.string().min(1, 'text is required') })).min(1, 'edits is required').max(200) });
 export const textRequest = z.object({ id, path: z.string().min(1, 'path is required'), content: z.string().min(1, 'text is required') });
 export const addBlockRequest = z.object({ id, block: z.string().min(1, 'block is required'), at: z.union([z.string(), z.number()]).optional(), frames: z.union([z.string(), z.number()]).optional(), scene: z.string().optional(), set: z.record(z.string(), z.unknown()).optional() });
 export const restoreRequest = z.object({ file: z.string().min(1), n: z.number().int().min(1) });
