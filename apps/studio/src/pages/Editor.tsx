@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { slotName } from '../slotName';
 import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionResult, type Detail, type Job, type Library, type ProductionState, type Revision, type SaveProductionResult, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
@@ -747,6 +747,123 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
   );
 }
 
+type CompDiffItem = {
+  type: 'duration' | 'scene_time' | 'text' | 'theme' | 'scene_count';
+  title: string;
+  before: string;
+  after: string;
+  badge?: string;
+  tone?: 'positive' | 'negative' | 'neutral' | 'accent';
+};
+
+function computeCompositionDiff(beforeRaw: any, afterRaw: any, fps: number): CompDiffItem[] {
+  if (!beforeRaw || !afterRaw) return [];
+  const diffs: CompDiffItem[] = [];
+
+  // 1. Duration
+  const bDur = Number(beforeRaw.durationFrames) || 0;
+  const aDur = Number(afterRaw.durationFrames) || 0;
+  if (bDur !== aDur && bDur > 0 && aDur > 0) {
+    const diffSec = (aDur - bDur) / fps;
+    diffs.push({
+      type: 'duration',
+      title: 'Total Video Duration',
+      before: `${(bDur / fps).toFixed(1)}s`,
+      after: `${(aDur / fps).toFixed(1)}s`,
+      badge: `${diffSec > 0 ? '+' : ''}${diffSec.toFixed(1)}s`,
+      tone: diffSec < 0 ? 'positive' : 'neutral',
+    });
+  }
+
+  // 2. Scene count & per-scene retiming
+  const bScenes = Array.isArray(beforeRaw.scenes) ? beforeRaw.scenes : [];
+  const aScenes = Array.isArray(afterRaw.scenes) ? afterRaw.scenes : [];
+  if (bScenes.length !== aScenes.length) {
+    const dCount = aScenes.length - bScenes.length;
+    diffs.push({
+      type: 'scene_count',
+      title: 'Scene Count',
+      before: `${bScenes.length} scenes`,
+      after: `${aScenes.length} scenes`,
+      badge: `${dCount > 0 ? '+' : ''}${dCount} scenes`,
+      tone: 'accent',
+    });
+  }
+
+  for (let i = 0; i < Math.min(bScenes.length, aScenes.length); i++) {
+    const bs = bScenes[i];
+    const as = aScenes[i];
+    const bsFrames = Number(bs.durationFrames) || 0;
+    const asFrames = Number(as.durationFrames) || 0;
+    if (bsFrames !== asFrames && bsFrames > 0 && asFrames > 0) {
+      const dSec = (asFrames - bsFrames) / fps;
+      diffs.push({
+        type: 'scene_time',
+        title: `Scene ${i + 1} (${as.name || bs.name || 'Beat'}) Timing`,
+        before: `${(bsFrames / fps).toFixed(1)}s`,
+        after: `${(asFrames / fps).toFixed(1)}s`,
+        badge: `${dSec > 0 ? '+' : ''}${dSec.toFixed(1)}s`,
+        tone: dSec < 0 ? 'positive' : 'neutral',
+      });
+    }
+  }
+
+  // 3. Text content changes
+  const extractTextMap = (comp: any) => {
+    const map = new Map<string, string>();
+    if (!comp || !Array.isArray(comp.scenes)) return map;
+    comp.scenes.forEach((s: any, sIdx: number) => {
+      const walk = (layers: any[], basePath: string) => {
+        if (!Array.isArray(layers)) return;
+        layers.forEach((l: any, lIdx: number) => {
+          if (!l) return;
+          const path = `${basePath}[${lIdx}]`;
+          const id = l.id || `s${sIdx + 1}-layer${lIdx + 1}`;
+          if (l.type === 'group') walk(l.children, `${path}.children`);
+          else if (l.type === 'text') {
+            let text = typeof l.content === 'string' ? l.content : '';
+            if (!text && Array.isArray(l.spans)) text = l.spans.map((sp: any) => sp.text || '').join('');
+            if (text) map.set(id, text);
+          }
+        });
+      };
+      walk(s.layers, `scenes[${sIdx}].layers`);
+    });
+    return map;
+  };
+
+  const bTexts = extractTextMap(beforeRaw);
+  const aTexts = extractTextMap(afterRaw);
+
+  for (const [id, aVal] of aTexts.entries()) {
+    const bVal = bTexts.get(id);
+    if (bVal !== undefined && bVal !== aVal) {
+      diffs.push({
+        type: 'text',
+        title: `Text Layer "${id}"`,
+        before: bVal,
+        after: aVal,
+        badge: 'Copy changed',
+        tone: 'accent',
+      });
+    }
+  }
+
+  // 4. Theme & brand colors
+  if (beforeRaw.theme !== afterRaw.theme && (beforeRaw.theme || afterRaw.theme)) {
+    diffs.push({
+      type: 'theme',
+      title: 'Visual Theme',
+      before: beforeRaw.theme || 'Auto',
+      after: afterRaw.theme || 'Auto',
+      badge: 'Theme update',
+      tone: 'accent',
+    });
+  }
+
+  return diffs;
+}
+
 type AskAiProps = PaneProps & {
   draft: string;
   onDraft: (text: string) => void;
@@ -763,7 +880,32 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
   const [error, setError] = useState('');
   const [notes, setNotes] = useState<string[]>([]);
   const [reverting, setReverting] = useState(false);
+  const [beforeRaw, setBeforeRaw] = useState<any>(null);
+  const [loadingBefore, setLoadingBefore] = useState(false);
   const { toast } = useUi();
+
+  useEffect(() => {
+    if (!revert) {
+      setBeforeRaw(null);
+      return;
+    }
+    let live = true;
+    setLoadingBefore(true);
+    api<{ raw: any; revision: Revision }>(`/api/revision?file=${encodeURIComponent(file)}&n=${revert.n}`)
+      .then(res => {
+        if (live) setBeforeRaw(res.raw);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (live) setLoadingBefore(false);
+      });
+    return () => { live = false; };
+  }, [file, revert]);
+
+  const diffs = useMemo(() => {
+    if (!beforeRaw || !detail?.source?.raw) return [];
+    return computeCompositionDiff(beforeRaw, detail.source.raw, detail.fps || 30);
+  }, [beforeRaw, detail]);
 
   const run = async () => {
     if (!draft.trim()) return;
@@ -867,19 +1009,87 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
         </Notice>
       ) : null}
 
+      {/* Structured AI Diff Inspector & Decision Card */}
       {revert ? (
-        <div className="ai-revert">
-          <div>
-            <b>Newest change is live.</b>
-            <small>Version #{revert.n} · {revert.label}</small>
+        <div
+          className="ai-diff-inspector"
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid color-mix(in srgb, var(--accent) 55%, var(--border))',
+            borderRadius: 'var(--radius)',
+            padding: 14,
+            margin: '14px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <SparklesIcon size={14} style={{ color: 'var(--accent)' }} />
+              <b style={{ fontSize: 13, color: 'var(--text)' }}>AI Proposed Modifications</b>
+              {diffs.length ? (
+                <span style={{ fontSize: 10, background: 'var(--accent)', color: '#fff', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
+                  {diffs.length} {diffs.length === 1 ? 'change' : 'changes'}
+                </span>
+              ) : null}
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+              vs #{revert.n}
+            </span>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Button size="sm" variant="secondary" icon={<SlidersIcon size={13} />} onClick={() => onCompare(revert.n, revert.label)}>
+
+          {/* Diffs List */}
+          {loadingBefore ? (
+            <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Spinner size={12} /> Loading revision AST diff…
+            </div>
+          ) : diffs.length ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+              {diffs.map((d, idx) => (
+                <div key={idx} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px', fontSize: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <b style={{ color: 'var(--text)', fontSize: 12 }}>{d.title}</b>
+                    {d.badge ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: d.tone === 'positive' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(70, 147, 241, 0.15)', color: d.tone === 'positive' ? '#34d399' : 'var(--accent)' }}>
+                        {d.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontFamily: d.type === 'text' ? 'inherit' : 'var(--mono)', fontSize: 11.5 }}>
+                    <div style={{ color: '#f87171', display: 'flex', gap: 6, textDecoration: 'line-through', opacity: 0.85 }}>
+                      <span style={{ userSelect: 'none', color: '#f87171' }}>−</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.before}</span>
+                    </div>
+                    <div style={{ color: '#34d399', display: 'flex', gap: 6, fontWeight: 500 }}>
+                      <span style={{ userSelect: 'none', color: '#34d399' }}>+</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.after}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="sub" style={{ margin: 0 }}>
+              Refinement applied: animation curves or internal styling adjusted.
+            </p>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+            <Button size="sm" variant="secondary" icon={<SlidersIcon size={12} />} onClick={() => onCompare(revert.n, revert.label)} title="Launch side-by-side / split visual scrubber">
               Compare Split
             </Button>
-            <Button size="sm" loading={reverting} onClick={undo}>
-              Revert to #{revert.n}
-            </Button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Button size="sm" loading={reverting} onClick={undo} title="Discard changes and restore previous version">
+                Revert to #{revert.n}
+              </Button>
+              <Button size="sm" variant="primary" icon={<CheckIcon size={12} />} onClick={() => { onApplied(null); setNote('Changes accepted'); }} title="Accept and keep newest version">
+                Keep Changes
+              </Button>
+            </div>
           </div>
         </div>
       ) : null}
