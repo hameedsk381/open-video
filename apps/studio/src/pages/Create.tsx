@@ -271,7 +271,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
           autoFocus
           className="create-brief"
           aria-label="Describe your video"
-          placeholder="What is the video about? Name the product, the benefit and who it is for — or paste a brief."
+          placeholder="What is the video about? Name the product, the benefit and who it is for, or paste a brief."
           value={brief}
           onChange={event => setBrief(event.target.value)}
           onKeyDown={event => {
@@ -458,7 +458,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
                   <option value="confident">Confident & authoritative (B2B & pitch)</option>
                   <option value="warm">Warm & conversational (creator & friendly)</option>
                   <option value="hype">High-energy hype (viral & promo)</option>
-                  <option value="calm">Calm & thoughtful (explainer & story)</option>
+                  <option value="calm">Calm (explainer & story)</option>
                 </select>
               </Field>
               <Field label="Captions">
@@ -473,7 +473,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
 
           <label className="check">
             <input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} />
-            <span>Design review — check readability, contrast and safe zones before opening the editor</span>
+            <span>Design review: check readability, contrast and safe zones before opening the editor</span>
           </label>
         </section>
       ) : null}
@@ -681,7 +681,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
               </div>
               <label className="check" style={{ marginTop: 10 }}>
                 <input type="checkbox" checked={full} onChange={event => setFull(event.target.checked)} />
-                <span>Bespoke synthesis — build every layer from scratch instead of using templates</span>
+                <span>Build every layer from scratch instead of starting from a template</span>
               </label>
             </details>
           </section>

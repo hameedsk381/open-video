@@ -743,7 +743,7 @@ function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIs
       tone: 'red',
     });
   }
-  if (!plan.brief?.prompt?.trim()) steps.push({ key: 'brief', title: 'Say what the video is for', detail: 'One sentence in the brief keeps every shot honest.', section: 'brief', tone: 'amber' });
+  if (!plan.brief?.prompt?.trim()) steps.push({ key: 'brief', title: 'Say what the video is for', detail: 'One sentence in the brief keeps every shot on topic.', section: 'brief', tone: 'amber' });
   if (!plan.script?.beats?.length) steps.push({ key: 'script', title: 'Write the script beats', detail: 'Every shot renders one beat.', section: 'script', tone: 'amber' });
   if (!review.total) steps.push({ key: 'shots', title: 'Add shots to the plan', detail: 'A plan needs at least one shot to compile.', section: 'shots', tone: 'amber' });
   if (review.unusedBeats.length) {

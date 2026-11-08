@@ -499,7 +499,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
 
       {detail.mode === 'template' ? (
         <Notice tone="neutral">
-          Your changes will be integrated directly across all scenes with seamless timing adjustments.
+          This video is built from a template, so edits change its variables (text, colours, theme) rather than individual layers.
         </Notice>
       ) : null}
 

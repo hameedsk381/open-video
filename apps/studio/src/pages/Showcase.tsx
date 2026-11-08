@@ -21,10 +21,6 @@ export type ShowcaseItem = {
   category: 'Product UI' | 'Kinetic Type' | '3D & WebGL' | 'Social Reels' | 'Charts & Data' | 'Brand Promos';
   aspect: '9:16' | '16:9' | '1:1';
   duration: string;
-  fps: number;
-  author: string;
-  authorAvatar: string;
-  model: string;
   theme: string;
   templateId?: string;
   prompt: string;
@@ -40,10 +36,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Product UI',
     aspect: '16:9',
     duration: '12s',
-    fps: 60,
-    author: '@twoclipping',
-    authorAvatar: 'TC',
-    model: 'Claude Opus 5.5 & MotionRender',
     theme: 'midnight',
     templateId: 'product-spotlight',
     prompt: 'Make an ultra-clean 12-second SaaS UI animation demonstrating shape morphing across three states: idle state with glowing status indicator, active state where cards expand fluidly with spring physics, and success celebration with kinetic particle pop. Use sleek dark glassmorphism, crisp Inter typography, and subframe motion blur.',
@@ -57,10 +49,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Kinetic Type',
     aspect: '9:16',
     duration: '15s',
-    fps: 60,
-    author: '@shneural',
-    authorAvatar: 'SN',
-    model: 'Claude Opus 5.5',
     theme: 'neon',
     templateId: 'kinetic-type',
     prompt: 'A bold, high-energy 15-second kinetic typography reel. Start with rapid rhythmic cuts on single impactful words, transition into an elastic word cascade, dynamic highlighter swipe on the punchline, and finish with an extruded neon title reveal. Strict 9:16 vertical safe-zones with Edge Neural TTS speech timing.',
@@ -74,10 +62,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: '3D & WebGL',
     aspect: '16:9',
     duration: '10s',
-    fps: 60,
-    author: '@stephanlivera',
-    authorAvatar: 'SL',
-    model: 'Claude Opus 5.5 & MotionRender',
     theme: 'midnight',
     templateId: 'starter',
     prompt: 'Create a cinematic 10-second product film featuring an isometric bento grid floating in 3D space with subtle camera push and depth of field. Each glass tile reveals a core feature with frosted glass refraction, glowing border outline, and soft ambient drop shadows.',
@@ -91,10 +75,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Social Reels',
     aspect: '9:16',
     duration: '15s',
-    fps: 30,
-    author: '@notdwd',
-    authorAvatar: 'ND',
-    model: 'FreeLLMAPI & Edge TTS',
     theme: 'neon',
     templateId: 'hook-reel',
     prompt: 'Generate an irresistible 15-second vertical video designed for TikTok and Instagram Reels. Top third features an attention-grabbing hook badge with animated siren glow, middle has dynamic animated cards, and bottom displays synchronized word-by-word highlighted captions timed exactly to the voiceover.',
@@ -108,10 +88,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Product UI',
     aspect: '16:9',
     duration: '10s',
-    fps: 60,
-    author: '@motionrender',
-    authorAvatar: 'MR',
-    model: 'MotionRender Engine',
     theme: 'neon',
     templateId: 'stats-showcase',
     prompt: 'Create a polished product feature video showcasing real-time analytics. Numbers rapidly count up with spring easing from 0 to 4.2M users, accompanied by an animated glowing SVG sparkline that draws across the canvas, followed by badge status pills turning green.',
@@ -125,10 +101,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: '3D & WebGL',
     aspect: '9:16',
     duration: '12s',
-    fps: 60,
-    author: '@twoclipping',
-    authorAvatar: 'TC',
-    model: 'Claude Opus 5.5',
     theme: 'midnight',
     templateId: 'hook-reel',
     prompt: 'A sleek 3D smartphone mockup that tilts toward the camera. The screen displays an interactive mobile app onboarding sequence that scrolls smoothly through 3 cards with subtle parallax, ending with a dynamic download call-to-action card.',
@@ -142,10 +114,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Charts & Data',
     aspect: '16:9',
     duration: '8s',
-    fps: 60,
-    author: '@linearuncle',
-    authorAvatar: 'LU',
-    model: 'Claude Opus 5.5',
     theme: 'signal',
     templateId: 'stats-showcase',
     prompt: 'A bold data comparison video split down the center. Left column reveals "10x Faster Deployment" with an animated circular progress ring; right column shows "+320% Revenue" with rising bar charts and celebration particles. Crisp monospace data labels.',
@@ -159,10 +127,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Brand Promos',
     aspect: '16:9',
     duration: '6s',
-    fps: 60,
-    author: '@lexnlin',
-    authorAvatar: 'LL',
-    model: 'Claude Opus 5.5 & MotionRender',
     theme: 'midnight',
     templateId: 'logo-sting',
     prompt: 'A 6-second broadcast-grade logo intro on deep obsidian black. An ethereal spotlight sweeps across an embossed metallic logo with light leaks and chromatic aberration, followed by a crisp brand tagline fading in with letter-spacing drift and an impact bass hit.',
@@ -176,10 +140,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Kinetic Type',
     aspect: '1:1',
     duration: '8s',
-    fps: 60,
-    author: '@ajith_io',
-    authorAvatar: 'AI',
-    model: 'Claude Opus 5.5',
     theme: 'paper',
     templateId: 'quote-card',
     prompt: 'Create an editorial 1:1 square animated quote video. Large serif typography renders with typewriter reveal, followed by a warm yellow marker highlighter stroke wiping across the primary concept, ending with an elegant author signature card.',
@@ -193,10 +153,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Product UI',
     aspect: '1:1',
     duration: '10s',
-    fps: 60,
-    author: '@gabrielbuzziv',
-    authorAvatar: 'GB',
-    model: 'MotionRender Engine',
     theme: 'slate',
     templateId: 'product-spotlight',
     prompt: 'A clean 10-second square product video for a modern hardware device. Smooth slow-motion scale-in of the product photograph with drop shadow, animated badge chips showing technical specs (e.g. "Titanium Build", "48h Battery"), and animated price tag.',
@@ -210,14 +166,10 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Charts & Data',
     aspect: '16:9',
     duration: '12s',
-    fps: 30,
-    author: '@gabrielbuzziv',
-    authorAvatar: 'GB',
-    model: 'Claude Opus 5.5',
     theme: 'midnight',
     templateId: 'tutorial-steps',
     prompt: 'A timeline progression animation tracking quarterly product milestones. A glowing neon cursor travels across an SVG path, activating step cards one by one with subtle scale pulse and checkmark reveals. Clean date tags and dark mode palette.',
-    summary: 'Animated milestone journey tracking quarterly releases along an animated path.',
+    summary: 'Quarterly releases as milestones along an animated path.',
     previewGradient: 'linear-gradient(135deg, #030712 0%, #0f172a 50%, #111827 100%)',
     accentColor: '#34d399',
   },
@@ -227,10 +179,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     category: 'Brand Promos',
     aspect: '16:9',
     duration: '14s',
-    fps: 60,
-    author: '@himanshutwtxs',
-    authorAvatar: 'HT',
-    model: 'Claude Opus 5.5 & MotionRender',
     theme: 'espresso',
     templateId: 'starter',
     prompt: 'A high-impact 14-second conference keynote opening video. Cinematic Ken Burns zoom across architectural backdrop imagery, overlaid with huge condensed headline typography, dual-color gradients, and rhythmic camera shake impacts on beat drops.',
@@ -275,7 +223,6 @@ export function Showcase() {
         !q ||
         item.title.toLowerCase().includes(q) ||
         item.prompt.toLowerCase().includes(q) ||
-        item.author.toLowerCase().includes(q) ||
         item.category.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
@@ -285,7 +232,7 @@ export function Showcase() {
     e?.stopPropagation();
     navigator.clipboard.writeText(item.prompt).then(() => {
       setCopiedId(item.id);
-      toast('Prompt copied to clipboard!', 'success');
+      toast('Prompt copied', 'success');
       setTimeout(() => setCopiedId(null), 2500);
     });
   };
@@ -303,22 +250,12 @@ export function Showcase() {
       {/* Hero Section */}
       <section className="showcase-hero">
         <div className="showcase-hero-inner">
-          <div className="showcase-headline-row">
-            <span className="showcase-badge-pill">
-              <SparklesIcon size={13} />
-              <span>MotionRender Showcase</span>
-            </span>
-            <span className="showcase-live-pill">
-              <span className="pulse-dot" />
-              <span>{SHOWCASE_ITEMS.length} Curated Motion Prompts</span>
-            </span>
-          </div>
 
           <h1 className="showcase-title">
-            Motion Graphics Prompt Library
+            Starting prompts
           </h1>
           <p className="showcase-subtitle">
-            A curated showcase of broadcast-grade motion videos conceptualized with Claude Opus 5.5 and rendered frame-deterministically with MotionRender. Use any brief as your starting point, or copy it.
+            Briefs for the kinds of video people ask for most. Copy one, or open it in the creator with a matching template.
           </p>
 
           {/* Search bar */}
@@ -328,7 +265,7 @@ export function Showcase() {
               <input
                 type="text"
                 className="showcase-search-input"
-                placeholder={`Search prompts, motion styles, UI state animations, or creators... (${modKeyLabel('K')})`}
+                placeholder={`Search prompts or styles (${modKeyLabel('K')})`}
                 aria-label="Search Discover"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -384,43 +321,10 @@ export function Showcase() {
                   className="bento-card"
                   onClick={() => setActiveModalItem(item)}
                 >
-                  {/* Media Viewport Container */}
-                  <div
-                    className="bento-media"
-                    style={{ background: item.previewGradient }}
-                  >
-                    {/* Abstract Simulated Motion Canvas Canvas Graphic */}
-                    <div className="bento-media-graphic">
-                      <div
-                        className="orb-glow"
-                        style={{ background: item.accentColor }}
-                      />
-                      <div className="media-overlay-content">
-                        <span className="watermark-type">{item.category}</span>
-                        <div className="preview-play-btn">
-                          <PlayIcon size={18} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Overlay Badges */}
-                    <div className="media-badges-top">
-                      <span className="tag-pill category-tag">{item.category}</span>
-                      <span className="tag-pill aspect-tag">{item.aspect}</span>
-                    </div>
-
-                    <div className="media-badges-bottom">
-                      <span className="duration-pill">{item.duration} · {item.fps}fps</span>
-                    </div>
-                  </div>
 
                   {/* Card Body & Metadata */}
                   <div className="bento-body">
-                    <div className="author-row">
-                      <span className="author-avatar">{item.authorAvatar}</span>
-                      <span className="author-handle">{item.author}</span>
-                      <span className="model-chip">{item.model.split('&')[0]?.trim()}</span>
-                    </div>
+                    <div className="bento-tags"><span className="tag-pill category-tag">{item.category}</span><span className="tag-pill aspect-tag">{item.aspect}</span><span className="tag-pill">{item.duration}</span></div>
 
                     <h3 className="bento-item-title">{item.title}</h3>
                     <p className="bento-item-summary">{item.summary}</p>
@@ -438,7 +342,7 @@ export function Showcase() {
                         onClick={e => copyPrompt(item, e)}
                       >
                         {isCopied ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
-                        <span>{isCopied ? 'Copied!' : 'Copy Prompt'}</span>
+                        <span>{isCopied ? 'Copied' : 'Copy prompt'}</span>
                       </button>
 
                       <button
@@ -472,11 +376,6 @@ export function Showcase() {
 
             <div className="modal-header">
               <div className="modal-meta-row">
-                <span className="author-avatar large">{activeModalItem.authorAvatar}</span>
-                <div>
-                  <div className="author-handle bold">{activeModalItem.author}</div>
-                  <div className="modal-posted-note">Created with {activeModalItem.model}</div>
-                </div>
                 <div className="grow" />
                 <Badge tone="blue">{activeModalItem.category}</Badge>
                 <Badge tone="green">{activeModalItem.aspect}</Badge>
@@ -484,19 +383,15 @@ export function Showcase() {
               <h2 className="modal-title">{activeModalItem.title}</h2>
             </div>
 
-            {/* Simulated Motion Graphic Preview */}
+            {/* Size and length of the video this brief asks for */}
             <div
               className="modal-media-player"
               style={{ background: activeModalItem.previewGradient }}
             >
               <div className="modal-ambient-glow" style={{ background: activeModalItem.accentColor }} />
               <div className="modal-player-center">
-                <div className="modal-play-circle">
-                  <PlayIcon size={28} />
-                </div>
-                <span className="modal-preview-text">Interactive Motion Canvas Preview</span>
                 <span className="modal-preview-specs">
-                  {activeModalItem.aspect === '9:16' ? '1080x1920' : activeModalItem.aspect === '1:1' ? '1080x1080' : '1920x1080'} · {activeModalItem.duration} · {activeModalItem.fps} FPS · Subframe Motion Blur
+                  {activeModalItem.aspect === '9:16' ? '1080×1920' : activeModalItem.aspect === '1:1' ? '1080×1080' : '1920×1080'} · {activeModalItem.duration}
                 </span>
               </div>
             </div>
@@ -504,13 +399,13 @@ export function Showcase() {
             {/* Prompt Box */}
             <div className="modal-prompt-section">
               <div className="prompt-header-bar">
-                <b>Prompt & Motion Instructions</b>
+                <b>Prompt</b>
                 <button
                   className="btn ghost sm"
                   onClick={() => copyPrompt(activeModalItem)}
                 >
                   {copiedId === activeModalItem.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-                  <span>{copiedId === activeModalItem.id ? 'Copied' : 'Copy Full Prompt'}</span>
+                  <span>{copiedId === activeModalItem.id ? 'Copied' : 'Copy prompt'}</span>
                 </button>
               </div>
 
@@ -523,8 +418,6 @@ export function Showcase() {
             <div className="modal-footer">
               <div className="modal-specs-list">
                 <span>Theme: <b>{activeModalItem.theme}</b></span>
-                <span>•</span>
-                <span>Audio: <b>Edge Neural TTS + Subtitles</b></span>
               </div>
 
               <div className="modal-actions-cta">

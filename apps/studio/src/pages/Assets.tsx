@@ -60,7 +60,7 @@ export function Assets() {
   return (
     <Page
       title="Assets"
-      subtitle="The templates, scene blocks and themes this studio can build with — ready to drop into any video."
+      subtitle="The templates, scene blocks and themes this studio can build with."
     >
       {error ? <Notice tone="error" title="Could not load the asset library">{error}</Notice> : null}
 

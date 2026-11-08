@@ -73,7 +73,6 @@ export function Home({ email }: { email?: string }) {
   const ordered = Object.values(jobs).sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
   const active = ordered.filter(job => job.status === 'running' || job.status === 'queued');
   const recent = [...active, ...ordered.filter(job => job.status === 'done' || job.status === 'error')].slice(0, 5);
-  const scenes = projects?.reduce((total, project) => total + project.scenes, 0) ?? 0;
   const name = email?.split('@')[0];
   const allTemplates = library?.templates ?? [];
   const curated = presetOrder.map(id => allTemplates.find(template => template.id === id)).filter((template): template is TemplateSummary => !!template);
@@ -215,12 +214,6 @@ export function Home({ email }: { email?: string }) {
 
           <section className="home-panel">
             <h3>Workspace</h3>
-            <div className="home-stats">
-              <div><b>{projects?.length ?? '—'}</b><small>Projects</small></div>
-              <div><b>{projects ? scenes : '—'}</b><small>Scenes</small></div>
-              <div><b>{library?.templates.length ?? '—'}</b><small>Templates</small></div>
-              <div><b>{library?.blocks.length ?? '—'}</b><small>Blocks</small></div>
-            </div>
             <div className="home-links">
               <a href={discoverPath}><CompassIcon size={14} /> Browse Discover</a>
               <a href="#/library"><LayersIcon size={14} /> Open asset library</a>
