@@ -55,6 +55,12 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const file = `${id}/composition.json`;
   const planFile = `${id}/production.json`;
 
+  const load = useCallback((keepFrame: boolean) => {
+    if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
+    else frameAt.current = 0;
+    return api<Detail>(`/api/project?id=${encodeURIComponent(id)}`).then(setDetail, e => setError(e.message));
+  }, [id]);
+
   const openCompare = useCallback(async (n: number, label: string) => {
     try {
       const data = await api<{ raw: any; revision: Revision }>(`/api/revision?file=${encodeURIComponent(file)}&n=${n}`);
@@ -92,12 +98,6 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
       toast((e as Error).message, 'error');
     }
   }, [detail, load, setNote, toast]);
-
-  const load = useCallback((keepFrame: boolean) => {
-    if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
-    else frameAt.current = 0;
-    return api<Detail>(`/api/project?id=${encodeURIComponent(id)}`).then(setDetail, e => setError(e.message));
-  }, [id]);
 
   useEffect(() => {
     setDetail(null);
