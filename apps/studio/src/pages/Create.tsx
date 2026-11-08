@@ -820,7 +820,9 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
               <div className="create-themes">
                 {[
                   { id: '', name: 'Auto', desc: 'Designed from brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
-                  { id: 'midnight', name: 'Midnight', desc: 'Tech & Modern B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
+                  { id: 'electric', name: 'Electric', desc: 'Iris & Cyan Kinetic', colors: ['#08090e', '#6366f1', '#06b6d4'] },
+                  { id: 'aurora', name: 'Aurora', desc: 'Space Plum & Mint', colors: ['#0d0914', '#a855f7', '#10b981'] },
+                  { id: 'midnight', name: 'Midnight', desc: 'Tech & Modern B2B', colors: ['#0b1020', '#22d3ee', '#a78bfa'] },
                   { id: 'neon', name: 'Neon', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
                   { id: 'espresso', name: 'Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
                   { id: 'paper', name: 'Paper', desc: 'Editorial Minimal', colors: ['#f8f6f0', '#2563eb', '#18181b'] },

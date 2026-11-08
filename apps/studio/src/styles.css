@@ -28,38 +28,41 @@
   --line-height-base: 22px;
   --line-height-xl: 38px;
 
-  /* Color Palette - Charcoal Dark (Default) */
+  /* Color Palette - Electric Iris & Cyan (High-Engagement Creative Studio) */
 
-  --bg: #0b0d12;
-  --surface: #11151d;
-  --surface-2: #191f2b;
-  --surface-3: #202737;
-  --hover: #1c2330;
-  --border: #272e3a;
-  --border-strong: #3a4455;
-  --text: #f5f6fa;
-  --muted: #929baa;
-  --faint: #8791a1;
-  --inverse: #0b0d12;
-  --stage: #05070b;
-  --primary: #f4f4f5;           /* the main action is the ink colour, not an accent */
-  --on-primary: #0b0d12;
-  --primary-hover: #ffffff;
+  --bg: #08090e;
+  --surface: #0f121d;
+  --surface-2: #161b2b;
+  --surface-3: #1e253c;
+  --hover: #1c2238;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(129, 140, 248, 0.32);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --inverse: #08090e;
+  --stage: #040508;
+  --primary: #6366f1;
+  --on-primary: #ffffff;
+  --primary-hover: #4f46e5;
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --primary-gradient-hover: linear-gradient(135deg, #7174ff 0%, #5d55f9 100%);
 
   /* Focus & Accents */
-  --focus-ring: rgba(70, 147, 241, 0.55);
+  --focus-ring: rgba(99, 102, 241, 0.55);
 
-  --accent: #4693f1;
-  --accent-2: #70adfb;
-  --accent-soft: rgba(70, 147, 241, 0.14);
-  --indigo: var(--accent);
-  --blue: var(--accent);
-  --green: #36b98a;
-  --red: #e56c74;
-  --amber: #e7ad55;
+  --accent: #6366f1;
+  --accent-2: #818cf8;
+  --accent-cyan: #06b6d4;
+  --accent-soft: rgba(99, 102, 241, 0.16);
+  --indigo: #6366f1;
+  --blue: #06b6d4;
+  --green: #10b981;
+  --red: #f43f5e;
+  --amber: #f59e0b;
 
-  --brand-gradient: var(--accent);
-  --brand-glow: transparent;
+  --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+  --brand-glow: 0 0 24px rgba(99, 102, 241, 0.35);
 
   /* Spacing Scale */
   --space-1: 8px;
@@ -451,22 +454,33 @@ h3 { font-size: 15px; }
 .btn.lg { height: 44px; padding: 0 22px; font-size: 15px; border-radius: var(--radius-md); }
 
 .btn.primary {
-  background: var(--primary);
+  background: var(--primary-gradient, var(--primary));
   color: var(--on-primary);
   font-weight: 600;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 14px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .btn.primary:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-gradient-hover, var(--primary-hover));
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+.btn.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 6px rgba(99, 102, 241, 0.3);
 }
 
 .btn.secondary {
   background: var(--surface-2);
   color: var(--text);
-  border-color: transparent;
+  border: 1px solid var(--border);
+  transition: all var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .btn.secondary:hover:not(:disabled) {
   background: var(--surface-3);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
 }
 
 .btn.ghost {
@@ -2168,7 +2182,11 @@ details[open] summary { margin-bottom: 16px; }
   transition: color var(--motion-duration-instant), background var(--motion-duration-instant);
 }
 .segmented button:hover { color: var(--text); background: var(--hover); }
-.segmented button.on { color: var(--text); background: var(--surface-3); }
+.segmented button.on {
+  color: #ffffff;
+  background: var(--surface-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(129, 140, 248, 0.3);
+}
 .seg-count {
   margin-left: 6px;
   font-family: var(--font-mono);
@@ -2189,9 +2207,13 @@ details[open] summary { margin-bottom: 16px; }
   border-radius: 12px;
   background: var(--surface);
   overflow: hidden;
-  transition: border-color var(--motion-duration-fast), transform var(--motion-duration-fast);
+  transition: border-color var(--motion-duration-fast), transform var(--motion-duration-fast), box-shadow var(--motion-duration-fast);
 }
-.project-tile:hover { border-color: var(--border-strong); }
+.project-tile:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(99, 102, 241, 0.12);
+  transform: translateY(-2px);
+}
 .project-thumb {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -2526,7 +2548,12 @@ details[open] summary { margin-bottom: 16px; }
   transition: color var(--motion-duration-instant), border-color var(--motion-duration-instant), background var(--motion-duration-instant);
 }
 .chip-toggle:hover { color: var(--text); border-color: var(--border-strong); }
-.chip-toggle.on { color: var(--text); border-color: var(--text); background: transparent; }
+.chip-toggle.on {
+  color: var(--accent-2);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+}
 .create-foot {
   display: flex;
   align-items: center;
