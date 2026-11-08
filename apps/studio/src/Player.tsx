@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallba
 import { type Detail } from './api';
 import { TimelineScrubber } from './TimelineScrubber';
 import { Badge, Button, SparklesIcon, SlidersIcon } from './ui';
+import { CanvasDirectOverlay } from './CanvasDirectOverlay';
 
 type LivePlayer = {
   readonly frame: number;
@@ -30,6 +31,9 @@ export type PlayerViewProps = {
   onCloseCompare?: () => void;
   onRestoreCompare?: (n: number) => void;
   onFrame?: (frame: number) => void;
+  selectedLayerPath?: string | null;
+  onSelectLayerPath?: (path: string | null) => void;
+  onSaveLayerText?: (path: string, content: string, variableName?: string) => Promise<void>;
 };
 
 export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function PlayerView(
@@ -42,6 +46,9 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
     onCloseCompare,
     onRestoreCompare,
     onFrame,
+    selectedLayerPath = null,
+    onSelectLayerPath,
+    onSaveLayerText,
   },
   ref
 ) {
@@ -499,7 +506,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
               </div>
             </div>
 
-            {/* Bottom Caption & Audio Bar Safe Area (18%) */}
+            {/* Feed Overlay Margin */}
             <div
               style={{
                 height: '18%',
@@ -518,6 +525,18 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
               Feed Overlay Margin (Account / Caption / Music Tag)
             </div>
           </div>
+        ) : null}
+
+        {/* Direct Canvas Text Selection & Inline Editing Overlay */}
+        {!compareTarget ? (
+          <CanvasDirectOverlay
+            detail={detail}
+            currentFrame={frame}
+            selectedPath={selectedLayerPath ?? null}
+            onSelectPath={onSelectLayerPath ?? (() => {})}
+            onSaveText={onSaveLayerText ?? (async () => {})}
+            disabled={playing}
+          />
         ) : null}
 
         {error ? <div className="notice error" style={{ margin: 16 }}>{error}</div> : null}

@@ -47,6 +47,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [aiRevert, setAiRevert] = useState<{ n: number; label: string } | null>(null);
   const [exportIntent, setExportIntent] = useState<{ kind: 'review' | 'render'; nonce: number } | null>(null);
   const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
+  const [selectedTextPath, setSelectedTextPath] = useState<string | null>(null);
   const [currentFrame, setCurrentFrame] = useState(0);
   const frameAt = useRef(0);
   const player = useRef<PlayerHandle>(null);
@@ -63,6 +64,22 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
       toast((e as Error).message, 'error');
     }
   }, [file, toast]);
+
+  const saveDirectText = useCallback(async (path: string, content: string, variableName?: string) => {
+    if (!detail) return;
+    try {
+      if (detail.mode === 'template' && variableName) {
+        await api('/api/variables', { id: detail.id, values: { [variableName]: content } });
+      } else {
+        await api('/api/text', { id: detail.id, path, content });
+      }
+      setNote('Text updated');
+      toast('Text updated on canvas', 'success');
+      await load(true);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }, [detail, load, setNote, toast]);
 
   const load = useCallback((keepFrame: boolean) => {
     if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
@@ -210,6 +227,9 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
             frameAt.current = f;
             setCurrentFrame(f);
           }}
+          selectedLayerPath={selectedTextPath}
+          onSelectLayerPath={setSelectedTextPath}
+          onSaveLayerText={saveDirectText}
         />
 
         <div className="scene-focus">
@@ -283,7 +303,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ) : tab === 'export' ? (
             <Export {...props} intent={exportIntent} onIntentDone={() => setExportIntent(null)} />
           ) : (
-            <Edit {...props} />
+            <Edit {...props} selectedTextPath={selectedTextPath} onSelectTextPath={setSelectedTextPath} />
           )}
         </div>
       </div>
@@ -322,7 +342,17 @@ function TitleInput({ detail, save }: { detail: Detail; save: (name: string) => 
   );
 }
 
-function Edit({ detail, save, reload, setNote }: PaneProps) {
+function Edit({
+  detail,
+  save,
+  reload,
+  setNote,
+  selectedTextPath,
+  onSelectTextPath,
+}: PaneProps & {
+  selectedTextPath?: string | null;
+  onSelectTextPath?: (path: string | null) => void;
+}) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -413,16 +443,24 @@ function Edit({ detail, save, reload, setNote }: PaneProps) {
           <p className="sub">No editable text slots in this video. You can ask AI to refine the scene, or add new scenes from Style.</p>
         )
       ) : detail.texts.length ? (
-        detail.texts.map((t: TextLayer) => (
-          <Field key={t.path} label={`${t.scene} · ${slotName(t.scene, t.id)}`}>
-            <textarea
-              className="input"
-              style={{ minHeight: t.content.length > 60 ? 90 : 44 }}
-              value={texts[t.path] ?? ''}
-              onChange={e => setTexts({ ...texts, [t.path]: e.target.value })}
-            />
-          </Field>
-        ))
+        detail.texts.map((t: TextLayer) => {
+          const isSelected = selectedTextPath === t.path;
+          return (
+            <Field key={t.path} label={`${t.scene} · ${slotName(t.scene, t.id)}`}>
+              <textarea
+                className="input"
+                style={{
+                  minHeight: t.content.length > 60 ? 90 : 44,
+                  borderColor: isSelected ? 'var(--accent)' : undefined,
+                  boxShadow: isSelected ? '0 0 10px rgba(70, 147, 241, 0.35)' : undefined,
+                }}
+                value={texts[t.path] ?? ''}
+                onFocus={() => onSelectTextPath?.(t.path)}
+                onChange={e => setTexts({ ...texts, [t.path]: e.target.value })}
+              />
+            </Field>
+          );
+        })
       ) : (
         <p className="sub">No text found in this video.</p>
       )}
