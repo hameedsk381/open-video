@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { slotName } from '../slotName';
-import { api, cleanUserStatus, dur, runJob, type Block, type Detail, type Job, type Library, type Revision, type Scene, type TextLayer, type Variable } from '../api';
+import { api, cleanUserStatus, dur, runJob, type Block, type CompileProductionResult, type Detail, type Job, type Library, type ProductionState, type Revision, type SaveProductionResult, type Scene, type TextLayer, type Variable } from '../api';
 import { composeNotesKey } from '../composeReport';
-import { PlayerView, type PlayerHandle } from '../Player';
+import { PlayerView, type CompareTarget, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
 import {
   ArrowLeftIcon,
@@ -16,14 +16,18 @@ import {
   LayersIcon,
   Notice,
   PaletteIcon,
+  PlusIcon,
   ShieldIcon,
+  SlidersIcon,
   SparklesIcon,
   Spinner,
+  TypeIcon,
   useUi,
 } from '../ui';
 
 const tabs = [
   ['edit', 'Content', FilmIcon] as const,
+  ['script', 'Script & Beats', TypeIcon] as const,
   ['ai', 'AI Director', SparklesIcon] as const,
   ['look', 'Style & Themes', PaletteIcon] as const,
   ['history', 'Revisions', ClockIcon] as const,
@@ -42,11 +46,23 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [aiDraft, setAiDraft] = useState('');
   const [aiRevert, setAiRevert] = useState<{ n: number; label: string } | null>(null);
   const [exportIntent, setExportIntent] = useState<{ kind: 'review' | 'render'; nonce: number } | null>(null);
+  const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
+  const [currentFrame, setCurrentFrame] = useState(0);
   const frameAt = useRef(0);
   const player = useRef<PlayerHandle>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const file = `${id}/composition.json`;
   const planFile = `${id}/production.json`;
+
+  const openCompare = useCallback(async (n: number, label: string) => {
+    try {
+      const data = await api<{ raw: any; revision: Revision }>(`/api/revision?file=${encodeURIComponent(file)}&n=${n}`);
+      setCompareTarget({ n, label, raw: data.raw });
+      toast(`Comparing version #${n} with live draft`, 'info');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }, [file, toast]);
 
   const load = useCallback((keepFrame: boolean) => {
     if (keepFrame) frameAt.current = player.current?.frame() ?? 0;
@@ -182,6 +198,18 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           startFrame={frameAt.current}
           selectedSceneId={selectedSceneId}
           onSelectScene={setSelectedSceneId}
+          compareTarget={compareTarget}
+          onCloseCompare={() => setCompareTarget(null)}
+          onRestoreCompare={async n => {
+            await api('/api/restore', { file, n });
+            setNote(`Restored version #${n}`);
+            setCompareTarget(null);
+            await load(true);
+          }}
+          onFrame={f => {
+            frameAt.current = f;
+            setCurrentFrame(f);
+          }}
         />
 
         <div className="scene-focus">
@@ -230,7 +258,13 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ))}
         </div>
         <div className="pane">
-          {tab === 'ai' ? (
+          {tab === 'script' ? (
+            <ScriptTab
+              {...props}
+              currentFrame={currentFrame}
+              onSeek={f => player.current?.seek(f)}
+            />
+          ) : tab === 'ai' ? (
             <AskAi
               {...props}
               draft={aiDraft}
@@ -240,11 +274,12 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
               onClearScene={() => setSelectedSceneId(null)}
               revert={aiRevert}
               onApplied={setAiRevert}
+              onCompare={openCompare}
             />
           ) : tab === 'look' ? (
             <Look {...props} />
           ) : tab === 'history' ? (
-            <History {...props} />
+            <History {...props} onCompare={openCompare} />
           ) : tab === 'export' ? (
             <Export {...props} intent={exportIntent} onIntentDone={() => setExportIntent(null)} />
           ) : (
@@ -401,6 +436,266 @@ function Edit({ detail, save, reload, setNote }: PaneProps) {
   );
 }
 
+type ScriptTabProps = PaneProps & {
+  currentFrame: number;
+  onSeek: (frame: number) => void;
+};
+
+function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabProps) {
+  const { toast } = useUi();
+  const [planState, setPlanState] = useState<ProductionState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [compiling, setCompiling] = useState(false);
+  const [beats, setBeats] = useState<any[]>([]);
+
+  const loadPlan = useCallback(async () => {
+    try {
+      setLoading(true);
+      const state = await api<ProductionState>(`/api/production?id=${encodeURIComponent(detail.id)}`);
+      setPlanState(state);
+      const scriptBeats = (state.production as any)?.script?.beats ?? [];
+      setBeats(scriptBeats);
+      setDirty(false);
+    } catch {
+      setPlanState(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [detail.id]);
+
+  useEffect(() => {
+    void loadPlan();
+  }, [loadPlan]);
+
+  const initPlan = async () => {
+    try {
+      setLoading(true);
+      const result = await api<SaveProductionResult>('/api/production/init', { id: detail.id });
+      setPlanState({
+        production: result.production,
+        valid: true,
+        issues: result.issues,
+        summary: result.summary,
+        modified: result.modified,
+        base: result.base,
+      });
+      setBeats((result.production as any)?.script?.beats ?? []);
+      toast('Narrative script created from timeline scenes', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateBeat = (index: number, key: string, value: any) => {
+    setBeats(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+    setDirty(true);
+  };
+
+  const saveScript = async () => {
+    if (!planState?.production) return;
+    setSaving(true);
+    try {
+      const currentPlan = structuredClone(planState.production) as any;
+      currentPlan.script = currentPlan.script ?? {};
+      currentPlan.script.beats = beats;
+      const res = await api<SaveProductionResult>('/api/production', {
+        id: detail.id,
+        production: currentPlan,
+        baseModified: planState.modified,
+      });
+      setPlanState({
+        production: res.production,
+        valid: true,
+        issues: res.issues,
+        summary: res.summary,
+        modified: res.modified,
+        base: res.base,
+      });
+      setDirty(false);
+      setNote('Script saved');
+      toast('Script changes saved', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const compileToTimeline = async () => {
+    setCompiling(true);
+    try {
+      if (dirty && planState?.production) {
+        const currentPlan = structuredClone(planState.production) as any;
+        currentPlan.script = currentPlan.script ?? {};
+        currentPlan.script.beats = beats;
+        await api('/api/production', { id: detail.id, production: currentPlan, baseModified: planState.modified });
+      }
+      const report = await api<CompileProductionResult>('/api/production/compile', { id: detail.id, apply: true });
+      toast(`Video compiled: ${report.changes.length ? report.changes.join(', ') : 'Timeline synced'}`, 'success');
+      setNote('Timeline updated from script');
+      setDirty(false);
+      await reload(true);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setCompiling(false);
+    }
+  };
+
+  const addBeat = () => {
+    const n = beats.length + 1;
+    const newBeat = {
+      id: `beat-${n}`,
+      name: `Scene ${n} Beat`,
+      onScreen: `Key message for scene ${n}`,
+      speech: '',
+    };
+    setBeats(prev => [...prev, newBeat]);
+    setDirty(true);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '20px 0' }}>
+        <Spinner size={20} />
+        <p className="sub" style={{ marginTop: 8 }}>Loading narrative script…</p>
+      </div>
+    );
+  }
+
+  if (!planState?.production || !beats.length) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h2>Script & Narrative Beats</h2>
+        <p className="sub">
+          Link spoken voiceover and on-screen copy directly to your video scenes. Editing lines updates and synchronizes with your timeline.
+        </p>
+        <Notice tone="neutral" title="No script linked yet">
+          <p style={{ margin: '4px 0 12px' }}>
+            Initialize a narrative production script from your current scenes. Each scene becomes an editable narrative beat linked to playback.
+          </p>
+          <Button variant="primary" icon={<TypeIcon size={14} />} onClick={initPlan}>
+            Start Script from Timeline
+          </Button>
+        </Notice>
+      </div>
+    );
+  }
+
+  const scenes = detail.scenes ?? [];
+  const fps = detail.fps || 30;
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <h2>Script & Narrative Beats</h2>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button size="sm" variant={dirty ? 'primary' : 'secondary'} loading={saving} disabled={!dirty} onClick={saveScript}>
+            Save
+          </Button>
+          <Button size="sm" variant="primary" loading={compiling} icon={<SparklesIcon size={13} />} onClick={compileToTimeline} title="Compile script into active video timeline">
+            Sync to Video
+          </Button>
+        </div>
+      </div>
+      <p className="sub">
+        Click any beat to jump the video playhead. The active beat glows as the video scrubs or plays.
+      </p>
+
+      {dirty ? (
+        <Notice tone="warn" title="Unsynced script edits">
+          <p style={{ margin: 0 }}>Click <b>Sync to Video</b> to compile your edited lines into the active video layers.</p>
+        </Notice>
+      ) : null}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+        {beats.map((beat, idx) => {
+          const matchingScene = scenes[idx];
+          const startF = matchingScene ? matchingScene.startFrame : idx * 90;
+          const durationF = matchingScene ? matchingScene.durationFrames : 90;
+          const endF = startF + durationF;
+          const isActive = currentFrame >= startF && currentFrame < endF;
+
+          return (
+            <div
+              key={beat.id || idx}
+              style={{
+                border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
+                background: isActive ? 'color-mix(in srgb, var(--accent) 9%, var(--surface))' : 'var(--surface)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '12px 14px',
+                transition: 'border-color 0.15s ease, background 0.15s ease',
+                boxShadow: isActive ? '0 0 14px rgba(70, 147, 241, 0.15)' : 'none',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  marginBottom: 8,
+                  cursor: 'pointer',
+                }}
+                onClick={() => onSeek(startF)}
+                title="Click to seek player to this beat"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <code style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--surface-2)', padding: '2px 5px', borderRadius: 4 }}>
+                    {beat.id || `beat-${idx + 1}`}
+                  </code>
+                  <b style={{ fontSize: 13, color: isActive ? 'var(--accent)' : 'var(--text)' }}>
+                    {beat.name || `Beat ${idx + 1}`}
+                  </b>
+                  {isActive ? <Badge tone="green" dot>Playing now</Badge> : null}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
+                    {dur(durationF / fps)} · f{startF}–{endF}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Field label="On-Screen Text (Visual)">
+                  <textarea
+                    className="input"
+                    rows={2}
+                    value={beat.onScreen ?? ''}
+                    placeholder="Text the viewer reads on screen…"
+                    onChange={e => updateBeat(idx, 'onScreen', e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Spoken Dialogue / Voiceover">
+                  <input
+                    className="input"
+                    value={beat.speech ?? ''}
+                    placeholder="Spoken narration words…"
+                    onChange={e => updateBeat(idx, 'speech', e.target.value)}
+                  />
+                </Field>
+              </div>
+            </div>
+          );
+        })}
+
+        <Button size="sm" variant="secondary" icon={<PlusIcon size={14} />} onClick={addBeat}>
+          Add Script Beat
+        </Button>
+      </div>
+    </>
+  );
+}
+
 type AskAiProps = PaneProps & {
   draft: string;
   onDraft: (text: string) => void;
@@ -409,9 +704,10 @@ type AskAiProps = PaneProps & {
   onClearScene: () => void;
   revert: { n: number; label: string } | null;
   onApplied: (revision: { n: number; label: string } | null) => void;
+  onCompare: (n: number, label: string) => void;
 };
 
-function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneIndex, onClearScene, revert, onApplied }: AskAiProps) {
+function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneIndex, onClearScene, revert, onApplied, onCompare }: AskAiProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notes, setNotes] = useState<string[]>([]);
@@ -526,7 +822,14 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
             <b>Newest change is live.</b>
             <small>Version #{revert.n} · {revert.label}</small>
           </div>
-          <Button size="sm" loading={reverting} onClick={undo}>Revert to #{revert.n}</Button>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Button size="sm" variant="secondary" icon={<SlidersIcon size={13} />} onClick={() => onCompare(revert.n, revert.label)}>
+              Compare Split
+            </Button>
+            <Button size="sm" loading={reverting} onClick={undo}>
+              Revert to #{revert.n}
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -607,7 +910,9 @@ function Look({ detail, save }: PaneProps) {
   );
 }
 
-function History({ detail, file, planFile, reload, setNote }: PaneProps) {
+function History({ detail, file, planFile, reload, setNote, onCompare }: PaneProps & {
+  onCompare: (n: number, label: string) => void;
+}) {
   const [timeline, setTimeline] = useState<Revision[] | null>(null);
   const [plan, setPlan] = useState<Revision[] | null>(null);
   const [error, setError] = useState('');
@@ -652,9 +957,16 @@ function History({ detail, file, planFile, reload, setNote }: PaneProps) {
       {i === 0 ? (
         <Badge tone="green" dot>Active</Badge>
       ) : (
-        <Button size="sm" onClick={() => void restore(what === 'plan' ? planFile : file, r.n, what)}>
-          Restore
-        </Button>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {what === 'timeline' ? (
+            <Button size="sm" variant="ghost" icon={<SlidersIcon size={12} />} onClick={() => onCompare(r.n, r.label)}>
+              Compare
+            </Button>
+          ) : null}
+          <Button size="sm" onClick={() => void restore(what === 'plan' ? planFile : file, r.n, what)}>
+            Restore
+          </Button>
+        </div>
       )}
     </div>
   ));

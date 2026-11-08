@@ -65,6 +65,14 @@ export function projectRoutes(): Route[] {
       const file = c.url.searchParams.get('file') ?? '', id = await exists(c, file.split('/')[0]);
       c.json(200, { revisions: await c.deps.store.revisions(c.who, id, projectFile(file)) });
     } },
+    { method: 'GET', path: '/api/revision', handle: async c => {
+      const file = c.url.searchParams.get('file') ?? '', id = await exists(c, file.split('/')[0]);
+      const n = Number(c.url.searchParams.get('n'));
+      if (!Number.isFinite(n) || n < 1) return c.json(400, { error: 'Valid revision number n is required' });
+      const rev = await c.deps.store.revisionRaw(c.who, id, n, projectFile(file));
+      if (!rev) return c.json(404, { error: `Revision ${n} not found` });
+      c.json(200, rev);
+    } },
     { method: 'GET', path: '/api/library', handle: async c => {
       const { library } = c.deps;
       c.json(200, { blocks: (await library.listBlocks()).map(({ layers, ...block }) => block), themes: await library.listThemes(), templates: await library.listTemplates(), fonts: fontIds });

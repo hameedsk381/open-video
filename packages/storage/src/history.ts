@@ -130,3 +130,18 @@ export async function restoreRevision(compositionFile: string, n: number): Promi
   await copyFile(join(historyDir(compositionFile), found.file), resolve(compositionFile));
   return saveRevision(compositionFile, { kind: 'restore', label: `Restored revision ${n}`, restoredFrom: n });
 }
+
+/** Reads the raw text and parsed object of revision n. */
+export async function readRevisionRaw(compositionFile: string, n: number): Promise<{ raw: any; revision: Revision } | undefined> {
+  const list = await listRevisions(compositionFile);
+  const found = list.find(revision => revision.n === n);
+  if (!found) return undefined;
+  const text = await readText(join(historyDir(compositionFile), found.file));
+  if (!text) return undefined;
+  try {
+    return { raw: JSON.parse(text), revision: found };
+  } catch {
+    return undefined;
+  }
+}
+

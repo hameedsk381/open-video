@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
-import { ensureBaseline, listRevisions, restoreRevision, saveRevision, type Revision, type RevisionMeta } from './history';
+import { ensureBaseline, listRevisions, readRevisionRaw, restoreRevision, saveRevision, type Revision, type RevisionMeta } from './history';
 
 export * from './history';
 export * from './ai-settings';
@@ -53,6 +53,7 @@ export interface ProjectStore {
   thumb(who: Principal, id: string): Promise<Buffer | undefined>;
   putThumb(who: Principal, id: string, png: Buffer): Promise<void>;
   revisions(who: Principal, id: string, file?: ProjectFile): Promise<Revision[]>;
+  revisionRaw(who: Principal, id: string, n: number, file?: ProjectFile): Promise<{ raw: any; revision: Revision } | undefined>;
   restore(who: Principal, id: string, n: number, file?: ProjectFile): Promise<Revision>;
   /** Bytes this principal's projects take up on disk. */
   usedBytes(who: Principal): Promise<number>;
@@ -212,6 +213,7 @@ export class FsProjectStore implements ProjectStore {
     return walk(this.tenantRoot(who));
   }
   revisions(who: Principal, id: string, file: ProjectFile = 'composition.json') { return listRevisions(this.named(who, id, file)); }
+  revisionRaw(who: Principal, id: string, n: number, file: ProjectFile = 'composition.json') { return readRevisionRaw(this.named(who, id, file), n); }
   restore(who: Principal, id: string, n: number, file: ProjectFile = 'composition.json') { return restoreRevision(this.named(who, id, file), n); }
   async workdir(who: Principal, id: string) { return { dir: this.projectDir(who, id), commit: async () => {} }; }
 }
