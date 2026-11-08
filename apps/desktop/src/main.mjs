@@ -1,13 +1,14 @@
 // MotionRender Studio as a desktop app: a native window around the studio the CLI already serves. The shell owns no video
 // logic. It starts one `ai studio` server for the chosen project folder on a loopback port, loads the built studio from it,
 // and gives the window the two things a browser cannot: the folder's real path, and shutdown that takes the server with it.
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { StudioServer } from './server.mjs';
 import { readSettings, rememberProject, samePath, writeSettings } from './settings.mjs';
 import { toolEnv, toolReport } from './tools.mjs';
+import { cleanTheme, shellPalette, themeChoices } from './theme.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..');
@@ -44,19 +45,23 @@ const state = () => ({
   tools: toolReport(toolsDir),
 });
 
+// The shell's own surfaces follow the studio's theme (light unless the person chose otherwise).
+const palette = () => shellPalette(settings.theme, nativeTheme.shouldUseDarkColors);
+
 const escapeHtml = text => String(text).replace(/[&<>"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[character]));
 
 // A page that says what is happening while the server starts or restarts, drawn in the studio's own colours so the window
-// never flashes white.
+// never flashes a colour the studio does not use.
 function messagePage(title, detail) {
+  const color = palette();
   const html = `<!doctype html><meta charset="utf-8"><title>MotionRender Studio</title>
 <style>
-  html,body{height:100%;margin:0;background:#0b0d10;color:#e7e9ee;font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  html,body{height:100%;margin:0;background:${color.background};color:${color.text};font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
   main{height:100%;display:grid;place-items:center;padding:32px;box-sizing:border-box;text-align:center}
-  .brand{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#8b93a7;margin-bottom:14px}
-  h1{font-size:18px;font-weight:600;margin:0 0 8px}
-  p{max-width:560px;margin:0 auto;color:#9aa2b4;white-space:pre-wrap}
-  .dot{width:7px;height:7px;border-radius:50%;background:#7c6cff;display:inline-block;margin-right:8px;animation:pulse 1.2s ease-in-out infinite}
+  .brand{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:${color.faint};margin-bottom:14px}
+  h1{font-size:18px;font-weight:500;letter-spacing:-.02em;margin:0 0 8px}
+  p{max-width:560px;margin:0 auto;color:${color.muted};white-space:pre-wrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:${color.ink};display:inline-block;margin-right:8px;animation:pulse 1.2s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.25}}
 </style>
 <main><div><div class="brand">MotionRender Studio</div><h1><span class="dot"></span>${escapeHtml(title)}</h1><p>${escapeHtml(detail ?? '')}</p></div></main>`;
@@ -76,7 +81,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 620,
     show: false,
-    backgroundColor: '#0b0d10',
+    backgroundColor: palette().background,
     title: 'MotionRender Studio',
     ...(existsSync(iconPath) ? { icon: iconPath } : {}),
     webPreferences: {
@@ -103,6 +108,8 @@ function createWindow() {
   // The window is the product's name, not whichever project is open.
   window.on('page-title-updated', event => { event.preventDefault(); window.setTitle('MotionRender Studio'); });
 
+  window.webContents.on('did-finish-load', () => void rememberTheme());
+  window.webContents.on('did-navigate-in-page', () => void rememberTheme());
   if (!smoke) window.once('ready-to-show', () => window.show());
   window.on('close', () => {
     if (window.isMinimized()) return;
@@ -111,6 +118,16 @@ function createWindow() {
     writeSettings(settingsFile, settings);
   });
   return window;
+}
+
+// Reads the studio's theme from its page and keeps it, so the next launch (and any page the shell draws itself) matches.
+async function rememberTheme() {
+  if (!win || win.isDestroyed() || !server.origin || !win.webContents.getURL().startsWith(server.origin)) return;
+  try {
+    const stored = await win.webContents.executeJavaScript("localStorage.getItem('ove-theme')");
+    const theme = themeChoices.includes(stored) ? stored : cleanTheme(undefined);
+    if (theme !== settings.theme) { settings.theme = theme; writeSettings(settingsFile, settings); win.setBackgroundColor(palette().background); }
+  } catch { /* the page is going away; the next launch uses what was kept */ }
 }
 
 function go(hash) {
@@ -337,6 +354,6 @@ if (!app.requestSingleInstanceLock()) {
     if (leaving) return;
     event.preventDefault();
     leaving = true;
-    void server.stop().finally(() => app.quit());
+    void rememberTheme().finally(() => server.stop()).finally(() => app.quit());
   });
 }

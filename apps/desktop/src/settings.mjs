@@ -2,6 +2,7 @@
 // where the window sat. Kept in userData/settings.json beside the studio log; a corrupt file falls back to the defaults.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { cleanTheme } from './theme.mjs';
 
 const RECENT_LIMIT = 8;
 
@@ -25,6 +26,8 @@ export function readSettings(file, defaults) {
     recent: recent.filter((item, index) => recent.findIndex(other => samePath(other, item)) === index).slice(0, RECENT_LIMIT),
     bounds,
     maximized: raw.maximized === true,
+    // The studio's theme, as last seen, so the window and its loading page open in the colours the studio will use.
+    theme: cleanTheme(raw.theme),
   };
 }
 

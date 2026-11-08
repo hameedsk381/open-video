@@ -13,6 +13,9 @@ pnpm --filter @ove/desktop smoke   # starts the server inside Electron and check
 - **Projects** live in `Documents/MotionRender Studio` unless you choose another folder (File, Open Project Folder). Recent folders are remembered.
 - **Provider keys** come from a `.env` in the app's user-data folder when the app is opened from the file manager (the shell's environment is
   not inherited). A development run also reads the repository's `.env`. With no key the studio runs on the offline mock.
+- **Look.** The window follows the studio's design (light by default). The surfaces the shell draws itself, the window behind the page and the
+  pages shown while the server starts or stops, use the studio's colours; the theme you chose in the studio is read back from the page and kept in
+  `settings.json`, so the next launch opens in it without a flash of another colour.
 - **Logs** are written to `logs/studio.log` in the user-data folder (File, Open Log Folder).
 - **Packaged builds** carry ffmpeg, ffprobe and Chromium. `pnpm --filter @ove/desktop fetch-tools` puts them in `resources/tools`
   (it reuses the engine's ffmpeg downloads and Playwright's Chromium); that folder and `release/` are ignored by git. `pnpm --filter @ove/desktop build`
