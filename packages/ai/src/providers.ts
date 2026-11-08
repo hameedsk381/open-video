@@ -311,7 +311,7 @@ export class VercelAiProvider implements AiProvider {
   speechEngine: SpeechEngine;
 
   constructor(config: ProviderConfig = {}) {
-    const rawId = (config.provider || process.env.OVE_AI_PROVIDER || 'freellmapi').toLowerCase();
+    const rawId = (config.provider || process.env.OVE_AI_PROVIDER || defaultProviderId()).toLowerCase();
     this.id = rawId;
 
     if (rawId === 'anthropic' || rawId === 'claude') {
@@ -662,7 +662,7 @@ export class MockProvider implements AiProvider {
         animations: [{ property: 'y', keyframes: [{ frame: 0, value: height * 0.35 }, { frame: duration, value: height * 0.38, easing: 'drift' }] }] },
       { id: 'title', type: 'text', content: fields.length ? fields.map(field => `{{${field.name}}}`).join(' · ') : 'Mock video', x: width / 2, y: height * 0.4, fontFamily: 'Inter', fontSize: Math.round(width * 0.09), fontWeight: 800, color: '#f5f7fb', textAlign: 'center', maxWidth: width * 0.85, letterSpacing: -2, split: { by: 'words', stagger: 4, preset: 'rise' },
         animations: [{ property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 18, value: 1, easing: 'land' }] }] },
-      { id: 'sub', type: 'text', content: 'Set FREELLMAPI_API_KEY for real output.', x: width / 2, y: height * 0.74, fontFamily: 'Inter', fontSize: Math.round(width * 0.03), color: '#97a0b6', textAlign: 'center', maxWidth: width * 0.8 },
+      { id: 'sub', type: 'text', content: 'Set GROQ_API_KEY for real output.', x: width / 2, y: height * 0.74, fontFamily: 'Inter', fontSize: Math.round(width * 0.03), color: '#97a0b6', textAlign: 'center', maxWidth: width * 0.8 },
     ];
     const camera = (frames: number) => ({ x: width / 2, y: height / 2, zoom: 1, animations: [{ property: 'zoom', keyframes: [{ frame: 0, value: 1 }, { frame: frames, value: 1.06, easing: 'drift' }] }] });
     const glow = layers[0], title = { ...layers[1], split: { by: 'words', stagger: 4, preset: 'rise' } }, sub = layers[2];
@@ -678,6 +678,16 @@ export class MockProvider implements AiProvider {
   async image(): Promise<ImageResult> { return { data: onePixelPng, extension: 'png' }; }
 }
 
+/**
+ * Groq is the default provider. A deployment that only has a FreeLLMAPI key (and no Groq key) keeps working: with no provider named, the
+ * one that has a credential is used, rather than a default that would fail at the first request.
+ */
+export function defaultProviderId(): 'groq' | 'freellmapi' {
+  const groq = Boolean(process.env.GROQ_API_KEY || process.env.OVE_AI_API_KEY);
+  const gateway = Boolean(process.env.FREELLMAPI_API_KEY || process.env.FREELLMAPI_KEY || process.env.OPENAI_API_KEY);
+  return !groq && gateway ? 'freellmapi' : 'groq';
+}
+
 export function createProvider(config: ProviderConfig = {}): AiProvider {
   const explicit = (config.provider || process.env.OVE_AI_PROVIDER || '').trim();
   let id = explicit.toLowerCase();
@@ -691,10 +701,9 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
       if (/^gemini|^google\//i.test(config.model)) id = 'gemini';
       else if (/^claude|^anthropic\//i.test(config.model)) id = 'anthropic';
       else if (/^gpt-|^o1|^o3|^openai\//i.test(config.model)) id = 'openai';
-      else if (/^llama|^qwen|^mixtral/i.test(config.model) && !process.env.FREELLMAPI_BASE_URL) id = 'groq';
-      else id = 'freellmapi';
+      else id = defaultProviderId();
     } else {
-      id = 'freellmapi';
+      id = defaultProviderId();
     }
   }
   if (id === 'mock') return new MockProvider();
@@ -706,8 +715,8 @@ export function createProvider(config: ProviderConfig = {}): AiProvider {
   const configured = networkProvider.speechEngine === 'native' ? networkProvider : attachEdgeAudio(networkProvider);
   // Nothing configured and nothing but the gateway default to choose: a request here would carry no credential, so
   // say so and hand back the offline provider rather than failing at the endpoint minutes into a render.
-  if (id === 'freellmapi' && !explicit && !configured.apiKey) {
-    console.warn('No AI provider is configured (set FREELLMAPI_API_KEY, OPENAI_API_KEY or --provider): using the offline mock, which writes placeholder videos and makes no requests.');
+  if ((id === 'groq' || id === 'freellmapi') && !explicit && !configured.apiKey) {
+    console.warn('No AI provider is configured (set GROQ_API_KEY, or FREELLMAPI_API_KEY, or pass --provider): using the offline mock, which writes placeholder videos and makes no requests.');
     return new MockProvider();
   }
   return configured;

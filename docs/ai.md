@@ -20,14 +20,16 @@ no `--provider`, the commands run on the offline mock and make no network reques
 brief somewhere unauthenticated.
 
 ```sh
-# The default gateway: OpenAI-compatible, with task-aware model routing. Its key is yours to supply.
-export FREELLMAPI_API_KEY=...            # or OPENAI_API_KEY / OVE_AI_API_KEY
-export FREELLMAPI_BASE_URL=...           # optional; a different gateway for the same protocol
-export OVE_AI_MODEL=auto                 # auto routes each task to its preferred gateway model
+# The default provider is Groq. Its key is yours to supply.
+export GROQ_API_KEY=gsk_...              # the default; also --provider groq
 
-# Or a first-party vendor key
+# Or the FreeLLMAPI gateway: OpenAI-compatible, with task-aware model routing. It is used when only its key is set.
+export FREELLMAPI_API_KEY=...            # or OPENAI_API_KEY / OVE_AI_API_KEY; --provider freellmapi forces it
+export FREELLMAPI_BASE_URL=...           # optional; a different gateway for the same protocol
+export OVE_AI_MODEL=auto                 # on the gateway, auto routes each task to its preferred model
+
+# Or another first-party vendor key
 export ANTHROPIC_API_KEY=sk-ant-...      # --provider anthropic (or claude)
-export GROQ_API_KEY=gsk_...              # --provider groq
 export NVIDIA_API_KEY=nvapi-...          # --provider nvidia (or nim)
 export OPENAI_API_KEY=sk-...             # --provider openai
 export GEMINI_API_KEY=...                # --provider google (or gemini)
@@ -45,9 +47,9 @@ ove ai compose demo --provider mock --brief "a test"
 
 | Provider | chat | images | speech | word timings |
 |---|---|---|---|---|
-| `freellmapi` (default) | yes (`auto` routes per task) | yes | yes (Edge; see engines) | yes |
+| `groq` (default) | yes (`openai/gpt-oss-120b`) | — | yes (Edge; native TTS available) | yes (`whisper-large-v3-turbo`) |
+| `freellmapi` | yes (`auto` routes per task) | yes | yes (Edge; see engines) | yes |
 | `openai` | yes | yes | yes (Edge; native TTS available) | yes (`whisper-1`) |
-| `groq` | yes (`openai/gpt-oss-120b`) | — | yes (Edge; native TTS available) | yes (`whisper-large-v3-turbo`) |
 | `anthropic` / `claude` | yes | — | yes (Edge TTS only) | — |
 | `nvidia` / `nim` | yes | — | yes (Edge TTS only) | — |
 | `google` / `gemini` | yes | — | yes (Edge TTS only) | — |

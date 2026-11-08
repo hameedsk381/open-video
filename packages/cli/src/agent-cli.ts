@@ -99,7 +99,7 @@ Options:
   --no-render        Generate and compile React code only; skip MP4 rendering
   --no-plan          skip the planner and always run the React agent loop
   --no-direction     skip the creative-direction stage (one fewer model call)
-  --provider <name>  AI provider: freellmapi, mock (default: auto-detected)
+  --provider <name>  AI provider: groq, freellmapi, openai, anthropic, google, mock (default: groq)
   --model <id>       Model ID override
 
 Examples:

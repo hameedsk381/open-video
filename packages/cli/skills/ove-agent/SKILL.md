@@ -33,7 +33,7 @@ ove agent "<brief>" [dir] [options]
 | `--no-render` | Generate and compile React code only; skip MP4 rendering | Off |
 | `--no-plan` | Skip the route planner and always run the React agent loop | Off |
 | `--no-direction` | Skip the creative-direction stage (one fewer model call) | Off |
-| `--provider <name>` | AI provider: `freellmapi`, `mock` | Auto-detected |
+| `--provider <name>` | AI provider: `groq`, `freellmapi`, `openai`, `anthropic`, `google`, `mock` | `groq` (the gateway if only its key is set) |
 | `--model <id>` | Model ID override (passed to the selected provider) | Provider default |
 
 ## Brand Pack API

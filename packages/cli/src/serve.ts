@@ -1,7 +1,7 @@
 // Hosted use. `ove serve` is the API behind a login, `ove job-worker` runs the jobs it queues. Both read their settings from the environment
 // (containers pass settings that way) and print what they are doing. The same published package serves both; only the command differs.
 import { resolve } from 'node:path';
-import { createProvider, FREELLMAPI_DEFAULT_BASE_URL, type AiProvider } from '@ove/ai';
+import { createProvider, providerCapabilities, type AiProvider } from '@ove/ai';
 import { createAccounts, createApp, createQuotas, consoleMailer, PgUserStore, type Limits } from '@ove/api';
 import { RedisQueue, createJobRunner, redisConnection, type JobClass } from '@ove/jobs';
 import { FsProjectStore } from '@ove/storage';
@@ -28,10 +28,13 @@ export async function runServe(env: NodeJS.ProcessEnv = process.env): Promise<vo
   for (const key of Object.keys(limits) as (keyof Limits)[]) if (limits[key] === undefined) delete limits[key];
   const quotas = createQuotas({ users, limits, storageUsed: who => store.usedBytes(who) });
   const publicHost = new URL(publicOrigin).host.replace(/:\d+$/, '');
+  // What the studio's settings page shows: the provider the workers will use (the same environment), not a fixed claim about one gateway.
+  let described: AiProvider | undefined;
+  const describedProvider = () => described ??= createProvider({ provider: env.AI_PROVIDER, model: env.AI_MODEL });
   const app = createApp({
     mode: 'hosted', store, queue, validate: runner.validate, auth, quotas, library: studioLibrary, player: studioPlayer, app: studioApp,
     makeThumbnail: async () => { throw new Error('Thumbnails are drawn by the render workers'); },
-    providerState: () => ({ provider: { id: 'freellmapi', model: env.FREELLMAPI_MODEL ?? env.AI_MODEL ?? 'auto', baseUrl: env.FREELLMAPI_BASE_URL ?? FREELLMAPI_DEFAULT_BASE_URL, capabilities: { chat: true, speech: true, transcription: true, image: true } }, error: null }),
+    providerState: () => { const p = describedProvider(); return { provider: { id: p.id, model: p.model, baseUrl: p.baseUrl, capabilities: providerCapabilities(p) }, error: null }; },
     // 127.0.0.1 and localhost are listed so a container health check can ask; they cannot be reached by a web page on another site.
     allowHosts: [publicHost, '127.0.0.1', 'localhost'], publicOrigin,
   });

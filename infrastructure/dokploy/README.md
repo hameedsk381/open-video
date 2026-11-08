@@ -30,9 +30,11 @@ PUBLIC_ORIGIN=https://video.yourdomain.com
 # AI Provider Configuration
 GROQ_API_KEY=your_groq_key_here
 # Or the OpenAI-compatible gateway:
-FREELLMAPI_API_KEY=your_freellmapi_key_here
-FREELLMAPI_BASE_URL=https://ai.hamathopc.in/v1
-FREELLMAPI_MODEL=auto
+GROQ_API_KEY=your_groq_key_here          # the default provider
+# Or the FreeLLMAPI gateway instead, if you have no Groq key:
+# FREELLMAPI_API_KEY=your_freellmapi_key_here
+# FREELLMAPI_BASE_URL=https://ai.hamathopc.in/v1
+# FREELLMAPI_MODEL=auto
 
 # Narration speech: empty = the free Edge TTS engine; native = the provider's own audio endpoint
 OVE_AI_TTS_PROVIDER=

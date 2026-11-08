@@ -41,8 +41,8 @@ const usage = `Usage:
       [--duration 18] [--fps 30] [render options]
   ove ai studio [--port 3100] [--out ai-videos]   open a local page for the AI commands in a browser
 
-Provider options (all commands): --provider freellmapi|mock, --model name, --base-url URL, --speech-engine edge|native
-Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, FREELLMAPI_API_KEY, FREELLMAPI_BASE_URL, OVE_AI_TTS_PROVIDER (edge by default).
+Provider options (all commands): --provider groq|freellmapi|openai|anthropic|google|openrouter|mock (default: groq), --model name, --base-url URL, --speech-engine edge|native
+Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, GROQ_API_KEY, FREELLMAPI_API_KEY, FREELLMAPI_BASE_URL, OVE_AI_TTS_PROVIDER (edge by default).
 Render options: --crf, --bitrate, --audio-bitrate, --scale, --loudness, --concurrency, --preset, --codec, --format`;
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -467,12 +467,13 @@ function doctorCommand(argv: string[]): number {
   console.log(`Speech       ${capabilities.speech ? `${provider.speechEngine ?? 'edge'} engine` : 'none'}`);
   console.log(`Capabilities ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`);
   console.log(`Credential   ${provider.apiKey ? 'configured' : 'NOT SET'}`);
+  if (provider.id === 'groq' && !provider.apiKey) console.log('  Groq needs GROQ_API_KEY (or OVE_AI_API_KEY); requests fail without it.');
   if (provider.id === 'freellmapi' && !provider.apiKey) console.log('  The gateway needs FREELLMAPI_API_KEY (or OPENAI_API_KEY / OVE_AI_API_KEY); requests fail without it.');
   console.log(`\n${describeProvider(provider)}`);
   if (!capabilities.speech) console.log('  Narration needs speech: only an offline mock runs without it — set a key, or pass --provider.');
   if (capabilities.speech && provider.speechEngine === 'native') console.log('  Speech comes from the provider endpoint (--speech-engine native / OVE_AI_TTS_PROVIDER=native); captions are transcribed from it.');
-  if (!capabilities.image) console.log('  Images need a provider with image; FreeLLMAPI provides native image generation.');
-  console.log('\nSet FREELLMAPI_API_KEY in .env, or pass --provider.');
+  if (!capabilities.image) console.log('  Images need a provider with image generation; the Groq adapter here has none, so use FreeLLMAPI, OpenAI or another (--provider), or supply pictures with --asset.');
+  console.log('\nSet GROQ_API_KEY in .env (the default provider), or pass --provider.');
   return 0;
 }
 
