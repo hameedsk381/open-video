@@ -4,9 +4,9 @@
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
-import { ensureBaseline, listRevisions, restoreRevision, saveRevision, type Revision, type RevisionMeta } from '@ove/ai';
+import { ensureBaseline, listRevisions, restoreRevision, saveRevision, type Revision, type RevisionMeta } from './history';
 
-export type { Revision, RevisionMeta };
+export * from './history';
 export * from './ai-settings';
 /** Who is asking. Local use has one fixed principal; a hosted API makes one per signed-in user. */
 export type Principal = { userId: string; tenantId: string };

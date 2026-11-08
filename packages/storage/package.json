@@ -1,1 +1,1 @@
-{"name":"@ove/storage","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@ove/ai":"workspace:*"}}
+{"name":"@ove/storage","version":"0.1.0","type":"module","exports":"./src/index.ts"}

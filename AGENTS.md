@@ -66,19 +66,30 @@ Add to `.cursor/mcp.json`:
 | `motionrender_script` | `file`, `script?`, `output?`, `format?` | Reads the video's content script (spoken lines, on-screen copy, figures and their sources) or, when `script` is given, validates and imports a replacement. Claims must cite quotes that appear in the cited source. |
 | `motionrender_production_validate` | `file` | Validates a `production.json` manifest: brief, script, cast, locations, shot list, and every asset reference, reporting all broken references at once. |
 | `motionrender_production_compile` | `file`, `output?` | Compiles a `production.json` shot list into a renderable `composition.json`: shots become scenes, approved takes become footage, planned shots become text cards from their on-screen copy, and the notes say what it fell back on. |
+| `motionrender_adapt_aspect` | `file`, `aspect`, `output?` | Adapts a composition to another aspect ratio (`9:16`, `16:9`, `1:1`, `4:5`, `3:4` or `WIDTHxHEIGHT`). Overwrites the input unless `output` is given. |
+| `motionrender_batch_render` | `file`, `data`, `outputPattern`, `limit?`, `scale?` | Renders one personalised video per row of a JSON array (or a `rows.json` path) from a template composition; `outputPattern` can use `{{variables}}`, e.g. `out/{{name}}.mp4`. |
+| `motionrender_transcribe_audio` | `audio`, `output?`, `language?` | Transcribes an audio file into word-level timestamps and subtitle cues for kinetic captions. |
+| `motionrender_import_figma` | `input`, `token?`, `outputTheme?`, `outputComp?` | Imports design tokens (colours, type, radii) and scene layers from a Figma file or exported tokens JSON. |
 
 ---
 
 ## 3. Claude Skills (`.claude/skills`)
 
-For Claude Code or Anthropic agent environments, MotionRender includes 15 domain-specific skills:
+For Claude Code or Anthropic agent environments, MotionRender includes 15 skills (`motionrender` and `ove` are the same entry point under two names). One project agent also lives in `.claude/agents/`: `solution-architect`, which maps the monorepo and writes architecture notes.
 - `motionrender` / `ove`: Main entry point and composition grammar.
-- `ove-react-video`: React-powered videos with spring physics, glass bento cards, and glowing orbs.
-- `ove-make-reel`: Rapid vertical social reels for TikTok, Instagram Reels, and YouTube Shorts.
-- `ove-broll-loop`: Seamless looping B-roll engineered for voiceover pacing.
-- `ove-voiceover-captions`: AI voiceover synthesis, SRT transcription, and word-level kinetic subtitles.
-- `ove-batch-videos`: Data-driven video personalization across JSON datasets.
-- `ove-effects`: Motion effects, tracked labels, grain, and color grading.
+- `ove-agent`: Autonomous video director: brief to a finished React or JSON video, with a visual self-check loop.
+- `ove-ai-compose`: Generate or change a video from a brief with `ove ai`, keeping every AI change reversible.
+- `ove-make-reel`: Quick vertical or square social videos from ready-made blocks and themes.
+- `ove-react-video`: High-end React videos with spring physics, bento cards and glowing orbs.
+- `ove-code-video`: Videos written as TypeScript, JavaScript or React when JSON cannot express the logic.
+- `ove-motion-graphics`: Kinetic typography, bento grids, code walk-throughs and audio waveforms.
+- `ove-effects`: Motion effects over footage: glass cards, kinetic titles, tracked labels, grain and grading.
+- `ove-voiceover-captions`: Voiceover and word-timed captions, with scenes cut to the speech.
+- `ove-batch-videos`: Many personalised or localised videos from one template and a list of rows.
+- `ove-broll-loop`: Seamless looping B-roll timed to a voiceover.
+- `ove-paper-collage`: Editorial halftone paper-collage B-roll and stop-motion cutouts.
+- `ove-papercut`: Layered papercraft explainers and paper-diorama videos.
+- `ove-remotion`: Run and adapt Remotion compositions with MotionRender.
 
 ---
 

@@ -12,6 +12,7 @@
     "@ove/ffmpeg": "workspace:*",
     "@ove/graphics": "workspace:*",
     "@ove/schema": "workspace:*",
+    "@ove/storage": "workspace:*",
     "ai": "^7.0.163"
   }
 }
