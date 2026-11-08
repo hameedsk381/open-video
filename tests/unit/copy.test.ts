@@ -102,6 +102,31 @@ describe('repairCopy', () => {
     expect(notes).toHaveLength(4);
   });
 
+  it("drops a label when the scene already says its beat's line, instead of printing the line twice", () => {
+    const raw = video([text('label', 'Proof'), text('a', 'Calm design'), text('b', 'Premium security')]);
+    const notes = repairCopy(raw, 'A calm, premium finance launch.', [{ name: 'Proof', onScreen: 'Calm design, premium security' }]);
+    expect(raw.scenes[0].layers.map((layer: any) => layer.id)).toEqual(['a', 'b']);
+    expect(notes).toEqual(['scene 1: dropped the beat label "Proof", because the scene already says "Calm design, premium security".']);
+  });
+
+  it('never prints a shot description in place of a label', () => {
+    const raw = video([text('label', 'Problem Reveal'), text('a', 'Tracking your money')]);
+    const notes = repairCopy(raw, 'A calm finance app.', [{ name: 'Problem Reveal', onScreen: 'Close-up of phone screen showing chaotic spreadsheet with red numbers flashing.' }]);
+    expect(raw.scenes[0].layers.map((layer: any) => layer.id)).toEqual(['a']);
+    expect(notes).toEqual(['scene 1: dropped the beat label "Problem Reveal".']);
+  });
+
+  it('drops the spoken line when a scene also prints it under the headline', () => {
+    const raw = video([text('head', 'Clarity in your palm', { fontSize: 173 }), text('sub', 'Money clarity in the palm of your hand.', { fontSize: 86 })]);
+    const notes = repairCopy(raw, 'A calm finance app.', [{ name: 'Hook', onScreen: 'Clarity in your palm', narration: 'Money clarity in the palm of your hand.' }]);
+    expect(raw.scenes[0].layers.map((layer: any) => layer.id)).toEqual(['head']);
+    expect(notes).toEqual(['scene 1: dropped "Money clarity in the palm of your hand.", which is the spoken line; narration is heard, not printed.']);
+    // A scene with only the spoken line keeps it: dropping it would leave the scene wordless.
+    const solo = video([text('only', 'Money clarity in the palm of your hand.')]);
+    expect(repairCopy(solo, 'A calm finance app.', [{ narration: 'Money clarity in the palm of your hand.' }])).toEqual([]);
+    expect(solo.scenes[0].layers).toHaveLength(1);
+  });
+
   it('puts a missing required line into the last scene\'s biggest text, once per line', () => {
     const raw = video([text('a', 'Intro', { fontSize: 120 })], [text('small', 'detail', { fontSize: 40 }), text('big', 'more..', { fontSize: 140 })]);
     const notes = repairCopy(raw, transit, []);
@@ -142,6 +167,29 @@ describe('in composeVideo', () => {
     const motionPlan = { beats: [{ name: 'Hook', onScreen: 'Reykja Transit' }, { name: 'Call to action', onScreen: 'Ride more.' }] };
     const { result } = await run([reply({ id: 'a', texts: ['Hook'] }, { id: 'b', texts: ['Call to action'] })], transit, { motionPlan });
     expect(lines(result)).toEqual([['Reykja Transit'], ['Ride more.']]);
+  });
+
+  it('lays a scene out again after repair changes its words, so the copy below a grown headline is not left on top of it', async () => {
+    // What the scene route really produced: the headline was the beat name "Proof", so it was measured as one line and the
+    // sublines were placed 230px below it; repair then made the headline say the whole line and it wrapped to three lines.
+    const raw = JSON.stringify({
+      version: '1.0', id: 'v', name: 'V', durationFrames: 120,
+      scenes: [
+        { id: 'a', name: 'A', startFrame: 0, durationFrames: 60, layers: [
+          { id: 'h', type: 'text', content: 'Proof', x: 540, y: 460, fontSize: 173, maxWidth: 800, textAlign: 'center', color: '#ffffff' },
+          { id: 's', type: 'text', content: 'Calm design', x: 540, y: 689.6, fontSize: 86, maxWidth: 800, textAlign: 'center', color: '#ffffff' },
+        ] },
+        { id: 'b', name: 'B', startFrame: 60, durationFrames: 60, layers: [
+          { id: 'x', type: 'text', content: 'Ride more.', x: 40, y: 40, fontSize: 64, color: '#ffffff' },
+        ] },
+      ],
+    });
+    const motionPlan = { beats: [{ name: 'Proof', onScreen: 'Calm design, premium security' }, { name: 'Call to action', onScreen: 'Ride more.' }] };
+    const { result } = await run([raw], transit, { motionPlan });
+    const [headline, subline] = result.composition.scenes[0].layers;
+    expect(headline.content).toBe('Calm design, premium security');
+    expect(headline.fontSize).toBeLessThan(173);                       // shrank to fit the line it now says
+    expect(subline.y).toBeGreaterThanOrEqual(headline.y + 3 * headline.fontSize! * 1.2);   // three lines of room
   });
 
   it('leaves a video alone that already says it', async () => {

@@ -13,7 +13,9 @@ import { useCurrentFrame, useVideoConfig } from './index';
 
 type Layer = Record<string, any>;
 type Scene = Record<string, any>;
-export type CompositionData = { width: number; height: number; fps: number; durationFrames: number; background?: string; scenes: Scene[]; [key: string]: unknown };
+/** A colour, or a gradient the renderer paints underneath every layer. */
+type Background = string | { type: 'linear' | 'radial'; from?: [number, number]; to?: [number, number]; center?: [number, number]; radius?: number; stops: { offset: number; color: string }[] };
+export type CompositionData = { width: number; height: number; fps: number; durationFrames: number; background?: Background; scenes: Scene[]; [key: string]: unknown };
 
 const supportedTypes = new Set(['rect', 'circle', 'path', 'text', 'image', 'group', 'audio', 'react']);
 const supportedTransitions = new Set(['fade', 'slide', 'zoom', 'wipe', 'push', 'dip', 'blur']);

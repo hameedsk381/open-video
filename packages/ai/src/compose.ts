@@ -1,7 +1,7 @@
 // Prompt-to-composition with a self-correcting loop: generate, parse, validate with the real schema, feed the exact
 // errors back, repeat. Optional review rounds use the same renderer/design checks as `ove review`, so the model is
 // corrected against what the video actually looks like rather than only against the schema.
-import { describeError, loadComposition, reviewComposition, type Composition, type ReviewIssue } from '@ove/core';
+import { describeError, loadComposition, reviewComposition, safeZoneBands, type Composition, type ReviewIssue } from '@ove/core';
 import type { VideoContent } from '@ove/schema';
 import type { ProvidedSource } from './content';
 import type { AiProvider, ChatMessage } from './providers';
@@ -10,7 +10,7 @@ import { assetProblems, refinePolicy, restoreSuppliedSources } from './assets';
 import { isMotionPlan, planSystemPrompt, planUserPrompt, refineOutlineChars, refineOutlinePrompt, refineUserPrompt, systemPrompt, userPrompt, type MotionPlan, type PromptOptions } from './prompt';
 import { readLook } from './plan';
 import { applyFixes, isFixReply, patchFeedback } from './patch';
-import { composeByScenes, healScenes, normalizeAnimation, type ScenesOptions } from './scenes';
+import { composeByScenes, healScenes, layoutSceneText, normalizeAnimation, type ScenesOptions } from './scenes';
 import { copyProblems, repairCopy } from './copy';
 
 export type ComposeOptions = PromptOptions & {
@@ -157,7 +157,7 @@ function normalize(raw: any, options: ComposeOptions, notes: string[] = []): any
 // Checks the schema cannot express: the thing must actually be renderable from the assets at hand, must cover the
 // video, and template variables must be used or a batch would produce identical videos.
 /** The beats the video was planned around: their names must not reach the screen, and their lines are what a label is replaced with. */
-const plannedBeats = (options: ComposeOptions): { name?: string; onScreen?: string }[] => options.content ? options.content.beats : options.motionPlan?.beats ?? [];
+const plannedBeats = (options: ComposeOptions): { name?: string; onScreen?: string; narration?: string }[] => options.content ? options.content.beats : options.motionPlan?.beats ?? [];
 
 function inspect(composition: Composition, raw: any, options: ComposeOptions): string[] {
   const problems: string[] = [];
@@ -232,6 +232,12 @@ async function acceptComposition(rawInput: unknown, options: ComposeOptions, ext
   const raw = normalize(structuredClone(current), options, notes);
   // A line the brief required that is missing, or a beat's name printed as copy, is fixed here, not sent back for another model call.
   notes.push(...repairCopy(raw, options.brief, plannedBeats(options)));
+  // Text is laid out here rather than trusted to the model: the stitch has already done it for scenes, but a one-call reply
+  // never was, and repair can change a layer's words after the stitch measured the old ones (a one-word beat label becoming
+  // a full line). Either way the text gets the frame's width, a size that fits it, room of its own, and a place above the bottom.
+  const width = numeric(raw.width) ?? options.width, height = numeric(raw.height) ?? options.height, margin = Math.round(width * 0.08);
+  const bottomBand = safeZoneBands(width, height).find(band => band.name === 'bottom UI band');
+  for (const scene of Array.isArray(raw.scenes) ? raw.scenes : []) layoutSceneText(scene.layers ?? [], width, height, margin, bottomBand ? bottomBand.y0 : height - margin);
   if (options.content) raw.content = structuredClone(options.content);
   const composition = loadComposition(raw);
   const problems = inspect(composition, raw, options);

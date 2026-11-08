@@ -84,6 +84,34 @@ export const providerCapabilities = (provider: AiProvider) => ({
   transcription: typeof provider.transcribe === 'function',
 });
 
+/**
+ * Whether this provider's chat model accepts image content. A provider can chat without seeing: Groq's default model is
+ * text-only and refuses any message whose content is an array, which is exactly what an image message is.
+ */
+export function providerVision(provider: AiProvider): boolean {
+  if (provider.id === 'mock') return true;
+  // The gateway routes by task and its vision preferences are image models, so image content is safe to send.
+  if (provider.id === 'freellmapi') return true;
+  if (provider.id === 'anthropic' || provider.id === 'claude' || provider.id === 'google' || provider.id === 'gemini') return true;
+  if (provider.id === 'openai') return /gpt-4|gpt-5|o1|o3|o4/i.test(provider.model);
+  if (provider.id === 'groq') return /vision|-vl|llama-4|maverick|scout/i.test(provider.model);
+  if (provider.id === 'nvidia' || provider.id === 'nim') return /vision|-vl|llava|vila|pixstral/i.test(provider.model);
+  // A provider this file does not know (a caller's fake, a private gateway) is tried with images: only the vendors whose
+  // text-only models were actually seen rejecting image content are refused here.
+  return true;
+}
+
+/**
+ * A provider that can look at rendered frames: the caller's own when its model sees images, otherwise the operator's
+ * vision-capable gateway. Undefined means no configured model can see, so the caller skips the pass and says so.
+ */
+export function visionProvider(provider: AiProvider): AiProvider | undefined {
+  if (providerVision(provider)) return provider;
+  const gatewayKey = process.env.FREELLMAPI_API_KEY || process.env.FREELLMAPI_KEY;
+  if (!gatewayKey || provider.id === 'freellmapi') return undefined;
+  return createProvider({ provider: 'freellmapi', model: 'auto' });
+}
+
 const trimSlash = (url: string) => url.replace(/\/+$/, '');
 const numberFromPrompt = (prompt: string, name: string, fallback: number) => { const found = new RegExp(`${name}=(\\d+)`).exec(prompt); return found ? Number(found[1]) : fallback; };
 export const requestTimeoutMs = 180_000;

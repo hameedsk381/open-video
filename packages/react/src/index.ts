@@ -78,9 +78,41 @@ export function Video(props: MediaProps & { muted?: boolean; left?: number; top?
 /** A picture: an asset id declared in config.assets, or a file path. Same as <img>. */
 export function Img(props: ImgHTMLAttributes<HTMLImageElement>): ReactElement { return createElement('img', props); }
 
-/** A box that fills the video (position: absolute, all four sides 0), for stacking layers. */
-export function AbsoluteFill({ style, children, ...rest }: HTMLAttributes<HTMLDivElement> & { style?: CSSProperties }): ReactElement {
-  return createElement('div', { style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', ...style }, ...rest }, children);
+/**
+ * Placement shorthands models write from other motion libraries (`x`, `y`, `translateX`/`translateY`, `scale`, `rotate`).
+ * Browsers ignore them inside `style`, which used to leave every layer stacked at the top-left corner, so they are turned
+ * into real CSS here. `x`/`y` anchor the box's top-left corner; type is centred on x the way the composition renderer does.
+ */
+type Placement = Omit<CSSProperties, 'x' | 'y' | 'translateX' | 'translateY' | 'scale' | 'rotate'> & {
+  x?: number | string; y?: number | string; translateX?: number | string; translateY?: number | string; scale?: number | string; rotate?: number | string;
+};
+const length = (value: number | string) => (typeof value === 'number' ? `${value}px` : value);
+function placement(style: Placement | undefined): CSSProperties {
+  const { x, y, translateX, translateY, scale, rotate, textAlign, width, ...css } = { ...style } as Placement;
+  const placed: CSSProperties = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', ...css, textAlign, width };
+  if (x !== undefined) { placed.left = length(x); placed.right = 'auto'; }
+  if (y !== undefined) { placed.top = length(y); placed.bottom = 'auto'; }
+  const moves: string[] = [];
+  if (translateX !== undefined) moves.push(`translateX(${length(translateX)})`);
+  if (translateY !== undefined) moves.push(`translateY(${length(translateY)})`);
+  if (scale !== undefined) moves.push(`scale(${scale})`);
+  if (rotate !== undefined) moves.push(`rotate(${typeof rotate === 'number' ? `${rotate}deg` : rotate})`);
+  // Text with no box of its own is sized by its words, so textAlign alone cannot centre it on x; shift the words instead.
+  if (x !== undefined && width === undefined && textAlign === 'center' && !moves.some(move => move.startsWith('translateX'))) moves.unshift('translateX(-50%)');
+  if (x !== undefined && width === undefined && textAlign === 'right' && !moves.some(move => move.startsWith('translateX'))) moves.unshift('translateX(-100%)');
+  if (moves.length) placed.transform = [moves.join(' '), css.transform].filter(Boolean).join(' ');
+  return placed;
+}
+
+/**
+ * A box that fills the video (position: absolute, all four sides 0), for stacking layers. `from` and `durationInFrames`
+ * show it for a stretch of the video (absolute frames, not remapped like Sequence) — the shape models reach for when they
+ * want to delay a layer.
+ */
+export function AbsoluteFill({ style, from, durationInFrames, children, ...rest }: Omit<HTMLAttributes<HTMLDivElement>, 'style'> & { style?: Placement; from?: number; durationInFrames?: number }): ReactElement | null {
+  const frame = useContext(shared.frame);
+  if (frame !== null && from !== undefined && (frame < from || (durationInFrames !== undefined && frame >= from + durationInFrames))) return null;
+  return createElement('div', { style: placement(style), ...rest }, children);
 }
 
 /** Shows its children from frame `from` for `durationInFrames`, with the frame counted from the start of the sequence. */

@@ -113,6 +113,8 @@ Reply with ONE JSON object and nothing else:
 How to write it:
 - ${options.durationSeconds < 20 ? 'Three to four' : 'Four to six'} beats. Narration runs at about 2.4 words per second; in total about ${words(options.durationSeconds)} words.
 - narration is spoken: short sentences, no stage directions, timestamps, emojis or markdown. onScreen is read: it can be shorter and sharper but must say the same thing, never describe a picture.
+- Every line is about the subject, never about the video. Its type, motion, music, voice, camera and edit are the design's business, not the script's: never write "sleek sans", "dynamic motion", "confident voice" or anything else describing how the film is made.
+- When the sources state no supporting fact, do not invent a "Proof" beat: make the beat's point qualitatively from what the brief does say.
 - Every number, date, statistic, quote and factual claim must cite a source id in sourceIds. The brief itself is source "brief"; cite it for facts the brief states.
 - Use ONLY what the sources say. If a figure you want is missing, leave the figure out or say it qualitatively. Never estimate, round into a new claim, or invent a number.
 - Each "quote" must be copied word for word from that source's excerpt. A quote the checker cannot find costs a retry.
@@ -124,6 +126,13 @@ function userText(options: ContentOptions, sources: WorkingSource[]) {
   const supplied = sources.map(source => ({ id: source.id, title: source.title, url: source.url, text: truncate(source.text, 5000) }));
   return `Brief:\n${options.brief.trim()}\n\nTarget length: ${Math.round(options.durationSeconds)} seconds${options.kind ? `\nKind: ${options.kind}` : ''}\n\nSources:\n${JSON.stringify(supplied, null, 2)}`;
 }
+
+/**
+ * Watch pages and social posts are not citable here: the readable text is the page around the video, not what was said in
+ * it, so every quote the model copies from them fails the checker and the whole script is thrown away. The model names them
+ * anyway (it knows the video exists, not that the text is unquotable), so they are skipped before the read.
+ */
+const nonCitable = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|instagram\.com|facebook\.com|x\.com|twitter\.com|linkedin\.com|pinterest\.com)$/i;
 
 /** Kept separate from the writing call: the model proposes pages, the engine decides whether to read them. */
 async function research(provider: AiProvider, options: ContentOptions, sources: WorkingSource[]): Promise<WorkingSource[]> {
@@ -137,14 +146,17 @@ async function research(provider: AiProvider, options: ContentOptions, sources: 
   const parsed = extractJson(reply) as any;
   const urls = Array.isArray(parsed?.urls) ? parsed.urls.slice(0, limit) : [];
   const found: WorkingSource[] = [];
-  for (const [index, entry] of urls.entries()) {
+  for (const entry of urls) {
     const url = typeof entry?.url === 'string' ? entry.url.trim() : '';
     if (!/^https?:\/\//i.test(url)) continue;
+    let host = '';
+    try { host = new URL(url).hostname; } catch { continue; }
+    if (nonCitable.test(host)) { options.onProgress?.(`Skipped ${url}: a watch page is not text the model can quote`); continue; }
     options.onProgress?.(`Reading ${url}`);
     try {
       const text = await (options.fetchPage ?? readUrl)(url);
       if (!text || text.length < 200) { options.onProgress?.(`Skipped ${url}: nothing readable`); continue; }
-      found.push({ id: `web${index + 1}`, title: typeof entry.title === 'string' ? entry.title : new URL(url).hostname, url, text, retrievedAt: new Date().toISOString().slice(0, 10) });
+      found.push({ id: `web${found.length + 1}`, title: typeof entry.title === 'string' ? entry.title : new URL(url).hostname, url, text, retrievedAt: new Date().toISOString().slice(0, 10) });
     } catch (error) {
       options.onProgress?.(`Skipped ${url}: ${(error as Error).message}`);
     }
@@ -179,6 +191,12 @@ export function readContent(raw: unknown, sources: WorkingSource[]): { content?:
     reported.push({ id, title: (typeof entry.title === 'string' ? entry.title : undefined) ?? given.title, url: given.url, retrievedAt: given.retrievedAt, quote: quote || undefined });
   }
 
+  // A beat with no cited source must not be about the video itself. These are the words a model reaches for when it has
+  // nothing to say about the subject and describes the film instead ("sleek sans + cyber sound"). A subject that genuinely
+  // is typography, motion or sound supplies the same words in its material, so the check stands down.
+  const productionWords = /\b(motion graphics|motion design|kinetic type|typeface|typography|font|sans|serif|animation|animated|soundtrack|sound design|sound effect|sfx|voice-?over|narration|camera|footage|b-roll|montage|storyboard|palette|gradient|motion|voice)\b/gi;
+  const subjectText = normal(sources.map(source => source.text).join(' '));
+
   const rawBeats = Array.isArray(input.beats) ? input.beats : [];
   if (!rawBeats.length) problems.push('"beats" must be a list of at least one beat');
   const beats: ContentBeat[] = [];
@@ -198,7 +216,13 @@ export function readContent(raw: unknown, sources: WorkingSource[]): { content?:
       sourceIds: [...new Set(ids(datum.sourceIds))],
     }));
     const claim = typeof entry?.claim === 'string' ? entry.claim.trim() : '';
+    const narration = typeof entry?.narration === 'string' && entry.narration.trim() ? entry.narration.trim() : undefined;
     if (claim && !sourceIds.length) problems.push(`beat "${id}" makes a claim but cites no source`);
+    if (!sourceIds.length) {
+      const described = [...new Set([...(onScreen.match(productionWords) ?? []), ...((narration ?? '').match(productionWords) ?? [])].map(word => word.toLowerCase()))]
+        .filter(word => !new RegExp(`\\b${word}\\b`).test(subjectText));
+      if (described.length) problems.push(`beat "${id}" describes the video itself (${described.map(word => `"${word}"`).join(', ')}), not the subject: onScreen and narration must say something the viewer learns about the subject, not how the film is made`);
+    }
     for (const datum of data) if (!datum.sourceIds.length) problems.push(`"${datum.label}" in beat "${id}" cites no source`);
     for (const sourceId of [...sourceIds, ...data.flatMap(item => item.sourceIds)]) {
       if (!cited.has(sourceId)) problems.push(`beat "${id}" cites "${sourceId}", which is not a quoted source`);
@@ -207,7 +231,7 @@ export function readContent(raw: unknown, sources: WorkingSource[]): { content?:
     beats.push({
       id, name: name || `Beat ${index + 1}`, onScreen,
       seconds: Number.isFinite(seconds) && seconds > 0 ? Math.min(30, seconds) : undefined,
-      narration: typeof entry?.narration === 'string' && entry.narration.trim() ? entry.narration.trim() : undefined,
+      narration,
       claim: claim || undefined, data, sourceIds,
       motion: typeof entry?.motion === 'string' && entry.motion.trim() ? entry.motion.trim() : undefined,
     });

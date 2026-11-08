@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { audioCacheKey, clearFreeLlmModelCache, concatWav, createProvider, inferChatTask, MockProvider, resolveSpeechEngine, VercelAiProvider, type AiProvider } from '@ove/ai';
+import { audioCacheKey, clearFreeLlmModelCache, concatWav, createProvider, inferChatTask, MockProvider, providerVision, resolveSpeechEngine, VercelAiProvider, visionProvider, type AiProvider } from '@ove/ai';
 
 // One integration layer: every network provider is VercelAiProvider (the Vercel AI SDK) with per-vendor driver and
 // defaults; the FreeLLMAPI task-aware routing is policy on top of it; the mock stays offline. Speech is the pluggable
@@ -45,6 +45,24 @@ const replyEnding = (content: string, finish: 'stop' | 'length') => json({
   id: 'chatcmpl-test', object: 'chat.completion', created: Date.now(), model: 'test',
   choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finish }],
   usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+});
+
+describe('seeing images', () => {
+  it('tells a text-only model from one that reads pictures', () => {
+    expect(providerVision(createProvider({ provider: 'groq', apiKey: 'k', model: 'openai/gpt-oss-120b' }))).toBe(false);
+    expect(providerVision(createProvider({ provider: 'groq', apiKey: 'k', model: 'meta-llama/llama-4-scout-17b-16e-instruct' }))).toBe(true);
+    expect(providerVision(createProvider({ provider: 'anthropic', apiKey: 'k' }))).toBe(true);
+    expect(providerVision(new MockProvider())).toBe(true);
+  });
+
+  it('lends the operator gateway to a build model that cannot see, and only when the gateway has a key', () => {
+    const groq = createProvider({ provider: 'groq', apiKey: 'k', model: 'openai/gpt-oss-120b' });
+    expect(visionProvider(groq)).toBeUndefined();
+    vi.stubEnv('FREELLMAPI_API_KEY', 'gateway-key');
+    expect(visionProvider(groq)?.id).toBe('freellmapi');
+    const anthropic = createProvider({ provider: 'anthropic', apiKey: 'k' });
+    expect(visionProvider(anthropic)).toBe(anthropic);
+  });
 });
 
 describe('output limit', () => {

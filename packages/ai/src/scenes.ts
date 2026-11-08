@@ -214,7 +214,7 @@ const contractMessages = (options: ScenesOptions, plan?: MotionPlan): ChatMessag
     { role: 'user', content: `Brief: ${options.brief.trim()}
 ${beatLines ? `The video follows these beats:\n${beatLines}\n` : 'Split the brief into 3-6 short beats (one idea each, unequal weight).\n'}
 Decide the visual system all scenes will share${look ? ', following the look above' : ' — the subject decides it, not a house style'}. Reply ONLY JSON:
-{ "beats": [{ "name": "...", "onScreen": "what is on screen, concretely", "seconds": 3 }],
+{ "beats": [{ "name": "...", "onScreen": "the words the viewer reads (copy, not a description of the shot)", "seconds": 3 }],
   "palette": { "background": "#hex", "text": "#hex", "primary": "#hex", "accent": "#hex", "secondary": "#hex" },
   "fonts": { "heading": "Inter|Space Grotesk|Fraunces|Archivo|Source Sans 3", "body": "<family>" },
   "moves": ["one motion move per beat, e.g. word-cascade, ken-burns, pop-in, rise-in, drift, wipe-reveal"],
@@ -235,6 +235,8 @@ const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number,
   // letterbox math — a landscape canvas has no bands, and the prompt must not invent rules the renderer ignores.
   const bands = safeZoneBands(options.width, options.height);
   const platformUi = bands.length ? ` ${bands.map(band => band.hint).join('. ')}.` : '';
+  // The same lowest line the stitch will enforce, so the prompt asks for what the layout can keep.
+  const textBottom = bands.find(band => band.name === 'bottom UI band')?.y0 ?? options.height - margin;
   const arrangement = contract.layout === 'center' ? 'centre the content symmetrically'
     : contract.layout === 'split' ? 'create two-column tension: the headline on one side, supporting content on the other'
     : contract.layout === 'editorial' ? 'use an asymmetric grid with generous margins and oversized type'
@@ -242,6 +244,7 @@ const sceneMessages = (contract: StyleContract, beat: ScenesBeat, index: number,
   const headlineRule = contract.motion === 'none'
     ? 'Set the headline still, with no "split". One move (a slide, a fade, a scale) may bring it in, or it may simply be there.'
     : `The scene's headline (largest text) carries "split": { "by": "words", "stagger": 4, "preset": "${contract.motion}" }.`;
+  const copyRule = 'Supporting text adds something the headline does not already say: never print the headline, or a piece of it, again as a second line.';
   return [
     { role: 'system', content: `You design ONE scene of a ${options.width}x${options.height} motion-graphics video (${options.fps} fps). Reply with ONE JSON object and nothing else:
 { "background": { "type": "color", "color": "#hex from the palette" },
@@ -257,8 +260,9 @@ House rules:
 - Use ONLY the palette colours: background ${contract.background}, text ${contract.text}, primary ${contract.primary}, accent ${contract.accent}, secondary ${contract.secondary}.
 - Fonts: headings in ${contract.fonts.heading}, supporting text in ${contract.fonts.body}.
 - Layout: ${arrangement}.
-- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}.${platformUi}
+- Keep every layer fully inside the frame: x within ${margin}-${options.width - margin}, y within ${margin}-${options.height - margin}. A text layer's y is the top of its first line; every line it wraps adds about 1.2 times fontSize below that, so choose y so the last line still ends above ${textBottom}.${platformUi}
 - ${headlineRule}
+- ${copyRule}
 - Every layer MUST have at least one animation. An animation is { "property": "x"|"y"|"opacity"|"rotation"|"scale"|"fontSize"|"blur", "keyframes": [{ "frame": 0, "value": <start> }, { "frame": <end>, "value": <end value>, "easing": "land" }] } — keyframes are relative to the scene start (frame 0), the easing sits on the keyframe being arrived at, and every frame must stay within the scene's ${frames} frames. Easings: land, snap, glide, pop, drift, spring, easeInOut.
 - Headline fontSize about ${Math.round(options.height * 0.09)} px, supporting text about ${Math.round(options.height * 0.045)} px.
 - Decoration (rect/circle) sits behind the text and must never cost legibility. Keep its opacity low unless a flat block of colour is the design, as it is in a poster look.` },
@@ -554,10 +558,53 @@ export function separateText(layers: any[]): void {
   }
 }
 
-/** What the stitch does to a scene's layers: text gets a width that fits the frame, a size that fits the width, and room of its own. */
-function laidOut(layers: any[], width: number, margin: number): any[] {
+const textLines = (layer: any): number => {
+  const size = Number(layer.fontSize) || 48, lineHeight = Number(layer.lineHeight) > 0 ? Number(layer.lineHeight) : 1.2;
+  return estimateLines(textOf(layer), size, Number(layer.maxWidth) || 1e9) * size * lineHeight;
+};
+
+/**
+ * Keeps the scene's text above the bottom edge. separateText only ever pushes layers down, so a supporting line that wraps
+ * below a big headline can end under the frame, where the renderer reports it as off-frame. The whole stack moves up
+ * (the spacing is the design's, not the check's); only when it is taller than the space does its type shrink to fit.
+ * `limit` is the lowest the last line may end: the frame's margin, or the top of a player's bottom UI band on a reel.
+ */
+export function fitTextHeight(layers: any[], height: number, margin: number, limit = height - margin): void {
+  const texts = layers.filter(layer => layer?.type === 'text' && textOf(layer).trim());
+  const room = limit - margin;
+  if (!texts.length || !(room > 0)) return;
+  const top = Math.min(...texts.map(layer => Number(layer.y) || 0));
+  const stack = () => Math.max(...texts.map(layer => (Number(layer.y) || 0) + textLines(layer))) - top;
+  if (stack() > room) {
+    const ratio = room / stack(), floor = Math.min(28, ...texts.map(layer => Number(layer.fontSize) || 48));
+    for (const layer of texts) {
+      const requested = Number(layer.fontSize) || 48, size = Math.max(floor, Math.floor(requested * ratio));
+      layer.fontSize = size;
+      for (const animation of Array.isArray(layer.animations) ? layer.animations : []) {
+        if (animation?.property === 'fontSize') for (const keyframe of animation.keyframes ?? []) if (typeof keyframe.value === 'number') keyframe.value = Math.round(keyframe.value * size / requested);
+      }
+    }
+  }
+  const bottom = Math.max(...texts.map(layer => (Number(layer.y) || 0) + textLines(layer)));
+  const shift = Math.min(bottom - limit, top - margin);
+  if (!(shift > 0)) return;
+  for (const layer of texts) {
+    layer.y = (Number(layer.y) || 0) - shift;
+    for (const animation of Array.isArray(layer.animations) ? layer.animations : []) {
+      if (animation?.property === 'y') for (const keyframe of animation.keyframes ?? []) if (typeof keyframe.value === 'number') keyframe.value -= shift;
+    }
+  }
+}
+
+/**
+ * The text layout the stitch applies to a scene: text gets a width that fits the frame, a size that fits the width, room of
+ * its own, and a place above the bottom edge. Exported because copy repair can change what a layer says after the stitch (a
+ * beat label becoming a full line), and the new words need the same layout the old ones were measured for.
+ */
+export function layoutSceneText(layers: any[], width: number, height: number, margin: number, limit = height - margin): any[] {
   for (const layer of layers) { fitTextWidth(layer, width, margin); fitTextSize(layer); }
   separateText(layers);
+  fitTextHeight(layers, height, margin, limit);
   return layers;
 }
 
@@ -588,6 +635,9 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
   }
   const stitched = scenes.map((scene, i) => {
     const camera = scene.camera ?? (plan.contract.camera === 'push' ? houseCamera(plan.durations[i]!) : undefined);
+    const margin = Math.round(options.width * 0.08 * plan.contract.density);
+    // A reel's own player covers the bottom of the frame, so copy has to end above that band, not just inside the video.
+    const bottomBand = safeZoneBands(options.width, options.height).find(band => band.name === 'bottom UI band');
     return {
     id: `scene-${i + 1}`,
     name: plan.beats[i]?.name ?? `Scene ${i + 1}`,
@@ -596,7 +646,7 @@ export function stitchScenes(scenes: any[], plan: ScenesPlan, options: ScenesOpt
     durationFrames: plan.durations[i]!,
     ...(i > 0 ? { transitionIn: { type: plan.contract.transition, durationFrames: overlaps[i] } } : {}),
     ...(camera ? { camera } : {}),
-    layers: laidOut((scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })), options.width, Math.round(options.width * 0.08 * plan.contract.density)),
+    layers: layoutSceneText((scene.layers ?? []).map((layer: any, j: number) => ({ ...structuredClone(layer), id: `s${i + 1}-l${j + 1}` })), options.width, options.height, margin, bottomBand ? bottomBand.y0 : options.height - margin),
     };
   });
   return {

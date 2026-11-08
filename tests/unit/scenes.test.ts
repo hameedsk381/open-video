@@ -256,6 +256,22 @@ describe('text that stays in the frame', () => {
     expect(sub.y).toBeGreaterThan(head.y + head.fontSize * 1.2 * 2);                 // below the headline's three lines, not on them
   });
 
+  it('lifts text that wraps below the bottom edge back inside the frame, and moves its animation with it', () => {
+    const beats = parseBeats(JSON.parse(contractReply).beats), contract = parseContract(JSON.parse(contractReply));
+    const plan = { beats, contract, durations: [105, 135, 60], sceneRanges: sceneRanges([105, 135, 60], sceneOverlaps(3, 30)) };
+    const low = parseScene({ layers: [
+      { type: 'text', text: 'premium, and close', x: 512, y: 1100, fontSize: 173, textAlign: 'center' },
+      { type: 'text', text: 'A pocket finance app keeps your money calm, now.', x: 512, y: 1744.8, fontSize: 86, maxWidth: 700, textAlign: 'center',
+        animations: [{ property: 'y', keyframes: [{ frame: 0, value: 1824.8 }, { frame: 20, value: 1744.8 }] }] },
+    ] }, 105);
+    const sub: any = stitchScenes([low, parseScene({ layers: [text({})] }, 135), parseScene({ layers: [text({})] }, 60)], plan, options).scenes[0]!.layers[1];
+    const bottom = sub.y + estimateLines(sub.content, sub.fontSize, sub.maxWidth) * sub.fontSize * 1.2;
+    expect(bottom).toBeLessThanOrEqual(1920 - 86);
+    expect(bottom).toBeLessThanOrEqual(1575);   // above the Reels/TikTok control band, not just inside the frame
+    expect(sub.y).toBeLessThan(1744.8);
+    expect(sub.animations[0].keyframes.map((keyframe: any) => keyframe.value)).toEqual([sub.y + 80, sub.y]);
+  });
+
   it('describes the real anchors in the scene prompt, not a centre that the renderer does not use', async () => {
     const provider = scriptedProvider([contractReply, sceneReply('A', 'a'), sceneReply('B', 'b'), sceneReply('C', 'c')]);
     await composeByScenes(provider, options);

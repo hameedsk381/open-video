@@ -25,7 +25,18 @@ export async function writeCompositionProject(dir: string, composition: Composit
   try { existing = await readdir(target); } catch { /* a new folder */ }
   if (existing.length && !options.force && !(existing.length === 1 && existing[0] === 'assets')) throw new Error(`${target} is not empty; pass --force to write into it anyway`);
   await mkdir(resolve(target, 'assets'), { recursive: true });
-  const json = { $schema: './composition.schema.json', ...((options.source as object | undefined) ?? composition) };
+  const source = (options.source as Record<string, unknown> | undefined) ?? (composition as unknown as Record<string, unknown>);
+  const json: Record<string, unknown> = { $schema: './composition.schema.json', ...source };
+  // A template is saved as a template, so its variables stay editable, but the script written for it is not a variable:
+  // carry it across (and the beat each scene speaks), or the saved project loses what narration and captions read.
+  const content = (composition as any).content;
+  if (content) {
+    if (!json.content) json.content = content;
+    if (Array.isArray(json.scenes)) json.scenes = json.scenes.map((scene: any) => {
+      const resolved = composition.scenes.find(candidate => candidate.id === scene?.id);
+      return resolved?.beat && !scene?.beat ? { ...scene, beat: resolved.beat } : scene;
+    });
+  }
   const compositionPath = resolve(target, 'composition.json'), schemaPath = resolve(target, 'composition.schema.json');
   await writeFile(compositionPath, JSON.stringify(json, null, 2) + '\n');
   await writeFile(schemaPath, JSON.stringify(compositionJsonSchema, null, 2) + '\n');

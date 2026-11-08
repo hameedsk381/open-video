@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runBuild } from '../../packages/cli/src/build';
@@ -28,6 +28,15 @@ describe('Audio and Video components', () => {
     const bundle = await readFile(join(dir, 'media-fixture.bundle.js'), 'utf8');
     expect(bundle).toContain('#123456'); expect(bundle).toContain('url(data:font/woff2');   // the font file went in as data
   });
+  it('refuses a file the project does not have, instead of failing at render', async () => {
+    const fixture = join(dir, 'missing-media.tsx');
+    await writeFile(fixture, `import { Audio } from '@ove/react';
+export const config = { id: 'missing', width: 320, height: 180, fps: 30, durationInFrames: 30 };
+export default function Video() { return <Audio src="audio/pad.mp3" />; }
+`);
+    await expect(runBuild(['build', fixture, '--output', join(dir, 'missing', 'composition.json')])).rejects.toThrow(/not in the project: audio\/pad\.mp3/);
+  });
+
   it('says so when the component cannot be rendered in Node, and still builds', async () => {
     const warnings: string[] = []; const warn = console.warn; console.warn = (...args: unknown[]) => { warnings.push(args.join(' ')); };
     try { await runBuild(['build', join(process.cwd(), 'tests/integration/fixtures/window-fixture.tsx'), '--output', join(dir, 'win', 'composition.json')]); } finally { console.warn = warn; }

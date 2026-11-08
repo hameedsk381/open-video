@@ -5,7 +5,7 @@
 // worker that offered it would execute code a prompt chose.
 import { readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { loadComposition, renderStill, reviewComposition, type ReviewIssue } from '@ove/core';
+import { createRenderer, loadComposition, renderStill, reviewComposition, type ReviewIssue } from '@ove/core';
 import { critiqueFrameNumbers, drawableBrand, runVideoAgent, type AiProvider, type BuildPlan, type ComposeOptions, type CritiqueFrame, type SmartMode, type SmartResult } from '@ove/ai';
 import { buildReact } from './build';
 
@@ -21,20 +21,38 @@ export function reactVisualCheck(baseDir: string, onReview?: (issues: ReviewIssu
     try { raw = await readFile(compositionPath, 'utf8'); } catch { return { passed: true, report: '' }; }
     const composition = loadComposition(JSON.parse(raw));
     const totalFrames = composition.durationFrames;
-    // Four frames spread over the video. A video whose scenes all draw something never repeats a frame exactly; two identical frames
-    // mean a stretch shows nothing new, which the layout review cannot see because there is no element to measure.
-    const frames: { frame: number; png: Buffer }[] = [];
-    for (const fraction of [0.15, 0.4, 0.65, 0.9]) {
-      const frame = Math.min(totalFrames - 1, Math.round(fraction * totalFrames));
-      try { frames.push({ frame, png: await renderStill(composition, { frame, baseDir, allowCode: true }) }); }
-      catch { /* the review below reports why */ }
-    }
+    // Four frames spread over the video, read as thumbnails because the renderer's text report cannot see text drawn by a
+    // React component. A video whose beats all draw something changes between them; three samples that are the same
+    // picture mean most of the video shows nothing new, which the layout review cannot see because it measures elements.
+    const samples: { frame: number; pixels: number[] }[] = [];
+    const renderer = await createRenderer(composition, { baseDir, allowCode: true, scale: Math.min(1, 1280 / Math.max(composition.width, composition.height)) });
+    try {
+      for (const fraction of [0.15, 0.4, 0.65, 0.9]) {
+        const frame = Math.min(totalFrames - 1, Math.round(fraction * totalFrames));
+        try { samples.push({ frame, pixels: (await renderer.inspectFrame(frame)).thumb.pixels }); }
+        catch { /* the review below reports why */ }
+      }
+    } finally { await renderer.close(); }
     const review = await reviewComposition(composition, { baseDir, allowCode: true, audio: false });
-    const found = [...review.issues];
-    const repeated = frames.find((a, i) => frames.some((b, j) => j > i && a.png.equals(b.png)));
-    if (repeated) {
-      const twins = frames.filter(other => other.png.equals(repeated.png)).map(other => other.frame);
-      found.push({ severity: 'error', code: 'frames-identical', message: `Frames ${twins.join(' and ')} are exactly the same, so part of the video shows nothing new (usually blank). Inside a <Sequence>, useCurrentFrame() counts from the start of that sequence, so an element that waits for an absolute start frame (such as 270) never appears: use frames relative to the sequence.` } as ReviewIssue);
+    // A scripted video has to keep moving. The general review only warns about a long still frame, because a poster or a
+    // deliberate closing hold can be legitimate; on the React route a stretch that long is the generated code failing.
+    const sequenceHint = 'Inside a <Sequence>, useCurrentFrame() counts from the start of that sequence, so an element that waits for an absolute start frame (such as 270) never appears: use frames relative to the sequence.';
+    const found: ReviewIssue[] = review.issues.map(issue => {
+      const span = issue.code === 'frozen' ? issue.suggestion as { from?: number; to?: number } | undefined : undefined;
+      const stillFor = span?.from !== undefined && span.to !== undefined ? span.to - span.from : 0;
+      return issue.code === 'frozen' && stillFor >= Math.max(totalFrames * 0.25, 4 * composition.fps)
+        ? { ...issue, severity: 'error' as const, code: 'frames-still', message: `${issue.message} — ${(stillFor / composition.fps).toFixed(1)} s of a ${(totalFrames / composition.fps).toFixed(1)} s video. ${sequenceHint}` }
+        : issue;
+    });
+    // Thumbnails of the same picture: a group of three or more among the four samples covers most of the video. A clip
+    // of a few seconds may legitimately hold one card still, so this only applies once the video is long enough for a hold
+    // to swallow it.
+    const spread = (a: number[], b: number[]) => a.reduce((sum, value, index) => sum + Math.abs(value - (b[index] ?? 0)), 0) / Math.max(1, a.length);
+    for (const sample of totalFrames >= 4 * composition.fps ? samples : []) {
+      const twins = samples.filter(other => other === sample || spread(other.pixels, sample.pixels) < 1);
+      if (twins.length < 3) continue;
+      found.push({ severity: 'error', code: 'frames-identical', message: `Frames ${twins.map(other => other.frame).join(', ')} show the same picture (${twins.map(other => `${(other.frame / composition.fps).toFixed(1)} s`).join(', ')}), so most of the video shows nothing new and is probably blank. ${sequenceHint}` });
+      break;
     }
     onReview?.(found);
     const errors = found.filter(issue => issue.severity === 'error');

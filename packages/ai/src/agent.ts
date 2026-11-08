@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { loadComposition, safeZoneBands, type Composition } from '@ove/core';
 import type { VideoContent } from '@ove/schema';
-import type { AiProvider, ChatMessage } from './providers';
+import { providerVision, visionProvider, type AiProvider, type ChatMessage } from './providers';
 import { distillBrandPack, scrapeWebsiteBrand } from './brand-scraper';
 import { directionSection, writeDirection, type CreativeDirection, type DirectionBeat, type DirectionPlanInput } from './direction';
 import { critiqueVideo, polishRequest, type Critique, type CritiqueFrame } from './critique';
@@ -43,6 +43,8 @@ export type AgentOptions = {
   visualCheck?: (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
   /** Renders stills of the built video for the art-director pass. Without it the pass does not run. */
   critiqueFrames?: (compositionPath: string) => Promise<CritiqueFrame[]>;
+  /** The model that looks at those stills. Defaults to the build provider when it can see images, else the operator's vision gateway. */
+  critiqueProvider?: AiProvider;
   /** How many rewrites the art director may ask for after a clean build (default 2). Each costs a vision call and a rewrite. */
   polishRounds?: number;
 };
@@ -129,6 +131,9 @@ Write one complete, standalone, production-ready React video component file (\`v
    - Primitives: \`AbsoluteFill\`, \`Sequence\`, \`Series\`, \`useCurrentFrame\`, \`useVideoConfig\`, \`interpolate\`, \`spring\`, \`Easing\`, \`random\`, \`delayRender\`, \`continueRender\`, \`Audio\`, \`Img\`, \`staticFile\`.
    - Never animate with CSS transitions or keyframes, \`requestAnimationFrame\`, \`setTimeout\` or \`Date.now()\`; drive every value from the frame.
    - Inside a \`<Sequence from={N}>\`, \`useCurrentFrame()\` counts from the start of that sequence (0 at its first frame), not from the start of the video. Time everything in a scene from 0; never pass the sequence's absolute start frame to a child as its own start, or the child stays invisible.
+   - Place layers explicitly. An \`AbsoluteFill\` is a full-frame box: \`style={{ x, y }}\` anchors it at that point (text with no width is centred on x when \`textAlign: 'center'\`), and \`translateX\`, \`translateY\`, \`scale\` and \`rotate\` move it. \`left\`/\`top\`/\`width\`/\`height\` work too. Plain CSS layout props that a browser ignores (\`x\`, \`y\` on a \`<div>\`) will not place anything.
+   - \`from\` and \`durationInFrames\` on an \`AbsoluteFill\` show it only for that stretch of absolute frames (no remap); use \`Sequence\` when children should count from 0.
+   - Nothing on screen may sit still for long. Every element that remains visible must keep changing (drift, parallax, scale, a ticking figure) or leave; once a beat's elements have all arrived and nothing exits, that is a still frame and the review rejects it.
    - Do not fetch anything at render time.
 2. Canvas: ${width}x${height} (${format === 'reel' ? '9:16 vertical' : '16:9 landscape'}), ${fps} fps, ${durationFrames} frames (${(durationFrames / fps).toFixed(1)} s).
 3. File shape:
@@ -145,6 +150,7 @@ Write one complete, standalone, production-ready React video component file (\`v
    - \`<DeviceFrame url="example.com" delay={n}>…</DeviceFrame>\` browser or device frame.
    - \`<ProgressBar value={0.85} color="#38bdf8" delay={n} />\`, \`<BentoGrid>\` / \`<BentoCard>\`, \`<Typewriter>\`, \`<Waveform>\`, \`<CodeEditor>\`.
    - Sound through \`<Audio src="sfx:whoosh" volume={0.6} />\`: sfx:whoosh, sfx:pop, sfx:ding, sfx:click, sfx:thump, sfx:tick. Sound is optional.
+   - Never name a media file that is not already in the project: there is no music library, so an invented path such as \`audio/pad.mp3\` makes the video fail to render. Use the built-in sounds above, or no sound.
 
 5. Design authorship:
    - The direction decides the number of scenes, their structure, transitions, camera and sound. There is no required three-act shape, no required hook/value/CTA sequence and no required camera move.
@@ -322,7 +328,10 @@ export async function runVideoAgent(
             throw new Error(`Video Agent could not produce a passing visual review after ${maxAttempts} attempts.\nLast report:\n${visualResult.report}`);
           }
 
-          currentTask = visualResult.sheet ? 'vision' : 'heal';
+          // Only a model that can see may be sent the sheet: a text-only model refuses the whole message, which would turn
+          // a fixable design fault into a failed build.
+          const canSee = providerVision(provider);
+          currentTask = visualResult.sheet && canSee ? 'vision' : 'heal';
 
           // Build a repair message for visual issues
           const repairContent = `The video compiled but the design review found these issues:\n${visualResult.report}\n\nPlease fix ONLY these design problems. Output the full corrected video.tsx.`;
@@ -333,7 +342,7 @@ export async function runVideoAgent(
 
           messages.splice(2);   // the brief and the latest code only, for the same reason as the build repair below
           // Attach the contact sheet image if the provider supports it (best-effort)
-          if (visualResult.sheet) {
+          if (visualResult.sheet && canSee) {
             try {
               const base64 = visualResult.sheet.toString('base64');
               const imageMessage: ChatMessage = {
@@ -385,13 +394,17 @@ export async function runVideoAgent(
   let polished = 0;
   const rounds = Math.max(0, options.polishRounds ?? 2);
   if (buildHelper && options.critiqueFrames && (composition as Composition | undefined)) {
-    for (let round = 0; ; round++) {
+    // The art director reads pictures, so it needs a model that sees them. A text-only build model (Groq's default) still
+    // builds; its frames go to the operator's vision gateway when one is configured, and the miss is reported, not hidden.
+    const reviewer = options.critiqueProvider ?? visionProvider(provider);
+    if (!reviewer) options.onProgress?.(`The art director needs a model that can see images; ${provider.id} (${provider.model}) cannot, and no vision gateway is configured (set FREELLMAPI_API_KEY). Continuing without that pass.`);
+    else for (let round = 0; ; round++) {
       let frames: CritiqueFrame[];
       try { frames = await options.critiqueFrames(compositionPath); }
       catch (error: any) { options.onProgress?.(`⚠️ Could not render frames for the art director: ${String(error?.message ?? error).split('\n')[0]}`); break; }
       if (!frames.length) break;
       options.onProgress?.(`🎨 Art director is looking at ${frames.length} frames${round ? ` (after rewrite ${round})` : ''}…`);
-      const verdict = await critiqueVideo(provider, {
+      const verdict = await critiqueVideo(reviewer, {
         brief: activeBrief, width, height, direction, content: options.content, frames, signal: options.signal, onProgress: options.onProgress,
       });
       if (!verdict) break;

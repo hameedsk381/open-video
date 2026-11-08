@@ -46,8 +46,12 @@ export function screenText(composition: Pick<Composition, 'scenes'>): ScreenText
 /** What a beat or a scene is called in a plan; never what a viewer should be asked to read. */
 const labels = ['hook', 'problem', 'proof', 'offer', 'solution', 'payoff', 'call to action', 'cta', 'intro', 'outro', 'conclusion', 'beat', 'scene', 'headline', 'subhead', 'subtitle', 'body text', 'placeholder'];
 
-/** True when everything the text says is a label, such as "Hook", "Problem Proof" or "Scene 2". */
-export function isLabelOnly(text: string, extra: readonly string[] = [], brief = ''): boolean {
+/** Words that belong to a shot description ("Close-up of the phone, red numbers flashing"), never to copy a viewer reads. */
+const shotLanguage = /\b(close-?up|wide shot|medium shot|zoom|pan|tilt|overlay|mockup|spreadsheet|footage|b-roll|camera|reveals?|shows?|showing|appears?|flashing|montage|collage)\b/i;
+/** A line may take a label's place only when it reads like copy: short, and not a description of the picture. */
+const readsAsCopy = (line: string) => line.trim().split(/\s+/).length <= 12 && !shotLanguage.test(line);
+
+/** True when everything the text says is a label, such as "Hook", "Problem Proof" or "Scene 2". */export function isLabelOnly(text: string, extra: readonly string[] = [], brief = ''): boolean {
   const asked = normal(brief);
   const own = [...labels, ...extra.map(normal)].filter(label => label && !new RegExp(`(^| )${label}( |$)`).test(asked)).sort((a, b) => b.length - a.length);
   let rest = ` ${normal(text)} `;
@@ -87,7 +91,7 @@ export function copyProblems(brief: string, composition: Pick<Composition, 'scen
  * layer takes its beat's on-screen line (or is dropped when there is none), and a required line that is missing becomes the
  * headline of the last scene. Returns what it changed, in words, so the caller can report it.
  */
-export function repairCopy(raw: any, brief: string, beats: readonly { name?: string; onScreen?: string }[] = []): string[] {
+export function repairCopy(raw: any, brief: string, beats: readonly { name?: string; onScreen?: string; narration?: string }[] = []): string[] {
   const notes: string[] = [];
   const scenes: any[] = Array.isArray(raw?.scenes) ? raw.scenes : [];
   const names = beats.map(beat => beat.name ?? '').filter(Boolean);
@@ -98,9 +102,26 @@ export function repairCopy(raw: any, brief: string, beats: readonly { name?: str
   scenes.forEach((scene, index) => walk(scene.layers, (layer, siblings) => {
     if (layer?.type !== 'text') return;
     const text = typeof layer.content === 'string' ? layer.content : typeof layer.text === 'string' ? layer.text : '';
-    if (!text.trim() || !isLabelOnly(text, names, brief)) return;
+    if (!text.trim()) return;
+    // The spoken line is heard, not printed: the scene prompt says so, and a model that puts it on screen under the
+    // headline gives the viewer the same sentence twice. The label below may still be the only copy in a one-text scene.
+    const spoken = aligned ? beats[index]?.narration : undefined;
+    if (spoken && normal(text) === normal(spoken) && siblings.filter(other => other?.type === 'text').length > 1) {
+      siblings.splice(siblings.indexOf(layer), 1);
+      notes.push(`scene ${index + 1}: dropped "${text.replace(/\s+/g, ' ').trim()}", which is the spoken line; narration is heard, not printed.`);
+      return;
+    }
+    if (!isLabelOnly(text, names, brief)) return;
     const line = aligned ? beats[index]?.onScreen : undefined;
-    if (line && !isLabelOnly(line, names, brief)) { setText(layer, line); notes.push(`scene ${index + 1}: "${text.replace(/\s+/g, ' ').trim()}" is a beat label, not copy; it now says "${line}".`); }
+    if (line && !isLabelOnly(line, names, brief) && readsAsCopy(line)) {
+      // A scene that already says the beat's line in smaller supporting text ("Calm design" over "Premium security" for
+      // "Calm design, premium security") would print it twice if the label took the line too; the label is then simply spare.
+      const said = siblings.filter(other => other !== layer && other?.type === 'text')
+        .map(other => String(other.content ?? other.text ?? '')).join(' ');
+      if (normal(said) && normal(said).includes(normal(line))) { siblings.splice(siblings.indexOf(layer), 1); notes.push(`scene ${index + 1}: dropped the beat label "${text.replace(/\s+/g, ' ').trim()}", because the scene already says "${line}".`); return; }
+      setText(layer, line);
+      notes.push(`scene ${index + 1}: "${text.replace(/\s+/g, ' ').trim()}" is a beat label, not copy; it now says "${line}".`);
+    }
     else if (siblings.filter(other => other?.type === 'text').length > 1) { siblings.splice(siblings.indexOf(layer), 1); notes.push(`scene ${index + 1}: dropped the beat label "${text.replace(/\s+/g, ' ').trim()}".`); }
   }));
   const last = scenes[scenes.length - 1];

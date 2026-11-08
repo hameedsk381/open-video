@@ -63,6 +63,20 @@ describe('readContent', () => {
     expect(readContent(unknown, [brief]).problems.join('\n')).toContain('"s9", which is not a quoted source');
   });
 
+  it('rejects a beat that describes the video instead of the subject', () => {
+    const meta = { sources: [], beats: [{ id: 'proof', name: 'Proof', onScreen: 'Sleek sans + cyber sound', narration: 'It uses sleek sans typography and cyber sound.' }] };
+    const { content, problems } = readContent(meta, [{ id: 'brief', title: 'The brief', text: 'A launch film for a pocket finance app, calm and premium' }]);
+    expect(content).toBeUndefined();
+    expect(problems.join('\n')).toContain('beat "proof" describes the video itself');
+  });
+
+  it('allows those words when the subject is itself about them', () => {
+    const line = { sources: [], beats: [{ id: 'hook', name: 'Hook', onScreen: 'Motion smoothing for shaky footage', narration: 'Smooth the motion in every camera clip.' }] };
+    const { content, problems } = readContent(line, [{ id: 'brief', title: 'The brief', text: 'A camera app for motion smoothing and steady footage' }]);
+    expect(problems).toEqual([]);
+    expect(content?.beats[0]?.onScreen).toBe('Motion smoothing for shaky footage');
+  });
+
   it('requires an on-screen line and rejects duplicate source ids', () => {
     const missing = { ...grounded, beats: [{ ...grounded.beats[0], onScreen: '' }] };
     expect(readContent(missing, [brief]).problems).toContain('beat 1 has no "onScreen" line');
@@ -109,6 +123,21 @@ describe('writeContent', () => {
     expect(reads).toEqual(['https://example.com/report']);
     expect(progress).toContain('Reading https://example.com/report');
     expect(content?.sources[0]).toMatchObject({ id: 'web1', url: 'https://example.com/report', title: 'Report' });
+  });
+
+  it('skips watch pages and social posts, whose text cannot be quoted, instead of losing the whole script', async () => {
+    const page = 'In 2025 the platform rendered 4.2 million videos, according to our annual report.'.repeat(4);
+    const reply = { ...grounded, sources: [{ id: 'web1', quote: 'the platform rendered 4.2 million videos' }], beats: [{ ...grounded.beats[0], sourceIds: ['web1'], data: [] }] };
+    const provider = fake({ urls: [{ url: 'https://www.youtube.com/watch?v=abc', title: 'A video' }, { url: 'https://example.com/report', title: 'Report' }] }, reply);
+    const progress: string[] = [];
+    const reads: string[] = [];
+    const content = await writeContent(provider, {
+      ...options, research: true, onProgress: message => progress.push(message),
+      fetchPage: async url => { reads.push(url); return page; },
+    });
+    expect(reads).toEqual(['https://example.com/report']);
+    expect(progress).toContain('Skipped https://www.youtube.com/watch?v=abc: a watch page is not text the model can quote');
+    expect(content?.sources[0]).toMatchObject({ id: 'web1', url: 'https://example.com/report' });
   });
 });
 

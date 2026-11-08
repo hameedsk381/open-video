@@ -65,6 +65,31 @@ describe('@ove/react', () => {
     expect(at(0, createElement(AbsoluteFill, { style: { background: 'red' } }))).toMatch(/position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;background:red/);
   });
 
+  it('honours the placement shorthands models write instead of dropping layers at the corner', () => {
+    const centred = at(0, createElement(AbsoluteFill, { style: { x: 540, y: 960, textAlign: 'center', fontSize: 64 } }, 'Hello'));
+    expect(centred).toContain('left:540px');
+    expect(centred).toContain('top:960px');
+    expect(centred).toContain('right:auto');
+    expect(centred).toContain('transform:translateX(-50%)');
+    expect(centred).toContain('font-size:64px');
+
+    const moved = at(0, createElement(AbsoluteFill, { style: { translateY: -20, scale: 1.2, rotate: 4 } }, 'x'));
+    expect(moved).toContain('transform:translateY(-20px) scale(1.2) rotate(4deg)');
+
+    // A box with its own width places its words with textAlign; shifting it again would move the whole box.
+    const panel = at(0, createElement(AbsoluteFill, { style: { x: 100, width: 500, textAlign: 'center' } }, 'x'));
+    expect(panel).toContain('width:500px');
+    expect(panel).not.toContain('translateX(-50%)');
+  });
+
+  it('shows an AbsoluteFill only for its from/durationInFrames stretch, without remapping the frame', () => {
+    const node = createElement(AbsoluteFill, { from: 10, durationInFrames: 5 }, createElement(Probe));
+    expect(at(9, node)).toBe('');
+    expect(at(10, node)).toContain('frame 10 of');
+    expect(at(14, node)).toContain('frame 14 of');
+    expect(at(15, node)).toBe('');
+  });
+
   it('interpolates with easing functions, springs settle, and random repeats', () => {
     expect(interpolate(15, [0, 30], [0, 1])).toBe(0.5);
     expect(interpolate(15, [0, 30], [0, 1], { easing: Easing.out(Easing.quad) })).toBe(0.75);

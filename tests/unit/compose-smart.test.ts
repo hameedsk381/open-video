@@ -73,7 +73,7 @@ describe('composeSmart routing', () => {
   it('writes the script before design and carries it into the video', async () => {
     const script = { audience: 'builders', promise: 'ship faster', cta: 'try it', sources: [], beats: [
       { id: 'hook', name: 'Hook', seconds: 1, narration: 'A quick product intro.', onScreen: 'Hello', data: [], sourceIds: [] },
-      { id: 'point', name: 'Point', seconds: 1, narration: 'It is made of motion.', onScreen: 'Designed motion', data: [], sourceIds: [] },
+      { id: 'point', name: 'Point', seconds: 1, narration: 'It makes every intro feel instant.', onScreen: 'Faster every time', data: [], sourceIds: [] },
     ] };
     const progress: string[] = [];
     const provider = scripted(script, plan, composition);
@@ -81,7 +81,7 @@ describe('composeSmart routing', () => {
     // The script is the first call; the planner and the composer both receive it so neither invents copy.
     expect(String(provider.seen[0]![0]!.content)).toContain('script editor');
     expect(String(provider.seen[1]![0]!.content)).toContain('content script is already written');
-    expect(provider.seen[2]!.map(message => String(message.content)).join('\n')).toContain('Designed motion');
+    expect(provider.seen[2]!.map(message => String(message.content)).join('\n')).toContain('Faster every time');
     expect(result.composition.content?.beats.map(beat => beat.id)).toEqual(['hook', 'point']);
     expect(progress).toContain('Script ready: 2 beats, 0 sources.');
   });

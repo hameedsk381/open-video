@@ -1,5 +1,9 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { applyFixes, composeFromTemplate, composeVideo, isFixReply, templatesFor, type AiProvider, type ChatMessage, type TemplateChoice } from '@ove/ai';
+import { loadComposition } from '@ove/core';
+import { applyFixes, composeFromTemplate, composeVideo, isFixReply, templatesFor, writeCompositionProject, type AiProvider, type ChatMessage, type TemplateChoice } from '@ove/ai';
 
 // Template mode and patch repair: the model's reply is small, wrong replies are corrected from short feedback, and anything the
 // templates cannot cover falls back to writing a full composition.
@@ -81,6 +85,22 @@ describe('template pictures', () => {
     const none = scripted({ template: 'pictured', values: { title: 'Hi', image: 'logo' } }, { template: 'pictured', values: { title: 'Hi' } });
     expect((await composeFromTemplate(none, [pictured], base))!.attempts).toBe(2);
     expect(String(none.seen[1]!.at(-1)!.content)).toMatch(/no pictures were supplied/);
+  });
+});
+
+describe('saving a filled template', () => {
+  it('keeps the script and each scene\'s beat beside the variables, so the saved project still has its narration', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ove-template-'));
+    try {
+      const composition = loadComposition({ ...structuredClone(card),
+        content: { beats: [{ id: 'hook', name: 'Hook', onScreen: 'Hello' }] },
+        scenes: [{ ...card.scenes[0], beat: 'hook' }] });
+      const path = (await writeCompositionProject(dir, composition, { source: structuredClone(card) })).composition;
+      const saved = JSON.parse(await readFile(path, 'utf8'));
+      expect(saved.variables.title.default).toBe('Hello there');
+      expect(saved.content.beats[0].id).toBe('hook');
+      expect(saved.scenes[0].beat).toBe('hook');
+    } finally { await rm(dir, { recursive: true, force: true }); }
   });
 });
 

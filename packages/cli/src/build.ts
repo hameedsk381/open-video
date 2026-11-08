@@ -166,6 +166,12 @@ export const __render = (frame, props, cfg) => { let tree = __ce(__getComp(), pr
     const layer = { id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, ...first, ...(moving.length ? { animations: moving.map(property => ({ property, keyframes: keyframes(run.boxes.map(box => box[property])) })) } : {}) };
     (a.layer === 'front' ? mediaLayers.videoFront : mediaLayers.video).push(layer);
   }
+  // A sound or clip the component names but the project does not hold used to fail minutes later inside ffmpeg. The build
+  // is the right place to say so: built-in sounds are `sfx:` names, everything else is a path beside the component.
+  const declaredAssets = new Set((Array.isArray(config.assets) ? config.assets : []).map((asset: any) => String(asset?.id)));
+  const missingMedia = [...mediaLayers.audio, ...mediaLayers.video, ...mediaLayers.videoFront]
+    .map(layer => layer.src).filter((src): src is string => typeof src === 'string' && !declaredAssets.has(src) && !/^[a-z]+:/i.test(src) && !existsSync(resolve(dirname(source), src)));
+  if (missingMedia.length) throw new Error(`The video names media that is not in the project: ${[...new Set(missingMedia)].join(', ')}. Add the file beside ${basename(source)}, or use a built-in sound (sfx:whoosh, sfx:pop, sfx:ding, sfx:click, sfx:thump, sfx:tick) instead.`);
   const bundleName = `${basename(source).replace(/\.[jt]sx?$/, '')}.bundle.js`;
   const raw: Record<string, unknown> = { $schema: './composition.schema.json', version: '1.0', id, name: config.name ?? id, width: Number(config.width), height: Number(config.height), fps, durationFrames: Number(config.durationInFrames),
     ...(config.background !== undefined ? { background: config.background } : {}), ...(config.motionBlur ? { motionBlur: config.motionBlur === true ? { samples: 4, shutter: 180 } : config.motionBlur } : {}), ...(config.export ? { export: config.export } : {}), ...(config.assets ? { assets: config.assets } : {}),
