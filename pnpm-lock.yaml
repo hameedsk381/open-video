@@ -85,8 +85,8 @@ importers:
         specifier: '19'
         version: 19.3.1(react@19.3.1)
       three:
-        specifier: 0.170.0
-        version: 0.170.0
+        specifier: 0.187.0
+        version: 0.187.0
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -2425,8 +2425,8 @@ packages:
     resolution: {integrity: sha512-yYrrsWnrXMcdsnu/7YMYAofM1ktpL5By7vZhf15CrXijWWrEYZks5AXBudalfSWJLlnen/QUJUB5aoB0kqZUGA==}
     engines: {node: '>=6.0.0'}
 
-  three@0.170.0:
-    resolution: {integrity: sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==}
+  three@0.187.0:
+    resolution: {integrity: sha512-Qiu7R+Cmh8CstZsY1uJOSWnVlfo7ZtNLV7mF8Jltk3LB3AtDu9cRZlcnRKkAk8Y4z6KKw35z7Y7Urd7jWY8etA==}
 
   tiny-async-pool@1.3.0:
     resolution: {integrity: sha512-01EAw5EDrcVrdgyCLgoSPvqznC0sVxDSVeiOz09FUpjh71G79VCqneOr+xvt7T1r76CF6ZZfPjHorN2+d+3mqA==}
@@ -4683,7 +4683,7 @@ snapshots:
       mkdirp: 0.5.6
       rimraf: 2.6.3
 
-  three@0.170.0: {}
+  three@0.187.0: {}
 
   tiny-async-pool@1.3.0:
     dependencies:
