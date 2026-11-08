@@ -7,12 +7,17 @@
     "packages/*"
   ],
   "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
   "scripts": {
     "mr": "tsx packages/cli/src/index.ts",
     "motionrender": "tsx packages/cli/src/index.ts",
     "ove": "tsx packages/cli/src/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
     "validate:example": "tsx packages/cli/src/index.ts validate examples/typography/composition.json",
     "render:example": "tsx packages/cli/src/index.ts render examples/typography/composition.json --output artifacts/typography.mp4",
     "build:studio": "pnpm --filter @ove/studio build",
@@ -26,9 +31,10 @@
     "build:templates": "tsx scripts/build-templates.mjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.6",
     "@ove/ai": "workspace:*",
-    "@ove/api": "workspace:*",
     "@ove/animation": "workspace:*",
+    "@ove/api": "workspace:*",
     "@ove/assets": "workspace:*",
     "@ove/builder": "workspace:*",
     "@ove/contracts": "workspace:*",
@@ -38,10 +44,10 @@
     "@ove/jobs": "workspace:*",
     "@ove/react": "workspace:*",
     "@ove/renderer": "workspace:*",
-    "@ove/storage": "workspace:*",
-    "@ove/worker": "workspace:*",
     "@ove/schema": "workspace:*",
+    "@ove/storage": "workspace:*",
     "@ove/timeline": "workspace:*",
+    "@ove/worker": "workspace:*",
     "@types/node": "^24.19.2",
     "@types/react": "19",
     "@types/react-dom": "19",

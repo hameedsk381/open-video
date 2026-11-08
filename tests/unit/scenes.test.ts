@@ -184,12 +184,12 @@ describe('text that stays in the frame', () => {
   });
 
   it('limits the width to the room between the anchor and the margin, so a headline wraps instead of running off', () => {
-    const fit = (layer: any) => { fitTextWidth(layer, 1080, 86); return layer.maxWidth; };
-    expect(fit(text({ textAlign: 'left' }))).toBe(454);                       // 1080 - 86 - 540
-    expect(fit(text({ textAlign: 'center' }))).toBe(908);                     // both sides of the centre
-    expect(fit(text({ textAlign: 'right' }))).toBe(454);
-    expect(fit(text({ x: 90, textAlign: 'left' }))).toBe(904);
-    expect(fit(text({ x: 1000, textAlign: 'left' }))).toBe(360);              // never below a third of the frame
+    const widthFor = (layer: any) => { fitTextWidth(layer, 1080, 86); return layer.maxWidth; };
+    expect(widthFor(text({ textAlign: 'left' }))).toBe(454);                       // 1080 - 86 - 540
+    expect(widthFor(text({ textAlign: 'center' }))).toBe(908);                     // both sides of the centre
+    expect(widthFor(text({ textAlign: 'right' }))).toBe(454);
+    expect(widthFor(text({ x: 90, textAlign: 'left' }))).toBe(904);
+    expect(widthFor(text({ x: 1000, textAlign: 'left' }))).toBe(360);              // never below a third of the frame
   });
 
   it('only narrows a width the model chose, and leaves other layers alone', () => {

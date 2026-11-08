@@ -54,6 +54,7 @@ jobs:
 
       - run: pnpm ove doctor
       - run: pnpm typecheck
+      - run: pnpm lint
       - run: pnpm test
       - run: pnpm test:integration
       # The catalogue is shared by every OS, so one runner reviews it; the check needs FFmpeg and a browser.
@@ -71,3 +72,35 @@ jobs:
           npx ove init demo --no-skill
           npx ove render demo/composition.json --output demo/out.mp4 --frames 0-29
           node -e "import('motionrender').then(m => { if (typeof m.renderMedia !== 'function') process.exit(1); console.log('API ok'); })"
+
+  # The images are what actually ships, so build them on every change: a failure that only shows up in the container build
+  # (a typecheck of the packed tarball, a missing file) is caught here and not at deploy time. Nothing is pushed.
+  docker:
+    name: docker (api image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: api
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Known-vulnerability check on what ships. Advisory for now: it reports without failing the build, so a new advisory
+  # in a transitive dependency does not block unrelated work. Tighten to a failing check once the baseline is clean.
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm audit --prod --audit-level=high

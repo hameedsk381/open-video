@@ -1,0 +1,23 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "packages/**/*.{ts,tsx,mjs,cjs}", "services/**/*.ts", "apps/studio/src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs,cjs}", "tests/**/*.ts",
+      "!**/dist", "!**/node_modules", "!packages/cli/studio", "!packages/ove", "!**/*.d.ts"
+    ]
+  },
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": { "noAssignInExpressions": "off", "noExplicitAny": "off", "noDoubleEquals": "off", "noPrototypeBuiltins": "off", "noConfusingLabels": "off", "noLabelVar": "off", "useIterableCallbackReturn": "off", "noControlCharactersInRegex": "off", "noImplicitAnyLet": "warn", "noShadowRestrictedNames": "warn" },
+      "complexity": { "noCommaOperator": "off", "useArrowFunction": "off", "useOptionalChain": "off", "noArguments": "off", "noUselessLabel": "off" },
+      "style": { "noNonNullAssertion": "off", "useTemplate": "off", "useExponentiationOperator": "off", "useConst": "off", "useImportType": "off", "noDescendingSpecificity": "off" },
+      "correctness": { "noInnerDeclarations": "off", "noSwitchDeclarations": "off", "noInvalidUseBeforeDeclaration": "off", "noUnusedFunctionParameters": "off", "noUnusedVariables": "off", "noUnusedImports": "off" },
+      "a11y": { "noAutofocus": "warn", "useValidAnchor": "warn", "useAriaPropsSupportedByRole": "warn", "useMediaCaption": "warn", "useSemanticElements": "warn", "noSvgWithoutTitle": "off", "useButtonType": "off", "noStaticElementInteractions": "off", "useKeyWithClickEvents": "off", "noLabelWithoutControl": "off" }
+    }
+  }
+}
