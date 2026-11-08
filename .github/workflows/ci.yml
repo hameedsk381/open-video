@@ -37,7 +37,7 @@ jobs:
       - run: pnpm build:studio
       - run: pnpm --filter @ove/studio typecheck
       - name: Cache Playwright browser
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: playwright-cache
         with:
           path: |
