@@ -69,3 +69,24 @@ describe('POST /api/layer/snap', () => {
     expect((await send('POST', '/api/layer/snap', { id: 'snap', moves: [{ path: 'scenes[9].layers[0]', dx: 1, dy: 1 }] })).status).toBeGreaterThanOrEqual(400);
   });
 });
+
+describe('POST /api/text', () => {
+  it('changes one literal line and leaves the template (variables, bound text, defaults) as written', async () => {
+    const lit = { id: 'lit', type: 'text', content: 'Literal line', x: 100, y: 300, fontSize: 48 };
+    await writeFile(file(), JSON.stringify({ ...composition, scenes: [{ ...composition.scenes[0], layers: [lit, text('bound', { y: 500 })] }] }, null, 2));
+    expect((await send('POST', '/api/text', { id: 'snap', path: 'scenes[0].layers[0]', content: 'Edited line' })).status).toBe(200);
+    const after = await read(); const [first, bound] = after.scenes[0].layers;
+    expect(first.content).toBe('Edited line');
+    expect(bound.content).toBe('{{headline}}');
+    expect(after.variables.headline.default).toBe('Big news');
+    expect(first).not.toHaveProperty('color');
+    expect(Object.keys(first).sort()).toEqual(['content', 'fontSize', 'id', 'type', 'x', 'y']);
+  });
+
+  it('refuses a layer that is not text and a path that is not there, changing nothing', async () => {
+    const before = await readFile(file(), 'utf8');
+    expect((await send('POST', '/api/text', { id: 'snap', path: 'scenes[0]', content: 'x' })).status).toBeGreaterThanOrEqual(400);
+    expect((await send('POST', '/api/text', { id: 'snap', path: 'scenes[7].layers[0]', content: 'x' })).status).toBeGreaterThanOrEqual(400);
+    expect(await readFile(file(), 'utf8')).toBe(before);
+  });
+});

@@ -71,6 +71,13 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
   const [compareMode, setCompareMode] = useState<'split' | 'side-by-side' | 'flip'>('split');
   const [flipShowBefore, setFlipShowBefore] = useState(false);
 
+  // The parent hands in a new onFrame on every render, and every played frame renders it. Held in refs, they are read when needed and
+  // never restart the player: it is rebuilt only when the video itself changes.
+  const onFrameRef = useRef(onFrame);
+  onFrameRef.current = onFrame;
+  const startFrameRef = useRef(startFrame);
+  startFrameRef.current = startFrame;
+
   const total = detail.durationFrames;
   const isVertical = detail.height >= detail.width;
 
@@ -81,11 +88,11 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
         void player.current?.seek(f);
         void comparePlayer.current?.seek(f);
         setFrame(f);
-        onFrame?.(f);
+        onFrameRef.current?.(f);
       },
       frame: () => player.current?.frame ?? frame,
     }),
-    [frame, onFrame]
+    [frame]
   );
 
   // Primary player initialization
@@ -120,7 +127,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
         p.on('frame', f => {
           const currentF = typeof f === 'number' ? f : p.frame;
           setFrame(currentF);
-          onFrame?.(currentF);
+          onFrameRef.current?.(currentF);
           if (comparePlayer.current && Math.abs(comparePlayer.current.frame - currentF) > 1) {
             void comparePlayer.current.seek(currentF);
           }
@@ -138,7 +145,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
           comparePlayer.current?.pause();
         });
         p.on('error', e => setError(String(e?.message ?? e)));
-        if (startFrame) void p.seek(startFrame);
+        if (startFrameRef.current) void p.seek(startFrameRef.current);
       })
       .catch(e => {
         if (!dead) setError(`Could not start preview player: ${e.message}`);
@@ -153,7 +160,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
         /* already gone */
       }
     };
-  }, [detail.source, onFrame, startFrame]);
+  }, [detail.source]);
 
   // Compare player initialization when compareTarget is provided
   useEffect(() => {
@@ -224,8 +231,8 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
     void p?.seek(f);
     void comparePlayer.current?.seek(f);
     setFrame(f);
-    onFrame?.(f);
-  }, [onFrame]);
+    onFrameRef.current?.(f);
+  }, []);
 
   // Divider drag handlers
   const handleDividerPointerDown = (e: React.PointerEvent) => {
