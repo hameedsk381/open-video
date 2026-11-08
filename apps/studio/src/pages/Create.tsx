@@ -764,7 +764,8 @@ export function Making({ id, job }: { id: string; job: string }) {
         // notes arrive as a dismissible banner instead of an extra click.
         const outcome = composeOutcome(j.result);
         if (outcome.stop) { setReport(outcome.report); return; }
-        if (outcome.notes.length) stashComposeNotes(id, outcome.notes);
+        // Always written, even when empty: a project that reuses a deleted one's id must not inherit its notes.
+        stashComposeNotes(id, outcome.notes);
         go(`#/p/${encodeURIComponent(id)}`);
       },
       e => {
