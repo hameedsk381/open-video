@@ -153,6 +153,8 @@ export const renameRequest = z.object({ id, name: z.string().trim().min(1, 'name
 export const idRequest = z.object({ id });
 export const variablesRequest = z.object({ id, values: z.record(z.string(), z.unknown()) });
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
+/** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
+export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0) })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
 export const textRequest = z.object({ id, path: z.string().min(1, 'path is required'), content: z.string().min(1, 'text is required') });
 export const addBlockRequest = z.object({ id, block: z.string().min(1, 'block is required'), at: z.union([z.string(), z.number()]).optional(), frames: z.union([z.string(), z.number()]).optional(), scene: z.string().optional(), set: z.record(z.string(), z.unknown()).optional() });
 export const restoreRequest = z.object({ file: z.string().min(1), n: z.number().int().min(1) });

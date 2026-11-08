@@ -1,4 +1,4 @@
-import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, textRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, snapRequest, textRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
@@ -128,19 +128,23 @@ export function projectRoutes(): Route[] {
       await writeRaw(c, id, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Edited the text' }); c.json(200, { ok: true });
     } },
     { method: 'POST', path: '/api/layer/snap', handle: async c => {
-      const body = await c.body();
-      const id = await exists(c, body.id);
-      const path = textOf(body.path, 'path');
-      const dx = typeof body.dx === 'number' ? body.dx : 0;
-      const dy = typeof body.dy === 'number' ? body.dy : 0;
-      const composition = loadComposition(await c.deps.store.readRaw(c.who, id)) as any;
-      setAtPath(composition, path, layer => {
-        if (!layer || typeof layer !== 'object') throw new Error('Layer not found');
-        layer.x = (Number(layer.x) || 0) + dx;
-        layer.y = (Number(layer.y) || 0) + dy;
-      });
-      await writeRaw(c, id, { $schema: './composition.schema.json', ...composition }, { kind: 'edit', label: 'Snapped to safe zone' });
-      c.json(200, { ok: true });
+      // Moves layers by the given offsets, all in one saved change. It edits the file as written (not the loaded composition), so variables,
+      // components and scene timing stay as they were; a layer's animated x and y move with it.
+      const request = parseRequest(snapRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
+      const moves = request.moves ?? [{ path: request.path ?? '', dx: request.dx ?? 0, dy: request.dy ?? 0 }];
+      for (const { path, dx, dy } of moves) {
+        if (!path) throw new Error('path is required');
+        setAtPath(composition, path, layer => {
+          for (const [axis, by] of [['x', dx], ['y', dy]] as const) {
+            if (!by) continue;
+            if (layer[axis] !== undefined && typeof layer[axis] !== 'number') throw new Error(`That layer's ${axis} position is an expression, so it cannot be nudged automatically`);
+            layer[axis] = (layer[axis] ?? 0) + by;
+            for (const animation of Array.isArray(layer.animations) ? layer.animations : []) if (animation?.property === axis) for (const key of animation.keyframes ?? []) if (typeof key.value === 'number') key.value += by;
+          }
+        });
+      }
+      await writeRaw(c, id, composition, { kind: 'edit', label: moves.length > 1 ? `Moved ${moves.length} layers into the safe zone` : 'Snapped to safe zone' });
+      c.json(200, { ok: true, moved: moves.length });
     } },
     { method: 'POST', path: '/api/add-block', handle: async c => {
       const request = parseRequest(addBlockRequest, await c.body()), id = await exists(c, request.id), { store, library } = c.deps, block = await library.readBlock(request.block);

@@ -25,14 +25,15 @@ import {
   useUi,
 } from '../ui';
 
+// Three things a person does here. The script sits beside the scenes it describes, and Revisions and Export open from the top bar, so
+// the side panel never needs to scroll sideways. Every older address (…/script, …/history, …/export) still opens its panel.
 const tabs = [
-  ['edit', 'Content', FilmIcon] as const,
-  ['script', 'Script & Beats', TypeIcon] as const,
+  ['edit', 'Edit', FilmIcon] as const,
   ['ai', 'AI Director', SparklesIcon] as const,
-  ['look', 'Style & Themes', PaletteIcon] as const,
-  ['history', 'Revisions', ClockIcon] as const,
-  ['export', 'Export', DownloadIcon] as const,
+  ['look', 'Style', PaletteIcon] as const,
 ];
+const tabOf = (tab: string) => (tab === 'script' ? 'edit' : tab);
+const sideTitles: Record<string, string> = { history: 'Revisions', export: 'Export & review' };
 
 const themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight', 'fontDisplay', 'fontBody', 'texture', 'textureColor', 'textureOpacity', 'motion', 'transition', 'layout', 'density'];
 
@@ -87,12 +88,12 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   }, [detail, load, setNote, toast]);
 
-  const snapLayer = useCallback(async (path: string, dx: number, dy: number) => {
+  const snapLayers = useCallback(async (moves: { path: string; dx: number; dy: number }[]) => {
     if (!detail) return;
     try {
-      await api('/api/layer/snap', { id: detail.id, path, dx, dy });
+      await api('/api/layer/snap', { id: detail.id, moves });
       setNote('Snapped to safe area');
-      toast('Moved layer into platform safe zone', 'success');
+      toast(moves.length > 1 ? `Moved ${moves.length} layers into the safe zone` : 'Moved layer into the safe zone', 'success');
       await load(true);
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -212,6 +213,9 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
             </span>
           ) : null}
           <div className="etop-actions">
+            <Button size="sm" variant="ghost" icon={<ClockIcon size={14} />} onClick={() => go(editorPath(id, 'history'))} title="Every saved version of this video, with compare and restore">
+              Revisions{detail.revisions ? ` · ${detail.revisions}` : ''}
+            </Button>
             <Button size="sm" variant="ghost" icon={<ShieldIcon size={14} />} onClick={() => openExport('review')}>
               Review
             </Button>
@@ -242,7 +246,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           selectedLayerPath={selectedTextPath}
           onSelectLayerPath={setSelectedTextPath}
           onSaveLayerText={saveDirectText}
-          onSnapLayer={snapLayer}
+          onSnapLayers={snapLayers}
         />
 
         <div className="scene-focus">
@@ -282,7 +286,8 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           {tabs.map(([key, label, Icon]) => (
             <button
               key={key}
-              className={tab === key ? 'on' : ''}
+              className={tabOf(tab) === key ? 'on' : ''}
+              aria-current={tabOf(tab) === key ? 'page' : undefined}
               onClick={() => go(editorPath(id, key))}
             >
               <Icon size={13} />
@@ -291,6 +296,17 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ))}
         </div>
         <div className="pane">
+          {tab === 'edit' || tab === 'script' || !(tab in { ai: 1, look: 1, history: 1, export: 1 }) ? (
+            <div className="segmented" role="tablist" aria-label="What to edit" style={{ marginBottom: 18 }}>
+              <button role="tab" aria-selected={tab !== 'script'} className={tab !== 'script' ? 'on' : ''} onClick={() => go(editorPath(id))}>Scenes &amp; text</button>
+              <button role="tab" aria-selected={tab === 'script'} className={tab === 'script' ? 'on' : ''} onClick={() => go(editorPath(id, 'script'))}>Script &amp; beats</button>
+            </div>
+          ) : tab === 'history' || tab === 'export' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go(editorPath(id))}>Back to editing</Button>
+              <b style={{ fontSize: 13, color: 'var(--muted)' }}>{sideTitles[tab]}</b>
+            </div>
+          ) : null}
           {tab === 'script' ? (
             <ScriptTab
               {...props}

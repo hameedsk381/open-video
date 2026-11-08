@@ -2,103 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Detail } from './api';
 import { CheckIcon, ShieldIcon, Spinner } from './ui';
 
-export type CanvasTextItem = {
-  id: string;
-  path: string;
-  sceneId: string;
-  sceneName: string;
-  content: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  leftPct: number;
-  topPct: number;
-  widthPct: number;
-  heightPct: number;
-  fontSize: number;
-  fontFamily: string;
-  fontWeight: number;
-  textAlign: 'left' | 'center' | 'right';
-  variableName?: string;
-};
-
-export type SafeZoneCollision = {
-  band: 'top' | 'bottom' | 'right' | 'left';
-  name: string;
-  hint: string;
-  dx: number;
-  dy: number;
-};
-
-/** Checks whether a text item intrudes into mobile UI overlay exclusion zones (Reels, TikTok, Shorts). */
-export function checkSafeZoneCollision(
-  item: CanvasTextItem,
-  compWidth: number,
-  compHeight: number
-): SafeZoneCollision | null {
-  if (compHeight < compWidth) return null; // Safe zones apply to vertical / square social formats
-
-  const screen = (compWidth * 16) / 9;
-  const letterbox = Math.max(0, (screen - compHeight) / 2);
-  const topThreshold = Math.max(0, 0.08 * screen - letterbox);
-  const bottomThreshold = compHeight - Math.max(0, 0.18 * screen - letterbox);
-  const rightThreshold = compWidth - 0.11 * compWidth;
-  const leftThreshold = 0.02 * compWidth;
-
-  const itemRight = item.x + item.width;
-  const itemBottom = item.y + item.height;
-
-  // 1. Bottom obstruction (Reels / TikTok caption, account handle & audio tags)
-  if (itemBottom > bottomThreshold) {
-    const dy = Math.round(bottomThreshold - itemBottom - 16);
-    return {
-      band: 'bottom',
-      name: 'Bottom Caption & Feed Zone',
-      hint: 'Obstructed by TikTok/Reels captions & sound tags',
-      dx: 0,
-      dy,
-    };
-  }
-
-  // 2. Top obstruction (Top status bar, search bar, stories/reels header)
-  if (item.y < topThreshold) {
-    const dy = Math.round(topThreshold - item.y + 16);
-    return {
-      band: 'top',
-      name: 'Top Header Zone',
-      hint: 'Obstructed by platform header & search bar',
-      dx: 0,
-      dy,
-    };
-  }
-
-  // 3. Right obstruction (Action buttons: Like, Comment, Share, Audio Disc)
-  if (itemRight > rightThreshold) {
-    const dx = Math.round(rightThreshold - itemRight - 16);
-    return {
-      band: 'right',
-      name: 'Right Action Buttons',
-      hint: 'Obstructed by Like, Comment & Share buttons',
-      dx,
-      dy: 0,
-    };
-  }
-
-  // 4. Left bezel margin
-  if (item.x < leftThreshold) {
-    const dx = Math.round(leftThreshold - item.x + 12);
-    return {
-      band: 'left',
-      name: 'Left Margin',
-      hint: 'Too close to screen bezel',
-      dx,
-      dy: 0,
-    };
-  }
-
-  return null;
-}
+import { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type SafeZoneCollision } from './safeZone';
+export { checkSafeZoneCollision, resolveSafeZone, type CanvasTextItem, type SafeZoneCollision };
 
 /** Traverses composition scenes & layers at currentFrame to extract visible text layers with canvas coordinates. */
 export function extractCanvasTextItems(detail: Detail, currentFrame: number): CanvasTextItem[] {
@@ -209,7 +114,7 @@ export function CanvasDirectOverlay({
   selectedPath,
   onSelectPath,
   onSaveText,
-  onSnapLayer,
+  onSnapLayers,
   disabled = false,
 }: {
   detail: Detail;
@@ -217,7 +122,7 @@ export function CanvasDirectOverlay({
   selectedPath: string | null;
   onSelectPath: (path: string | null) => void;
   onSaveText: (path: string, content: string, variableName?: string) => Promise<void>;
-  onSnapLayer?: (path: string, dx: number, dy: number) => Promise<void>;
+  onSnapLayers?: (moves: { path: string; dx: number; dy: number }[]) => Promise<void>;
   disabled?: boolean;
 }) {
   const compWidth = Number(detail.width) || 1080;
@@ -274,25 +179,23 @@ export function CanvasDirectOverlay({
   };
 
   const handleSnap = async () => {
-    if (!selectedItem || !selectedCollision || !onSnapLayer || snapping) return;
+    const move = selectedItem && selectedCollision ? resolveSafeZone(selectedItem, compWidth, compHeight) : null;
+    if (!selectedItem || !move || !onSnapLayers || snapping) return;
     setSnapping(true);
     try {
-      await onSnapLayer(selectedItem.path, selectedCollision.dx, selectedCollision.dy);
+      await onSnapLayers([{ path: selectedItem.path, ...move }]);
     } finally {
       setSnapping(false);
     }
   };
 
   const handleSnapAll = async () => {
-    if (!onSnapLayer || snappingAll || !itemsWithViolations.length) return;
+    if (!onSnapLayers || snappingAll || !itemsWithViolations.length) return;
+    const moves = itemsWithViolations.flatMap(item => { const move = resolveSafeZone(item, compWidth, compHeight); return move ? [{ path: item.path, ...move }] : []; });
+    if (!moves.length) return;
     setSnappingAll(true);
     try {
-      for (const item of itemsWithViolations) {
-        const col = collisions.get(item.path);
-        if (col) {
-          await onSnapLayer(item.path, col.dx, col.dy);
-        }
-      }
+      await onSnapLayers(moves);
     } finally {
       setSnappingAll(false);
     }
@@ -334,7 +237,7 @@ export function CanvasDirectOverlay({
         >
           <ShieldIcon size={13} />
           <span>{itemsWithViolations.length} element{itemsWithViolations.length > 1 ? 's' : ''} outside safe area</span>
-          {onSnapLayer ? (
+          {onSnapLayers ? (
             <button
               className="btn sm"
               style={{
@@ -526,7 +429,7 @@ export function CanvasDirectOverlay({
           </button>
 
           {/* 1-Click Snap to Safe Area Button */}
-          {selectedCollision && onSnapLayer ? (
+          {selectedCollision && onSnapLayers ? (
             <button
               className="btn sm"
               style={{
