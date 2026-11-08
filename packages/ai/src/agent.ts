@@ -16,6 +16,8 @@ export type BrandPack = {
   fonts?: BrandFont;
   logo?: string;         // file path or URL
   name?: string;         // brand name to include in copy
+  /** One line the closing scene may print: phone, email, website. */
+  contact?: string;
   style?: string;        // any free-text style notes e.g. "minimalist", "playful tech"
 };
 
@@ -96,6 +98,7 @@ function brandPromptSection(brand: BrandPack): string {
     if (fontParts.length) lines.push(`Fonts: ${fontParts.join(', ')}`);
   }
   if (brand.name) lines.push(`Brand Name: ${brand.name}`);
+  if (brand.contact) lines.push(`Contact Line: ${brand.contact} (print it in the closing scene)`);
   if (brand.style) lines.push(`Style: ${brand.style}`);
   lines.push('You MUST use ONLY these brand colors and fonts in every component style. Do not invent new colors.');
   return lines.join('\n');

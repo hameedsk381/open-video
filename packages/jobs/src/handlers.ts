@@ -9,6 +9,7 @@ import {
 import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
 import { boolOf, canvasFor, folderName, integerIn, optionalNumber, optionalText, renderSettings, textOf } from './input';
+import { addBrandContact, addBrandLogo } from './brand-logo';
 import type { JobEnv } from './env';
 import type { JobSpec } from './queue';
 
@@ -80,7 +81,14 @@ export function createHandlers(env: JobEnv) {
       }
       if (typeof input.sceneCount === 'number' && input.sceneCount > 0) directions.push(`Target Scene Count: Exactly ${input.sceneCount} scenes`);
 
-      const effectiveBrief = directions.length ? `${brief}\n\n[Creative Direction]\n- ${directions.join('\n- ')}` : brief;
+      // A saved brand travels as copy as well as colour: the name and contact line are what the closing scene prints.
+      const brand = readBrand(input.brand);
+      const brandCopy = [brand?.name && `Brand name: ${brand.name}`, brand?.contact && `Contact line for the closing scene: ${brand.contact}`].filter(Boolean);
+      const effectiveBrief = [
+        brief,
+        directions.length ? `[Creative Direction]\n- ${directions.join('\n- ')}` : '',
+        brandCopy.length ? `[Brand]\n- ${brandCopy.join('\n- ')}` : '',
+      ].filter(Boolean).join('\n\n');
 
       // Evidence the caller already has, and an optional written script; either travels into the compose exactly as the
       // command line hands it over, so the hosted studio and the CLI produce the same content-first video.
@@ -97,7 +105,7 @@ export function createHandlers(env: JobEnv) {
         content: input.content && typeof input.content === 'object' && !Array.isArray(input.content) ? input.content as any : undefined,
         sources: sources.length ? sources : undefined,
         research: input.research === false ? false : undefined,
-        brand: readBrand(input.brand), includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
+        brand, includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(cleanProgressMessage(message)),
       };
       const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
@@ -137,10 +145,15 @@ export function createHandlers(env: JobEnv) {
       }
       await ensureBaseline(resolve(dir, 'composition.json'));
       const source = result.source ? (options.narration ? mergeNarration(result.source, composition) : result.source) : undefined;
+      // A saved brand's logo and contact line sign the closing scene. The caller names an asset the project already holds, never a path.
+      const logoId = typeof input.brandLogo === 'string' ? input.brandLogo.trim() : '';
+      const logo = logoId ? pictures.find(picture => picture.id === logoId && picture.type === 'image') : undefined;
+      if (logo) addBrandLogo(composition as any, source as any, logo.src);
+      if (brand?.contact) addBrandContact(composition as any, source as any, brand.contact);
       const files = await writeCompositionProject(dir, composition, { force: true, source });
       // A template's own pictures and sounds travel with it inside composeSmart, which owns the template catalogue;
       // if they could not, it says so in `result.warnings` and that is reported below like any other note.
-      await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: ai.id, model: ai.model, template: result.template, attempts: result.attempts });
+      await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), brief: brief.slice(0, 4000), provider: ai.id, model: ai.model, template: result.template, attempts: result.attempts });
       return {
         dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps,
         scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(options.review),

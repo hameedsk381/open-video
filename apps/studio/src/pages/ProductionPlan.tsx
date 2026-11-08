@@ -169,7 +169,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
     setError('');
     try {
       const result = await api<CompileProductionResult>('/api/production/compile', { id });
-      toast(`Timeline compiled${result.revision ? ` · version #${result.revision.n}` : ''}`, 'success');
+      toast(`Video built${result.revision ? ` · version #${result.revision.n}` : ''}`, 'success');
       go(editorPath(id, 'edit'));
     } catch (e) {
       setError((e as Error).message);
@@ -192,7 +192,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
     return (
       <div className="center">
         <Spinner size={32} />
-        <p className="sub" style={{ marginTop: 14 }}>Loading the production plan…</p>
+        <p className="sub" style={{ marginTop: 14 }}>Loading the storyboard…</p>
       </div>
     );
   }
@@ -214,7 +214,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
       <div className="plan-head">
         <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go(editorPath(id))}>Editor</Button>
         <div className="plan-title">
-          <h1>{plan?.name ?? detail?.name ?? 'Production plan'}</h1>
+          <h1>{plan?.name ?? detail?.name ?? 'Storyboard'}</h1>
           <small>{detail ? `${detail.width}×${detail.height} · ${dur(detail.durationFrames / detail.fps)}` : `Project ${id}`}</small>
         </div>
         <span className="grow" />
@@ -307,12 +307,12 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
         </div>
       ) : (
         <div className="plan-empty">
-          <Empty icon={<LayersIcon size={38} />} title="No production plan yet">
+          <Empty icon={<LayersIcon size={38} />} title="No storyboard yet">
             <p style={{ maxWidth: 480, margin: '8px auto 0' }}>
-              A plan turns this timeline into a brief, a script and a shot list. Edit it here, then compile it back into the video.
+              The storyboard turns this timeline into a brief, a script and a shot list. Edit it here, then build it back into the video.
             </p>
             <Button variant="primary" loading={busy === 'init'} onClick={() => void start()}>
-              Start a plan from this video
+              Start a storyboard from this video
             </Button>
           </Empty>
           {error ? <Notice tone="error">{error}</Notice> : null}
@@ -417,7 +417,7 @@ function Brief({ plan, edit }: { plan: Production; edit: Edit }) {
       </div>
 
       <h2 style={{ marginTop: 26 }}>Canvas</h2>
-      <p className="sub">Compiling the plan resizes the timeline to this format.</p>
+      <p className="sub">Building the video resizes the timeline to this format.</p>
       <div className="plan-grid plan-grid-three">
         <NumberField label="Width" value={format.width} min={1} onChange={value => edit(draft => { if (value) (draft.format ??= {}).width = Math.round(value); })} />
         <NumberField label="Height" value={format.height} min={1} onChange={value => edit(draft => { if (value) (draft.format ??= {}).height = Math.round(value); })} />
@@ -425,7 +425,7 @@ function Brief({ plan, edit }: { plan: Production; edit: Edit }) {
       </div>
 
       <h2 style={{ marginTop: 26 }}>Look</h2>
-      <p className="sub">The art direction the compiled timeline starts from.</p>
+      <p className="sub">The art direction the built video starts from.</p>
       <div className="plan-grid">
         <TextField label="Genre" value={style.genre} onChange={value => look('genre', value)} />
         <TextField label="Visual language" value={style.visualLanguage} onChange={value => look('visualLanguage', value)} />
@@ -478,7 +478,7 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
     const used = new Set(draft.beats.map((beat: any) => beat.id));
     let n = draft.beats.length + 1;
     while (used.has(`beat-${n}`)) n++;
-    draft.beats.push({ id: `beat-${n}`, name: 'New beat', onScreen: 'The line on screen' });
+    draft.beats.push({ id: `beat-${n}`, name: 'New line', onScreen: 'The line on screen' });
   });
 
   const removeBeat = (index: number) => edit(draft => {
@@ -507,9 +507,9 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
     return (
       <>
         <h2>Script</h2>
-        <p className="sub">What the film says, beat by beat, with the source behind every claim.</p>
+        <p className="sub">What the film says, line by line, with the source behind every claim.</p>
         <Empty icon={<TypeIcon size={32} />} title="This plan has no script">
-          <p style={{ maxWidth: 420, margin: '8px auto 0' }}>Write the spoken and on-screen lines, then link each shot to the beat it renders.</p>
+          <p style={{ maxWidth: 420, margin: '8px auto 0' }}>Write the spoken and on-screen lines, then link each scene to the line it says.</p>
           <Button variant="primary" onClick={() => edit(draft => { draft.script = { beats: [{ id: 'beat-1', name: 'Hook', onScreen: 'The first line' }], sources: [] }; })}>
             Write a script
           </Button>
@@ -521,7 +521,7 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
   return (
     <>
       <h2>Script</h2>
-      <p className="sub">What the film says, beat by beat. A claim or figure needs a cited source, and a cited source needs its quote.</p>
+      <p className="sub">What the film says, line by line. A claim or figure needs a cited source, and a cited source needs its quote.</p>
 
       <div className="plan-grid">
         <TextField label="Audience" value={script.audience} onChange={value => setScript(draft => { if (value) draft.audience = value; else delete draft.audience; })} />
@@ -530,14 +530,14 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
       </div>
 
       <div className="plan-section-head">
-        <h2>Beats</h2>
-        <Button size="sm" onClick={addBeat}>Add beat</Button>
+        <h2>Script lines</h2>
+        <Button size="sm" onClick={addBeat}>Add line</Button>
       </div>
       {beats.length ? beats.map((beat, index) => (
         <div className="plan-card" key={beat.id ?? index}>
           <div className="plan-card-head">
             <code className="plan-id">{beat.id}</code>
-            <Badge tone="neutral">Beat {index + 1}</Badge>
+            <Badge tone="neutral">Line {index + 1}</Badge>
             <span className="grow" />
             <Button size="sm" variant="ghost" onClick={() => removeBeat(index)}>Remove</Button>
           </div>
@@ -548,7 +548,7 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
           <TextField label="On screen" value={beat.onScreen} onChange={value => setScript(draft => { draft.beats[index].onScreen = value; })} />
           <TextField label="Narration" value={beat.narration} rows={2} onChange={value => setScript(draft => { if (value) draft.beats[index].narration = value; else delete draft.beats[index].narration; })} />
           <div className="plan-grid">
-            <TextField label="Claim" value={beat.claim} onChange={value => setScript(draft => { if (value) draft.beats[index].claim = value; else delete draft.beats[index].claim; })} hint="The factual assertion this beat makes, if any." />
+            <TextField label="Claim" value={beat.claim} onChange={value => setScript(draft => { if (value) draft.beats[index].claim = value; else delete draft.beats[index].claim; })} hint="The factual assertion this line makes, if any." />
             <TextField label="Sources" value={(beat.sourceIds ?? []).join(', ')} onChange={value => setScript(draft => { draft.beats[index].sourceIds = value.split(',').map((item: string) => item.trim()).filter(Boolean); })} hint="Comma-separated source ids." />
             <TextField label="Entrance" value={beat.motion} onChange={value => setScript(draft => { if (value) draft.beats[index].motion = value; else delete draft.beats[index].motion; })} hint="Optional: rise, pop, fade." />
           </div>
@@ -570,7 +570,7 @@ function Script({ plan, edit }: { plan: Production; edit: Edit }) {
             </div>
           ))}
         </div>
-      )) : <p className="sub">No beats yet. Add one so each shot has something to say.</p>}
+      )) : <p className="sub">No lines yet. Add one so each scene has something to say.</p>}
 
       <div className="plan-section-head">
         <h2>Sources</h2>
@@ -650,7 +650,7 @@ function Storyboard({ plan, base, edit, review, selected, onSelect, onCompile }:
         </div>
         <div className="storyboard-actions">
           <span className="storyboard-ready">{review.ready}/{review.total} with footage</span>
-          <Button size="sm" variant="primary" icon={<PlayIcon size={13} />} onClick={onCompile}>Review &amp; compile</Button>
+          <Button size="sm" variant="primary" icon={<PlayIcon size={13} />} onClick={onCompile}>Review &amp; build</Button>
         </div>
       </div>
 
@@ -744,16 +744,16 @@ function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIs
     });
   }
   if (!plan.brief?.prompt?.trim()) steps.push({ key: 'brief', title: 'Say what the video is for', detail: 'One sentence in the brief keeps every shot on topic.', section: 'brief', tone: 'amber' });
-  if (!plan.script?.beats?.length) steps.push({ key: 'script', title: 'Write the script beats', detail: 'Every shot renders one beat.', section: 'script', tone: 'amber' });
-  if (!review.total) steps.push({ key: 'shots', title: 'Add shots to the plan', detail: 'A plan needs at least one shot to compile.', section: 'shots', tone: 'amber' });
+  if (!plan.script?.beats?.length) steps.push({ key: 'script', title: 'Write the script lines', detail: 'Every scene needs one line.', section: 'script', tone: 'amber' });
+  if (!review.total) steps.push({ key: 'shots', title: 'Add shots to the plan', detail: 'The video needs at least one shot.', section: 'shots', tone: 'amber' });
   if (review.unusedBeats.length) {
-    steps.push({ key: 'beats', title: `${plural(review.unusedBeats.length, 'beat')} no shot renders`, detail: review.unusedBeats.slice(0, 4).join(', '), section: 'storyboard', tone: 'amber' });
+    steps.push({ key: 'beats', title: `${plural(review.unusedBeats.length, 'line')} no scene uses`, detail: review.unusedBeats.slice(0, 4).join(', '), section: 'storyboard', tone: 'amber' });
   }
   if (review.unreviewed) {
     steps.push({ key: 'review', title: `${plural(review.unreviewed, 'take')} to approve`, detail: 'Approving picks the take the timeline uses.', section: 'storyboard', tone: 'neutral' });
   }
   if (review.pending) {
-    steps.push({ key: 'pending', title: `${plural(review.pending, 'shot')} will compile as text cards`, detail: 'Add media or approve a take to show footage.', section: 'storyboard', tone: 'neutral' });
+    steps.push({ key: 'pending', title: `${plural(review.pending, 'shot')} will build as text cards`, detail: 'Add media or approve a take to show footage.', section: 'storyboard', tone: 'neutral' });
   }
   // Assets the plan says it needs: counted from approvals, so an uploaded file nobody approved for its job still shows here.
   if (coverage?.missing) {
@@ -763,14 +763,14 @@ function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIs
     steps.push({ key: 'assets-review', title: `${plural(coverage.candidate, 'asset')} to approve`, detail: 'Approved assets are the ones the shots may use.', section: 'storyboard', tone: 'neutral' });
   }
   if (coverage?.total && coverage.beatsWithoutRequirements.length) {
-    steps.push({ key: 'assets-beats', title: `${plural(coverage.beatsWithoutRequirements.length, 'beat')} with no asset requirement`, detail: coverage.beatsWithoutRequirements.slice(0, 4).join(', '), section: 'script', tone: 'neutral' });
+    steps.push({ key: 'assets-beats', title: `${plural(coverage.beatsWithoutRequirements.length, 'line')} with no asset requirement`, detail: coverage.beatsWithoutRequirements.slice(0, 4).join(', '), section: 'script', tone: 'neutral' });
   }
   if (review.missingCopy.length) {
     steps.push({ key: 'copy', title: `${plural(review.missingCopy.length, 'shot')} without on-screen copy`, detail: review.missingCopy.slice(0, 4).join(', '), section: 'storyboard', tone: 'neutral' });
   }
-  if (dirty) steps.push({ key: 'dirty', title: 'Save the plan before compiling', detail: 'Compile reads the saved plan.', section: 'compile', tone: 'amber' });
+  if (dirty) steps.push({ key: 'dirty', title: 'Save the storyboard first', detail: 'Building reads the saved storyboard.', section: 'compile', tone: 'amber' });
   if (!steps.length) {
-    steps.push({ key: 'ready', title: 'The plan is ready to compile', detail: `${plural(review.total, 'shot')} · ${review.approved} approved`, section: 'compile', tone: 'green' });
+    steps.push({ key: 'ready', title: 'The storyboard is ready to build', detail: `${plural(review.total, 'shot')} · ${review.approved} approved`, section: 'compile', tone: 'green' });
   }
   return steps;
 }
@@ -841,7 +841,7 @@ function CoPilot({ plan, review, issues, dirty, coverage, busy, active, selected
             <span>{Number(selected.durationSeconds) || 0}s</span>
             {selected.beatId ? <span>{selected.beatId}</span> : null}
           </div>
-          {selected.onScreen ? <blockquote className="copilot-quote">{selected.onScreen}</blockquote> : <p className="copilot-hint">No on-screen copy yet; compile uses the action line.</p>}
+          {selected.onScreen ? <blockquote className="copilot-quote">{selected.onScreen}</blockquote> : <p className="copilot-hint">No on-screen copy yet; the build uses the action line.</p>}
           {selected.generation?.error ? <p className="copilot-hint is-error">{selected.generation.error}</p> : null}
           <div className="copilot-actions">
             {take.canApprove ? (
@@ -866,7 +866,7 @@ function CoPilot({ plan, review, issues, dirty, coverage, busy, active, selected
 
       <div className="copilot-foot">
         {dirty ? <Button size="sm" variant="primary" loading={busy === 'save'} onClick={save}>Save plan</Button> : null}
-        <Button size="sm" variant={dirty ? 'ghost' : 'primary'} icon={<PlayIcon size={12} />} onClick={() => goSection('compile')}>Compile</Button>
+        <Button size="sm" variant={dirty ? 'ghost' : 'primary'} icon={<PlayIcon size={12} />} onClick={() => goSection('compile')}>Build video</Button>
       </div>
     </aside>
   );
@@ -877,7 +877,7 @@ function CoPilot({ plan, review, issues, dirty, coverage, busy, active, selected
 function Shots({ plan, edit }: { plan: Production; edit: Edit }) {
   const shots: ProductionShot[] = Array.isArray(plan.shots) ? plan.shots : [];
   const beats: any[] = Array.isArray((plan as any).script?.beats) ? (plan as any).script.beats : [];
-  const beatOptions = [{ value: '', label: 'No beat' }, ...beats.map((beat: any) => ({ value: beat.id, label: `${beat.id} — ${beat.name ?? beat.id}` }))];
+  const beatOptions = [{ value: '', label: 'No line' }, ...beats.map((beat: any) => ({ value: beat.id, label: `${beat.id} — ${beat.name ?? beat.id}` }))];
 
   const set = (index: number, mutate: (shot: any) => void) => edit(draft => mutate(draft.shots[index]));
 
@@ -928,7 +928,7 @@ function Shots({ plan, edit }: { plan: Production; edit: Edit }) {
             <TextField label="Action" value={shot.action} rows={2} onChange={value => set(index, draft => { draft.action = value; })} hint="What happens on screen, as a physical action." />
             <TextField label="On screen" value={shot.onScreen} onChange={value => set(index, draft => { if (value) draft.onScreen = value; else delete draft.onScreen; })} />
             <div className="plan-grid plan-grid-three">
-              <SelectField label="Beat" value={shot.beatId} options={beatOptions} onChange={value => set(index, draft => { if (value) draft.beatId = value; else delete draft.beatId; })} />
+              <SelectField label="Script line" value={shot.beatId} options={beatOptions} onChange={value => set(index, draft => { if (value) draft.beatId = value; else delete draft.beatId; })} />
               <SelectField label="Transition" value={shot.transition} options={[{ value: '', label: 'Cut' }, ...transitions.map(value => ({ value, label: title(value) }))]} onChange={value => set(index, draft => { if (value) draft.transition = value; else delete draft.transition; })} />
               <SelectField label="Media fit" value={shot.media?.fit} options={[{ value: 'cover', label: 'Cover' }, { value: 'contain', label: 'Contain' }, { value: 'fill', label: 'Fill' }]} onChange={value => set(index, draft => setMedia(draft, 'fit', value))} />
             </div>
@@ -965,12 +965,12 @@ function Compile({ plan, summary, report, dirty, busy, check, compile, save }: {
 
   return (
     <>
-      <h2>Compile</h2>
-      <p className="sub">Check the plan in memory first, then replace the timeline with its scenes. The plan itself is kept.</p>
+      <h2>Build the video</h2>
+      <p className="sub">Check the storyboard first, then replace the timeline with its scenes. The storyboard itself is kept.</p>
 
       {dirty ? (
         <Notice tone="warn" title="Save before checking">
-          <p style={{ margin: '0 0 10px' }}>Compile reads the saved plan, so unsaved edits would be left out.</p>
+          <p style={{ margin: '0 0 10px' }}>Building reads the saved storyboard, so unsaved edits would be left out.</p>
           <Button size="sm" variant="primary" onClick={save}>Save the plan</Button>
         </Notice>
       ) : null}
@@ -982,8 +982,8 @@ function Compile({ plan, summary, report, dirty, busy, check, compile, save }: {
         <div className="summary-stat"><b>{summary ? `${summary.readyShots}/${summary.shots}` : '–'}</b><small>shots with media</small></div>
         <div className="summary-stat"><b>{summary?.approvedShots ?? 0}</b><small>approved takes</small></div>
         <div className="summary-stat"><b>{summary?.pendingShots ?? 0}</b><small>still to shoot</small></div>
-        <div className="summary-stat"><b>{summary?.beats ?? 0}</b><small>script beats</small></div>
-        <div className="summary-stat"><b>{summary?.unusedBeats.length ?? 0}</b><small>beats not rendered</small></div>
+        <div className="summary-stat"><b>{summary?.beats ?? 0}</b><small>script lines</small></div>
+        <div className="summary-stat"><b>{summary?.unusedBeats.length ?? 0}</b><small>lines no scene uses</small></div>
       </div>
 
       <div className="form-actions" style={{ marginTop: 18 }}>
@@ -991,14 +991,14 @@ function Compile({ plan, summary, report, dirty, busy, check, compile, save }: {
           {busy === 'check' ? 'Checking the plan…' : 'Check the plan'}
         </Button>
         <Button variant="primary" loading={busy === 'compile'} disabled={!report || dirty || !!busy} icon={<DownloadIcon size={14} />} onClick={compile}>
-          {busy === 'compile' ? 'Compiling the timeline…' : 'Replace the timeline'}
+          {busy === 'compile' ? 'Building the video…' : 'Build the video'}
         </Button>
       </div>
 
       {report ? (
         <div className="result">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <b>The plan compiles</b>
+            <b>The storyboard is ready</b>
             <Badge tone="green" dot>Checked, not applied</Badge>
           </div>
           <p className="sub" style={{ margin: '6px 0 10px' }}>
@@ -1013,28 +1013,28 @@ function Compile({ plan, summary, report, dirty, busy, check, compile, save }: {
           ) : <p className="sub">The timeline already matches this plan.</p>}
 
           {report.notes.length ? (
-            <Notice tone="warn" title="What compile will improvise">
+            <Notice tone="warn" title="What the build will fill in">
               <ul className="issue-list">{report.notes.map(note => <li key={note}>{note}</li>)}</ul>
             </Notice>
           ) : null}
 
           {summary?.unusedBeats.length ? (
-            <Notice tone="neutral" title="Beats no shot renders">
+            <Notice tone="neutral" title="Script lines no scene uses">
               <p style={{ margin: 0 }}>{summary.unusedBeats.join(', ')}</p>
             </Notice>
           ) : null}
 
-          <Button variant="primary" style={{ marginTop: 8 }} onClick={compile}>Replace the timeline</Button>
+          <Button variant="primary" style={{ marginTop: 8 }} onClick={compile}>Build the video</Button>
         </div>
       ) : null}
 
       {plan.shots?.length && summary && summary.pendingShots ? (
         <Notice tone="neutral" title={`${summary.pendingShots} shot${summary.pendingShots === 1 ? ' has' : 's have'} no media yet`}>
-          <p style={{ margin: 0 }}>{summary.pendingShots === 1 ? 'It compiles as a text card from its on-screen copy. Add an image, video or approved take to show footage instead.' : 'They compile as text cards from their on-screen copy. Add an image, video or approved take to show footage instead.'}</p>
+          <p style={{ margin: 0 }}>{summary.pendingShots === 1 ? 'It builds as a text card from its on-screen copy. Add an image, video or approved take to show footage instead.' : 'They build as text cards from their on-screen copy. Add an image, video or approved take to show footage instead.'}</p>
         </Notice>
       ) : null}
 
-      {plan.shots?.length === 0 ? <Notice tone="warn">The plan has no shots, so there is nothing to compile.</Notice> : null}
+      {plan.shots?.length === 0 ? <Notice tone="warn">The storyboard has no shots, so there is nothing to build.</Notice> : null}
     </>
   );
 }

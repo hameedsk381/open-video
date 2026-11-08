@@ -99,6 +99,10 @@ describe('Studio projects', () => {
     expect((await send('POST', `/api/upload?project=${id}&name=a.png`, { origin: 'https://evil.example', 'content-type': 'application/octet-stream' }, png)).status).toBe(403);
     expect((await send('POST', `/api/upload?project=../..&name=a.png`, octet, png)).status).toBe(400);
     expect((await send('POST', '/api/project/delete', octet, JSON.stringify({ id }))).status).toBe(403);
+    // A project from "New" has its folder before any composition: a reference or logo may be uploaded straight away.
+    const fresh = (json(await post('/api/project/new', { name: 'Fresh References' })) as { id: string }).id;
+    expect(json(await send('POST', `/api/upload?project=${fresh}&name=ref.png`, octet, png)).assets).toHaveLength(1);
+    expect((await send('POST', `/api/upload?project=missing-project&name=ref.png`, octet, png)).status).toBe(400);
   });
 
   it.skipIf(!existsSync(join(process.cwd(), 'packages/cli/studio/index.html')))('serves the built web app, its assets, and keeps the API apart', async () => {

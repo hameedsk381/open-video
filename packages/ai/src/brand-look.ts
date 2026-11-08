@@ -23,9 +23,9 @@ export function readBrand(value: unknown): BrandPack | undefined {
   for (const role of ['primary', 'secondary', 'accent', 'background', 'text'] as const) { const found = colour(input.colors?.[role]); if (found) colors[role] = found; }
   const fonts: Record<string, string> = {};
   for (const role of ['heading', 'body'] as const) { const found = clean(input.fonts?.[role], 80); if (found) fonts[role] = found; }
-  const name = clean(input.name, 80), style = clean(input.style, 200);
-  if (!Object.keys(colors).length && !Object.keys(fonts).length && !name && !style) return undefined;
-  return { ...(name ? { name } : {}), ...(style ? { style } : {}), ...(Object.keys(colors).length ? { colors: colors as BrandPack['colors'] } : {}), ...(Object.keys(fonts).length ? { fonts } : {}) };
+  const name = clean(input.name, 80), style = clean(input.style, 200), contact = clean(input.contact, 200);
+  if (!Object.keys(colors).length && !Object.keys(fonts).length && !name && !style && !contact) return undefined;
+  return { ...(name ? { name } : {}), ...(contact ? { contact } : {}), ...(style ? { style } : {}), ...(Object.keys(colors).length ? { colors: colors as BrandPack['colors'] } : {}), ...(Object.keys(fonts).length ? { fonts } : {}) };
 }
 
 /** The first family of a CSS stack that the renderer ships ("Inter, system-ui" is Inter; "Söhne" is nothing we have). */

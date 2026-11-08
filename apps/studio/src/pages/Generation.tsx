@@ -15,21 +15,24 @@ import {
 } from '../ui';
 
 const labels: Record<string, string> = {
-  compose: 'Compose',
-  refine: 'Refine',
-  render: 'Render',
-  review: 'Review',
-  narrate: 'Narration',
-  transcribe: 'Captions',
-  image: 'Imagery',
-  thumbnail: 'Thumbnail',
-  batch: 'Batch',
-  import: 'Import',
+  compose: 'Writing the video',
+  refine: 'Applying your changes',
+  render: 'Rendering the file',
+  review: 'Checking the design',
+  narrate: 'Adding a voiceover',
+  transcribe: 'Timing the captions',
+  image: 'Making images',
+  thumbnail: 'Making a preview',
+  batch: 'Building a batch',
+  import: 'Importing media',
 };
+
+const statusLabels: Record<string, string> = { running: 'in progress', queued: 'waiting', done: 'done', error: 'failed' };
+const statusLabel = (job: Job) => statusLabels[job.status] ?? job.status;
 
 type JobResult = { id?: string; url?: string; file?: string; seconds?: number; scenes?: number };
 
-const tone = (job: Job) => (job.status === 'error' ? 'red' : job.status === 'done' ? 'green' : job.status === 'running' ? 'blue' : 'neutral') as const;
+const tone = (job: Job): 'red' | 'green' | 'blue' | 'neutral' => job.status === 'error' ? 'red' : job.status === 'done' ? 'green' : job.status === 'running' ? 'blue' : 'neutral';
 
 const elapsed = (job: Job) => {
   if (!job.startedAt) return '';
@@ -39,7 +42,7 @@ const elapsed = (job: Job) => {
 };
 
 function detail(job: Job) {
-  if (job.status === 'error') return job.error || 'The job failed.';
+  if (job.status === 'error') return job.error || 'Something went wrong.';
   if (job.status === 'running' || job.status === 'queued') return cleanUserStatus(job.messages.at(-1));
   const result = job.result as JobResult | undefined;
   if (result?.seconds) return `Finished — ${Math.round(result.seconds)}s${result.scenes ? `, ${result.scenes} scenes` : ''}`;
@@ -61,7 +64,7 @@ function JobRow({ job }: { job: Job }) {
         <div className="gen-title">
           <b>{labels[job.kind] ?? job.kind}</b>
           <Badge tone={tone(job)} dot={job.status === 'running'}>
-            {job.status === 'running' ? 'working' : job.status}
+            {statusLabel(job)}
           </Badge>
           <span className="gen-time">
             {job.startedAt ? ago(job.startedAt) : ''}{job.startedAt ? ` · ${elapsed(job)}` : ''}
@@ -102,8 +105,8 @@ export function Generation() {
 
   return (
     <Page
-      title="Generation"
-      subtitle="Every compose, refine, render and voice job in this workspace, newest first."
+      title="Activity"
+      subtitle="Everything the studio has made in this workspace, newest first."
       actions={<Button variant="primary" icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>New video</Button>}
     >
       <div className="gen-stats">
@@ -123,8 +126,8 @@ export function Generation() {
       {shown.length === 0 ? (
         <div className="gen-empty">
           <ClockIcon size={26} />
-          <b>{ordered.length ? 'Nothing in this view' : 'No jobs yet'}</b>
-          <small>{ordered.length ? 'Try another filter to see earlier work.' : 'Start a video and its progress will be listed here, with the files it produced.'}</small>
+          <b>{ordered.length ? 'Nothing in this view' : 'Nothing made yet'}</b>
+          <small>{ordered.length ? 'Try another filter to see earlier work.' : 'Make a video and its progress will appear here, with the file it produced.'}</small>
           {ordered.length ? null : <Button size="sm" variant="secondary" icon={<FilmIcon size={12} />} onClick={() => go('#/new')}>Create a video</Button>}
         </div>
       ) : (

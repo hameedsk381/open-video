@@ -80,30 +80,12 @@ function ThemeToggle() {
   );
 }
 
-function ProviderBadge() {
-  const [provider, setProvider] = useState<{ id: string; model: string } | null>(null);
-  useEffect(() => {
-    fetch('/api/status').then(r => r.json()).then(s => {
-      if (s?.provider) setProvider(s.provider);
-    }).catch(() => {});
-  }, []);
-
-  if (!provider) return null;
-  const label = provider.id === 'freellmapi' ? 'FreeLLMAPI' : provider.id;
-  return (
-    <a className="provider" href="#/settings" title={`AI Motion Engine: ${label}`}>
-      <span className="provider-dot" />
-      <span className="lbl">{label}</span>
-    </a>
-  );
-}
-
 const nav = [
   ['home', '#/', 'Home', HomeIcon] as const,
   ['new', '#/new', 'Create', PlusIcon] as const,
   ['projects', '#/projects', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Assets', ImagesIcon] as const,
-  ['generation', '#/generation', 'Generation', ClockIcon] as const,
+  ['generation', '#/generation', 'Activity', ClockIcon] as const,
   ['showcase', '#/discover', 'Discover', CompassIcon] as const,
 ];
 
@@ -112,14 +94,14 @@ const sections: Record<Route['name'], string> = {
   showcase: 'Discover',
   projects: 'Projects',
   library: 'Assets',
-  generation: 'Generation',
+  generation: 'Activity',
   settings: 'Settings',
   new: 'Create',
   reset: 'Account',
   verify: 'Account',
-  making: 'Production',
-  production: 'Production plan',
-  editor: 'Studio',
+  making: 'Making your video',
+  production: 'Storyboard',
+  editor: 'Edit video',
   notfound: 'Not found',
 };
 
@@ -220,7 +202,6 @@ function Sidebar({ route, session, onSignOut }: { route: Route; session: Session
           <GlobeIcon size={15} />
           <span>Docs</span>
         </a>
-        <ProviderBadge />
         <ThemeToggle />
         {session.state === 'in' ? (
           <div className="side-user">
@@ -240,7 +221,6 @@ function Sidebar({ route, session, onSignOut }: { route: Route; session: Session
             </span>
           </div>
         )}
-        <div className="side-meta">MotionRender Engine</div>
       </div>
     </aside>
   );
@@ -294,7 +274,7 @@ export function App() {
       ) : route.name === 'showcase' ? (
         <Showcase />
       ) : route.name === 'new' ? (
-        <Create initialTemplate={route.template} initialKind={route.kind} initialPrompt={route.prompt} />
+        <Create initialTemplate={route.template} initialKind={route.kind} initialPrompt={route.prompt} initialFrom={route.from} />
       ) : route.name === 'making' ? (
         <Making id={route.id} job={route.job} />
       ) : route.name === 'production' ? (

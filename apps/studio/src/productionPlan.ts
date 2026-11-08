@@ -11,7 +11,7 @@ export const sectionLabels: Record<PlanSection, string> = {
   script: 'Script',
   storyboard: 'Storyboard',
   shots: 'Shots',
-  compile: 'Compile',
+  compile: 'Build',
 };
 
 /** The section a validation issue belongs to, from its dotted path. */

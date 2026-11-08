@@ -147,7 +147,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     <div className="editor">
       <div className="stage">
         {composeNotes.length ? (
-          <Notice tone="warn" title="What the engine had to change" onDismiss={dismissComposeNotes}>
+          <Notice tone="warn" title="What the studio adjusted" onDismiss={dismissComposeNotes}>
             <ul className="issue-list" style={{ margin: '4px 0 0' }}>
               {composeNotes.map(change => <li key={change}>{change}</li>)}
             </ul>
@@ -159,7 +159,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           </Button>
           <TitleInput detail={detail} save={name => save('/api/project/rename', { id, name }, 'Renamed')} />
           <Button size="sm" variant="secondary" icon={<LayersIcon size={14} />} onClick={() => go(planPath(id))}>
-            Production plan
+            Storyboard
           </Button>
           <span className="grow" />
           {note ? (
@@ -212,7 +212,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
               </Button>
             </>
           ) : (
-            <span className="scene-meta">Pick a scene on the timeline to edit just that beat.</span>
+            <span className="scene-meta">Pick a scene on the timeline to edit just that scene.</span>
           )}
         </div>
       </div>
@@ -376,7 +376,7 @@ function Edit({ detail, save, reload, setNote }: PaneProps) {
             </Field>
           ))
         ) : (
-          <p className="sub">No editable text slots in this composition. You can ask AI to refine the scene, or add new scenes from Style.</p>
+          <p className="sub">No editable text slots in this video. You can ask AI to refine the scene, or add new scenes from Style.</p>
         )
       ) : detail.texts.length ? (
         detail.texts.map((t: TextLayer) => (
@@ -473,9 +473,9 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
 
   return (
     <>
-      <h2>AI Creative Director</h2>
+      <h2>Ask the studio</h2>
       <p className="sub">
-        Describe any change in natural language. The AI will recalculate typography, timings, and visual balance.
+        Describe any change in plain words. The studio adjusts the type, timing and layout to match.
       </p>
 
       {scene ? (
@@ -492,7 +492,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
       <textarea
         className="input"
         style={{ minHeight: 120 }}
-        placeholder="e.g. Make the pacing 20% faster, emphasize our 99.9% guarantee, and give the closing beat more punch…"
+        placeholder="e.g. Make the pacing 20% faster, emphasize our 99.9% guarantee, and give the closing line more punch…"
         value={draft}
         onChange={e => onDraft(e.target.value)}
       />
@@ -662,15 +662,15 @@ function History({ detail, file, planFile, reload, setNote }: PaneProps) {
 
   return (
     <>
-      <h2>Version History</h2>
-      <p className="sub">Every change is saved automatically. The timeline and the production plan keep separate histories.</p>
+      <h2>Edit history</h2>
+      <p className="sub">Every change is saved automatically. The timeline and the storyboard keep separate histories.</p>
       {error ? <Notice tone="error">{error}</Notice> : null}
 
       <h3 className="history-group">Timeline</h3>
       {timeline === null ? <p className="sub">Loading…</p> : timeline.length === 0 ? <p className="sub">No timeline revisions yet.</p> : rows(timeline, 'timeline')}
 
-      <h3 className="history-group">Production plan</h3>
-      {plan === null ? <p className="sub">Loading…</p> : plan.length === 0 ? <p className="sub">No plan revisions yet. Start a plan from the Production plan workspace.</p> : rows(plan, 'plan')}
+      <h3 className="history-group">Storyboard</h3>
+      {plan === null ? <p className="sub">Loading…</p> : plan.length === 0 ? <p className="sub">No storyboard revisions yet. Start one from the Storyboard workspace.</p> : rows(plan, 'plan')}
     </>
   );
 }
@@ -742,11 +742,11 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
         {detail.width}×{detail.height} · {dur(detail.durationFrames / detail.fps)} · MP4 Video
       </p>
 
-      <Field label="Resolution Quality">
+      <Field label="Quality">
         <select className="input" value={scale} onChange={e => setScale(e.target.value)}>
-          <option value="1">High Definition (Full 1080p, Production Quality)</option>
-          <option value="0.5">Standard Definition (720p, Faster Export)</option>
-          <option value="0.25">Fast Draft (Quick Review)</option>
+          <option value="1">High quality (1080p)</option>
+          <option value="0.5">Standard (720p, faster)</option>
+          <option value="0.25">Draft (quick check)</option>
         </select>
       </Field>
 
@@ -757,7 +757,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
         icon={<DownloadIcon size={14} />}
         onClick={() => void render()}
       >
-        {busy === 'render' ? label || 'Rendering video…' : 'Render Video (MP4)'}
+        {busy === 'render' ? label || 'Rendering video…' : 'Download Video (MP4)'}
       </Button>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -767,7 +767,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
           icon={<ShieldIcon size={14} />}
           onClick={() => void check()}
         >
-          Design Quality Audit
+          Check the design
         </Button>
         <Button
           loading={busy === 'thumb'}

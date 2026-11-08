@@ -2,7 +2,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 
 export type Route =
   | { name: 'home' | 'showcase' | 'projects' | 'library' | 'settings' | 'generation' }
-  | { name: 'new'; template?: string; kind?: string; prompt?: string }
+  | { name: 'new'; template?: string; kind?: string; prompt?: string; from?: string }
   | { name: 'notfound'; path: string }
   | { name: 'reset' | 'verify'; token: string }
   | { name: 'making'; id: string; job: string }
@@ -20,7 +20,7 @@ export function parse(hash: string): Route {
   if ((parts[0] === 'reset' || parts[0] === 'verify') && parts[1]) return { name: parts[0], token: parts[1] };
   if (parts[0] === 'projects') return { name: 'projects' };
   if (parts[0] === 'showcase' || parts[0] === 'discover') return { name: 'showcase' };
-  if (parts[0] === 'new') return { name: 'new', template: params.get('template') ?? undefined, kind: params.get('kind') ?? undefined, prompt: params.get('prompt') ?? undefined };
+  if (parts[0] === 'new') return { name: 'new', template: params.get('template') ?? undefined, kind: params.get('kind') ?? undefined, prompt: params.get('prompt') ?? undefined, from: params.get('from') ?? undefined };
   if (parts[0] === 'library') return { name: 'library' };
   if (parts[0] === 'generation') return { name: 'generation' };
   if (parts[0] === 'settings') return { name: 'settings' };

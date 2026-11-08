@@ -39,13 +39,13 @@ const presetMeta = (template: TemplateSummary) => {
 };
 
 const jobLabels: Record<string, string> = {
-  compose: 'Composing the video',
-  refine: 'Applying your direction',
-  render: 'Rendering',
-  review: 'Reviewing design',
-  narrate: 'Voicing the script',
-  transcribe: 'Timing captions',
-  image: 'Generating imagery',
+  compose: 'Writing the video',
+  refine: 'Applying your changes',
+  render: 'Rendering the file',
+  review: 'Checking the design',
+  narrate: 'Adding a voiceover',
+  transcribe: 'Timing the captions',
+  image: 'Making images',
   thumbnail: 'Making a preview',
   batch: 'Building a batch',
   import: 'Importing media',
@@ -191,7 +191,7 @@ export function Home({ email }: { email?: string }) {
               {active.length ? <Badge tone="green" dot>{active.length} active</Badge> : null}
             </div>
             {recent.length === 0 ? (
-              <p className="home-muted">No jobs yet. Start a video and the agent’s progress appears here.</p>
+              <p className="home-muted">Nothing running. Start a video and its progress appears here.</p>
             ) : (
               <div className="home-jobs">
                 {recent.map(job => (
@@ -205,7 +205,7 @@ export function Home({ email }: { email?: string }) {
                           : job.status === 'error' ? (job.error || 'Failed') : 'Finished'}
                       </small>
                     </div>
-                    <Badge tone={jobTone(job)}>{job.status === 'running' ? 'working' : job.status}</Badge>
+                    <Badge tone={jobTone(job)}>{job.status === 'running' ? 'in progress' : job.status === 'queued' ? 'waiting' : job.status === 'error' ? 'failed' : 'done'}</Badge>
                   </div>
                 ))}
               </div>
@@ -217,7 +217,7 @@ export function Home({ email }: { email?: string }) {
             <div className="home-links">
               <a href={discoverPath}><CompassIcon size={14} /> Browse Discover</a>
               <a href="#/library"><LayersIcon size={14} /> Open asset library</a>
-              <a href="#/settings"><SlidersIcon size={14} /> Engine settings</a>
+              <a href="#/settings"><SlidersIcon size={14} /> Studio settings</a>
             </div>
           </section>
         </aside>

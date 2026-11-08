@@ -13,6 +13,8 @@ export type Revision = {
   kind: RevisionKind;
   /** The brief or instruction, or a note such as "Before AI changes". */
   label: string;
+  /** The whole brief a compose was given, so "make another like this" starts from the words that made this video. */
+  brief?: string;
   provider?: string;
   model?: string;
   template?: string;
@@ -23,7 +25,7 @@ export type Revision = {
   changes: string[];
   restoredFrom?: number;
 };
-export type RevisionMeta = { kind: RevisionKind; label: string; provider?: string; model?: string; template?: string; attempts?: number; restoredFrom?: number };
+export type RevisionMeta = { kind: RevisionKind; label: string; brief?: string; provider?: string; model?: string; template?: string; attempts?: number; restoredFrom?: number };
 
 const historyDir = (compositionFile: string) => join(dirname(resolve(compositionFile)), 'history', basename(compositionFile).replace(/\.json$/i, ''));
 const indexFile = (compositionFile: string) => join(historyDir(compositionFile), 'index.json');

@@ -33,7 +33,7 @@ export const detailSchema = z.object({
 export type Detail = z.infer<typeof detailSchema>;
 
 export const revisionSchema = z.object({
-  n: z.number(), file: z.string(), at: z.string(), kind: z.enum(['baseline', 'compose', 'refine', 'edit', 'import', 'restore']), label: z.string(),
+  n: z.number(), file: z.string(), at: z.string(), kind: z.enum(['baseline', 'compose', 'refine', 'edit', 'import', 'restore']), label: z.string(), brief: z.string().optional(),
   provider: z.string().optional(), model: z.string().optional(), template: z.string().optional(), attempts: z.number().optional(), frames: z.number(), scenes: z.number(), changes: z.array(z.string()), restoredFrom: z.number().optional(),
 });
 export type Revision = z.infer<typeof revisionSchema>;
@@ -122,7 +122,7 @@ export const templateSummarySchema = z.object({
   previewFrame: z.number().optional(),
 }).passthrough();
 export type TemplateSummary = z.infer<typeof templateSummarySchema>;
-export const librarySchema = z.object({ blocks: z.array(blockSchema), themes: z.array(themeSchema), templates: z.array(templateSummarySchema) });
+export const librarySchema = z.object({ blocks: z.array(blockSchema), themes: z.array(themeSchema), templates: z.array(templateSummarySchema), fonts: z.array(z.string()).optional() });
 export type Library = z.infer<typeof librarySchema>;
 
 /* Jobs and status */

@@ -64,8 +64,8 @@ export function Projects() {
     <Page
       title="Projects"
       subtitle={projects?.length
-        ? `${projects.length} ${projects.length === 1 ? 'production' : 'productions'} · ${dur(total)} of finished video`
-        : 'Every motion piece in this studio, ready to edit, review or export.'}
+        ? `${projects.length} ${projects.length === 1 ? 'video' : 'videos'} · ${dur(total)} of finished video`
+        : 'Every video in this studio, ready to edit, review or export.'}
       actions={<Button variant={projects?.length ? 'primary' : 'secondary'} icon={<PlusIcon size={14} />} onClick={() => go('#/new')}>New video</Button>}
     >
       {error ? <Notice tone="error" title="Could not load projects">{error}</Notice> : null}
@@ -199,7 +199,8 @@ function ProjectCard({ project, onDuplicate, onDelete }: { project: Project; onD
 
       <div className="project-actions">
         <Button size="sm" variant="secondary" onClick={open}>Open</Button>
-        <Button size="sm" variant="ghost" icon={<LayersIcon size={12} />} onClick={() => go(planPath(project.id))} title="Production plan">Plan</Button>
+        <Button size="sm" variant="ghost" icon={<SparklesIcon size={12} />} onClick={() => go(`#/new?from=${encodeURIComponent(project.id)}`)} title="Make another video like this">Make another</Button>
+        <Button size="sm" variant="ghost" icon={<LayersIcon size={12} />} onClick={() => go(planPath(project.id))} title="Storyboard">Plan</Button>
         <Button size="sm" variant="ghost" icon={<CopyIcon size={12} />} onClick={onDuplicate} title="Duplicate project">Duplicate</Button>
         <Button size="sm" variant="ghost" icon={<TrashIcon size={12} />} onClick={onDelete} title="Delete project">Delete</Button>
       </div>

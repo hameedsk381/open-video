@@ -7,10 +7,10 @@ import { SearchIcon } from './ui';
 const baseCommands = (): Command[] => [
   { id: 'new', label: 'Create a new video', hint: 'Prompt', group: 'Create', run: () => go('#/new') },
   { id: 'home', label: 'Go to Home', hint: 'Dashboard', group: 'Navigate', run: () => go('#/') },
-  { id: 'projects', label: 'Open Projects', hint: 'All productions', group: 'Navigate', run: () => go('#/projects') },
-  { id: 'library', label: 'Open Assets', hint: 'Blocks, themes and templates', group: 'Navigate', run: () => go('#/library') },
-  { id: 'discover', label: 'Browse Discover', hint: 'Prompt library and examples', group: 'Navigate', run: () => go('#/discover') },
-  { id: 'settings', label: 'Open Settings', hint: 'Models, engine and account', group: 'Preferences', run: () => go('#/settings') },
+  { id: 'projects', label: 'Open Projects', hint: 'All videos', group: 'Navigate', run: () => go('#/projects') },
+  { id: 'library', label: 'Open Assets', hint: 'Templates, themes and blocks', group: 'Navigate', run: () => go('#/library') },
+  { id: 'discover', label: 'Browse Discover', hint: 'Example briefs', group: 'Navigate', run: () => go('#/discover') },
+  { id: 'settings', label: 'Open Settings', hint: 'Account and advanced options', group: 'Preferences', run: () => go('#/settings') },
   { id: 'theme', label: 'Switch theme', hint: 'Dark, light or auto', group: 'Preferences', run: () => window.dispatchEvent(new Event('ove-cycle-theme')) },
 ];
 

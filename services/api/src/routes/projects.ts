@@ -2,7 +2,7 @@ import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequ
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
-import { resolveVariables, variablesSchema } from '@ove/schema';
+import { fontIds, resolveVariables, variablesSchema } from '@ove/schema';
 import { assertSourcesConfined, distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
 import type { ProjectFile, RevisionMeta } from '@ove/storage';
 import { listProjects, projectMode, projectVariables, setVariableValues, textLayers } from '../projects';
@@ -23,6 +23,7 @@ export function projectRoutes(): Route[] {
   // Hosted, a composition may only name files of its own project: a template variable or a plan can otherwise carry another account's path into a source the renderer reads.
   const writeRaw = async (c: Ctx, id: string, raw: unknown, meta: RevisionMeta) => { const composition = loadComposition(raw); if (c.deps.mode === 'hosted') assertSourcesConfined(composition); await c.deps.store.writeRaw(c.who, id, raw, meta); };
   const exists = async (c: Ctx, value: unknown) => { const id = textOf(value, 'project'); c.deps.store.projectDir(c.who, id); if (!await c.deps.store.exists(c.who, id)) throw new Error(`There is no project "${id}"`); return id; };
+  const existsUpload = async (c: Ctx, value: unknown) => { const id = textOf(value, 'project'); c.deps.store.projectDir(c.who, id); if (!await c.deps.store.projectExists(c.who, id)) throw new Error(`There is no project "${id}"`); return id; };
   // Only the two root documents have histories; a request naming anything else is refused rather than guessed at.
   const projectFile = (file: string): ProjectFile => {
     const name = file.split('/').slice(1).join('/');
@@ -66,10 +67,10 @@ export function projectRoutes(): Route[] {
     } },
     { method: 'GET', path: '/api/library', handle: async c => {
       const { library } = c.deps;
-      c.json(200, { blocks: (await library.listBlocks()).map(({ layers, ...block }) => block), themes: await library.listThemes(), templates: await library.listTemplates() });
+      c.json(200, { blocks: (await library.listBlocks()).map(({ layers, ...block }) => block), themes: await library.listThemes(), templates: await library.listTemplates(), fonts: fontIds });
     } },
     { method: 'POST', path: '/api/upload', handle: async c => {
-      const id = await exists(c, c.url.searchParams.get('project')), name = textOf(c.url.searchParams.get('name'), 'name');
+      const id = await existsUpload(c, c.url.searchParams.get('project')), name = textOf(c.url.searchParams.get('name'), 'name');
       // Refuse an oversized upload before buffering it: the declared size is checked now, the actual bytes again below.
       const declared = Number(c.req.headers['content-length']);
       if (Number.isFinite(declared) && declared > 0) await c.deps.quotas?.beforeUpload(c.who, declared);

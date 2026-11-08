@@ -26,6 +26,7 @@ export interface ProjectStore {
   /** Folder names under the principal's space; not every one is a valid project. */
   ids(who: Principal): Promise<string[]>;
   exists(who: Principal, id: string): Promise<boolean>;
+  projectExists(who: Principal, id: string): Promise<boolean>;
   /** Makes an empty project folder named after `name` and gives its id (a name that is taken gets -2, -3, ...). */
   create(who: Principal, name: string): Promise<string>;
   readRaw(who: Principal, id: string): Promise<any>;
@@ -105,6 +106,8 @@ export class FsProjectStore implements ProjectStore {
     return entries.filter(entry => entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_')).map(entry => entry.name);
   }
   async exists(who: Principal, id: string) { return stat(this.file(who, id)).then(info => info.isFile(), () => false); }
+  /** A project made by "New" has a folder but no composition until its first job writes one; uploads may still land there. */
+  async projectExists(who: Principal, id: string) { return stat(this.projectDir(who, id)).then(info => info.isDirectory(), () => false); }
 
   async create(who: Principal, name: string) {
     const space = this.tenantRoot(who); await mkdir(space, { recursive: true });

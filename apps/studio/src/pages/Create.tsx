@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { limitMessage } from '../limitMessage';
-import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type TemplateSummary } from '../api';
+import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type Revision, type TemplateSummary } from '../api';
+import { BRAND_KIT_EVENT, brandForCompose, kitIsSet, loadBrandKit, logoFile, type BrandKit } from '../brandKit';
 import { composeNotesKey, composeOutcome } from '../composeReport';
+import { designBrief, designById, designForTemplate, designName, designs, missingFields } from '../designs';
 import { go } from '../router';
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   Badge,
   Button,
   CheckIcon,
@@ -38,7 +41,7 @@ const examples = [
   'High-impact SaaS product update announcing realtime collaboration and AI workflows',
 ];
 
-export function Create({ initialTemplate, initialKind, initialPrompt }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string } = {}) {
+export function Create({ initialTemplate, initialKind, initialPrompt, initialFrom }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string; initialFrom?: string } = {}) {
   const hostMode = useHostMode();
   // Autopilot hides everything; Guided exposes the choices that matter; Pro is the full engine.
   const [mode, setMode] = useState<'autopilot' | 'guided' | 'pro'>(() => {
@@ -61,6 +64,13 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>(initialTemplate || '');
   const [templateFilter, setTemplateFilter] = useState<'all' | 'match'>('match');
+
+  // Designs: the gallery of outcomes. Choosing one fills its template and asks only for the details only the customer knows.
+  const [designId, setDesignId] = useState<string>(() => designForTemplate(initialTemplate)?.id || '');
+  const [designValues, setDesignValues] = useState<Record<string, string>>({});
+  const [designExtra, setDesignExtra] = useState('');
+  const [designError, setDesignError] = useState('');
+  const [showComposer, setShowComposer] = useState(() => Boolean(initialPrompt) || (Boolean(initialTemplate) && !designForTemplate(initialTemplate)));
 
   // Creative Styling Customizations
   const [typography, setTypography] = useState('sans');
@@ -113,6 +123,72 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
   const [over, setOver] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
+  // The saved brand kit, applied to every video unless switched off for this one.
+  const [kit, setKit] = useState<BrandKit | null>(() => loadBrandKit());
+  const [useKit, setUseKit] = useState(() => loadBrandKit()?.enabled !== false);
+  const activeKit = useKit && kitIsSet(kit) ? kit : null;
+  // "Make another like this" arrives with a project id; its name says what the composer is carrying.
+  const [fromName, setFromName] = useState('');
+
+  useEffect(() => {
+    const refresh = () => {
+      const saved = loadBrandKit();
+      setKit(saved);
+      setUseKit(saved?.enabled !== false);
+    };
+    window.addEventListener(BRAND_KIT_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => { window.removeEventListener(BRAND_KIT_EVENT, refresh); window.removeEventListener('storage', refresh); };
+  }, []);
+
+  // The page stays mounted while the hash changes. A link into Create (a prompt, a template from Discover) must reset
+  // what is on screen, and a plain "#/new" must open the gallery again.
+  useEffect(() => {
+    const linked = designForTemplate(initialTemplate);
+    setDesignId(linked?.id || '');
+    setDesignValues({});
+    setDesignExtra('');
+    setDesignError('');
+    setShowComposer(Boolean(initialPrompt) || Boolean(initialFrom) || (Boolean(initialTemplate) && !linked));
+    if (initialPrompt) setBrief(initialPrompt);
+    if (linked) {
+      setKind(linked.kind);
+      setAspect(linked.aspect);
+      setSelectedTemplate(linked.template);
+      setFull(false);
+    } else if (initialTemplate) {
+      setSelectedTemplate(initialTemplate);
+      setFull(false);
+    }
+  }, [initialTemplate, initialPrompt, initialFrom]);
+
+  // A finished project can be asked for "another like this": the brief and template that made it open in the composer,
+  // ready to change before making a new one. A project without a composed revision opens the gallery instead.
+  useEffect(() => {
+    if (!initialFrom) { setFromName(''); return; }
+    let live = true;
+    setDesignId('');
+    setDesignValues({});
+    setDesignError('');
+    setShowComposer(true);
+    Promise.all([
+      api<{ revisions: Revision[] }>(`/api/history?file=${encodeURIComponent(initialFrom)}/composition.json`).catch(() => ({ revisions: [] as Revision[] })),
+      api<{ name: string; width: number; height: number; durationFrames: number; fps: number }>(`/api/project?id=${encodeURIComponent(initialFrom)}`),
+    ]).then(([history, project]) => {
+      if (!live) return;
+      setFromName(project.name);
+      setKind(project.width > project.height ? 'promo' : project.width === project.height ? 'product' : 'reel');
+      const made = [...history.revisions].reverse().find(revision => revision.kind === 'compose');
+      if (made) {
+        setBrief(made.brief || made.label);
+        setSelectedTemplate(made.template ?? '');
+      }
+      setTemplateOpen(false);
+      setFull(false);
+    }, () => { if (live) setFromName(''); });
+    return () => { live = false; };
+  }, [initialFrom]);
+
   useEffect(() => {
     api<Library>('/api/library').then(l => {
       if (l?.templates) {
@@ -154,47 +230,56 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
     }
   };
 
-  const submit = async () => {
+  // A design fills in what the composer would have been typed: its brief, template, format and a name from its details.
+  const submit = async (starter?: { brief: string; kind: string; template?: string; aspect?: string; name?: string; duration?: string }) => {
     setError('');
-    if (!brief.trim()) {
+    const text = (starter?.brief ?? brief).trim();
+    if (!text) {
       setError('Please provide a brief description of what you want to create.');
       return;
     }
+    const chosenKind = starter?.kind ?? kind;
+    const chosenTemplate = starter?.template ?? selectedTemplate;
+    const chosenAspect = starter?.aspect ?? aspect;
+    const chosenDuration = starter?.duration ?? duration;
     setBusy(true);
     try {
       const made = await api<{ id: string }>('/api/project/new', {
-        name: name.trim() || brief.trim().split(/\s+/).slice(0, 6).join(' '),
-        kind,
+        name: (starter?.name ?? name).trim() || text.split(/\s+/).slice(0, 6).join(' '),
+        kind: chosenKind,
       });
       for (const file of files) await upload(made.id, file);
+      // The logo travels as the project's own asset, never as a path: the compose job resolves it by id.
+      const logo = activeKit?.logo && activeKit.logoOnEndCard ? logoFile(activeKit) : null;
+      if (logo) await upload(made.id, logo);
 
       // Build composite brief with key points and visual directions
-      let compositeBrief = brief.trim();
+      let compositeBrief = text;
       if (keyPoints.trim()) {
         compositeBrief += `\n\nKey Message Points:\n${keyPoints.trim()}`;
       }
 
       const body: Record<string, unknown> = {
         brief: compositeBrief,
-        kind,
+        kind: chosenKind,
         folder: made.id,
         narration: voice,
         review,
         full,
-        typography,
-        motionPacing,
-        audioMood,
-        sfx,
-        voiceTone,
-        captionsStyle,
+        // A design keeps its own art direction; these overrides belong to someone who opened Guided or Pro.
+        ...(starter && mode === 'autopilot' ? {} : { typography, motionPacing, audioMood, sfx, voiceTone, captionsStyle }),
       };
 
-      if (selectedTemplate) body.template = selectedTemplate;
+      if (chosenTemplate) body.template = chosenTemplate;
+      if (activeKit) {
+        body.brand = brandForCompose(activeKit);
+        if (logo) body.brandLogo = 'brand-logo';
+      }
       if (ctaHeadline.trim()) body.ctaHeadline = ctaHeadline.trim();
       if (ctaSubline.trim()) body.ctaSubline = ctaSubline.trim();
       if (sceneCount) body.sceneCount = Number(sceneCount);
-      if (duration) body.duration = duration;
-      if (aspect) body.aspect = aspect;
+      if (chosenDuration) body.duration = chosenDuration;
+      if (chosenAspect) body.aspect = chosenAspect;
 
       if (customColorsEnabled) {
         body.customColors = {
@@ -227,12 +312,51 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
       } catch {}
 
       const { job } = await api<{ job: Job }>('/api/compose', body);
-      try { sessionStorage.setItem(`ove-brief-${made.id}`, brief.trim()); } catch {}
+      try { sessionStorage.setItem(`ove-brief-${made.id}`, text); } catch {}
       go(`#/making/${encodeURIComponent(made.id)}/${job.id}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
     }
+  };
+
+  const chooseDesign = (id: string) => {
+    const chosen = designById(id);
+    if (!chosen) return;
+    setDesignId(chosen.id);
+    setDesignValues({});
+    setDesignExtra('');
+    setDesignError('');
+    setError('');
+    setKind(chosen.kind);
+    setAspect(chosen.aspect);
+    setSelectedTemplate(chosen.template);
+    setFull(false);
+    setBrief('');
+    setShowComposer(false);
+  };
+
+  const startFromScratch = () => {
+    setDesignId('');
+    setDesignError('');
+    setSelectedTemplate('');
+    setTemplateOpen(false);
+    setShowComposer(true);
+  };
+
+  const submitDesign = async () => {
+    const chosen = designId ? designById(designId) : undefined;
+    if (!chosen) return;
+    const missing = missingFields(chosen, designValues);
+    if (missing.length) {
+      setDesignError(`Add ${missing.map(label => label.toLowerCase()).join(', ')} to continue.`);
+      return;
+    }
+    setDesignError('');
+    // The design's own length, not the format's default: without this the template would be stretched to the kind's length.
+    const native = templates.find(template => template.id === chosen.template)?.durationSeconds;
+    const duration = native ? String(Math.round(native * 10) / 10) : chosen.length.replace(/[^\d.]/g, '');
+    await submit({ brief: designBrief(chosen, designValues, designExtra), kind: chosen.kind, template: chosen.template, aspect: chosen.aspect, name: designName(chosen, designValues), duration });
   };
 
   // Filter templates matching current format
@@ -244,31 +368,161 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
     return t.width > t.height;
   });
 
+  const design = designId ? designById(designId) : undefined;
   const templateName = templates.find(template => template.id === selectedTemplate)?.name;
   const ratio = aspect || (kind === 'product' ? '1:1' : kind === 'reel' ? '9:16' : '16:9');
-  const length = duration ? `${duration}s` : 'Auto length';
-  const engine = effectivePreset === 'auto' ? 'Auto engine' : effectivePreset;
+  const length = design ? design.length : duration ? `${duration}s` : 'Auto length';
+  const engine = effectivePreset === 'auto' ? 'Automatic' : effectivePreset;
 
   return (
     <Page
-      title="What are we making?"
-      subtitle="Describe it once. The studio writes the script, designs the look and opens an editable timeline."
+      title={design ? design.title : 'What are we making?'}
+      subtitle={design
+        ? 'Fill in a few details. The studio writes the script, fills the design and opens an editable timeline.'
+        : showComposer
+          ? 'Describe it once. The studio writes the script, designs the look and opens an editable timeline.'
+          : 'Pick what you are making, or describe it yourself. The studio writes the script, designs the look and opens an editable timeline.'}
       actions={
         <div className="segmented create-modes" aria-label="How much control to show">
           {([['autopilot', 'Autopilot'], ['guided', 'Guided'], ['pro', 'Pro']] as const).map(([id, label]) => (
-            <button key={id} className={mode === id ? 'on' : ''} onClick={() => setMode(id)} title={id === 'autopilot' ? 'The engine decides everything' : id === 'guided' ? 'Set format, length, theme and voice' : 'Every model and creative control'}>
+            <button key={id} className={mode === id ? 'on' : ''} onClick={() => setMode(id)} title={id === 'autopilot' ? 'The studio decides everything' : id === 'guided' ? 'Set format, length, theme and voice' : 'Every creative and advanced control'}>
               {label}
             </button>
           ))}
         </div>
       }
     >
-      <div
-        className={`create-composer ${over ? 'over' : ''}`}
-        onDragOver={event => { event.preventDefault(); setOver(true); }}
-        onDragLeave={() => setOver(false)}
-        onDrop={event => { event.preventDefault(); setOver(false); addFiles(event.dataTransfer.files); }}
-      >
+      {kit || (!design && !showComposer) ? (
+        <div className={`create-brandkit ${activeKit ? '' : 'create-brandkit-off'}`}>
+          <span className="create-brandkit-mark">
+            {kit?.logo ? <img src={kit.logo} alt="" /> : <PaletteIcon size={16} />}
+          </span>
+          {kit ? (
+            <>
+              <span className="create-brandkit-copy">
+                <b>{kit.name || 'Your brand'}</b>
+                <small>{activeKit ? 'Your logo, colours, fonts and contact line go into this video.' : 'Switched off for this video. Your saved brand is untouched.'}</small>
+              </span>
+              <span className="create-brandkit-swatches">
+                {[kit.colors.background, kit.colors.primary, kit.colors.secondary, kit.colors.accent, kit.colors.text].filter(Boolean).map(color => (
+                  <i key={color} style={{ background: color }} />
+                ))}
+              </span>
+              <label className="check">
+                <input type="checkbox" checked={useKit} onChange={event => setUseKit(event.target.checked)} />
+                <span>Use my brand</span>
+              </label>
+              <button type="button" className="create-back" onClick={() => go('#/settings')}>Edit brand</button>
+            </>
+          ) : (
+            <>
+              <span className="create-brandkit-copy">
+                <b>Make every video yours</b>
+                <small>Save your logo, colours, fonts and contact line once, and each new video carries them.</small>
+              </span>
+              <button type="button" className="create-back" onClick={() => go('#/settings')}>Set up your brand</button>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {!design && !showComposer ? (
+        <section className="create-section create-gallery">
+          <div className="create-section-head">
+            <div>
+              <h2>Start with a design</h2>
+              <p>Pick what you are making and fill in the details only you know. The studio decides the type, colour, motion and pacing.</p>
+            </div>
+            <span className="create-hint">{designs.length} designs</span>
+          </div>
+          <div className="create-designs">
+            {designs.map(item => (
+              <button key={item.id} type="button" className="create-design" onClick={() => chooseDesign(item.id)}>
+                <span className="create-design-art">
+                  <span className="create-design-frame" style={{ aspectRatio: item.aspect.replace(':', ' / '), background: `linear-gradient(145deg, ${item.art[0]}, ${item.art[1]})` }}>
+                    <i /><i /><i />
+                  </span>
+                </span>
+                <span className="create-design-info">
+                  <b>{item.title}</b>
+                  <small>{item.summary}</small>
+                  <em>{item.aspect} · {item.length}</em>
+                </span>
+              </button>
+            ))}
+            <button type="button" className="create-design create-design-free" onClick={startFromScratch}>
+              <span className="create-design-art"><SparklesIcon size={22} /></span>
+              <span className="create-design-info">
+                <b>Describe it yourself</b>
+                <small>Type a brief and the studio decides the layout, type and pacing.</small>
+                <em>Any format</em>
+              </span>
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {design ? (
+        <section className="create-section create-design-form">
+          <button type="button" className="create-back" onClick={() => { setDesignId(''); setDesignError(''); setError(''); }}>
+            <ArrowLeftIcon size={14} /> All designs
+          </button>
+          <div className="create-form-fields">
+            {design.fields.map(field => (
+              <Field key={field.key} label={field.required ? `${field.label} *` : field.label} hint={field.hint}>
+                {field.multiline ? (
+                  <textarea
+                    className="input create-area"
+                    rows={3}
+                    placeholder={field.placeholder}
+                    value={designValues[field.key] ?? ''}
+                    onChange={event => setDesignValues(values => ({ ...values, [field.key]: event.target.value }))}
+                  />
+                ) : (
+                  <input
+                    className="input"
+                    placeholder={field.placeholder}
+                    value={designValues[field.key] ?? ''}
+                    onChange={event => setDesignValues(values => ({ ...values, [field.key]: event.target.value }))}
+                  />
+                )}
+              </Field>
+            ))}
+          </div>
+          <Field label="Anything else? (optional)" hint="Extra details or wording the studio should work in.">
+            <textarea className="input create-area" rows={2} placeholder="Anything that does not fit above." value={designExtra} onChange={event => setDesignExtra(event.target.value)} />
+          </Field>
+          <label className="check">
+            <input type="checkbox" checked={voice} onChange={event => setVoice(event.target.checked)} />
+            <span>Add a voiceover</span>
+          </label>
+          {designError ? <Notice tone="error" title="A few details are missing">{designError}</Notice> : null}
+          <div className="create-form-foot">
+            <span className="create-hint">{ratio} · {length} · {voice ? 'voiceover on' : 'no voiceover'}{activeKit ? ` · brand ${activeKit.name || 'applied'}` : ''}</span>
+            <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={submitDesign}>
+              {busy ? 'Starting…' : 'Make my video'}
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {!design && showComposer ? (
+        <>
+          <button type="button" className="create-back" onClick={() => setShowComposer(false)}>
+            <ArrowLeftIcon size={14} /> All designs
+          </button>
+          {fromName ? (
+            <div className="create-from">
+              <SparklesIcon size={14} />
+              <span>Starting from <b>{fromName}</b> — the same brief and layout. Change anything before making a new video.</span>
+            </div>
+          ) : null}
+          <div
+            className={`create-composer ${over ? 'over' : ''}`}
+            onDragOver={event => { event.preventDefault(); setOver(true); }}
+            onDragLeave={() => setOver(false)}
+            onDrop={event => { event.preventDefault(); setOver(false); addFiles(event.dataTransfer.files); }}
+          >
         <textarea
           autoFocus
           className="create-brief"
@@ -349,10 +603,11 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
             <span>{length}</span>
             <span>{voice ? 'Voiceover' : 'No narration'}</span>
             <span>{review ? 'Design review' : 'No review'}</span>
+            {activeKit ? <span>Brand · {activeKit.name || 'your kit'}</span> : null}
             {templateName ? <span>Template · {templateName}</span> : null}
-            <button type="button" onClick={() => setMode('pro')} title="Change the engine and model">{engine}</button>
+            <button type="button" onClick={() => setMode('pro')} title="Change the AI service">{engine}</button>
           </div>
-          <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={submit}>
+          <Button variant="primary" size="lg" loading={busy} icon={<WandIcon size={16} />} onClick={() => void submit()}>
             {busy ? 'Starting…' : 'Make it'}
           </Button>
         </div>
@@ -365,8 +620,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         </div>
       ) : null}
 
-      {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
-
       <div className="create-row">
         <button type="button" className="create-more" onClick={() => setTemplateOpen(open => !open)}>
           <FilmIcon size={14} /> {templateOpen ? 'Hide templates' : 'Start from a template'}
@@ -374,7 +627,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
         <span className="create-hint">
           {mode === 'autopilot' ? 'Autopilot decides layout, type, palette and pacing from the brief.'
             : mode === 'guided' ? 'Guided exposes the choices that change the result most.'
-              : 'Pro exposes every engine, brand and timeline control.'}
+              : 'Pro shows every creative, brand and advanced control.'}
         </span>
       </div>
 
@@ -383,7 +636,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
           <div className="create-section-head">
             <div>
               <h2>Template</h2>
-              <p>Pick a ready-made layout, or leave Auto for a composition designed around this brief.</p>
+              <p>Pick a ready-made layout, or leave Auto for a design built around your description.</p>
             </div>
             <div className="segmented">
               <button className={templateFilter === 'match' ? 'on' : ''} onClick={() => setTemplateFilter('match')}>Matching format</button>
@@ -412,6 +665,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
           </div>
         </section>
       ) : null}
+        </>
+      ) : null}
+
+      {error ? <Notice tone="error" title="Could not create video">{error}</Notice> : null}
 
       {mode !== 'autopilot' ? (
         <section className="create-section">
@@ -423,7 +680,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
           </div>
 
           <div className="create-grid">
-            <Field label="Key message beats" hint="Bullet points to feature across scenes">
+            <Field label="Key message points" hint="What the video should say across its scenes">
               <input className="input" placeholder="e.g. 10x faster rendering, zero setup, free tier" value={keyPoints} onChange={event => setKeyPoints(event.target.value)} />
             </Field>
             <Field label="Call to action" hint="Headline and address shown in the closing scene">
@@ -434,7 +691,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
             </Field>
           </div>
 
-          <Field label="Palette" hint="Choose a look, or let the engine design one from the brief">
+          <Field label="Palette" hint="Choose a look, or let the studio design one from your description">
             <div className="create-themes">
               {[
                 { id: '', name: 'Auto', desc: 'Designed from the brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
@@ -523,7 +780,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
             <div className="create-section-head">
               <div>
                 <h2>Typography & motion</h2>
-                <p>Override the engine's art direction for this video.</p>
+                <p>Override the studio's art direction for this video.</p>
               </div>
             </div>
             <div className="create-grid create-grid-three">
@@ -581,7 +838,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
                   ))}
                 </div>
               ) : (
-                <p className="sub" style={{ margin: 0 }}>The palette comes from the theme or the engine. Turn this on to pin exact brand colors.</p>
+                <p className="sub" style={{ margin: 0 }}>The palette comes from the theme or the studio. Turn this on to pin exact brand colors.</p>
               )}
             </Field>
           </section>
@@ -589,13 +846,13 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
           <section className="create-section">
             <div className="create-section-head">
               <div>
-                <h2>Engine & audio</h2>
-                <p>The model that writes the composition, and the sound under it.</p>
+                <h2>AI service & audio</h2>
+                <p>Which AI writes the video, and the sound under it.</p>
               </div>
               {hostMode !== 'hosted' ? (
                 <label className="check" style={{ margin: 0 }}>
                   <input type="checkbox" checked={modelPreset === 'custom'} onChange={event => setModelPreset(event.target.checked ? 'custom' : 'auto')} />
-                  <span>Custom gateway / BYOK</span>
+                  <span>Use my own AI service</span>
                 </label>
               ) : null}
             </div>
@@ -615,19 +872,19 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
                   ))}
                 </div>
                 <div className="create-grid create-grid-three">
-                  <Field label="Gateway base URL"><input className="input" placeholder="https://openrouter.ai/api/v1" value={customBaseUrl} onChange={event => setCustomBaseUrl(event.target.value)} /></Field>
-                  <Field label="Model ID"><input className="input" placeholder="anthropic/claude-3.7-sonnet" value={customModel} onChange={event => setCustomModel(event.target.value)} /></Field>
+                  <Field label="Service address"><input className="input" placeholder="https://openrouter.ai/api/v1" value={customBaseUrl} onChange={event => setCustomBaseUrl(event.target.value)} /></Field>
+                  <Field label="Model name"><input className="input" placeholder="anthropic/claude-3.7-sonnet" value={customModel} onChange={event => setCustomModel(event.target.value)} /></Field>
                   <Field label="API key" hint="Stored in this browser only"><input className="input" type="password" placeholder="sk-…" value={customApiKey} onChange={event => setCustomApiKey(event.target.value)} /></Field>
                 </div>
               </div>
             ) : (
               <div className="create-models">
                 {[
-                  { id: 'auto', name: 'Auto router', desc: 'Task-aware routing', badge: 'Default' },
+                  { id: 'auto', name: 'Automatic', desc: 'Chooses for you', badge: 'Recommended' },
                   { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', desc: 'Anthropic', badge: 'Quality' },
                   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Google', badge: 'Fast' },
                   { id: 'deepseek-r1', name: 'DeepSeek R1', desc: 'Reasoning', badge: 'Reasoning' },
-                  { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Gateway favourite', badge: 'Stable' },
+                  { id: 'qwen3.8-27b', name: 'Qwen 3.8 27B', desc: 'Reliable all-rounder', badge: 'Stable' },
                   { id: 'gpt-4o', name: 'GPT-4o', desc: 'OpenAI', badge: 'Multimodal' },
                 ].map(model => (
                   <button key={model.id} type="button" className={`create-model ${effectivePreset === model.id ? 'on' : ''}`} onClick={() => setModelPreset(model.id)}>
@@ -697,36 +954,36 @@ export function Create({ initialTemplate, initialKind, initialPrompt }: { initia
 /* ==================== Making Screen ==================== */
 const STAGE_SENTENCES: Record<number, string[]> = {
   1: [
-    'Analyzing your creative brief and key message points…',
-    'Selecting typography hierarchy and color contrast rules…',
-    'Configuring responsive canvas specifications…',
-    'Calibrating visual style and branding mood…',
+    'Reading your brief and key message points…',
+    'Choosing type, colour and contrast…',
+    'Setting up the frame size and layout…',
+    'Setting the visual mood and brand feel…',
   ],
   2: [
-    'Structuring scene hooks and narrative progression…',
-    'Choreographing entrance timing for key features…',
-    'Calibrating scene durations for optimal retention…',
-    'Drafting high-impact on-screen copy and headlines…',
+    'Structuring the story and scene order…',
+    'Timing the entrance of each element…',
+    'Setting scene lengths for the best pacing…',
+    'Drafting on-screen copy and headlines…',
   ],
   3: [
-    'Composing kinetic typography with fluid entrance curves…',
-    'Choreographing dynamic 3D camera sweeps and drifts…',
-    'Positioning visual badges, highlights and layouts…',
-    'Balancing layer depth and motion responsiveness…',
+    'Animating type and scene reveals…',
+    'Adding camera moves and depth…',
+    'Positioning badges, highlights and layouts…',
+    'Balancing depth and motion…',
   ],
   4: [
-    'Fine-tuning frame durations and transition cuts…',
-    'Synchronizing audio accents and visual dynamics…',
-    'Verifying visual contrast and readability across frames…',
-    'Finalizing broadcast-grade motion graphics for preview…',
+    'Fine-tuning timing and transition cuts…',
+    'Syncing audio accents with the picture…',
+    'Checking contrast and readability…',
+    'Finishing the motion for preview…',
   ],
 };
 
 const CREATIVE_TIPS = [
-  '✨ 60fps kinetic motion graphics calibrated for high viewer engagement',
-  '🎨 Color harmony automatically adapts to your chosen brand palette',
-  '📐 Camera motion and transitions are timed to natural eye movement',
-  '🎵 Audio layers and sound effects automatically sync with visual reveals',
+  '✨ Smooth motion tuned for viewer engagement',
+  '🎨 Colour harmony follows your chosen brand palette',
+  '📐 Camera moves and transitions follow natural eye movement',
+  '🎵 Audio and sound effects sync with visual reveals',
 ];
 
 const Bulleted = ({ items }: { items: string[] }) => (
@@ -810,7 +1067,7 @@ export function Making({ id, job }: { id: string; job: string }) {
           </div>
           <h2>{report.errors.length ? 'Made, but the review still faults it' : 'Made, with notes'}</h2>
           {report.errors.length ? <Notice tone="error" title="Unresolved review faults"><Bulleted items={report.errors} /></Notice> : null}
-          {report.notes.length ? <Notice tone={report.errors.length ? 'neutral' : 'warn'} title="What the engine had to change"><Bulleted items={report.notes} /></Notice> : null}
+          {report.notes.length ? <Notice tone={report.errors.length ? 'neutral' : 'warn'} title="What the studio adjusted"><Bulleted items={report.notes} /></Notice> : null}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
             <Button variant="primary" onClick={() => go(`#/p/${encodeURIComponent(id)}`)}>Open the video</Button>
             <Button onClick={() => go('#/projects')}>Back to Projects</Button>
@@ -890,39 +1147,39 @@ export function Making({ id, job }: { id: string; job: string }) {
           {/* Visual Production Pipeline */}
           <div className="pipeline-card" style={{ textAlign: 'left', margin: '0 0 20px' }}>
             <div className="pipeline-header">
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Production Pipeline</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>How your video is made</span>
               <Badge tone="blue" dot>Stage {stage} of 4</Badge>
             </div>
 
             <div className={`pipeline-step ${stage === 1 ? 'active' : stage > 1 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 1 ? <CheckIcon size={14} /> : '1'}</div>
               <div className="step-content">
-                <b>Concept & Creative Direction</b>
-                <small>Analyzing creative brief and setting up brand color hierarchy</small>
+                <b>Concept & direction</b>
+                <small>Reading the brief and choosing brand colours</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 2 ? 'active' : stage > 2 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 2 ? <CheckIcon size={14} /> : '2'}</div>
               <div className="step-content">
-                <b>Storyboard & Scene Pacing</b>
-                <small>Structuring visual hooks, core message beats, and call-to-actions</small>
+                <b>Storyboard & pacing</b>
+                <small>Structuring visual hooks, key message points and a call to action</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 3 ? 'active' : stage > 3 ? 'done' : ''}`}>
               <div className="step-circle">{stage > 3 ? <CheckIcon size={14} /> : '3'}</div>
               <div className="step-content">
-                <b>Kinetic Motion & Layout</b>
-                <small>Choreographing camera transitions, typography reveals, and motion layers</small>
+                <b>Motion & layout</b>
+                <small>Animating type, camera moves and transitions</small>
               </div>
             </div>
 
             <div className={`pipeline-step ${stage === 4 ? 'active' : ''}`}>
               <div className="step-circle">{stage === 4 ? <SparklesIcon size={12} /> : '4'}</div>
               <div className="step-content">
-                <b>Visual Review & Polish</b>
-                <small>Fine-tuning frame durations, easings, audio sync, and render quality</small>
+                <b>Review & polish</b>
+                <small>Fine-tuning timing, audio sync and picture quality</small>
               </div>
             </div>
           </div>
