@@ -75,6 +75,8 @@ Google have no speech endpoint, so `native` refuses there rather than pretending
 / `OVE_AI_VOICE` values are passed to the native endpoint as given, but an Edge `…Neural` id means nothing to it, so
 that falls back to the endpoint's own default (or `OVE_AI_SPEECH_VOICE`).
 
+`OVE_AI_FALLBACK_PROVIDER` (with optional `OVE_AI_FALLBACK_MODEL`) names a second provider that answers a chat request when the first is rate limited, for example when a daily token cap runs out. It is used only when the caller has not brought their own key or gateway.
+
 Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
 `OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, `OVE_AI_SPEECH_MODEL`, `OVE_AI_SPEECH_VOICE`, `OVE_AI_TTS_PROVIDER`,
 `OVE_AI_VOICE`, plus the per-vendor keys above and

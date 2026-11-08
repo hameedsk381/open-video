@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { limitMessage } from '../limitMessage';
 import { api, upload, waitJob, cleanUserStatus, useHostMode, type Job, type Library, type TemplateSummary } from '../api';
 import { composeNotesKey, composeOutcome } from '../composeReport';
 import { go } from '../router';
@@ -769,11 +770,7 @@ export function Making({ id, job }: { id: string; job: string }) {
       e => {
         if (live) {
           const msg = (e as Error).message || '';
-          setError(
-            msg.includes('rate') || msg.includes('429')
-              ? 'Our video generation engine is experiencing high demand. Please try again in a few moments.'
-              : 'Video creation was interrupted. Please review your brief and try again.'
-          );
+          setError(limitMessage(msg) ?? 'Video creation was interrupted. Please review your brief and try again.');
         }
       }
     );

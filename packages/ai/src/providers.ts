@@ -716,7 +716,39 @@ export function defaultProviderId(): 'groq' | 'freellmapi' {
   return !groq && gateway ? 'freellmapi' : 'groq';
 }
 
+/** True for a rate or quota limit: waiting a few seconds, which the SDK already does, will not clear it. */
+export const isRateLimit = (error: unknown) => /rate.?limit|\b429\b|too many requests|quota|tokens per (day|minute)/i.test(error instanceof Error ? error.message : String(error));
+
+/** Chat goes to `fallback` when `primary` is rate limited; every other call, and every other kind of error, is the primary's own. */
+export function withFallback(primary: AiProvider, fallback: AiProvider): AiProvider {
+  return new Proxy(primary, {
+    get(target, key, receiver) {
+      if (key !== 'chat') return Reflect.get(target, key, receiver);
+      return async (messages: ChatMessage[], options?: ChatOptions) => {
+        try { return await target.chat(messages, options); }
+        catch (error) {
+          if (!isRateLimit(error)) throw error;
+          console.warn(`${target.id} is rate limited; answering with ${fallback.id} instead.`);
+          // A model name chosen for the primary means nothing to the fallback.
+          try { return await fallback.chat(messages, { ...options, model: undefined }); } catch { throw error; }
+        }
+      };
+    },
+  });
+}
+
+/**
+ * The provider for a request. When the operator sets OVE_AI_FALLBACK_PROVIDER (and optionally OVE_AI_FALLBACK_MODEL), a rate-limited
+ * chat call is answered by that provider instead of failing. A caller who brought their own key or gateway is never switched to the operator's.
+ */
 export function createProvider(config: ProviderConfig = {}): AiProvider {
+  const primary = createBaseProvider(config);
+  const fallbackId = (process.env.OVE_AI_FALLBACK_PROVIDER || '').trim().toLowerCase();
+  if (!fallbackId || primary.id === 'mock' || primary.id === fallbackId || config.apiKey || config.baseUrl) return primary;
+  return withFallback(primary, createBaseProvider({ provider: fallbackId, model: process.env.OVE_AI_FALLBACK_MODEL || undefined }));
+}
+
+function createBaseProvider(config: ProviderConfig = {}): AiProvider {
   const explicit = (config.provider || process.env.OVE_AI_PROVIDER || '').trim();
   let id = explicit.toLowerCase();
 
