@@ -169,7 +169,7 @@ Press Ctrl+C to stop.`);
     else { const values=await suppliedValues(), targetAspect=option('--aspect');
       let composition=await prepareComposition(raw, values, baseDir);
       if (targetAspect) composition=adaptCompositionAspect(composition, targetAspect);
-      if (command === 'validate') console.log(`Valid: ${composition.name} (${composition.durationFrames} frames, ${composition.width}x${composition.height})`);
+      if (command === 'validate') { console.log(`Valid: ${composition.name} (${composition.durationFrames} frames, ${composition.width}x${composition.height})`); const { assetNoteLines, collectAssetNotes } = await import('./asset-notes'); for (const line of assetNoteLines(await collectAssetNotes(composition.assets, baseDir))) console.log(`  ${line}`); }
       else if (command === 'inspect') console.log(JSON.stringify({id:composition.id, durationSeconds:composition.durationFrames/composition.fps, durationFrames:composition.durationFrames, scenes:composition.scenes.map(s=>({ id: s.id, startFrame: s.startFrame, durationFrames: s.durationFrames })), script: composition.content, export:composition.export, variables:composition.variables, assets:composition.assets.map(({ cues, ...asset }: any)=>asset), media: await measureMedia(raw, baseDir)},null,2));
       else if (command === 'captions') { const output=resolve(option('--output') ?? 'captions.srt'), format=output.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt', cues=captionTrack(composition); if (!cues.length) throw new Error('This composition has no captions layers with any lines'); await writeFile(output, formatCaptions(cues, format)); console.log(`Wrote ${cues.length} captions to ${output}`); }
       else if (command === 'still') {

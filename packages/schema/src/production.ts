@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { colorPattern } from './variables';
-import { assetSchema } from './assets';
+import { assetSchema, assetLinkProblems } from './assets';
 import { contentSchema } from './content';
 import { textureTypes, transitionStyles } from './design';
 
@@ -159,6 +159,7 @@ export const productionSchema = z.object({
   unique('Prop', production.props, ['props']);
   unique('Shot', production.shots, ['shots']);
   unique('Asset', production.assets, ['assets']);
+  for (const problem of assetLinkProblems(production.assets)) ctx.addIssue({ code: 'custom', path: ['assets', production.assets.findIndex(asset => asset.id === problem.assetId)], message: problem.message });
 
   const characterIds = new Set(production.characters.map(c => c.id));
   const environmentIds = new Set(production.environments.map(e => e.id));

@@ -5,6 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { productionSchema, type Production } from '@ove/schema';
 import { compileProduction, productionSummary } from '@ove/core';
+import { assetNoteLines, collectAssetNotes } from './asset-notes';
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
 
@@ -15,7 +16,7 @@ export function readProduction(raw: unknown): Production {
   return parsed.data;
 }
 
-export function summaryText(production: Production): string {
+export function summaryText(production: Production, assetLines: readonly string[] = []): string {
   const summary = productionSummary(production);
   const target = summary.targetSeconds === undefined ? '' : ` (brief: ${summary.targetSeconds} s)`;
   const lines = [
@@ -27,6 +28,7 @@ export function summaryText(production: Production): string {
     `  Script: ${summary.beats} beat${summary.beats === 1 ? '' : 's'}${summary.unusedBeats.length ? `, not rendered: ${summary.unusedBeats.join(', ')}` : ''}`,
   ];
   if (summary.targetSeconds !== undefined && Math.abs(summary.plannedSeconds - summary.targetSeconds) > 0.5) lines.push(`  The shot list and the brief disagree about length.`);
+  for (const line of assetLines) lines.push(`  ${line}`);
   return lines.join('\n') + '\n';
 }
 
@@ -39,8 +41,9 @@ export async function runProduction(argv: string[]): Promise<number> {
   const production = readProduction(JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, '')));
 
   if (sub === 'validate') {
-    if (argv.includes('--json')) console.log(JSON.stringify(productionSummary(production), null, 2));
-    else process.stdout.write(summaryText(production));
+    const notes = await collectAssetNotes(production.assets, dirname(path));
+    if (argv.includes('--json')) console.log(JSON.stringify({ ...productionSummary(production), assetNotes: notes }, null, 2));
+    else process.stdout.write(summaryText(production, assetNoteLines(notes)));
     return 0;
   }
 

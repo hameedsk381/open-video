@@ -1,6 +1,7 @@
 // Where projects live. A project is a folder (composition.json, assets/, history/). The studio reaches projects only through ProjectStore, and
 // every call says who is asking (a Principal), so the local folder store here can be replaced by a database and object storage without
 // touching routes or jobs. Jobs that need real files (Chromium, ffmpeg) ask for a workdir: a local folder holding the project's files.
+import { createHash } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { ensureBaseline, listRevisions, restoreRevision, saveRevision, type Revision, type RevisionMeta } from '@ove/ai';
@@ -9,7 +10,12 @@ export type { Revision, RevisionMeta };
 /** Who is asking. Local use has one fixed principal; a hosted API makes one per signed-in user. */
 export type Principal = { userId: string; tenantId: string };
 export const LOCAL_PRINCIPAL: Principal = { userId: 'local', tenantId: 'local' };
-export type StoredAsset = { name: string; path: string; kind: string; bytes: number };
+/** `sha256` and `addedAt` are recorded when a file is uploaded; files placed in the folder by hand have neither. */
+export type StoredAsset = { name: string; path: string; kind: string; bytes: number; sha256?: string; addedAt?: string };
+/** What an upload records about a file, kept in assets/.manifest.json beside the files so the hash is computed once, not on every listing. */
+type UploadRecord = { sha256: string; bytes: number; addedAt: string; originalName: string };
+const manifestPath = (folder: string) => join(folder, '.manifest.json');
+async function readManifest(folder: string): Promise<Record<string, UploadRecord>> { try { const parsed = JSON.parse(await readFile(manifestPath(folder), 'utf8')); return parsed && typeof parsed === 'object' ? parsed : {}; } catch { return {}; } }
 /** The JSON files a project keeps at its root, each with its own revision history. */
 export type ProjectFile = 'composition.json' | 'production.json';
 
@@ -135,10 +141,12 @@ export class FsProjectStore implements ProjectStore {
   }
 
   async assets(who: Principal, id: string): Promise<StoredAsset[]> {
-    const folder = join(this.projectDir(who, id), 'assets'), out: StoredAsset[] = [];
+    const folder = join(this.projectDir(who, id), 'assets'), out: StoredAsset[] = [], manifest = await readManifest(folder);
     for (const name of await readdir(folder).catch(() => [] as string[])) {
       const kind = assetKinds[extname(name).toLowerCase()]; if (!kind) continue;
-      out.push({ name, path: `assets/${name}`, kind, bytes: (await stat(join(folder, name))).size });
+      const bytes = (await stat(join(folder, name))).size, record = manifest[name];
+      // A file whose size no longer matches its record was replaced by hand: the old hash would be a false statement about it.
+      out.push({ name, path: `assets/${name}`, kind, bytes, ...(record && record.bytes === bytes ? { sha256: record.sha256, addedAt: record.addedAt } : {}) });
     }
     return out;
   }
@@ -149,6 +157,9 @@ export class FsProjectStore implements ProjectStore {
     const taken = new Set(await readdir(folder).catch(() => [])); let final = clean;
     for (let n = 2; taken.has(final); n++) final = clean.replace(/(\.[^.]*)?$/, `-${n}$1`);
     await writeFile(join(folder, final), bytes);
+    const manifest = await readManifest(folder);
+    manifest[final] = { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, addedAt: new Date().toISOString(), originalName: name };
+    await writeFile(manifestPath(folder), JSON.stringify(manifest, null, 2) + '\n');
     return this.assets(who, id);
   }
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { Composition } from '@ove/core';
@@ -39,7 +40,15 @@ export async function generateImage(provider: AiProvider, options: GenerateImage
   const next: Composition = JSON.parse(JSON.stringify(options.composition));
   const baseDir = dirname(resolve(options.compositionPath));
   next.assets = (next.assets ?? []).filter(asset => asset.id !== id);
-  next.assets.push({ id, type: 'image', src: compositionRelative(baseDir, file), metadata: {} });
+  // Recorded at the moment it is made: which provider drew it from which prompt, and the hash of the bytes. Whether the provider's terms allow
+  // commercial use is not something this code can know, so the rights stay "unknown" until a person records them.
+  const imageModel = (provider as { imageModel?: string }).imageModel;
+  next.assets.push({
+    id, type: 'image', src: compositionRelative(baseDir, file), metadata: {},
+    sha256: createHash('sha256').update(generated.data).digest('hex'),
+    provenance: { origin: 'generated', provider: provider.id, ...(imageModel ? { model: imageModel } : {}), prompt: options.prompt, acquiredAt: new Date().toISOString() },
+    rights: { commercialUse: 'unknown' },
+  });
   validateTemplate(next);
   return { file, id, composition: next };
 }

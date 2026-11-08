@@ -10,6 +10,7 @@ import { composeSmart, templateChoices } from './templates';
 import { listThemes, listBlocks } from './blocks';
 import { readScript, scriptMarkdown } from './script';
 import { readProduction, summaryText } from './production';
+import { assetNoteLines, collectAssetNotes } from './asset-notes';
 
 const TOOLS = [
   {
@@ -461,8 +462,9 @@ ${result.issues.length ? '\nIssues found:\n' + result.issues.map(i => `[${i.seve
     case 'motionrender_production_validate': {
       const file = resolve(String(args.file || ''));
       const production = readProduction(JSON.parse(await readFile(file, 'utf8')));
+      const assetLines = assetNoteLines(await collectAssetNotes(production.assets, dirname(file)));
       return {
-        content: [{ type: 'text', text: summaryText(production) }],
+        content: [{ type: 'text', text: summaryText(production, assetLines) }],
         isError: false
       };
     }
@@ -493,13 +495,14 @@ Next actions you can take:
       const file = resolve(String(args.file || ''));
       const raw = JSON.parse(await readFile(file, 'utf8'));
       const composition = loadComposition(raw);
+      const assetLines = assetNoteLines(await collectAssetNotes(composition.assets, dirname(file)));
       return {
         content: [{
           type: 'text',
           text: `Valid MotionRender composition: "${composition.name}" (${composition.id})
 - Duration: ${(composition.durationFrames / composition.fps).toFixed(1)}s (${composition.durationFrames} frames @ ${composition.fps}fps)
 - Dimensions: ${composition.width}x${composition.height}
-- Scenes: ${composition.scenes.length}`
+- Scenes: ${composition.scenes.length}${assetLines.length ? `\n- Assets:\n${assetLines.map(line => `  - ${line}`).join('\n')}` : ''}`
         }],
         isError: false
       };
