@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { modKeyLabel } from '../platform';
 import { go } from '../router';
 import {
@@ -195,46 +195,59 @@ const CATEGORIES = [
   'Brand Promos',
 ] as const;
 
+const sizeOf = (aspect: ShowcaseItem['aspect']) => (aspect === '9:16' ? '1080×1920' : aspect === '1:1' ? '1080×1080' : '1920×1080');
+
+/** A small picture of the video a brief asks for: a frame in its own shape, on the brief's colours. */
+function Poster({ item, large = false }: { item: ShowcaseItem; large?: boolean }) {
+  return (
+    <div className={`disc-media${large ? ' large' : ''}`} style={{ background: item.previewGradient }} aria-hidden="true">
+      <span className="disc-glow" style={{ background: item.accentColor }} />
+      <div className={`disc-frame a-${item.aspect.replace(':', 'x')}`} style={{ borderColor: `${item.accentColor}66` }}>
+        <i style={{ background: item.accentColor }} />
+        <b />
+        <b className="short" />
+      </div>
+    </div>
+  );
+}
+
 export function Showcase() {
   const { toast } = useUi();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [search, setSearch] = useState('');
-  const [activeModalItem, setActiveModalItem] = useState<ShowcaseItem | null>(null);
+  const [open, setOpen] = useState<ShowcaseItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Category counts
   const counts = useMemo(() => {
     const map: Record<string, number> = { All: SHOWCASE_ITEMS.length };
-    for (const item of SHOWCASE_ITEMS) {
-      map[item.category] = (map[item.category] || 0) + 1;
-    }
+    for (const item of SHOWCASE_ITEMS) map[item.category] = (map[item.category] || 0) + 1;
     return map;
   }, []);
 
-  // Filtered items
   const filtered = useMemo(() => {
-    return SHOWCASE_ITEMS.filter(item => {
-      const matchCat = selectedCategory === 'All' || item.category === selectedCategory;
-      const q = search.toLowerCase().trim();
-      const matchSearch =
-        !q ||
-        item.title.toLowerCase().includes(q) ||
-        item.prompt.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q);
-      return matchCat && matchSearch;
-    });
+    const q = search.toLowerCase().trim();
+    return SHOWCASE_ITEMS.filter(item =>
+      (selectedCategory === 'All' || item.category === selectedCategory) &&
+      (!q || item.title.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q) || item.prompt.toLowerCase().includes(q) || item.category.toLowerCase().includes(q)));
   }, [selectedCategory, search]);
 
-  const copyPrompt = (item: ShowcaseItem, e?: React.MouseEvent) => {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const copyPrompt = (item: ShowcaseItem, e?: React.SyntheticEvent) => {
     e?.stopPropagation();
     navigator.clipboard.writeText(item.prompt).then(() => {
       setCopiedId(item.id);
       toast('Prompt copied', 'success');
       setTimeout(() => setCopiedId(null), 2500);
-    });
+    }, () => toast('Could not copy. Select the text and copy it instead.', 'error'));
   };
 
-  const useThisBrief = (item: ShowcaseItem, e?: React.MouseEvent) => {
+  const useThisBrief = (item: ShowcaseItem, e?: React.SyntheticEvent) => {
     e?.stopPropagation();
     const params = new URLSearchParams();
     if (item.templateId) params.set('template', item.templateId);
@@ -243,189 +256,89 @@ export function Showcase() {
   };
 
   return (
-    <div className="showcase-page">
-      {/* Hero Section */}
-      <section className="showcase-hero">
-        <div className="showcase-hero-inner">
-
-          <h1 className="showcase-title">
-            Starting prompts
-          </h1>
-          <p className="showcase-subtitle">
-            Briefs for the kinds of video people ask for most. Copy one, or open it in the creator with a matching template.
-          </p>
-
-          {/* Search bar */}
-          <div className="showcase-search-wrapper">
-            <div className="showcase-search-bar">
-              <SearchIcon size={16} />
-              <input
-                type="text"
-                className="showcase-search-input"
-                placeholder={`Search prompts or styles (${modKeyLabel('K')})`}
-                aria-label="Search Discover"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search ? (
-                <button className="clear-btn" onClick={() => setSearch('')}>
-                  ✕
-                </button>
-              ) : null}
-            </div>
-          </div>
+    <div className="disc-page">
+      <header className="disc-head">
+        <div>
+          <h1>Discover</h1>
+          <p>Ready-made briefs for the videos people ask for most. Open one in the creator, or copy the prompt.</p>
         </div>
-      </section>
+        <label className="disc-search">
+          <SearchIcon size={15} />
+          <input type="search" placeholder={`Search briefs (${modKeyLabel('K')})`} aria-label="Search briefs" value={search} onChange={e => setSearch(e.target.value)} />
+        </label>
+      </header>
 
-      {/* Category Pill Filters (Signature Prompt Motion Element) */}
-      <nav className="category-pills-bar" aria-label="Filter by category">
-        <div className="category-pills-scroll">
-          {CATEGORIES.map(cat => {
-            const count = counts[cat] || 0;
-            const active = selectedCategory === cat;
-            return (
-              <button
-                key={cat}
-                className={`category-pill ${active ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                <span className="cat-label">{cat}</span>
-                <span className="cat-count">{count}</span>
-              </button>
-            );
-          })}
-        </div>
+      <nav className="disc-filters" aria-label="Filter by category">
+        {CATEGORIES.map(cat => (
+          <button key={cat} className={selectedCategory === cat ? 'on' : ''} aria-pressed={selectedCategory === cat} onClick={() => setSelectedCategory(cat)}>
+            {cat}<span>{counts[cat] || 0}</span>
+          </button>
+        ))}
       </nav>
 
-      {/* Bento Grid of Video Showcase Cards */}
-      <section className="bento-showcase-container">
-        {filtered.length === 0 ? (
-          <div className="empty-showcase">
-            <FilmIcon size={32} />
-            <h3>No motion prompts found</h3>
-            <p>Try searching for different keywords or select a different category filter.</p>
-            <Button variant="secondary" onClick={() => { setSelectedCategory('All'); setSearch(''); }}>
-              Reset Filters
-            </Button>
-          </div>
-        ) : (
-          <div className="bento-grid">
-            {filtered.map(item => {
-              const isCopied = copiedId === item.id;
-              return (
-                <article
-                  key={item.id}
-                  className="bento-card"
-                  onClick={() => setActiveModalItem(item)}
-                >
-
-                  {/* Card Body & Metadata */}
-                  <div className="bento-body">
-                    <div className="bento-tags"><span className="tag-pill category-tag">{item.category}</span><span className="tag-pill aspect-tag">{item.aspect}</span><span className="tag-pill">{item.duration}</span></div>
-
-                    <h3 className="bento-item-title">{item.title}</h3>
-                    <p className="bento-item-summary">{item.summary}</p>
-
-                    {/* Prompt Box Preview */}
-                    <div className="prompt-preview-snippet">
-                      <p>"{item.prompt.slice(0, 115)}..."</p>
-                    </div>
-
-                    {/* Action Row */}
-                    <div className="bento-actions-row">
-                      <button
-                        className={`prompt-copy-btn ${isCopied ? 'copied' : ''}`}
-                        title="Copy prompt text"
-                        onClick={e => copyPrompt(item, e)}
-                      >
-                        {isCopied ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
-                        <span>{isCopied ? 'Copied' : 'Copy prompt'}</span>
-                      </button>
-
-                      <button
-                        className="customize-btn"
-                        title="Start a new video from this brief"
-                        onClick={e => useThisBrief(item, e)}
-                      >
-                        <WandIcon size={13} />
-                        <span>Use this brief</span>
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Interactive Detail Modal Drawer */}
-      {activeModalItem ? (
-        <div className="showcase-modal-backdrop" onClick={() => setActiveModalItem(null)}>
-          <div className="showcase-modal-dialog" onClick={e => e.stopPropagation()}>
-            <button
-              className="modal-close-btn"
-              onClick={() => setActiveModalItem(null)}
-              aria-label="Close modal"
+      {filtered.length === 0 ? (
+        <div className="disc-empty">
+          <FilmIcon size={30} />
+          <h3>Nothing matches</h3>
+          <p>Try other words, or clear the filters.</p>
+          <Button variant="secondary" onClick={() => { setSelectedCategory('All'); setSearch(''); }}>Clear filters</Button>
+        </div>
+      ) : (
+        <div className="disc-grid">
+          {filtered.map(item => (
+            <article
+              key={item.id}
+              className="disc-card"
+              tabIndex={0}
+              role="button"
+              aria-label={`${item.title}. Open details`}
+              onClick={() => setOpen(item)}
+              onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) setOpen(item); }}
             >
-              ✕
-            </button>
-
-            <div className="modal-header">
-              <div className="modal-meta-row">
-                <div className="grow" />
-                <Badge tone="blue">{activeModalItem.category}</Badge>
-                <Badge tone="green">{activeModalItem.aspect}</Badge>
+              <Poster item={item} />
+              <div className="disc-chip"><i style={{ background: item.accentColor }} />{item.category}</div>
+              <div className="disc-body">
+                <h3>{item.title}</h3>
+                <p>{item.summary}</p>
+                <div className="disc-meta">{item.aspect} · {item.duration} · {item.theme}</div>
+                <div className="disc-actions">
+                  <Button variant="primary" size="sm" icon={<WandIcon size={13} />} onClick={e => useThisBrief(item, e)}>Use this brief</Button>
+                  <button className="disc-icon-btn" title="Copy the prompt" aria-label={`Copy the prompt for ${item.title}`} onClick={e => copyPrompt(item, e)}>
+                    {copiedId === item.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+                  </button>
+                </div>
               </div>
-              <h2 className="modal-title">{activeModalItem.title}</h2>
-            </div>
+            </article>
+          ))}
+        </div>
+      )}
 
-            {/* Size and length of the video this brief asks for */}
-            <div
-              className="modal-media-player"
-              style={{ background: activeModalItem.previewGradient }}
-            >
-              <div className="modal-ambient-glow" style={{ background: activeModalItem.accentColor }} />
-              <div className="modal-player-center">
-                <span className="modal-preview-specs">
-                  {activeModalItem.aspect === '9:16' ? '1080×1920' : activeModalItem.aspect === '1:1' ? '1080×1080' : '1920×1080'} · {activeModalItem.duration}
-                </span>
+      {open ? (
+        <div className="disc-backdrop" onClick={() => setOpen(null)}>
+          <div className="disc-modal" role="dialog" aria-modal="true" aria-label={open.title} onClick={e => e.stopPropagation()}>
+            <button className="disc-close" onClick={() => setOpen(null)} aria-label="Close">✕</button>
+            <Poster item={open} large />
+            <div className="disc-modal-body">
+              <div className="disc-tags">
+                <Badge tone="blue">{open.category}</Badge>
+                <Badge tone="green">{open.aspect}</Badge>
+                <span>{sizeOf(open.aspect)} · {open.duration} · {open.theme} theme</span>
               </div>
-            </div>
-
-            {/* Prompt Box */}
-            <div className="modal-prompt-section">
-              <div className="prompt-header-bar">
-                <b>Prompt</b>
-                <button
-                  className="btn ghost sm"
-                  onClick={() => copyPrompt(activeModalItem)}
-                >
-                  {copiedId === activeModalItem.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-                  <span>{copiedId === activeModalItem.id ? 'Copied' : 'Copy prompt'}</span>
-                </button>
+              <h2>{open.title}</h2>
+              <p className="disc-modal-summary">{open.summary}</p>
+              <div className="disc-prompt">
+                <div className="disc-prompt-head">
+                  <b>Prompt</b>
+                  <button className="btn ghost sm" onClick={() => copyPrompt(open)}>
+                    {copiedId === open.id ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+                    <span>{copiedId === open.id ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+                <p>{open.prompt}</p>
               </div>
-
-              <div className="modal-prompt-content">
-                <code>{activeModalItem.prompt}</code>
-              </div>
-            </div>
-
-            {/* Footer with Actions */}
-            <div className="modal-footer">
-              <div className="modal-specs-list">
-                <span>Theme: <b>{activeModalItem.theme}</b></span>
-              </div>
-
-              <div className="modal-actions-cta">
-                <Button variant="secondary" onClick={() => copyPrompt(activeModalItem)}>
-                  <CopyIcon size={14} />
-                  <span>Copy Prompt</span>
-                </Button>
-                <Button variant="primary" onClick={() => useThisBrief(activeModalItem)}>
-                  <WandIcon size={14} />
-                  <span>Use this brief</span>
-                </Button>
+              <div className="disc-modal-actions">
+                <Button variant="secondary" onClick={() => setOpen(null)}>Close</Button>
+                <Button variant="primary" icon={<WandIcon size={14} />} onClick={() => useThisBrief(open)}>Use this brief</Button>
               </div>
             </div>
           </div>
