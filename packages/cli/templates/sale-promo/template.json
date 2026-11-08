@@ -1,8 +1,0 @@
-{
-  "name": "Sale promo",
-  "description": "A 4:5 flash-sale promo: a bold discount, the product promise, a promo code and a call to action.",
-  "tags": ["sale", "promo", "4:5", "ecommerce"],
-  "order": 3,
-  "previewFrame": 90,
-  "brief": "A 15-second 4:5 flash-sale promo: a bold 30% OFF, the promise that everything must go, a promo code box and a shop-now call to action, in warm reds on a near-black background."
-}

@@ -1,8 +1,0 @@
-{
-  "name": "Event invite",
-  "description": "A vertical invitation with the event name, date, place and a save-your-seat call to action. Two scenes, twelve seconds.",
-  "tags": ["event", "invite", "9:16", "announcement"],
-  "order": 5,
-  "previewFrame": 80,
-  "brief": "A 12-second vertical event invitation: YOU'RE INVITED, a big event title, the date and place, a short description and a save-your-seat button, in violet on deep indigo."
-}

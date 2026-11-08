@@ -1,0 +1,17 @@
+{
+  "name": "Sale flash",
+  "description": "A 9-second vertical sale ad: a huge offer, three perks, a deadline and a promo code. Themeable.",
+  "tags": [
+    "sale",
+    "offer",
+    "promo",
+    "ad",
+    "discount",
+    "reel",
+    "9:16",
+    "themed"
+  ],
+  "order": 9,
+  "previewFrame": 50,
+  "brief": "A vertical sale ad: the discount, what is included, when it ends, and the code to use."
+}

@@ -24,7 +24,7 @@ const TOOLS = [
         kind: { type: 'string', enum: ['reel', 'promo', 'product', 'project'], description: 'Video archetype: reel (9:16 vertical), promo (16:9 widescreen), product (1:1 square), or project (16:9 story)' },
         duration: { type: 'number', description: 'Target duration in seconds (e.g. 6, 10, 15)' },
         theme: { type: 'string', description: 'Visual color theme: neon, midnight, slate, warm, editorial, terminal, sunset' },
-        template: { type: 'string', description: 'Optional template ID to base video on (e.g. social-reel, product-card, announcement)' },
+        template: { type: 'string', description: 'Optional template ID to base video on (e.g. hook-reel, product-spotlight, quote-card)' },
         full: { type: 'boolean', description: 'Set true to design completely from scratch rather than matching a template' },
         review: { type: 'boolean', description: 'Run the renderer design review before answering, and feed its errors back to the model (slower; the default of false leaves the composition unchecked)' },
         strict: { type: 'boolean', description: 'Refuse an answer that only became usable because it was repaired (invented animation property, unusable keyframe value) instead of quietly accepting it' },

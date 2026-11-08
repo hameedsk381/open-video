@@ -37,7 +37,7 @@ Scaffold the project or add the effect block:
 
 ```bash
 # 1. Initialize a standalone 5-second collage B-roll project
-mr init my-broll --template collage-broll
+mr init my-broll --template starter
 
 # 2. Or insert into an existing video composition
 mr add fx-paper-collage video/composition.json --at 120 --frames 150 --set label="BREAKTHROUGH" --set headline="The inflection point"

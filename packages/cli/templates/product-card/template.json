@@ -1,8 +1,0 @@
-{
-  "name": "Product card",
-  "description": "A square product card with badge, product name, caption and price. Themeable and ready for batch generation.",
-  "tags": ["product", "ecommerce", "1:1", "batch", "themed"],
-  "order": 2,
-  "previewFrame": 120,
-  "brief": "An 8-second square product card: badge, product name, short caption and price."
-}

@@ -23,13 +23,13 @@ const examples = [
   '30-second product story for a ceramic mug brand, warm and tactile',
 ];
 
-const presetOrder = ['social-reel', 'product-card', 'case-study', 'logo-reveal', 'slideshow', 'quote-card'];
+const presetOrder = ['hook-reel', 'product-spotlight', 'stats-showcase', 'logo-sting', 'tutorial-steps', 'quote-card'];
 const presetIcons: Record<string, typeof FilmIcon> = {
-  'social-reel': FilmIcon,
-  'product-card': ImagesIcon,
-  'case-study': LayersIcon,
-  'logo-reveal': SparklesIcon,
-  slideshow: LayersIcon,
+  'hook-reel': FilmIcon,
+  'product-spotlight': ImagesIcon,
+  'stats-showcase': LayersIcon,
+  'logo-sting': SparklesIcon,
+  'tutorial-steps': LayersIcon,
   'quote-card': TypeIcon,
 };
 const presetMeta = (template: TemplateSummary) => {

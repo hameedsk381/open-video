@@ -58,7 +58,7 @@ function describe(template: TemplateChoice): string {
 }
 
 const systemText = `You fill in ready-made video templates. Reply with JSON only: {"template": "<id>", "theme": "<theme id, only for templates that take a theme>", "values": {"<variable>": <value>, ...}}.
-Choose the template that best matches the story structure and topic of the brief (stories and stats -> story-tall; features and cards -> showcase-tall; tips and steps -> social-reel).
+Choose the template that best matches the story structure and topic of the brief (quotes -> quote-card; numbers -> stats-showcase; products and features -> product-spotlight; tips and steps -> hook-reel or tutorial-steps; events -> event-promo; offers -> sale-flash; a short intro or outro -> logo-sting; anything else -> starter).
 For templates that take a theme, choose the theme whose palette, typography, texture and motion best match the mood, industry and visual tone of the brief:
 - "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue; Space Grotesk, grid texture)
 - "neon": gaming, nightlife, social apps, crypto, cutting-edge AI (dark violet, hot magenta, electric lime; scanlines, zoom)

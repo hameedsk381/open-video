@@ -76,7 +76,7 @@ Layers with `"fixed": true` (such as brand watermarks and captions) remain stead
 
 ### Initialize a Standalone Loop Project:
 ```bash
-mr init my-loop --template broll-loop
+mr init my-loop --template starter
 cd my-loop
 mr dev composition.json
 ```

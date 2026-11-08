@@ -1,8 +1,0 @@
-{
-  "name": "Slideshow",
-  "description": "A 16:9 slideshow with one scene per item in a list. Give it any number of title and body pairs; the video grows to fit them.",
-  "tags": ["slideshow", "16:9", "list", "presentation"],
-  "order": 6,
-  "previewFrame": 60,
-  "brief": "A 16:9 slideshow with three short slides: a title and a sentence each, a big slide number and an accent rule, in cool blue on deep navy."
-}

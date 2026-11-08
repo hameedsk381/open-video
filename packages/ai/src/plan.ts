@@ -64,7 +64,7 @@ Reply with ONE JSON object and nothing else:
     "layout": "left" | "center" | "split" | "editorial",
     "density": 1
   },
-  "beats": [{ "name": "Hook", "onScreen": "what is on screen, concretely", "seconds": 3, "motion": "how it moves in" }],
+  "beats": [{ "name": "Hook", "onScreen": "the words the viewer reads (copy, not a description of the shot)", "seconds": 3, "motion": "how it moves in" }],
   "reasons": ["why this path and look suit this brief"]
 }
 The design is YOURS to decide. There is no house style: choose the fonts, palette, texture and motion that this specific subject calls for.
@@ -84,10 +84,10 @@ Choose the route the brief actually needs, not the most convenient one:
 React is the default for a video that should look designed rather than assembled: brand films, product stories, launches, explainers with a point of view, anything whose look and motion should be specific to this subject. It is the route that can make a video unlike the last one. Choose "json" instead only for plainly structured pieces (a list, a table of figures, a caption-led clip) that blocks express fully, and "template" only on a strong match.` : ''}
 If no template matches both the structure and the look, write the video ("json" or "react"); never force a near-miss template.
 When a template is the right route, pick the one that specifically fits the brief's narrative style:
-- Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "story-tall" or "quote-card".
-- Multi-feature tours, app UI cards, feature lists, and product showcases: choose "showcase-tall", "product-wide" or "product-card".
-- Quick tips, 3-step processes, how-to guides, and numbered reels: choose "social-reel".
-- Company keynotes, presentations, and product launch films: choose "keynote-wide", "launch-wide" or "case-study".
+- Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "quote-card" or "stats-showcase".
+- Multi-feature tours, app UI cards, feature lists, and product showcases: choose "product-spotlight" or "starter".
+- Quick tips, 3-step processes, how-to guides, and numbered reels: choose "hook-reel" or "tutorial-steps".
+- Company keynotes, presentations, and product launch films: choose "starter" or "stats-showcase".
 
 Themes are named presets of the same look (palette, type, texture, motion). For a template that takes a theme, name the closest theme AND still give the look you actually want; the look refines the theme:
 - "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue).
@@ -153,7 +153,7 @@ function beatsOf(raw: any, durationSeconds: number): { beats: MotionBeat[]; prob
     }
     const onScreen = typeof beat.onScreen === 'string' ? beat.onScreen.trim() :
       typeof beat.takeaway === 'string' && beat.takeaway.trim() ? beat.takeaway.trim() : '';
-    if (!onScreen) problems.push(`beats[${index}].onScreen must say what viewers see, concretely`);
+    if (!onScreen) problems.push(`beats[${index}].onScreen must give the words the viewer reads, not a description of the shot`);
     beats.push({ name: beat.name.trim(), onScreen, seconds: Number.isFinite(Number(beat.seconds)) ? Number(beat.seconds) : undefined, motion: typeof beat.motion === 'string' && beat.motion.trim() ? beat.motion.trim() : undefined });
   }
   // Beats should cover the video: scale what the planner gave, or split it evenly, so a planned video is never 2 seconds long.

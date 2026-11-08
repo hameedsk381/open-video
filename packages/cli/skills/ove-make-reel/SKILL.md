@@ -11,7 +11,7 @@ For fields and rules beyond this page, read the main `ove` skill. Everything her
 
 1. Pick the shape: `9:16` reel or story, `1:1` square post, `16:9` landscape, `4:5` feed. Read the user's wording for length; short videos run 15 to 30 seconds.
 2. Start from a whole template when one fits, or from blocks:
-   - `ove init <dir> --template story-tall` (also `launch-wide`, `explainer-square`, `keynote-wide`, `product-wide`, `showcase-tall`, `social-reel`, `sale-promo`, `quote-card`, `event-invite`, `product-card`, `case-study`, `slideshow`).
+   - `ove init <dir> --template starter` (also `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`).
    - Or build it: `ove add title-hero <dir>/composition.json --aspect 9:16 --theme neon --set headline="..."`, then `ove add big-stat ...`, `ove add cta-end ...`. `ove blocks` lists every block and its parameters.
 3. Write the real words. Replace sample text with the user's own names, numbers and details with `--set name=value` (or edit the `with` of the placement). Keep headlines to about five words. Do not invent prices, dates or claims the user did not give.
 4. Choose a theme to match the mood: `ove theme midnight|paper|neon|espresso <composition.json>`.

@@ -41,7 +41,7 @@ A 25–30 second papercut explainer naturally divides into 3 to 5 paper beats:
 
 ### Initialize a Full Papercut Explainer Project:
 ```bash
-mr init my-papercut --template papercut-explainer
+mr init my-papercut --template starter
 cd my-papercut
 mr dev composition.json
 ```

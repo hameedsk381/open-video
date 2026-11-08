@@ -1,8 +1,14 @@
 {
   "name": "Quote card",
-  "description": "A square quote card with a large quotation mark, the quote, and the speaker's name and role. Calm and typographic.",
-  "tags": ["quote", "1:1", "social", "testimonial"],
-  "order": 4,
-  "previewFrame": 135,
-  "brief": "A 9-second square quote card: a large quotation mark, a short memorable quote, and the author's name and role, in warm cream and ink on deep green."
+  "description": "A 7-second square quote with an oversized mark, the words arriving one by one, and the author. Themeable.",
+  "tags": [
+    "quote",
+    "testimonial",
+    "square",
+    "1:1",
+    "themed"
+  ],
+  "order": 6,
+  "previewFrame": 100,
+  "brief": "A square quote card: one quote, who said it and their role."
 }

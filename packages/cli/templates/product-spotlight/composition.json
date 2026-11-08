@@ -1,0 +1,1426 @@
+{
+  "version": "1.0",
+  "id": "product-spotlight",
+  "name": "Product spotlight",
+  "width": 1080,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": "auto",
+  "background": "{{bg}}",
+  "texture": {
+    "type": "{{texture}}",
+    "color": "{{textureColor}}",
+    "opacity": "{{textureOpacity}}",
+    "scale": 56
+  },
+  "export": {
+    "format": "mp4",
+    "loudness": -16
+  },
+  "variables": {
+    "bg": {
+      "type": "color",
+      "default": "#0d1117",
+      "description": "Theme: page background (a 6-digit hex)"
+    },
+    "surface": {
+      "type": "color",
+      "default": "#171d27",
+      "description": "Theme: raised surfaces and cards"
+    },
+    "text": {
+      "type": "color",
+      "default": "#f1f5f9",
+      "description": "Theme: main text"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#8a97a8",
+      "description": "Theme: secondary text"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#2ee6a6",
+      "description": "Theme: the one signal colour"
+    },
+    "accent2": {
+      "type": "color",
+      "default": "#a8f5d9",
+      "description": "Theme: a softer partner for the accent"
+    },
+    "radius": {
+      "type": "number",
+      "default": 28,
+      "description": "Theme: corner radius of cards and buttons"
+    },
+    "headWeight": {
+      "type": "number",
+      "default": 800,
+      "description": "Theme: weight of headlines"
+    },
+    "fontDisplay": {
+      "type": "string",
+      "default": "Archivo",
+      "description": "Theme: headline font"
+    },
+    "fontBody": {
+      "type": "string",
+      "default": "Inter",
+      "description": "Theme: body font"
+    },
+    "texture": {
+      "type": "string",
+      "default": "none",
+      "description": "Theme: background texture: none, grid, dots, scanlines or paper"
+    },
+    "textureColor": {
+      "type": "color",
+      "default": "#ffffff",
+      "description": "Theme: texture ink"
+    },
+    "textureOpacity": {
+      "type": "number",
+      "default": 0.05,
+      "description": "Theme: texture strength"
+    },
+    "motion": {
+      "type": "string",
+      "default": "rise",
+      "description": "Theme: how headlines arrive: rise, slide, pop or blur"
+    },
+    "transition": {
+      "type": "string",
+      "default": "fade",
+      "description": "Theme: how scenes change: fade, zoom, wipe or push"
+    },
+    "kicker": {
+      "type": "string",
+      "default": "NOW AVAILABLE",
+      "description": "Small label above the name"
+    },
+    "product": {
+      "type": "string",
+      "default": "Aero One",
+      "description": "Product name"
+    },
+    "promise": {
+      "type": "string",
+      "default": "The lightest way to carry everything.",
+      "description": "One-line promise"
+    },
+    "f1": {
+      "type": "string",
+      "default": "Featherweight",
+      "description": "Feature 1"
+    },
+    "f1d": {
+      "type": "string",
+      "default": "Under 300 grams, fully loaded.",
+      "description": "Feature 1 detail"
+    },
+    "f2": {
+      "type": "string",
+      "default": "Weatherproof",
+      "description": "Feature 2"
+    },
+    "f2d": {
+      "type": "string",
+      "default": "Sealed seams, tested in the rain.",
+      "description": "Feature 2 detail"
+    },
+    "f3": {
+      "type": "string",
+      "default": "Built to last",
+      "description": "Feature 3"
+    },
+    "f3d": {
+      "type": "string",
+      "default": "A ten-year guarantee, no questions.",
+      "description": "Feature 3 detail"
+    },
+    "price": {
+      "type": "string",
+      "default": "$129",
+      "description": "Price"
+    },
+    "priceNote": {
+      "type": "string",
+      "default": "Free shipping this week",
+      "description": "Line under the price"
+    },
+    "button": {
+      "type": "string",
+      "default": "Get it now",
+      "description": "Button text"
+    },
+    "url": {
+      "type": "string",
+      "default": "example.com/aero",
+      "description": "Address"
+    }
+  },
+  "scenes": [
+    {
+      "id": "name",
+      "name": "Product",
+      "durationFrames": 120,
+      "camera": {
+        "animations": [
+          {
+            "property": "zoom",
+            "keyframes": [
+              {
+                "frame": 0,
+                "value": 1
+              },
+              {
+                "frame": 120,
+                "value": 1.06,
+                "easing": "drift"
+              }
+            ]
+          }
+        ]
+      },
+      "layers": [
+        {
+          "id": "aurora-a",
+          "type": "circle",
+          "x": 842.4,
+          "y": 129.6,
+          "width": 810,
+          "fill": "{{accent}}",
+          "opacity": 0.22,
+          "blur": 120,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 842.4
+                },
+                {
+                  "frame": 120,
+                  "value": 691.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 129.6
+                },
+                {
+                  "frame": 120,
+                  "value": 216,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "aurora-b",
+          "type": "circle",
+          "x": 108,
+          "y": 993.6,
+          "width": 648,
+          "fill": "{{accent2}}",
+          "opacity": 0.13,
+          "blur": 130,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 108
+                },
+                {
+                  "frame": 120,
+                  "value": 259.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 993.6
+                },
+                {
+                  "frame": 120,
+                  "value": 885.5999999999999,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vignette",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 1080,
+          "height": 1080,
+          "radius": 0,
+          "fill": {
+            "type": "radial",
+            "center": [
+              540,
+              540
+            ],
+            "radius": 840.0428560496185,
+            "stops": [
+              {
+                "offset": 0.45,
+                "color": "{{bg}}00"
+              },
+              {
+                "offset": 1,
+                "color": "{{bg}}cc"
+              }
+            ]
+          }
+        },
+        {
+          "id": "frame",
+          "type": "rect",
+          "x": 36,
+          "y": 36,
+          "width": 1008,
+          "height": 1008,
+          "radius": 4,
+          "fill": "#00000000",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "opacity": 0.14
+        },
+        {
+          "id": "kicker",
+          "type": "text",
+          "content": "{{kicker}}",
+          "x": 540,
+          "y": 130,
+          "fontSize": 24,
+          "fontFamily": "JetBrains Mono",
+          "fontWeight": 600,
+          "color": "{{accent}}",
+          "letterSpacing": 7,
+          "textAlign": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 4,
+                  "value": 0
+                },
+                {
+                  "frame": 22,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "disc",
+          "type": "circle",
+          "x": 540,
+          "y": 540,
+          "width": 620,
+          "fill": "{{surface}}",
+          "stroke": "{{accent}}",
+          "strokeWidth": 2,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 8,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.4
+                },
+                {
+                  "frame": 30,
+                  "value": 1,
+                  "easing": "pop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "product",
+          "type": "text",
+          "content": "{{product}}",
+          "x": 540,
+          "y": 420,
+          "fontSize": 170,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -6,
+          "lineHeight": 0.96,
+          "maxWidth": 900,
+          "maxLines": 2,
+          "minFontSize": 90,
+          "textAlign": "center",
+          "split": {
+            "by": "words",
+            "preset": "{{motion}}",
+            "stagger": 6,
+            "duration": 26
+          },
+          "startFrame": 10
+        },
+        {
+          "id": "promise",
+          "type": "text",
+          "content": "{{promise}}",
+          "x": 540,
+          "y": 890,
+          "fontSize": 36,
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "maxWidth": 780,
+          "maxLines": 2,
+          "minFontSize": 22,
+          "textAlign": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 46,
+                  "value": 0
+                },
+                {
+                  "frame": 61,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 46,
+                  "value": 910
+                },
+                {
+                  "frame": 68,
+                  "value": 890,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-whoosh-2",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 2,
+          "volume": 0.4
+        },
+        {
+          "id": "sfx-thump-14",
+          "type": "audio",
+          "src": "sfx:thump",
+          "startFrame": 14,
+          "volume": 0.5
+        }
+      ]
+    },
+    {
+      "id": "features",
+      "name": "Features",
+      "durationFrames": 150,
+      "camera": {
+        "animations": [
+          {
+            "property": "zoom",
+            "keyframes": [
+              {
+                "frame": 0,
+                "value": 1
+              },
+              {
+                "frame": 150,
+                "value": 1.06,
+                "easing": "drift"
+              }
+            ]
+          }
+        ]
+      },
+      "transitionIn": {
+        "type": "{{transition}}",
+        "durationFrames": 14
+      },
+      "layers": [
+        {
+          "id": "aurora-a",
+          "type": "circle",
+          "x": 842.4,
+          "y": 129.6,
+          "width": 810,
+          "fill": "{{accent}}",
+          "opacity": 0.17600000000000002,
+          "blur": 120,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 842.4
+                },
+                {
+                  "frame": 150,
+                  "value": 691.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 129.6
+                },
+                {
+                  "frame": 150,
+                  "value": 216,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "aurora-b",
+          "type": "circle",
+          "x": 108,
+          "y": 993.6,
+          "width": 648,
+          "fill": "{{accent2}}",
+          "opacity": 0.10400000000000001,
+          "blur": 130,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 108
+                },
+                {
+                  "frame": 150,
+                  "value": 259.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 993.6
+                },
+                {
+                  "frame": 150,
+                  "value": 885.5999999999999,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vignette",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 1080,
+          "height": 1080,
+          "radius": 0,
+          "fill": {
+            "type": "radial",
+            "center": [
+              540,
+              540
+            ],
+            "radius": 840.0428560496185,
+            "stops": [
+              {
+                "offset": 0.45,
+                "color": "{{bg}}00"
+              },
+              {
+                "offset": 1,
+                "color": "{{bg}}cc"
+              }
+            ]
+          }
+        },
+        {
+          "id": "frame",
+          "type": "rect",
+          "x": 36,
+          "y": 36,
+          "width": 1008,
+          "height": 1008,
+          "radius": 4,
+          "fill": "#00000000",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "opacity": 0.14
+        },
+        {
+          "id": "heading",
+          "type": "text",
+          "content": "WHY IT WINS",
+          "x": 80,
+          "y": 100,
+          "fontSize": 24,
+          "fontFamily": "JetBrains Mono",
+          "fontWeight": 600,
+          "color": "{{accent}}",
+          "letterSpacing": 7,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 2,
+                  "value": 0
+                },
+                {
+                  "frame": 20,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card1",
+          "type": "rect",
+          "x": 80,
+          "y": 190,
+          "width": 920,
+          "height": 236,
+          "radius": "{{radius}}",
+          "fill": "{{surface}}",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 8,
+                  "value": 0
+                },
+                {
+                  "frame": 20,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 8,
+                  "value": 150
+                },
+                {
+                  "frame": 32,
+                  "value": 80,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dot1",
+          "type": "circle",
+          "x": 150,
+          "y": 308,
+          "width": 44,
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 14,
+                  "value": 0
+                },
+                {
+                  "frame": 22,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 14,
+                  "value": 0.6
+                },
+                {
+                  "frame": 36,
+                  "value": 1,
+                  "easing": "pop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ft1",
+          "type": "text",
+          "content": "{{f1}}",
+          "x": 230,
+          "y": 242,
+          "fontSize": 64,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -2,
+          "lineHeight": 0.96,
+          "maxWidth": 740,
+          "maxLines": 1,
+          "minFontSize": 40,
+          "split": {
+            "by": "words",
+            "preset": "{{motion}}",
+            "stagger": 4,
+            "duration": 20
+          },
+          "startFrame": 16
+        },
+        {
+          "id": "fd1",
+          "type": "text",
+          "content": "{{f1d}}",
+          "x": 232,
+          "y": 328,
+          "fontSize": 32,
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "maxWidth": 740,
+          "maxLines": 2,
+          "minFontSize": 19,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 24,
+                  "value": 0
+                },
+                {
+                  "frame": 38,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 24,
+                  "value": 344
+                },
+                {
+                  "frame": 44,
+                  "value": 328,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-pop-12",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": 12,
+          "volume": 0.4
+        },
+        {
+          "id": "card2",
+          "type": "rect",
+          "x": 80,
+          "y": 458,
+          "width": 920,
+          "height": 236,
+          "radius": "{{radius}}",
+          "fill": "{{surface}}",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 38,
+                  "value": 0
+                },
+                {
+                  "frame": 50,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 38,
+                  "value": 150
+                },
+                {
+                  "frame": 62,
+                  "value": 80,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dot2",
+          "type": "circle",
+          "x": 150,
+          "y": 576,
+          "width": 44,
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 44,
+                  "value": 0
+                },
+                {
+                  "frame": 52,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 44,
+                  "value": 0.6
+                },
+                {
+                  "frame": 66,
+                  "value": 1,
+                  "easing": "pop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ft2",
+          "type": "text",
+          "content": "{{f2}}",
+          "x": 230,
+          "y": 510,
+          "fontSize": 64,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -2,
+          "lineHeight": 0.96,
+          "maxWidth": 740,
+          "maxLines": 1,
+          "minFontSize": 40,
+          "split": {
+            "by": "words",
+            "preset": "{{motion}}",
+            "stagger": 4,
+            "duration": 20
+          },
+          "startFrame": 46
+        },
+        {
+          "id": "fd2",
+          "type": "text",
+          "content": "{{f2d}}",
+          "x": 232,
+          "y": 596,
+          "fontSize": 32,
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "maxWidth": 740,
+          "maxLines": 2,
+          "minFontSize": 19,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 54,
+                  "value": 0
+                },
+                {
+                  "frame": 68,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 54,
+                  "value": 612
+                },
+                {
+                  "frame": 74,
+                  "value": 596,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-pop-42",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": 42,
+          "volume": 0.4
+        },
+        {
+          "id": "card3",
+          "type": "rect",
+          "x": 80,
+          "y": 726,
+          "width": 920,
+          "height": 236,
+          "radius": "{{radius}}",
+          "fill": "{{surface}}",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 68,
+                  "value": 0
+                },
+                {
+                  "frame": 80,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 68,
+                  "value": 150
+                },
+                {
+                  "frame": 92,
+                  "value": 80,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dot3",
+          "type": "circle",
+          "x": 150,
+          "y": 844,
+          "width": 44,
+          "fill": "{{accent}}",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 74,
+                  "value": 0
+                },
+                {
+                  "frame": 82,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 74,
+                  "value": 0.6
+                },
+                {
+                  "frame": 96,
+                  "value": 1,
+                  "easing": "pop"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ft3",
+          "type": "text",
+          "content": "{{f3}}",
+          "x": 230,
+          "y": 778,
+          "fontSize": 64,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -2,
+          "lineHeight": 0.96,
+          "maxWidth": 740,
+          "maxLines": 1,
+          "minFontSize": 40,
+          "split": {
+            "by": "words",
+            "preset": "{{motion}}",
+            "stagger": 4,
+            "duration": 20
+          },
+          "startFrame": 76
+        },
+        {
+          "id": "fd3",
+          "type": "text",
+          "content": "{{f3d}}",
+          "x": 232,
+          "y": 864,
+          "fontSize": 32,
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "maxWidth": 740,
+          "maxLines": 2,
+          "minFontSize": 19,
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 84,
+                  "value": 0
+                },
+                {
+                  "frame": 98,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 84,
+                  "value": 880
+                },
+                {
+                  "frame": 104,
+                  "value": 864,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-pop-72",
+          "type": "audio",
+          "src": "sfx:pop",
+          "startFrame": 72,
+          "volume": 0.4
+        }
+      ]
+    },
+    {
+      "id": "buy",
+      "name": "Price",
+      "durationFrames": 120,
+      "camera": {
+        "animations": [
+          {
+            "property": "zoom",
+            "keyframes": [
+              {
+                "frame": 0,
+                "value": 1
+              },
+              {
+                "frame": 120,
+                "value": 1.06,
+                "easing": "drift"
+              }
+            ]
+          }
+        ]
+      },
+      "transitionIn": {
+        "type": "{{transition}}",
+        "durationFrames": 14
+      },
+      "layers": [
+        {
+          "id": "aurora-a",
+          "type": "circle",
+          "x": 842.4,
+          "y": 129.6,
+          "width": 810,
+          "fill": "{{accent}}",
+          "opacity": 0.308,
+          "blur": 120,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 842.4
+                },
+                {
+                  "frame": 120,
+                  "value": 691.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 129.6
+                },
+                {
+                  "frame": 120,
+                  "value": 216,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "aurora-b",
+          "type": "circle",
+          "x": 108,
+          "y": 993.6,
+          "width": 648,
+          "fill": "{{accent2}}",
+          "opacity": 0.182,
+          "blur": 130,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 108
+                },
+                {
+                  "frame": 120,
+                  "value": 259.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 993.6
+                },
+                {
+                  "frame": 120,
+                  "value": 885.5999999999999,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vignette",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 1080,
+          "height": 1080,
+          "radius": 0,
+          "fill": {
+            "type": "radial",
+            "center": [
+              540,
+              540
+            ],
+            "radius": 840.0428560496185,
+            "stops": [
+              {
+                "offset": 0.45,
+                "color": "{{bg}}00"
+              },
+              {
+                "offset": 1,
+                "color": "{{bg}}cc"
+              }
+            ]
+          }
+        },
+        {
+          "id": "frame",
+          "type": "rect",
+          "x": 36,
+          "y": 36,
+          "width": 1008,
+          "height": 1008,
+          "radius": 4,
+          "fill": "#00000000",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "opacity": 0.14
+        },
+        {
+          "id": "price",
+          "type": "text",
+          "content": "{{price}}",
+          "x": 540,
+          "y": 260,
+          "fontSize": 360,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -14,
+          "lineHeight": 0.96,
+          "maxWidth": 940,
+          "maxLines": 1,
+          "minFontSize": 160,
+          "textAlign": "center",
+          "split": {
+            "by": "letters",
+            "preset": "{{motion}}",
+            "stagger": 3,
+            "duration": 22
+          }
+        },
+        {
+          "id": "note",
+          "type": "text",
+          "content": "{{priceNote}}",
+          "x": 540,
+          "y": 650,
+          "fontSize": 36,
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "textAlign": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 24,
+                  "value": 0
+                },
+                {
+                  "frame": 38,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 24,
+                  "value": 666
+                },
+                {
+                  "frame": 44,
+                  "value": 650,
+                  "easing": "land"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "btn",
+          "type": "rect",
+          "x": 290,
+          "y": 760,
+          "width": 500,
+          "height": 120,
+          "radius": 60,
+          "fill": "{{accent}}",
+          "shadow": {
+            "color": "{{accent}}55",
+            "blur": 50,
+            "offsetX": 0,
+            "offsetY": 18
+          },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 30,
+                  "value": 0
+                },
+                {
+                  "frame": 38,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "scale",
+              "keyframes": [
+                {
+                  "frame": 30,
+                  "value": 0.7
+                },
+                {
+                  "frame": 54,
+                  "value": 1,
+                  "easing": "pop"
+                }
+              ]
+            }
+          ],
+          "originX": 250,
+          "originY": 60
+        },
+        {
+          "id": "btn-text",
+          "type": "text",
+          "content": "{{button}}",
+          "x": 540,
+          "y": 796,
+          "fontSize": 46,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": 800,
+          "color": "{{bg}}",
+          "textAlign": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 36,
+                  "value": 0
+                },
+                {
+                  "frame": 46,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "url",
+          "type": "text",
+          "content": "{{url}}",
+          "x": 540,
+          "y": 930,
+          "fontSize": 28,
+          "fontFamily": "JetBrains Mono",
+          "fontWeight": 500,
+          "color": "{{muted}}",
+          "letterSpacing": 3,
+          "textAlign": "center",
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 48,
+                  "value": 0
+                },
+                {
+                  "frame": 66,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sfx-ding-32",
+          "type": "audio",
+          "src": "sfx:ding",
+          "startFrame": 32,
+          "volume": 0.5
+        }
+      ]
+    }
+  ]
+}

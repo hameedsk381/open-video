@@ -1,126 +1,444 @@
 {
-  "$schema": "./composition.schema.json",
   "version": "1.0",
   "id": "quote-card",
   "name": "Quote card",
   "width": 1080,
   "height": 1080,
   "fps": 30,
-  "durationFrames": 270,
-  "background": {
-    "type": "linear",
-    "from": [0, 0],
-    "to": [1080, 1080],
-    "stops": [
-      { "offset": 0, "color": "#0c1a17" },
-      { "offset": 1, "color": "#132821" }
-    ]
+  "durationFrames": "auto",
+  "background": "{{bg}}",
+  "texture": {
+    "type": "{{texture}}",
+    "color": "{{textureColor}}",
+    "opacity": "{{textureOpacity}}",
+    "scale": 56
+  },
+  "export": {
+    "format": "mp4",
+    "loudness": -16
   },
   "variables": {
-    "quote": { "type": "string", "default": "The best videos are not written in a single take. They are built one honest frame at a time." },
-    "author": { "type": "string", "default": "Mira Chen" },
-    "role": { "type": "string", "default": "Creative director, Northlight" },
-    "accent": { "type": "color", "default": "#f4d58d", "description": "Quotation mark, rule and role colour" }
+    "bg": {
+      "type": "color",
+      "default": "#f4efe6",
+      "description": "Theme: page background (a 6-digit hex)"
+    },
+    "surface": {
+      "type": "color",
+      "default": "#e9e3d6",
+      "description": "Theme: raised surfaces and cards"
+    },
+    "text": {
+      "type": "color",
+      "default": "#14110d",
+      "description": "Theme: main text"
+    },
+    "muted": {
+      "type": "color",
+      "default": "#6f675a",
+      "description": "Theme: secondary text"
+    },
+    "accent": {
+      "type": "color",
+      "default": "#d9381e",
+      "description": "Theme: the one signal colour"
+    },
+    "accent2": {
+      "type": "color",
+      "default": "#f0a898",
+      "description": "Theme: a softer partner for the accent"
+    },
+    "radius": {
+      "type": "number",
+      "default": 28,
+      "description": "Theme: corner radius of cards and buttons"
+    },
+    "headWeight": {
+      "type": "number",
+      "default": 600,
+      "description": "Theme: weight of headlines"
+    },
+    "fontDisplay": {
+      "type": "string",
+      "default": "Fraunces",
+      "description": "Theme: headline font"
+    },
+    "fontBody": {
+      "type": "string",
+      "default": "Inter",
+      "description": "Theme: body font"
+    },
+    "texture": {
+      "type": "string",
+      "default": "paper",
+      "description": "Theme: background texture: none, grid, dots, scanlines or paper"
+    },
+    "textureColor": {
+      "type": "color",
+      "default": "#000000",
+      "description": "Theme: texture ink"
+    },
+    "textureOpacity": {
+      "type": "number",
+      "default": 0.06,
+      "description": "Theme: texture strength"
+    },
+    "motion": {
+      "type": "string",
+      "default": "blur",
+      "description": "Theme: how headlines arrive: rise, slide, pop or blur"
+    },
+    "transition": {
+      "type": "string",
+      "default": "fade",
+      "description": "Theme: how scenes change: fade, zoom, wipe or push"
+    },
+    "quote": {
+      "type": "string",
+      "default": "It finally feels like video is something we can write, not just something we wait for.",
+      "description": "The quote"
+    },
+    "author": {
+      "type": "string",
+      "default": "Priya Raman",
+      "description": "Who said it"
+    },
+    "role": {
+      "type": "string",
+      "default": "Head of Content, Northwind",
+      "description": "Their role"
+    }
   },
   "scenes": [
     {
       "id": "quote",
       "name": "Quote",
-      "startFrame": 0,
-      "durationFrames": 270,
+      "durationFrames": 210,
       "camera": {
         "animations": [
-          { "property": "zoom", "keyframes": [{ "frame": 0, "value": 1 }, { "frame": 270, "value": 1.08, "easing": "drift" }] }
+          {
+            "property": "zoom",
+            "keyframes": [
+              {
+                "frame": 0,
+                "value": 1
+              },
+              {
+                "frame": 210,
+                "value": 1.04,
+                "easing": "drift"
+              }
+            ]
+          }
         ]
       },
-      "transitionIn": { "type": "fade", "durationFrames": 12 },
-      "transitionOut": { "type": "fade", "durationFrames": 12 },
       "layers": [
         {
-          "id": "glow",
+          "id": "aurora-a",
           "type": "circle",
-          "x": 660,
-          "y": -260,
-          "width": 820,
+          "x": 842.4,
+          "y": 129.6,
+          "width": 810,
           "fill": "{{accent}}",
-          "opacity": 0.1,
-          "blur": 90,
+          "opacity": 0.198,
+          "blur": 120,
           "animations": [
-            { "property": "x", "keyframes": [{ "frame": 0, "value": 700 }, { "frame": 270, "value": 540, "easing": "drift" }] }
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 842.4
+                },
+                {
+                  "frame": 210,
+                  "value": 691.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 129.6
+                },
+                {
+                  "frame": 210,
+                  "value": 216,
+                  "easing": "drift"
+                }
+              ]
+            }
           ]
+        },
+        {
+          "id": "aurora-b",
+          "type": "circle",
+          "x": 108,
+          "y": 993.6,
+          "width": 648,
+          "fill": "{{accent2}}",
+          "opacity": 0.117,
+          "blur": 130,
+          "animations": [
+            {
+              "property": "x",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 108
+                },
+                {
+                  "frame": 210,
+                  "value": 259.2,
+                  "easing": "drift"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 993.6
+                },
+                {
+                  "frame": 210,
+                  "value": 885.5999999999999,
+                  "easing": "drift"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vignette",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 1080,
+          "height": 1080,
+          "radius": 0,
+          "fill": {
+            "type": "radial",
+            "center": [
+              540,
+              540
+            ],
+            "radius": 840.0428560496185,
+            "stops": [
+              {
+                "offset": 0.45,
+                "color": "{{bg}}00"
+              },
+              {
+                "offset": 1,
+                "color": "{{bg}}55"
+              }
+            ]
+          }
+        },
+        {
+          "id": "frame",
+          "type": "rect",
+          "x": 36,
+          "y": 36,
+          "width": 1008,
+          "height": 1008,
+          "radius": 4,
+          "fill": "#00000000",
+          "stroke": "{{text}}",
+          "strokeWidth": 1,
+          "opacity": 0.14
         },
         {
           "id": "mark",
           "type": "text",
           "content": "“",
-          "x": 92,
-          "y": 52,
-          "fontSize": 270,
-          "fontWeight": 800,
-          "lineHeight": 1,
+          "x": 80,
+          "y": 40,
+          "fontSize": 520,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": 700,
           "color": "{{accent}}",
+          "opacity": 0.9,
           "animations": [
-            { "property": "opacity", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 20, "value": 0.95 }] },
-            { "property": "scale", "keyframes": [{ "frame": 0, "value": 0.8 }, { "frame": 26, "value": 1, "easing": "easeOutBack" }] }
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 24,
+                  "value": 0.9,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 90
+                },
+                {
+                  "frame": 30,
+                  "value": 40,
+                  "easing": "land"
+                }
+              ]
+            }
           ]
         },
         {
           "id": "quote",
           "type": "text",
           "content": "{{quote}}",
-          "x": 96,
+          "x": 90,
           "y": 330,
-          "fontSize": 66,
-          "fontWeight": 600,
-          "lineHeight": 1.32,
-          "letterSpacing": -1,
-          "maxWidth": 888,
+          "fontSize": 74,
+          "fontFamily": "{{fontDisplay}}",
+          "fontWeight": "{{headWeight}}",
+          "color": "{{text}}",
+          "letterSpacing": -2,
+          "lineHeight": 1.08,
+          "maxWidth": 900,
           "maxLines": 6,
-          "minFontSize": 44,
-          "color": "#f4f7f2",
-          "split": { "by": "lines", "preset": "rise", "stagger": 7, "duration": 26 }
+          "minFontSize": 40,
+          "split": {
+            "by": "words",
+            "preset": "{{motion}}",
+            "stagger": 3,
+            "duration": 22
+          },
+          "startFrame": 14
         },
         {
           "id": "rule",
           "type": "rect",
-          "x": 96,
-          "y": 840,
-          "width": 120,
-          "height": 6,
-          "radius": 3,
+          "x": 90,
+          "y": 880,
+          "width": 1,
+          "height": 4,
+          "radius": 2,
           "fill": "{{accent}}",
           "animations": [
-            { "property": "width", "keyframes": [{ "frame": 26, "value": 0 }, { "frame": 52, "value": 120, "easing": "land" }] }
+            {
+              "property": "width",
+              "keyframes": [
+                {
+                  "frame": 100,
+                  "value": 0
+                },
+                {
+                  "frame": 124,
+                  "value": 120,
+                  "easing": "land"
+                }
+              ]
+            }
           ]
         },
         {
           "id": "author",
           "type": "text",
           "content": "{{author}}",
-          "x": 96,
-          "y": 892,
-          "fontSize": 38,
+          "x": 90,
+          "y": 910,
+          "fontSize": 44,
+          "fontFamily": "{{fontDisplay}}",
           "fontWeight": 700,
-          "maxWidth": 760,
-          "maxLines": 1,
-          "color": "#f4f7f2",
+          "color": "{{text}}",
           "animations": [
-            { "property": "opacity", "keyframes": [{ "frame": 34, "value": 0 }, { "frame": 54, "value": 1 }] }
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 112,
+                  "value": 0
+                },
+                {
+                  "frame": 126,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 112,
+                  "value": 928
+                },
+                {
+                  "frame": 132,
+                  "value": 910,
+                  "easing": "land"
+                }
+              ]
+            }
           ]
         },
         {
           "id": "role",
           "type": "text",
           "content": "{{role}}",
-          "x": 96,
-          "y": 948,
+          "x": 90,
+          "y": 970,
           "fontSize": 28,
-          "maxWidth": 820,
-          "maxLines": 1,
-          "color": "{{accent}}",
+          "fontFamily": "{{fontBody}}",
+          "fontWeight": 500,
+          "color": "{{muted}}",
           "animations": [
-            { "property": "opacity", "keyframes": [{ "frame": 42, "value": 0 }, { "frame": 60, "value": 1 }] }
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 120,
+                  "value": 0
+                },
+                {
+                  "frame": 134,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            },
+            {
+              "property": "y",
+              "keyframes": [
+                {
+                  "frame": 120,
+                  "value": 984
+                },
+                {
+                  "frame": 140,
+                  "value": 970,
+                  "easing": "land"
+                }
+              ]
+            }
           ]
+        },
+        {
+          "id": "sfx-whoosh-6",
+          "type": "audio",
+          "src": "sfx:whoosh",
+          "startFrame": 6,
+          "volume": 0.3
+        },
+        {
+          "id": "sfx-ding-104",
+          "type": "audio",
+          "src": "sfx:ding",
+          "startFrame": 104,
+          "volume": 0.3
         }
       ]
     }

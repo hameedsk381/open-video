@@ -1,8 +1,0 @@
-{
-  "name": "Social reel",
-  "description": "A 20-second vertical reel: a hook, three steps, and a call to action. Good for launches and social posts. Themeable.",
-  "tags": ["reel", "social", "9:16", "launch", "themed"],
-  "order": 1,
-  "previewFrame": 70,
-  "brief": "A 20-second vertical social reel for a product launch: a bold hook, three quick steps and a clear call to action."
-}

@@ -1,8 +1,0 @@
-{
-  "name": "Testimonial",
-  "description": "A square customer testimonial: a five-star rating, the quote, and who said it. Themeable and ready for batch generation.",
-  "tags": ["testimonial", "review", "social proof", "1:1", "batch", "themed"],
-  "order": 8,
-  "previewFrame": 150,
-  "brief": "A 7-second square customer testimonial: five gold stars, a short quote from a happy customer, and their name and company."
-}

@@ -158,7 +158,7 @@ When a ready-made template matches the video (the same aspect ratio, the same na
 
 With `--narration`, a template video is cut to its content script: the beats' narration is spoken one line per scene where the template has a scene per beat (otherwise the model writes one line per scene from what it shows), each line is spoken, and every scene is as long as its line, so what is said and what is on screen change together. Word-timed captions come from transcribing the result, and the export gets a -16 LUFS loudness target. Other videos get one script over the whole video. Pictures you pass with `--asset` (images only) are offered to templates with picture slots: the phone screen, the hero image, the story panel.
 
-Templates built from blocks (`launch-wide`, `story-tall`, `explainer-square`, `keynote-wide`) take a **theme** too: the model chooses one of `midnight`, `paper`, `neon`, `espresso` to suit the brief, and the colours follow. See the Blocks and themes section of the README.
+Every shipped template (`starter`, `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`) takes a **theme** too: the model chooses one of `midnight`, `paper`, `neon`, `espresso` to suit the brief, and the colours follow. See the Blocks and themes section of the README.
 
 When a full composition has problems, the model is asked for a patch instead of the whole composition again: `{"fixes": [{"path": "scenes[1].layers[0]", "value": {…}}, {"layer": "title", "set": {…}}, {"path": "scenes[0].layers[3]", "remove": true}]}`. A complete composition is still accepted as the reply.
 

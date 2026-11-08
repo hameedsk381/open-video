@@ -1,0 +1,16 @@
+{
+  "name": "Logo sting",
+  "description": "A 4-second wide brand sting: expanding rings, the name, a tagline. For intros and outros. Themeable.",
+  "tags": [
+    "logo",
+    "sting",
+    "intro",
+    "outro",
+    "wide",
+    "16:9",
+    "themed"
+  ],
+  "order": 3,
+  "previewFrame": 70,
+  "brief": "A short brand sting: the name lands over expanding rings, with a tagline."
+}

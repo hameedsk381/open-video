@@ -203,7 +203,7 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 
 `ove add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
 
-`ove init --template launch-wide` (also `story-tall`, `explainer-square`, `keynote-wide`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
+`ove init --template starter` (also `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
 
 ## Commands
 

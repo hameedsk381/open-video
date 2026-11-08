@@ -87,7 +87,7 @@ describe('mcp server (Model Context Protocol)', () => {
     const tmplResp = byId.get(5);
     expect(tmplResp?.result?.isError).toBe(false);
     const tmplJson = JSON.parse(tmplResp?.result?.content[0]?.text);
-    expect(tmplJson.templates.some((t: any) => t.id === 'social-reel')).toBe(true);
+    expect(tmplJson.templates.some((t: any) => t.id === 'hook-reel')).toBe(true);
     expect(tmplJson.themes.some((th: any) => th.id === 'neon')).toBe(true);
   }, 20000);
 });
