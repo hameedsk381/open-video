@@ -18,9 +18,87 @@ export type ProductionSummary = {
   pendingShots: number;
   beats: number;
   unusedBeats: string[];
+  coverage: ProductionCoverage;
 };
 
 export type CompiledProduction = { composition: Composition; notes: string[] };
+
+// ---- coverage: is everything the production needs actually there? ----
+
+export type RequirementStatus = 'missing' | 'candidate' | 'approved';
+export type ShotCoverage = {
+  shotId: string;
+  required: number; approved: number; candidate: number; missing: number;
+  /** none: nothing is required of this shot; blocked: something is missing; review: nothing is missing but something awaits approval; ready: all approved */
+  state: 'none' | 'blocked' | 'review' | 'ready';
+  needs: { requirementId: string; role: string; status: RequirementStatus; instruction?: string }[];
+};
+export type EntityCoverage = { id: string; kind: 'character' | 'environment' | 'prop'; references: number; required: number; approved: number; missing: number };
+export type Outstanding = { requirementId: string; role: string; strategy: string; status: RequirementStatus; instruction?: string; shotId?: string; entityId?: string; beatId?: string };
+export type ProductionCoverage = {
+  total: number; approved: number; candidate: number; missing: number;
+  /** Whole percent of requirements approved. Undefined while nothing is required: an unplanned production is not "100% ready". */
+  percent?: number;
+  shots: ShotCoverage[];
+  entities: EntityCoverage[];
+  /** Beats no requirement is aimed at, directly or through a shot that renders them. Meaningful once requirements exist. */
+  beatsWithoutRequirements: string[];
+  /** Everything not yet approved, the missing ones first. */
+  outstanding: Outstanding[];
+};
+
+/**
+ * What the production still lacks, computed from its requirements and their approval, never from how many files exist: an uploaded picture
+ * that nobody approved for its job does not make a shot ready. A requirement for a character, environment or prop applies to every shot
+ * that uses it; one for a beat applies to the shot that renders it.
+ */
+export function productionCoverage(production: Production): ProductionCoverage {
+  const requirements = production.requirements ?? [];
+  const applies = (requirement: (typeof requirements)[number], shot: Production['shots'][number]) => {
+    const { shotId, entityId, beatId } = requirement.purpose;
+    return shotId === shot.id
+      || (entityId !== undefined && (shot.characterIds.includes(entityId) || shot.environmentId === entityId || shot.propIds.includes(entityId)))
+      || (beatId !== undefined && beatId === shot.beatId);
+  };
+  const tally = (list: typeof requirements) => ({ approved: list.filter(r => r.status === 'approved').length, candidate: list.filter(r => r.status === 'candidate').length, missing: list.filter(r => r.status === 'missing').length });
+
+  const shots: ShotCoverage[] = production.shots.map(shot => {
+    const mine = requirements.filter(requirement => applies(requirement, shot)), counts = tally(mine);
+    return {
+      shotId: shot.id, required: mine.length, ...counts,
+      state: !mine.length ? 'none' : counts.missing ? 'blocked' : counts.candidate ? 'review' : 'ready',
+      needs: mine.map(requirement => ({ requirementId: requirement.id, role: requirement.role, status: requirement.status, ...(requirement.instruction ? { instruction: requirement.instruction } : {}) })),
+    };
+  });
+
+  const entity = (kind: EntityCoverage['kind'], item: { id: string; referenceAssets: unknown[] }): EntityCoverage => {
+    const mine = requirements.filter(requirement => requirement.purpose.entityId === item.id);
+    return { id: item.id, kind, references: item.referenceAssets.length, required: mine.length, approved: tally(mine).approved, missing: tally(mine).missing };
+  };
+  const entities = [
+    ...production.characters.map(item => entity('character', item)),
+    ...production.environments.map(item => entity('environment', item)),
+    ...production.props.map(item => entity('prop', item)),
+  ];
+
+  const covered = new Set<string>();
+  for (const requirement of requirements) if (requirement.purpose.beatId !== undefined) covered.add(requirement.purpose.beatId);
+  for (const shot of production.shots) if (shot.beatId !== undefined && requirements.some(requirement => applies(requirement, shot))) covered.add(shot.beatId);
+
+  const order: Record<RequirementStatus, number> = { missing: 0, candidate: 1, approved: 2 };
+  const outstanding: Outstanding[] = requirements.filter(requirement => requirement.status !== 'approved')
+    .sort((a, b) => order[a.status] - order[b.status])
+    .map(requirement => ({ requirementId: requirement.id, role: requirement.role, strategy: requirement.strategy, status: requirement.status, ...(requirement.instruction ? { instruction: requirement.instruction } : {}), ...requirement.purpose }));
+
+  const total = tally(requirements);
+  return {
+    total: requirements.length, ...total,
+    ...(requirements.length ? { percent: Math.floor((total.approved / requirements.length) * 100) } : {}),
+    shots, entities,
+    beatsWithoutRequirements: (production.script?.beats ?? []).map(beat => beat.id).filter(id => !covered.has(id)),
+    outstanding,
+  };
+}
 
 export function productionSummary(production: Production): ProductionSummary {
   const beats = production.script?.beats ?? [];
@@ -37,6 +115,7 @@ export function productionSummary(production: Production): ProductionSummary {
     pendingShots: production.shots.filter(shot => !shot.media && shot.generation?.status !== 'approved').length,
     beats: beats.length,
     unusedBeats: beats.map(beat => beat.id).filter(id => !used.has(id)),
+    coverage: productionCoverage(production),
   };
 }
 

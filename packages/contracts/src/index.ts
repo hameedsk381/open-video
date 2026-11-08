@@ -47,6 +47,17 @@ export const productionIssueSchema = z.object({ path: z.string(), message: z.str
 export type ProductionIssue = z.infer<typeof productionIssueSchema>;
 
 /** What the plan adds up to, before it is compiled. */
+const requirementState = z.enum(['missing', 'candidate', 'approved']);
+const count = z.number().int().nonnegative();
+export const productionCoverageSchema = z.object({
+  total: count, approved: count, candidate: count, missing: count, percent: z.number().optional(),
+  shots: z.array(z.object({ shotId: z.string(), required: count, approved: count, candidate: count, missing: count, state: z.enum(['none', 'blocked', 'review', 'ready']), needs: z.array(z.object({ requirementId: z.string(), role: z.string(), status: requirementState, instruction: z.string().optional() })) })),
+  entities: z.array(z.object({ id: z.string(), kind: z.enum(['character', 'environment', 'prop']), references: count, required: count, approved: count, missing: count })),
+  beatsWithoutRequirements: z.array(z.string()),
+  outstanding: z.array(z.object({ requirementId: z.string(), role: z.string(), strategy: z.string(), status: requirementState, instruction: z.string().optional(), shotId: z.string().optional(), entityId: z.string().optional(), beatId: z.string().optional() })),
+});
+export type ProductionCoverageState = z.infer<typeof productionCoverageSchema>;
+
 export const productionSummarySchema = z.object({
   shots: z.number().int().nonnegative(),
   scenes: z.array(z.string()),
@@ -59,6 +70,7 @@ export const productionSummarySchema = z.object({
   pendingShots: z.number().int().nonnegative(),
   beats: z.number().int().nonnegative(),
   unusedBeats: z.array(z.string()),
+  coverage: productionCoverageSchema.optional(),
 });
 export type ProductionSummaryState = z.infer<typeof productionSummarySchema>;
 

@@ -201,6 +201,21 @@ notes and never fails on them. Not yet covered: narration audio from the text-to
 provider or file to hash; it needs the same treatment where the audio file is written), template-library assets, and a way to record rights from
 the studio. Rights stay `unknown` for generated media because what a provider's terms allow is not something this code can know.
 
+**Slice 2 is built.** `referenceAssets` on characters, environments, props and a shot's generation record take either a bare asset id
+(as every existing manifest writes it) or `{ asset, role }`, with the roles in `referenceRoles` (`packages/schema/src/production.ts`). The schema
+checks that each reference names a declared asset, appears once per role, and is the kind of file its role needs (a first frame is a picture or a
+clip, a voice is a sound, motion is a clip), and that a generation has at most one first and one last frame. `referenceAssetId` and
+`referenceRole` read either form; a bare id's role is "reference" unless the caller passes the owner's natural role.
+
+**Slice 3 is built.** A production has `requirements`: what a shot, an entity or a beat needs, with a role, an acquisition strategy
+(retrieve, source, generate, procedural), an optional instruction, and a status (missing, candidate, approved) that must agree with whether an
+asset is named. The schema rejects a requirement aimed at something that does not exist, filled by the wrong kind of file, approved with a
+rejected or superseded asset, or asking to retrieve or source the real thing but filled by a generated one. `productionCoverage` (`@ove/core`)
+computes, from approvals only, the totals and percent, a state per shot (none, blocked, review, ready), per-entity counts, the beats nothing is
+aimed at, and the outstanding list with the missing first; `productionSummary` includes it. `production validate` and the MCP tool print it, and
+the plan view's next steps list shows missing and awaiting-approval assets. Not built yet: a planner that proposes requirements (slice 4),
+editing requirements in the studio (they are written in `production.json` for now), and the asset board.
+
 Slices 1 to 3 need no provider and no model, so they can ship and be tested first. Do not start with a vector index or several video
 providers: the data model and the lifecycle come first.
 

@@ -291,6 +291,7 @@ export function ProductionPlan({ id, section }: { id: string; section: string })
           {rail && review ? (
             <CoPilot
               plan={plan}
+              coverage={summary?.coverage}
               review={review}
               issues={issues}
               dirty={dirty}
@@ -730,7 +731,7 @@ function StoryCard({ plan, base, shot, selected, onSelect, approve, reject }: {
 
 type CopilotStep = { key: string; title: string; detail?: string; section: PlanSection; tone: 'neutral' | 'amber' | 'red' | 'green' };
 
-function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIssue[], dirty: boolean): CopilotStep[] {
+function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIssue[], dirty: boolean, coverage?: ProductionSummaryState['coverage']): CopilotStep[] {
   const steps: CopilotStep[] = [];
   const first = issues[0];
   if (issues.length) {
@@ -754,6 +755,16 @@ function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIs
   if (review.pending) {
     steps.push({ key: 'pending', title: `${plural(review.pending, 'shot')} will compile as text cards`, detail: 'Add media or approve a take to show footage.', section: 'storyboard', tone: 'neutral' });
   }
+  // Assets the plan says it needs: counted from approvals, so an uploaded file nobody approved for its job still shows here.
+  if (coverage?.missing) {
+    const first = coverage.outstanding.filter(item => item.status === 'missing').slice(0, 3).map(item => `${item.role}${item.instruction ? ` (${item.instruction})` : ''}`);
+    steps.push({ key: 'assets-missing', title: `${plural(coverage.missing, 'required asset')} missing`, detail: first.join(', '), section: 'storyboard', tone: 'amber' });
+  } else if (coverage?.candidate) {
+    steps.push({ key: 'assets-review', title: `${plural(coverage.candidate, 'asset')} to approve`, detail: 'Approved assets are the ones the shots may use.', section: 'storyboard', tone: 'neutral' });
+  }
+  if (coverage?.total && coverage.beatsWithoutRequirements.length) {
+    steps.push({ key: 'assets-beats', title: `${plural(coverage.beatsWithoutRequirements.length, 'beat')} with no asset requirement`, detail: coverage.beatsWithoutRequirements.slice(0, 4).join(', '), section: 'script', tone: 'neutral' });
+  }
   if (review.missingCopy.length) {
     steps.push({ key: 'copy', title: `${plural(review.missingCopy.length, 'shot')} without on-screen copy`, detail: review.missingCopy.slice(0, 4).join(', '), section: 'storyboard', tone: 'neutral' });
   }
@@ -764,8 +775,9 @@ function copilotSteps(plan: Production, review: PlanReview, issues: ProductionIs
   return steps;
 }
 
-function CoPilot({ plan, review, issues, dirty, busy, active, selected, edit, save, onClose, goSection }: {
+function CoPilot({ plan, review, issues, dirty, coverage, busy, active, selected, edit, save, onClose, goSection }: {
   plan: Production;
+  coverage?: ProductionSummaryState['coverage'];
   review: PlanReview;
   issues: ProductionIssue[];
   dirty: boolean;
@@ -778,7 +790,7 @@ function CoPilot({ plan, review, issues, dirty, busy, active, selected, edit, sa
   goSection: (key: PlanSection) => void;
 }) {
   const { toast } = useUi();
-  const steps = copilotSteps(plan, review, issues, dirty);
+  const steps = copilotSteps(plan, review, issues, dirty, coverage);
   const percent = review.total ? Math.round((review.ready / review.total) * 100) : 0;
   const take = selected ? shotTake(plan, selected) : null;
 

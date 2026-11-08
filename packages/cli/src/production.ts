@@ -28,6 +28,16 @@ export function summaryText(production: Production, assetLines: readonly string[
     `  Script: ${summary.beats} beat${summary.beats === 1 ? '' : 's'}${summary.unusedBeats.length ? `, not rendered: ${summary.unusedBeats.join(', ')}` : ''}`,
   ];
   if (summary.targetSeconds !== undefined && Math.abs(summary.plannedSeconds - summary.targetSeconds) > 0.5) lines.push(`  The shot list and the brief disagree about length.`);
+  const coverage = summary.coverage;
+  if (coverage.total) {
+    lines.push(`  Assets: ${coverage.approved} of ${coverage.total} required approved (${coverage.percent}%)${coverage.missing ? `, ${coverage.missing} missing` : ''}${coverage.candidate ? `, ${coverage.candidate} awaiting approval` : ''}`);
+    for (const item of coverage.outstanding.slice(0, 6)) {
+      const where = item.shotId ? `shot ${item.shotId}` : item.entityId ? item.entityId : item.beatId ? `beat ${item.beatId}` : '';
+      lines.push(`    ${item.status}: ${item.role} for ${where} (${item.strategy})${item.instruction ? ` — ${item.instruction}` : ''}`);
+    }
+    if (coverage.outstanding.length > 6) lines.push(`    …and ${coverage.outstanding.length - 6} more`);
+    if (coverage.beatsWithoutRequirements.length) lines.push(`  Beats with no asset requirement: ${coverage.beatsWithoutRequirements.join(', ')}`);
+  }
   for (const line of assetLines) lines.push(`  ${line}`);
   return lines.join('\n') + '\n';
 }
