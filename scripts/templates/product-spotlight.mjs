@@ -1,5 +1,5 @@
 // A square product launch: name, three features on cards, price and call to action.
-import { aurora, anim, circle, composition, field, fade, frame, headline, label, pop, rect, rise, scene, sfx, grow, text, tokens, vignette } from './kit.mjs';
+import { aurora, anim, circle, composition, field, fade, frame, headline, label, pop, rect, rise, scene, sfx, grow, text, tokens, vignette, wiggle } from './kit.mjs';
 
 const W = 1080, H = 1080;
 export default {
@@ -18,7 +18,7 @@ export default {
       scenes: [
         scene('name', 'Product', a, [aurora(W, H, a), vignette(W, H), frame(W, H),
           label('kicker', '{{kicker}}', 540, 130, { align: 'center', anims: [[fade(4)]] }),
-          circle('disc', 540, 540, 620, { fill: '{{surface}}', stroke: '{{accent}}', strokeWidth: 2, anims: [pop(0, 30, 0.4)] }),
+          circle('disc', 540, 540, 620, { fill: '{{surface}}', stroke: '{{accent}}', strokeWidth: 2, anims: [pop(0, 30, 0.4), wiggle('y', 540, { amount: 7, every: 45, seed: 3 })] }),
           headline('product', '{{product}}', 540, 420, { size: 170, align: 'center', maxWidth: 900, maxLines: 2, minSize: 90, split: { stagger: 6, duration: 26 }, start: 10 }),
           text('promise', '{{promise}}', 540, 890, { size: 36, color: '{{muted}}', align: 'center', maxWidth: 780, maxLines: 2, anims: [rise(890, 46, 20, 22)] }),
           sfx('whoosh', 2, 0.4), sfx('thump', 14, 0.5)], { tin: false }),

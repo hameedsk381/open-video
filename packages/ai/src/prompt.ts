@@ -86,13 +86,14 @@ Layer types and their required fields:
 Animations (optional "animations" array on any layer):
 { "property": "y", "keyframes": [ { "frame": 0, "value": 40, "easing": "land" }, { "frame": 20, "value": 0 } ] }
 - Keyframe frames are relative to the LAYER's startFrame.
-- Animatable: x, y, opacity, rotation, scale, fontSize, width, height, radius, letterSpacing, strokeWidth,
+- Animatable: x, y, opacity, rotation, scale, scaleX, scaleY, fontSize, width, height, radius, letterSpacing, strokeWidth,
   trimStart, trimEnd, blur, volume, and colours fill/color/stroke.
 - Before the first keyframe the first value holds; after the last the last value holds.
 - Easing names: linear, easeIn, easeOut, easeInOut, easeInCubic, easeOutCubic, easeInOutCubic, easeInQuart,
   easeOutQuart, easeInOutQuart, easeInExpo, easeOutExpo, easeInOutExpo, easeInBack, easeOutBack, easeInOutBack,
-  spring, hold, land, snap, glide, pop, move, exit, drift, or [x1,y1,x2,y2] cubic Bézier.
+  spring, hold, land, snap, glide, pop, move, exit, drift, anticipate, bounce, or [x1,y1,x2,y2] cubic Bézier.
 - "repeat": n (integer) repeats after the first play; "reverse": true ping-pongs.
+- "wiggle": { "amount": 6, "every": 12, "seed": 1 } on an animation adds a repeatable wobble to that property (idle float, handheld drift); "hold": true with "every": 5 is a hand-drawn boil.
 - Kinetic text is its own field on a TEXT layer, next to "content" (never an entry inside "animations"): { "split": { "by": "words"|"letters"|"lines", "stagger": 4, "preset": "rise"|"fade"|"pop"|
   "blur"|"slide"|"drop"|"typewriter", "order": "forward"|"reverse"|"center"|"edges"|"random", "duration": 18 } }.
 
@@ -122,6 +123,7 @@ expressions, repeat, if or components unless the brief explicitly asks; they are
 - Do not use opacity 0 as a way to hide a layer for the whole video: omit it or fade it in.
 - Give every rect/circle a width and height (circle: width). A rect without width and height draws nothing.
 - Use "land" for entrances, "move" for repositioning, "exit" for exits, "drift" for slow continuous motion.
+- Motion craft: never linear. Use "anticipate" for a big move (it winds back, then overshoots), squash a landing with scaleY below 1 and scaleX above 1 (product near 1), give the hero one small idle "wiggle", and move only the main subject so the eye knows where to look.
 - Entrances are shorter than exits: 14-26 frames in, 8-14 frames out.
 - Fill the frame. Avoid tiny cards floating in a corner; use margins and a consistent grid.
 - Colour comes from the chosen palette (background, surface, text, muted, accent). Keep text high-contrast against whatever sits behind it.

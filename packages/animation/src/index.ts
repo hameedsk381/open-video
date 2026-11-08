@@ -1,5 +1,5 @@
 import type { Animation } from '@ove/schema';
-export const easingNames = ['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInQuart','easeOutQuart','easeInOutQuart','easeInExpo','easeOutExpo','easeInOutExpo','easeInBack','easeOutBack','spring','hold','land','snap','glide','pop','move','exit','drift'] as const;
+export const easingNames = ['linear','easeIn','easeOut','easeInOut','easeInCubic','easeOutCubic','easeInOutCubic','easeInQuart','easeOutQuart','easeInOutQuart','easeInExpo','easeOutExpo','easeInOutExpo','easeInBack','easeOutBack','spring','hold','land','snap','glide','pop','move','exit','drift','anticipate','bounce'] as const;
 // A named curve, or [x1, y1, x2, y2] control points of a CSS-style cubic Bézier from (0,0) to (1,1).
 export type Easing = typeof easingNames[number] | readonly [number, number, number, number];
 const back = 1.70158;
@@ -21,7 +21,10 @@ export function ease(t: number, kind: Easing = 'linear'): number { if (t <= 0) r
     case 'easeInQuart': return t*t*t*t; case 'easeOutQuart': return 1-Math.pow(1-t,4); case 'easeInOutQuart': return t < .5 ? 8*t*t*t*t : 1-Math.pow(-2*t+2,4)/2;
     case 'easeInExpo': return Math.pow(2,10*t-10); case 'easeOutExpo': return 1-Math.pow(2,-10*t); case 'easeInOutExpo': return t < .5 ? Math.pow(2,20*t-10)/2 : (2-Math.pow(2,-20*t+10))/2;
     case 'easeInBack': return (back+1)*t*t*t - back*t*t; case 'easeOutBack': return 1 + (back+1)*Math.pow(t-1,3) + back*Math.pow(t-1,2);
-    case 'spring': return springCurve(t)/springEnd; case 'hold': return 0; default: { const c=roleCurves[kind]; return c ? cubicBezier(c[0], c[1], c[2], c[3], t) : t; } } }
+    case 'spring': return springCurve(t)/springEnd; case 'hold': return 0;
+    // Pulls back a little first, then launches past the target and settles: the wind-up and follow-through of one move.
+    case 'anticipate': return cubicBezier(0.68, -0.6, 0.32, 1.6, t);
+    case 'bounce': { const n=7.5625, d=2.75; if (t < 1/d) return n*t*t; if (t < 2/d) return n*(t-=1.5/d)*t+0.75; if (t < 2.5/d) return n*(t-=2.25/d)*t+0.9375; return n*(t-=2.625/d)*t+0.984375; } default: { const c=roleCurves[kind]; return c ? cubicBezier(c[0], c[1], c[2], c[3], t) : t; } } }
 // Colours interpolate per channel in sRGB, including alpha. Accepts the same forms as the schema: #rgb, #rgba, #rrggbb, #rrggbbaa,
 // rgb()/rgba() and transparent.
 export function parseColor(value: string): [number, number, number, number] { const v=value.trim().toLowerCase(); if (v === 'transparent') return [0,0,0,0];
@@ -36,8 +39,22 @@ export function interpolate(frame: number, input: readonly number[], output: rea
 export function animationSegment(animation: { keyframes: readonly { frame: number; value: unknown; easing?: Easing }[]; repeat?: number; reverse?: boolean }, frame: number): { from: unknown; to: unknown; t: number } { const keys=animation.keyframes; const duration=keys.at(-1)!.frame; let f=duration === 0 ? 0 : frame; if (animation.repeat !== undefined && duration > 0) { const cycle=Math.min(Math.floor(f/duration), animation.repeat); f=f-cycle*duration; if(animation.reverse && cycle%2) f=duration-f; }
   if (f <= keys[0]!.frame) return { from: keys[0]!.value, to: keys[0]!.value, t: 0 }; if (f >= keys.at(-1)!.frame) return { from: keys.at(-1)!.value, to: keys.at(-1)!.value, t: 1 };
   const i=keys.findIndex(k => k.frame >= f), from=keys[i-1]!, to=keys[i]!; return { from: from.value, to: to.value, t: ease((f-from.frame)/(to.frame-from.frame), to.easing ?? 'linear') }; }
-export function evaluateAnimation(animation: Animation, frame: number): number | string { const keys=animation.keyframes; const duration=keys.at(-1)!.frame; let f=duration === 0 ? 0 : frame; if (animation.repeat !== undefined && duration > 0) { const cycle=Math.min(Math.floor(f/duration), animation.repeat); f=f-cycle*duration; if(animation.reverse && cycle%2) f=duration-f; }
+function evaluateKeyframes(animation: Animation, frame: number): number | string { const keys=animation.keyframes; const duration=keys.at(-1)!.frame; let f=duration === 0 ? 0 : frame; if (animation.repeat !== undefined && duration > 0) { const cycle=Math.min(Math.floor(f/duration), animation.repeat); f=f-cycle*duration; if(animation.reverse && cycle%2) f=duration-f; }
   if (f <= keys[0]!.frame) return keys[0]!.value; if (f >= keys.at(-1)!.frame) return keys.at(-1)!.value;
   const i=keys.findIndex(k => k.frame >= f), from=keys[i-1]!, to=keys[i]!, t=ease((f-from.frame)/(to.frame-from.frame), to.easing ?? 'linear');
   return typeof from.value === 'string' || typeof to.value === 'string' ? mixColors(String(from.value), String(to.value), t) : from.value+(to.value-from.value)*t; }
+// A repeatable random number in [-1, 1] for an integer step and seed: the same everywhere, so a render and the Player agree.
+const hashNoise = (step: number, seed: number) => { let x=Math.imul((step|0) ^ Math.imul((seed|0)+1, 0x9e3779b1), 0x27d4eb2d); x=Math.imul(x ^ (x >>> 15), 0x85ebca6b); x=Math.imul(x ^ (x >>> 13), 0xc2b2ae35); return (((x ^ (x >>> 16)) >>> 0) / 4294967295)*2-1; };
+/**
+ * Procedural wobble added to an animated number: secondary motion, handheld drift, a floating idle. `every` is the number of frames between new
+ * random targets (smoothly eased between them); with `hold` each target is kept until the next, which is how a hand-redrawn "boil" jumps
+ * a few times a second instead of gliding. Depends only on the frame and the seed, so it is the same in every render.
+ */
+export function wiggleOffset(wiggle: { amount: number; every?: number; seed?: number; hold?: boolean }, frame: number): number {
+  const every=Math.max(1, wiggle.every ?? 12), seed=wiggle.seed ?? 0, k=Math.floor(frame/every);
+  if (wiggle.hold) return wiggle.amount*hashNoise(k, seed);
+  const t=frame/every-k, s=t*t*(3-2*t); return wiggle.amount*(hashNoise(k, seed)*(1-s)+hashNoise(k+1, seed)*s); }
+export function evaluateAnimation(animation: Animation, frame: number): number | string { const value=evaluateKeyframes(animation, frame);
+  const wiggle=(animation as { wiggle?: { amount: number; every?: number; seed?: number; hold?: boolean } }).wiggle;
+  return wiggle && typeof value === 'number' ? value+wiggleOffset(wiggle, frame) : value; }
 export function spring(frame: number, fps: number, config: { damping?: number; stiffness?: number; mass?: number } = {}): number { const t=frame/fps, d=config.damping ?? 12, k=config.stiffness ?? 100, m=config.mass ?? 1, w=Math.sqrt(k/m), z=d/(2*Math.sqrt(k*m)); return z<1 ? 1-Math.exp(-z*w*t)*(Math.cos(w*Math.sqrt(1-z*z)*t)+(z/Math.sqrt(1-z*z))*Math.sin(w*Math.sqrt(1-z*z)*t)) : 1-Math.exp(-w*t); }

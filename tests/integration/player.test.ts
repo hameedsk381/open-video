@@ -48,4 +48,27 @@ describe('browser Player', () => {
     expect(result.first).toEqual({ red10: true, red250: false });      // the bar starts at the left
     expect(result.last).toEqual({ red10: false, red250: true });       // and ends at the right
   }, 120_000);
+  it('stretches a layer with scaleX and scaleY, and wiggles the same way on every draw', async () => {
+    const stretched = { ...composition, id: 'stretch', scenes: [{ id: 's1', name: 'Scene', durationFrames: 60, layers: [
+      { id: 'bar', type: 'rect', x: 0, y: 60, width: 100, height: 60, fill: '#ff0000', scaleX: 2, scaleY: 0.5 },
+      { id: 'shaky', type: 'rect', x: 200, y: 20, width: 40, height: 20, fill: '#00ff00', animations: [{ property: 'x', keyframes: [{ frame: 0, value: 200 }], wiggle: { amount: 30, every: 4, seed: 2, hold: true } }] },
+    ] }] };
+    const result = await page.evaluate(`(async () => {
+      const { createPlayer } = await import('http://player.test/player.js');
+      document.getElementById('host').innerHTML = '';
+      const player = await createPlayer(document.getElementById('host'), { composition: ${JSON.stringify(stretched)}, controls: false });
+      const canvas = document.querySelector('canvas'), ctx = canvas.getContext('2d');
+      const px = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data);
+      const greenColumns = () => { const row = ctx.getImageData(0, 30, canvas.width, 1).data; const xs = []; for (let x = 0; x < canvas.width; x++) if (row[x * 4 + 1] > 200 && row[x * 4] < 60) xs.push(x); return xs.length ? xs[0] : -1; };
+      await player.seek(0); const wide = px(150, 75), tooFar = px(250, 75), tall = px(50, 100), first = greenColumns();
+      await player.seek(0); const again = greenColumns();
+      await player.seek(8); const later = greenColumns();
+      return { wide, tooFar, tall, first, again, later };
+    })()`) as { wide: number[]; tooFar: number[]; tall: number[]; first: number; again: number; later: number };
+    expect(result.wide[0]).toBeGreaterThan(200);        // twice as wide: red at x=150, which a 100 px bar would not reach
+    expect(result.tooFar[0]).toBeLessThan(60);          // but not at 250
+    expect(result.tall[0]).toBeLessThan(60);            // half as tall: y=100 is below the squashed bar (60 + 30)
+    expect(result.first).toBeGreaterThan(-1); expect(result.again).toBe(result.first);   // drawn twice, in the same place
+    expect(result.later).not.toBe(result.first);        // a later step of the boil is somewhere else
+  }, 120_000);
 });
