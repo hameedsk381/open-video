@@ -23,6 +23,8 @@ export type ChatOptions = {
   signal?: AbortSignal;
   task?: ChatTask;
   model?: string;
+  /** How many times the SDK retries a failed request (default 2). Rotation sets 0 so a spent model is left at once. */
+  maxRetries?: number;
 };
 export type ImageOptions = { size?: string; signal?: AbortSignal };
 export type ImageResult = { data: Uint8Array; extension: string };
@@ -495,7 +497,7 @@ export class VercelAiProvider implements AiProvider {
       temperature: options.temperature ?? 0.4,
       maxOutputTokens,
       abortSignal: timeoutSignal(options.signal),
-      maxRetries: 2,
+      maxRetries: options.maxRetries ?? 2,
     });
     // A reply cut off by the output limit is never usable JSON. Models that reason before they answer spend part of the limit
     // thinking, so a cap that suits a plain model truncates them mid-answer: most of this pipeline's failures on one model were
@@ -719,6 +721,45 @@ export function defaultProviderId(): 'groq' | 'freellmapi' {
 /** True for a rate or quota limit: waiting a few seconds, which the SDK already does, will not clear it. */
 export const isRateLimit = (error: unknown) => /rate.?limit|\b429\b|too many requests|quota|tokens per (day|minute)/i.test(error instanceof Error ? error.message : String(error));
 
+/** Groq chat models, best first. Each has its own token allowance, so one running out leaves the others. OVE_AI_GROQ_MODELS (comma separated) replaces the list; "off" turns rotation off. */
+export const GROQ_ROTATION = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'llama-3.3-70b-versatile', 'openai/gpt-oss-20b'];
+
+/** How long a daily-limit error says to wait, in ms; a limit that names no wait is treated as an hour. */
+const waitFromError = (message: string) => {
+  const found = /try again in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/i.exec(message);
+  const ms = found ? (Number(found[1] ?? 0) * 3600 + Number(found[2] ?? 0) * 60 + Number(found[3] ?? 0)) * 1000 : 0;
+  return Math.min(24 * 3600_000, ms || 3600_000);
+};
+
+/**
+ * Tries `models` in order for a chat call that did not name its own model. A model that hits a rate limit is passed over and, when
+ * the limit is a daily one, left alone until it resets, so the next call does not pay for the same failure. Any other error is the caller's.
+ */
+export function withModelRotation(primary: AiProvider, models: string[]): AiProvider {
+  const resting = new Map<string, number>();
+  return new Proxy(primary, {
+    get(target, key, receiver) {
+      if (key !== 'chat' || models.length < 2) return Reflect.get(target, key, receiver);
+      return async (messages: ChatMessage[], options?: ChatOptions) => {
+        if (options?.model) return target.chat(messages, options);
+        const now = Date.now(), awake = models.filter(model => (resting.get(model) ?? 0) <= now), order = awake.length ? awake : models;
+        let last: unknown;
+        for (const [index, model] of order.entries()) {
+          try { return await target.chat(messages, { ...options, model, ...(index < order.length - 1 ? { maxRetries: 0 } : {}) }); }
+          catch (error) {
+            if (!isRateLimit(error)) throw error;
+            last = error;
+            const text = error instanceof Error ? error.message : String(error);
+            if (/per day|TPD/i.test(text)) resting.set(model, Date.now() + waitFromError(text));
+            if (index < order.length - 1) console.warn(`${model} is rate limited; trying ${order[index + 1]}.`);
+          }
+        }
+        throw last;
+      };
+    },
+  });
+}
+
 /** Chat goes to `fallback` when `primary` is rate limited; every other call, and every other kind of error, is the primary's own. */
 export function withFallback(primary: AiProvider, fallback: AiProvider): AiProvider {
   return new Proxy(primary, {
@@ -742,7 +783,12 @@ export function withFallback(primary: AiProvider, fallback: AiProvider): AiProvi
  * chat call is answered by that provider instead of failing. A caller who brought their own key or gateway is never switched to the operator's.
  */
 export function createProvider(config: ProviderConfig = {}): AiProvider {
-  const primary = createBaseProvider(config);
+  let primary = createBaseProvider(config);
+  // Groq with no model chosen by the caller: spread the load over its models rather than one model's daily allowance.
+  const rotation = (process.env.OVE_AI_GROQ_MODELS ?? '').trim();
+  if (primary.id === 'groq' && !config.model && !config.apiKey && !config.baseUrl && !process.env.OVE_AI_MODEL && rotation.toLowerCase() !== 'off') {
+    primary = withModelRotation(primary, rotation ? rotation.split(',').map(model => model.trim()).filter(Boolean) : GROQ_ROTATION);
+  }
   const fallbackId = (process.env.OVE_AI_FALLBACK_PROVIDER || '').trim().toLowerCase();
   if (!fallbackId || primary.id === 'mock' || primary.id === fallbackId || config.apiKey || config.baseUrl) return primary;
   return withFallback(primary, createBaseProvider({ provider: fallbackId, model: process.env.OVE_AI_FALLBACK_MODEL || undefined }));
