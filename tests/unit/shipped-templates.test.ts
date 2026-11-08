@@ -21,7 +21,7 @@ describe('shipped templates', () => {
       for (const [name, variable] of Object.entries<any>(raw.variables)) expect(variable.description, `${id}.${name} needs a description`).toBeTruthy();
       const composition = loadComposition(raw);
       expect(composition.durationFrames).toBeGreaterThan(0);
-      expect(unsupportedFeatures(composition)).toEqual([]);
+      expect(unsupportedFeatures(composition as unknown as Parameters<typeof unsupportedFeatures>[0])).toEqual([]);
     });
   }
 });
