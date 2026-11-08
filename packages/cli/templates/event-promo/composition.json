@@ -385,7 +385,7 @@
           "content": "{{date}}",
           "x": 80,
           "y": 930,
-          "fontSize": 64,
+          "fontSize": 70,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": 800,
           "color": "{{text}}",
@@ -426,7 +426,7 @@
           "content": "{{place}}",
           "x": 80,
           "y": 1020,
-          "fontSize": 38,
+          "fontSize": 32,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
@@ -480,7 +480,7 @@
     {
       "id": "who",
       "name": "Speakers",
-      "durationFrames": 110,
+      "durationFrames": 170,
       "camera": {
         "animations": [
           {
@@ -491,7 +491,7 @@
                 "value": 1
               },
               {
-                "frame": 110,
+                "frame": 170,
                 "value": 1.06,
                 "easing": "drift"
               }
@@ -522,7 +522,7 @@
                   "value": 842.4
                 },
                 {
-                  "frame": 110,
+                  "frame": 170,
                   "value": 691.2,
                   "easing": "drift"
                 }
@@ -536,7 +536,7 @@
                   "value": 162
                 },
                 {
-                  "frame": 110,
+                  "frame": 170,
                   "value": 270,
                   "easing": "drift"
                 }
@@ -562,7 +562,7 @@
                   "value": 108
                 },
                 {
-                  "frame": 110,
+                  "frame": 170,
                   "value": 259.2,
                   "easing": "drift"
                 }
@@ -576,7 +576,7 @@
                   "value": 1242
                 },
                 {
-                  "frame": 110,
+                  "frame": 170,
                   "value": 1107,
                   "easing": "drift"
                 }
@@ -715,6 +715,15 @@
                   "frame": 24,
                   "value": 1,
                   "easing": "glide"
+                },
+                {
+                  "frame": 40,
+                  "value": 1
+                },
+                {
+                  "frame": 56,
+                  "value": 0.45,
+                  "easing": "glide"
                 }
               ]
             }
@@ -741,6 +750,31 @@
             "stagger": 4,
             "duration": 20
           },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 28,
+                  "value": 1
+                },
+                {
+                  "frame": 44,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
           "startFrame": 12
         },
         {
@@ -749,28 +783,14 @@
           "content": "{{a1d}}",
           "x": 342,
           "y": 405,
-          "fontSize": 34,
+          "fontSize": 32,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "maxWidth": 640,
           "maxLines": 2,
-          "minFontSize": 20,
+          "minFontSize": 19,
           "animations": [
-            {
-              "property": "opacity",
-              "keyframes": [
-                {
-                  "frame": 20,
-                  "value": 0
-                },
-                {
-                  "frame": 34,
-                  "value": 1,
-                  "easing": "glide"
-                }
-              ]
-            },
             {
               "property": "y",
               "keyframes": [
@@ -782,6 +802,20 @@
                   "frame": 40,
                   "value": 405,
                   "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 20,
+                  "value": 0
+                },
+                {
+                  "frame": 40,
+                  "value": 1,
+                  "easing": "glide"
                 }
               ]
             }
@@ -808,11 +842,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 28,
+                  "frame": 40,
                   "value": 0
                 },
                 {
-                  "frame": 36,
+                  "frame": 48,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -822,11 +856,11 @@
               "property": "scale",
               "keyframes": [
                 {
-                  "frame": 28,
+                  "frame": 40,
                   "value": 0.6
                 },
                 {
-                  "frame": 50,
+                  "frame": 62,
                   "value": 1,
                   "easing": "pop"
                 }
@@ -850,12 +884,21 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 32,
+                  "frame": 44,
                   "value": 0
                 },
                 {
-                  "frame": 46,
+                  "frame": 58,
                   "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 74,
+                  "value": 1
+                },
+                {
+                  "frame": 90,
+                  "value": 0.45,
                   "easing": "glide"
                 }
               ]
@@ -883,7 +926,32 @@
             "stagger": 4,
             "duration": 20
           },
-          "startFrame": 34
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 28,
+                  "value": 1
+                },
+                {
+                  "frame": 44,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
+          "startFrame": 46
         },
         {
           "id": "st2",
@@ -891,49 +959,49 @@
           "content": "{{a2d}}",
           "x": 342,
           "y": 735,
-          "fontSize": 34,
+          "fontSize": 32,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "maxWidth": 640,
           "maxLines": 2,
-          "minFontSize": 20,
+          "minFontSize": 19,
           "animations": [
-            {
-              "property": "opacity",
-              "keyframes": [
-                {
-                  "frame": 42,
-                  "value": 0
-                },
-                {
-                  "frame": 56,
-                  "value": 1,
-                  "easing": "glide"
-                }
-              ]
-            },
             {
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 42,
+                  "frame": 54,
                   "value": 751
                 },
                 {
-                  "frame": 62,
+                  "frame": 74,
                   "value": 735,
                   "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 54,
+                  "value": 0
+                },
+                {
+                  "frame": 74,
+                  "value": 1,
+                  "easing": "glide"
                 }
               ]
             }
           ]
         },
         {
-          "id": "sfx-pop-30",
+          "id": "sfx-pop-42",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 30,
+          "startFrame": 42,
           "volume": 0.4
         },
         {
@@ -950,11 +1018,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 50,
+                  "frame": 74,
                   "value": 0
                 },
                 {
-                  "frame": 58,
+                  "frame": 82,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -964,11 +1032,11 @@
               "property": "scale",
               "keyframes": [
                 {
-                  "frame": 50,
+                  "frame": 74,
                   "value": 0.6
                 },
                 {
-                  "frame": 72,
+                  "frame": 96,
                   "value": 1,
                   "easing": "pop"
                 }
@@ -992,11 +1060,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 54,
+                  "frame": 78,
                   "value": 0
                 },
                 {
-                  "frame": 68,
+                  "frame": 92,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -1025,7 +1093,23 @@
             "stagger": 4,
             "duration": 20
           },
-          "startFrame": 56
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
+          "startFrame": 80
         },
         {
           "id": "st3",
@@ -1033,49 +1117,49 @@
           "content": "{{a3d}}",
           "x": 342,
           "y": 1065,
-          "fontSize": 34,
+          "fontSize": 32,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "maxWidth": 640,
           "maxLines": 2,
-          "minFontSize": 20,
+          "minFontSize": 19,
           "animations": [
-            {
-              "property": "opacity",
-              "keyframes": [
-                {
-                  "frame": 64,
-                  "value": 0
-                },
-                {
-                  "frame": 78,
-                  "value": 1,
-                  "easing": "glide"
-                }
-              ]
-            },
             {
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 64,
+                  "frame": 88,
                   "value": 1081
                 },
                 {
-                  "frame": 84,
+                  "frame": 108,
                   "value": 1065,
                   "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 88,
+                  "value": 0
+                },
+                {
+                  "frame": 108,
+                  "value": 1,
+                  "easing": "glide"
                 }
               ]
             }
           ]
         },
         {
-          "id": "sfx-pop-52",
+          "id": "sfx-pop-76",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 52,
+          "startFrame": 76,
           "volume": 0.4
         }
       ]

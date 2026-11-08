@@ -475,7 +475,7 @@
     {
       "id": "points",
       "name": "Points",
-      "durationFrames": 210,
+      "durationFrames": 250,
       "camera": {
         "animations": [
           {
@@ -486,7 +486,7 @@
                 "value": 1
               },
               {
-                "frame": 210,
+                "frame": 250,
                 "value": 1.06,
                 "easing": "drift"
               }
@@ -517,7 +517,7 @@
                   "value": 1497.6000000000001
                 },
                 {
-                  "frame": 210,
+                  "frame": 250,
                   "value": 1228.8,
                   "easing": "drift"
                 }
@@ -531,7 +531,7 @@
                   "value": 129.6
                 },
                 {
-                  "frame": 210,
+                  "frame": 250,
                   "value": 216,
                   "easing": "drift"
                 }
@@ -557,7 +557,7 @@
                   "value": 192
                 },
                 {
-                  "frame": 210,
+                  "frame": 250,
                   "value": 460.79999999999995,
                   "easing": "drift"
                 }
@@ -571,7 +571,7 @@
                   "value": 993.6
                 },
                 {
-                  "frame": 210,
+                  "frame": 250,
                   "value": 885.5999999999999,
                   "easing": "drift"
                 }
@@ -703,20 +703,6 @@
           "letterSpacing": -4,
           "animations": [
             {
-              "property": "opacity",
-              "keyframes": [
-                {
-                  "frame": 16,
-                  "value": 0
-                },
-                {
-                  "frame": 33,
-                  "value": 1,
-                  "easing": "glide"
-                }
-              ]
-            },
-            {
               "property": "y",
               "keyframes": [
                 {
@@ -727,6 +713,29 @@
                   "frame": 40,
                   "value": 340,
                   "easing": "land"
+                }
+              ]
+            },
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 16,
+                  "value": 0
+                },
+                {
+                  "frame": 34,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 86,
+                  "value": 1
+                },
+                {
+                  "frame": 102,
+                  "value": 0.45,
+                  "easing": "glide"
                 }
               ]
             }
@@ -753,6 +762,31 @@
             "stagger": 4,
             "duration": 22
           },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 18,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 66,
+                  "value": 1
+                },
+                {
+                  "frame": 82,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
           "startFrame": 20
         },
         {
@@ -824,11 +858,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 34,
+                  "frame": 60,
                   "value": 0
                 },
                 {
-                  "frame": 52,
+                  "frame": 78,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -838,11 +872,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 34,
+                  "frame": 60,
                   "value": 350
                 },
                 {
-                  "frame": 60,
+                  "frame": 86,
                   "value": 300,
                   "easing": "land"
                 }
@@ -863,30 +897,39 @@
           "letterSpacing": -4,
           "animations": [
             {
-              "property": "opacity",
+              "property": "y",
               "keyframes": [
                 {
-                  "frame": 40,
-                  "value": 0
+                  "frame": 66,
+                  "value": 370
                 },
                 {
-                  "frame": 57,
-                  "value": 1,
-                  "easing": "glide"
+                  "frame": 90,
+                  "value": 340,
+                  "easing": "land"
                 }
               ]
             },
             {
-              "property": "y",
+              "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 40,
-                  "value": 370
+                  "frame": 66,
+                  "value": 0
                 },
                 {
-                  "frame": 64,
-                  "value": 340,
-                  "easing": "land"
+                  "frame": 84,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 136,
+                  "value": 1
+                },
+                {
+                  "frame": 152,
+                  "value": 0.45,
+                  "easing": "glide"
                 }
               ]
             }
@@ -913,7 +956,32 @@
             "stagger": 4,
             "duration": 22
           },
-          "startFrame": 44
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 18,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 66,
+                  "value": 1
+                },
+                {
+                  "frame": 82,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
+          "startFrame": 70
         },
         {
           "id": "pd2",
@@ -934,11 +1002,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 52,
+                  "frame": 78,
                   "value": 0
                 },
                 {
-                  "frame": 67,
+                  "frame": 93,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -948,11 +1016,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 52,
+                  "frame": 78,
                   "value": 750
                 },
                 {
-                  "frame": 74,
+                  "frame": 100,
                   "value": 730,
                   "easing": "land"
                 }
@@ -961,10 +1029,10 @@
           ]
         },
         {
-          "id": "sfx-pop-38",
+          "id": "sfx-pop-64",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 38,
+          "startFrame": 64,
           "volume": 0.4
         },
         {
@@ -984,11 +1052,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 58,
+                  "frame": 110,
                   "value": 0
                 },
                 {
-                  "frame": 76,
+                  "frame": 128,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -998,11 +1066,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 58,
+                  "frame": 110,
                   "value": 350
                 },
                 {
-                  "frame": 84,
+                  "frame": 136,
                   "value": 300,
                   "easing": "land"
                 }
@@ -1023,30 +1091,30 @@
           "letterSpacing": -4,
           "animations": [
             {
-              "property": "opacity",
+              "property": "y",
               "keyframes": [
                 {
-                  "frame": 64,
-                  "value": 0
+                  "frame": 116,
+                  "value": 370
                 },
                 {
-                  "frame": 81,
-                  "value": 1,
-                  "easing": "glide"
+                  "frame": 140,
+                  "value": 340,
+                  "easing": "land"
                 }
               ]
             },
             {
-              "property": "y",
+              "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 64,
-                  "value": 370
+                  "frame": 116,
+                  "value": 0
                 },
                 {
-                  "frame": 88,
-                  "value": 340,
-                  "easing": "land"
+                  "frame": 134,
+                  "value": 1,
+                  "easing": "glide"
                 }
               ]
             }
@@ -1073,7 +1141,23 @@
             "stagger": 4,
             "duration": 22
           },
-          "startFrame": 68
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 18,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
+          "startFrame": 120
         },
         {
           "id": "pd3",
@@ -1094,11 +1178,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 76,
+                  "frame": 128,
                   "value": 0
                 },
                 {
-                  "frame": 91,
+                  "frame": 143,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -1108,11 +1192,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 76,
+                  "frame": 128,
                   "value": 750
                 },
                 {
-                  "frame": 98,
+                  "frame": 150,
                   "value": 730,
                   "easing": "land"
                 }
@@ -1121,10 +1205,10 @@
           ]
         },
         {
-          "id": "sfx-pop-62",
+          "id": "sfx-pop-114",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 62,
+          "startFrame": 114,
           "volume": 0.4
         }
       ]
@@ -1305,7 +1389,7 @@
           "content": "{{url}}",
           "x": 960,
           "y": 800,
-          "fontSize": 32,
+          "fontSize": 30,
           "fontFamily": "JetBrains Mono",
           "fontWeight": 500,
           "color": "{{accent}}",

@@ -9,7 +9,7 @@ export default {
     const beat = 54, end = 90;
     const words = [1, 2, 3, 4].map(n => scene(`w${n}`, `Word ${n}`, beat, [
       aurora(W, H, beat, { strength: 1 + n * 0.1 }), vignette(W, H), frame(W, H),
-      label(`idx${n}`, `0${n} / 04`, 80, 100, { color: '{{muted}}', anims: [[fade(2)]] }),
+      label(`idx${n}`, `0${n}/04`, 80, 190, { color: '{{muted}}', anims: [[fade(2)]] }),
       headline(`word${n}`, `{{word${n}}}`, 540, 790, { size: 330, align: 'center', maxWidth: 960, maxLines: 1, minSize: 120, ls: -14, split: { by: 'letters', stagger: 2, duration: 18 } }),
       rect(`bar${n}`, 80, 1260, 0, 10, { radius: 5, fill: '{{accent}}', anims: [[grow('width', 920, 6, 30)]] }),
       sfx('pop', 2, 0.55),

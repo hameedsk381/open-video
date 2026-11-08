@@ -33,8 +33,8 @@ export default {
           headline('title', '{{title}}', 160, 400, { size: 170, maxWidth: 1500, maxLines: 2, minSize: 100, split: { stagger: 6, duration: 28 } }), sfx('whoosh', 4, 0.4)], { tin: false }),
         ...steps,
         scene('done', 'Result', c, [aurora(W, H, c, { strength: 1.4 }), vignette(W, H), frame(W, H),
-          headline('result', '{{result}}', 960, 400, { size: 230, align: 'center', maxWidth: 1500, maxLines: 2, minSize: 90, split: { stagger: 5, duration: 26 } }),
-          text('url', '{{url}}', 960, 760, { font: 'JetBrains Mono', size: 32, ls: 4, color: '{{accent}}', align: 'center', anims: [rise(760, 30, 16, 20)] }), sfx('ding', 24, 0.4)]),
+          headline('result', '{{result}}', 960, 400, { size: 170, align: 'center', maxWidth: 1500, maxLines: 2, minSize: 90, split: { stagger: 5, duration: 26 } }),
+          text('url', '{{url}}', 960, 800, { font: 'JetBrains Mono', size: 32, ls: 4, color: '{{accent}}', align: 'center', anims: [rise(800, 30, 16, 20)] }), sfx('ding', 24, 0.4)]),
       ],
     });
   },

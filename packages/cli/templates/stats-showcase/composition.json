@@ -536,6 +536,31 @@
             "stagger": 3,
             "duration": 22
           },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 32,
+                  "value": 1
+                },
+                {
+                  "frame": 48,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
           "startFrame": 10
         },
         {
@@ -637,6 +662,31 @@
             "stagger": 3,
             "duration": 22
           },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 32,
+                  "value": 1
+                },
+                {
+                  "frame": 48,
+                  "value": 0.45,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
           "startFrame": 46
         },
         {
@@ -738,6 +788,22 @@
             "stagger": 3,
             "duration": 22
           },
+          "animations": [
+            {
+              "property": "opacity",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 14,
+                  "value": 1,
+                  "easing": "glide"
+                }
+              ]
+            }
+          ],
           "startFrame": 82
         },
         {

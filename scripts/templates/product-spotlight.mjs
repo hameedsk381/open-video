@@ -27,7 +27,7 @@ export default {
           ...[1, 2, 3].flatMap(n => { const y = 190 + (n - 1) * 268, at = 8 + (n - 1) * 30; return [
             rect(`card${n}`, 80, y, 920, 236, { radius: '{{radius}}', fill: '{{surface}}', stroke: '{{text}}', strokeWidth: 1, anims: [[fade(at, 12), anim('x', [at, 150], [at + 24, 80, 'land'])]] }),
             circle(`dot${n}`, 150, y + 118, 44, { fill: '{{accent}}', anims: [pop(at + 6, 22)] }),
-            headline(`ft${n}`, `{{f${n}}}`, 230, y + 52, { size: 64, maxWidth: 740, maxLines: 1, minSize: 40, split: { stagger: 4, duration: 20 }, start: at + 8 }),
+            headline(`ft${n}`, `{{f${n}}}`, 230, y + 52, { size: 56, maxWidth: 740, maxLines: 1, minSize: 40, split: { stagger: 4, duration: 20 }, start: at + 8 }),
             text(`fd${n}`, `{{f${n}d}}`, 232, y + 138, { size: 32, color: '{{muted}}', maxWidth: 740, maxLines: 2, anims: [rise(y + 138, at + 16, 16, 20)] }),
             sfx('pop', at + 4, 0.4)]; })]),
         scene('buy', 'Price', c, [aurora(W, H, c, { strength: 1.4 }), vignette(W, H), frame(W, H),

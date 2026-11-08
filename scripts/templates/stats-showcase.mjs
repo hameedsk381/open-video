@@ -1,5 +1,5 @@
 // Wide results video: a headline, three big numbers, a closing line. For metrics, year in review, launch results.
-import { aurora, anim, composition, field, fade, frame, headline, label, rect, rise, scene, sfx, grow, text, tokens, vignette } from './kit.mjs';
+import { spot, aurora, anim, composition, field, fade, frame, headline, label, rect, rise, scene, sfx, grow, text, tokens, vignette } from './kit.mjs';
 
 const W = 1920, H = 1080;
 export default {
@@ -20,7 +20,7 @@ export default {
         scene('stats', 'Stats', b, [aurora(W, H, b, { strength: 0.8 }), vignette(W, H), frame(W, H),
           ...[1, 2, 3].flatMap(n => { const x = 120 + (n - 1) * 590, at = 6 + (n - 1) * 36; return [
             rect(`top${n}`, x, 340, 0, 6, { fill: '{{accent}}', anims: [[grow('width', 520, at, 26)]] }),
-            headline(`v${n}`, `{{s${n}}}`, x, 390, { size: 200, maxWidth: 540, maxLines: 1, minSize: 100, ls: -8, split: { by: 'letters', stagger: 3, duration: 22 }, start: at + 4 }),
+            headline(`v${n}`, `{{s${n}}}`, x, 390, { size: 200, maxWidth: 540, maxLines: 1, minSize: 100, ls: -8, split: { by: 'letters', stagger: 3, duration: 22 }, start: at + 4, anims: [[spot(0, n < 3 ? 32 : undefined, 14)]] }),
             text(`c${n}`, `{{s${n}d}}`, x + 4, 650, { size: 38, color: '{{muted}}', maxWidth: 480, maxLines: 3, lh: 1.3, anims: [rise(650, at + 20, 20, 22)] }),
             sfx('pop', at + 4, 0.5)]; })]),
         scene('close', 'Close', c, [aurora(W, H, c, { strength: 1.4 }), vignette(W, H), frame(W, H),

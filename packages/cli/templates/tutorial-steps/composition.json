@@ -1999,11 +1999,11 @@
           "content": "{{result}}",
           "x": 960,
           "y": 400,
-          "fontSize": 230,
+          "fontSize": 170,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": "{{headWeight}}",
           "color": "{{text}}",
-          "letterSpacing": -8,
+          "letterSpacing": -6,
           "lineHeight": 0.96,
           "maxWidth": 1500,
           "maxLines": 2,
@@ -2021,7 +2021,7 @@
           "type": "text",
           "content": "{{url}}",
           "x": 960,
-          "y": 760,
+          "y": 800,
           "fontSize": 32,
           "fontFamily": "JetBrains Mono",
           "fontWeight": 500,
@@ -2048,11 +2048,11 @@
               "keyframes": [
                 {
                   "frame": 30,
-                  "value": 776
+                  "value": 816
                 },
                 {
                   "frame": 50,
-                  "value": 760,
+                  "value": 800,
                   "easing": "land"
                 }
               ]

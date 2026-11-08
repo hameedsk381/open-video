@@ -148,7 +148,7 @@
     {
       "id": "offer",
       "name": "Offer",
-      "durationFrames": 100,
+      "durationFrames": 130,
       "camera": {
         "animations": [
           {
@@ -159,7 +159,7 @@
                 "value": 1
               },
               {
-                "frame": 100,
+                "frame": 130,
                 "value": 1.08,
                 "easing": "drift"
               }
@@ -186,7 +186,7 @@
                   "value": 842.4
                 },
                 {
-                  "frame": 100,
+                  "frame": 130,
                   "value": 691.2,
                   "easing": "drift"
                 }
@@ -200,7 +200,7 @@
                   "value": 230.39999999999998
                 },
                 {
-                  "frame": 100,
+                  "frame": 130,
                   "value": 384,
                   "easing": "drift"
                 }
@@ -226,7 +226,7 @@
                   "value": 108
                 },
                 {
-                  "frame": 100,
+                  "frame": 130,
                   "value": 259.2,
                   "easing": "drift"
                 }
@@ -240,7 +240,7 @@
                   "value": 1766.4
                 },
                 {
-                  "frame": 100,
+                  "frame": 130,
                   "value": 1574.3999999999999,
                   "easing": "drift"
                 }
@@ -333,11 +333,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 40,
+                  "frame": 34,
                   "value": 0
                 },
                 {
-                  "frame": 55,
+                  "frame": 49,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -347,11 +347,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 40,
+                  "frame": 34,
                   "value": 1474
                 },
                 {
-                  "frame": 62,
+                  "frame": 56,
                   "value": 1450,
                   "easing": "land"
                 }
@@ -378,7 +378,7 @@
     {
       "id": "perks",
       "name": "Perks",
-      "durationFrames": 100,
+      "durationFrames": 150,
       "camera": {
         "animations": [
           {
@@ -389,7 +389,7 @@
                 "value": 1
               },
               {
-                "frame": 100,
+                "frame": 150,
                 "value": 1.06,
                 "easing": "drift"
               }
@@ -420,7 +420,7 @@
                   "value": 842.4
                 },
                 {
-                  "frame": 100,
+                  "frame": 150,
                   "value": 691.2,
                   "easing": "drift"
                 }
@@ -434,7 +434,7 @@
                   "value": 230.39999999999998
                 },
                 {
-                  "frame": 100,
+                  "frame": 150,
                   "value": 384,
                   "easing": "drift"
                 }
@@ -460,7 +460,7 @@
                   "value": 108
                 },
                 {
-                  "frame": 100,
+                  "frame": 150,
                   "value": 259.2,
                   "easing": "drift"
                 }
@@ -474,7 +474,7 @@
                   "value": 1766.4
                 },
                 {
-                  "frame": 100,
+                  "frame": 150,
                   "value": 1574.3999999999999,
                   "easing": "drift"
                 }
@@ -515,6 +515,15 @@
                 {
                   "frame": 14,
                   "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 36,
+                  "value": 1
+                },
+                {
+                  "frame": 52,
+                  "value": 0.45,
                   "easing": "glide"
                 }
               ]
@@ -561,6 +570,15 @@
                   "frame": 24,
                   "value": 1,
                   "easing": "glide"
+                },
+                {
+                  "frame": 36,
+                  "value": 1
+                },
+                {
+                  "frame": 52,
+                  "value": 0.45,
+                  "easing": "glide"
                 }
               ]
             }
@@ -587,12 +605,21 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 26,
+                  "frame": 36,
                   "value": 0
                 },
                 {
-                  "frame": 36,
+                  "frame": 46,
                   "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 68,
+                  "value": 1
+                },
+                {
+                  "frame": 84,
+                  "value": 0.45,
                   "easing": "glide"
                 }
               ]
@@ -601,11 +628,11 @@
               "property": "x",
               "keyframes": [
                 {
-                  "frame": 26,
+                  "frame": 36,
                   "value": 200
                 },
                 {
-                  "frame": 48,
+                  "frame": 58,
                   "value": 80,
                   "easing": "land"
                 }
@@ -632,12 +659,21 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 34,
+                  "frame": 44,
                   "value": 0
                 },
                 {
-                  "frame": 46,
+                  "frame": 56,
                   "value": 1,
+                  "easing": "glide"
+                },
+                {
+                  "frame": 68,
+                  "value": 1
+                },
+                {
+                  "frame": 84,
+                  "value": 0.45,
                   "easing": "glide"
                 }
               ]
@@ -645,10 +681,10 @@
           ]
         },
         {
-          "id": "sfx-pop-28",
+          "id": "sfx-pop-38",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 28,
+          "startFrame": 38,
           "volume": 0.5
         },
         {
@@ -665,11 +701,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 48,
+                  "frame": 68,
                   "value": 0
                 },
                 {
-                  "frame": 58,
+                  "frame": 78,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -679,11 +715,11 @@
               "property": "x",
               "keyframes": [
                 {
-                  "frame": 48,
+                  "frame": 68,
                   "value": -200
                 },
                 {
-                  "frame": 70,
+                  "frame": 90,
                   "value": 80,
                   "easing": "land"
                 }
@@ -710,11 +746,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 56,
+                  "frame": 76,
                   "value": 0
                 },
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -723,10 +759,10 @@
           ]
         },
         {
-          "id": "sfx-pop-50",
+          "id": "sfx-pop-70",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 50,
+          "startFrame": 70,
           "volume": 0.5
         }
       ]

@@ -38,6 +38,8 @@ export const slideX = (x, delay = 0, dist = 80, dur = 24) => [fade(delay, Math.r
 export const grow = (prop, to, delay = 0, dur = 24, ease = 'land') => anim(prop, [delay, 0], [delay + dur, to, ease]);
 /** Pops: scale from small with a little overshoot. */
 export const pop = (delay = 0, dur = 20, from = 0.6) => [fade(delay, 8), anim('scale', [delay, from], [delay + dur, 1, 'pop'])];
+/** Fades in at `at`, then steps back to `to` once the next item (at frame `next`) has arrived, so one item at a time holds the frame. */
+export const spot = (at, next, dur = 14, to = 0.45) => next === undefined ? fade(at, dur) : anim('opacity', [at, 0], [at + dur, 1, 'glide'], [next, 1], [next + 16, to, 'glide']);
 /** Leaves: fades out over `dur` frames ending at `end`. */
 export const leave = (end, dur = 10) => anim('opacity', [end - dur, 1], [end, 0, 'exit']);
 /** Slow continuous drift between two values across the whole scene. */

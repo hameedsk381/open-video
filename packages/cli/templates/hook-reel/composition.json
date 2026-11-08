@@ -173,7 +173,7 @@
     {
       "id": "hook",
       "name": "Hook",
-      "durationFrames": 150,
+      "durationFrames": 180,
       "camera": {
         "animations": [
           {
@@ -184,7 +184,7 @@
                 "value": 1
               },
               {
-                "frame": 150,
+                "frame": 180,
                 "value": 1.08,
                 "easing": "drift"
               }
@@ -211,7 +211,7 @@
                   "value": 842.4
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 691.2,
                   "easing": "drift"
                 }
@@ -225,7 +225,7 @@
                   "value": 230.39999999999998
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 384,
                   "easing": "drift"
                 }
@@ -251,7 +251,7 @@
                   "value": 108
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 259.2,
                   "easing": "drift"
                 }
@@ -265,7 +265,7 @@
                   "value": 1766.4
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 1574.3999999999999,
                   "easing": "drift"
                 }
@@ -318,8 +318,8 @@
           "type": "text",
           "content": "{{brand}}",
           "x": 80,
-          "y": 96,
-          "fontSize": 22,
+          "y": 200,
+          "fontSize": 24,
           "fontFamily": "JetBrains Mono",
           "fontWeight": 600,
           "color": "{{muted}}",
@@ -481,51 +481,51 @@
                   "value": 699
                 },
                 {
-                  "frame": 13,
+                  "frame": 15,
                   "value": 883
                 },
                 {
-                  "frame": 25,
+                  "frame": 30,
                   "value": 975
                 },
                 {
-                  "frame": 38,
+                  "frame": 45,
                   "value": 950
                 },
                 {
-                  "frame": 50,
+                  "frame": 60,
                   "value": 815
                 },
                 {
-                  "frame": 63,
+                  "frame": 75,
                   "value": 607
                 },
                 {
-                  "frame": 75,
+                  "frame": 90,
                   "value": 381
                 },
                 {
-                  "frame": 88,
+                  "frame": 105,
                   "value": 197
                 },
                 {
-                  "frame": 100,
+                  "frame": 120,
                   "value": 105
                 },
                 {
-                  "frame": 113,
+                  "frame": 135,
                   "value": 130
                 },
                 {
-                  "frame": 125,
+                  "frame": 150,
                   "value": 265
                 },
                 {
-                  "frame": 138,
+                  "frame": 165,
                   "value": 473
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 699
                 }
               ]
@@ -538,51 +538,51 @@
                   "value": 470
                 },
                 {
-                  "frame": 13,
+                  "frame": 15,
                   "value": 605
                 },
                 {
-                  "frame": 25,
+                  "frame": 30,
                   "value": 813
                 },
                 {
-                  "frame": 38,
+                  "frame": 45,
                   "value": 1039
                 },
                 {
-                  "frame": 50,
+                  "frame": 60,
                   "value": 1223
                 },
                 {
-                  "frame": 63,
+                  "frame": 75,
                   "value": 1315
                 },
                 {
-                  "frame": 75,
+                  "frame": 90,
                   "value": 1290
                 },
                 {
-                  "frame": 88,
+                  "frame": 105,
                   "value": 1155
                 },
                 {
-                  "frame": 100,
+                  "frame": 120,
                   "value": 947
                 },
                 {
-                  "frame": 113,
+                  "frame": 135,
                   "value": 721
                 },
                 {
-                  "frame": 125,
+                  "frame": 150,
                   "value": 537
                 },
                 {
-                  "frame": 138,
+                  "frame": 165,
                   "value": 445
                 },
                 {
-                  "frame": 150,
+                  "frame": 180,
                   "value": 470
                 }
               ]
@@ -657,24 +657,24 @@
           "content": "{{detail}}",
           "x": 80,
           "y": 1350,
-          "fontSize": 42,
+          "fontSize": 40,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "lineHeight": 1.3,
           "maxWidth": 820,
           "maxLines": 3,
-          "minFontSize": 25,
+          "minFontSize": 24,
           "animations": [
             {
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 52,
+                  "frame": 40,
                   "value": 0
                 },
                 {
-                  "frame": 70,
+                  "frame": 58,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -684,11 +684,11 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 52,
+                  "frame": 40,
                   "value": 1378
                 },
                 {
-                  "frame": 78,
+                  "frame": 66,
                   "value": 1350,
                   "easing": "land"
                 }
@@ -701,8 +701,8 @@
           "type": "text",
           "content": "01 / 03",
           "x": 80,
-          "y": 1790,
-          "fontSize": 22,
+          "y": 1500,
+          "fontSize": 24,
           "fontFamily": "JetBrains Mono",
           "fontWeight": 600,
           "color": "{{muted}}",
@@ -784,7 +784,7 @@
     {
       "id": "steps",
       "name": "Steps",
-      "durationFrames": 240,
+      "durationFrames": 270,
       "camera": {
         "animations": [
           {
@@ -795,7 +795,7 @@
                 "value": 1
               },
               {
-                "frame": 240,
+                "frame": 270,
                 "value": 1.04,
                 "easing": "drift"
               }
@@ -826,7 +826,7 @@
                   "value": 842.4
                 },
                 {
-                  "frame": 240,
+                  "frame": 270,
                   "value": 691.2,
                   "easing": "drift"
                 }
@@ -840,7 +840,7 @@
                   "value": 230.39999999999998
                 },
                 {
-                  "frame": 240,
+                  "frame": 270,
                   "value": 384,
                   "easing": "drift"
                 }
@@ -866,7 +866,7 @@
                   "value": 108
                 },
                 {
-                  "frame": 240,
+                  "frame": 270,
                   "value": 259.2,
                   "easing": "drift"
                 }
@@ -880,7 +880,7 @@
                   "value": 1766.4
                 },
                 {
-                  "frame": 240,
+                  "frame": 270,
                   "value": 1574.3999999999999,
                   "easing": "drift"
                 }
@@ -933,7 +933,7 @@
           "type": "text",
           "content": "{{stepsTitle}}",
           "x": 80,
-          "y": 140,
+          "y": 176,
           "fontSize": 24,
           "fontFamily": "JetBrains Mono",
           "fontWeight": 600,
@@ -985,17 +985,17 @@
                   "value": 0
                 },
                 {
-                  "frame": 60,
+                  "frame": 52,
                   "value": 460,
                   "easing": "land"
                 },
                 {
-                  "frame": 100,
+                  "frame": 128,
                   "value": 920,
                   "easing": "land"
                 },
                 {
-                  "frame": 140,
+                  "frame": 204,
                   "value": 1380,
                   "easing": "land"
                 }
@@ -1008,12 +1008,12 @@
           "type": "text",
           "content": "01",
           "x": 70,
-          "y": 270,
-          "fontSize": 300,
+          "y": 230,
+          "fontSize": 250,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": 900,
           "color": "{{accent}}",
-          "letterSpacing": -12,
+          "letterSpacing": -10,
           "opacity": 1,
           "animations": [
             {
@@ -1029,11 +1029,11 @@
                   "easing": "glide"
                 },
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 1
                 },
                 {
-                  "frame": 84,
+                  "frame": 104,
                   "value": 0.4,
                   "easing": "glide"
                 }
@@ -1060,7 +1060,7 @@
           "type": "text",
           "content": "{{step1Title}}",
           "x": 90,
-          "y": 530,
+          "y": 490,
           "fontSize": 92,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": "{{headWeight}}",
@@ -1081,11 +1081,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 1
                 },
                 {
-                  "frame": 84,
+                  "frame": 104,
                   "value": 0.4,
                   "easing": "glide"
                 }
@@ -1099,15 +1099,15 @@
           "type": "text",
           "content": "{{step1Body}}",
           "x": 92,
-          "y": 642,
-          "fontSize": 38,
+          "y": 602,
+          "fontSize": 40,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "lineHeight": 1.3,
           "maxWidth": 820,
           "maxLines": 2,
-          "minFontSize": 23,
+          "minFontSize": 24,
           "animations": [
             {
               "property": "opacity",
@@ -1128,11 +1128,11 @@
               "keyframes": [
                 {
                   "frame": 26,
-                  "value": 664
+                  "value": 624
                 },
                 {
                   "frame": 48,
-                  "value": 642,
+                  "value": 602,
                   "easing": "land"
                 }
               ]
@@ -1141,11 +1141,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 1
                 },
                 {
-                  "frame": 84,
+                  "frame": 104,
                   "value": 0.4,
                   "easing": "glide"
                 }
@@ -1157,7 +1157,7 @@
           "id": "s1-line",
           "type": "rect",
           "x": 90,
-          "y": 710,
+          "y": 670,
           "width": 1,
           "height": 2,
           "radius": 0,
@@ -1192,32 +1192,32 @@
           "type": "text",
           "content": "02",
           "x": 70,
-          "y": 740,
-          "fontSize": 300,
+          "y": 660,
+          "fontSize": 250,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": 900,
           "color": "{{accent}}",
-          "letterSpacing": -12,
+          "letterSpacing": -10,
           "opacity": 1,
           "animations": [
             {
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 0
                 },
                 {
-                  "frame": 82,
+                  "frame": 102,
                   "value": 1,
                   "easing": "glide"
                 },
                 {
-                  "frame": 124,
+                  "frame": 164,
                   "value": 1
                 },
                 {
-                  "frame": 140,
+                  "frame": 180,
                   "value": 0.4,
                   "easing": "glide"
                 }
@@ -1227,11 +1227,11 @@
               "property": "x",
               "keyframes": [
                 {
-                  "frame": 68,
+                  "frame": 88,
                   "value": 20
                 },
                 {
-                  "frame": 94,
+                  "frame": 114,
                   "value": 70,
                   "easing": "land"
                 }
@@ -1244,7 +1244,7 @@
           "type": "text",
           "content": "{{step2Title}}",
           "x": 90,
-          "y": 1000,
+          "y": 920,
           "fontSize": 92,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": "{{headWeight}}",
@@ -1265,43 +1265,43 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 124,
+                  "frame": 164,
                   "value": 1
                 },
                 {
-                  "frame": 140,
+                  "frame": 180,
                   "value": 0.4,
                   "easing": "glide"
                 }
               ]
             }
           ],
-          "startFrame": 68
+          "startFrame": 88
         },
         {
           "id": "s2-body",
           "type": "text",
           "content": "{{step2Body}}",
           "x": 92,
-          "y": 1112,
-          "fontSize": 38,
+          "y": 1032,
+          "fontSize": 40,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "lineHeight": 1.3,
           "maxWidth": 820,
           "maxLines": 2,
-          "minFontSize": 23,
+          "minFontSize": 24,
           "animations": [
             {
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 82,
+                  "frame": 102,
                   "value": 0
                 },
                 {
-                  "frame": 97,
+                  "frame": 117,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -1311,12 +1311,12 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 82,
-                  "value": 1134
+                  "frame": 102,
+                  "value": 1054
                 },
                 {
-                  "frame": 104,
-                  "value": 1112,
+                  "frame": 124,
+                  "value": 1032,
                   "easing": "land"
                 }
               ]
@@ -1325,11 +1325,11 @@
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 124,
+                  "frame": 164,
                   "value": 1
                 },
                 {
-                  "frame": 140,
+                  "frame": 180,
                   "value": 0.4,
                   "easing": "glide"
                 }
@@ -1341,7 +1341,7 @@
           "id": "s2-line",
           "type": "rect",
           "x": 90,
-          "y": 1180,
+          "y": 1100,
           "width": 1,
           "height": 2,
           "radius": 0,
@@ -1352,11 +1352,11 @@
               "property": "width",
               "keyframes": [
                 {
-                  "frame": 74,
+                  "frame": 94,
                   "value": 0
                 },
                 {
-                  "frame": 104,
+                  "frame": 124,
                   "value": 860,
                   "easing": "land"
                 }
@@ -1365,10 +1365,10 @@
           ]
         },
         {
-          "id": "sfx-pop-70",
+          "id": "sfx-pop-90",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 70,
+          "startFrame": 90,
           "volume": 0.45
         },
         {
@@ -1376,23 +1376,23 @@
           "type": "text",
           "content": "03",
           "x": 70,
-          "y": 1210,
-          "fontSize": 300,
+          "y": 1090,
+          "fontSize": 250,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": 900,
           "color": "{{accent}}",
-          "letterSpacing": -12,
+          "letterSpacing": -10,
           "opacity": 1,
           "animations": [
             {
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 124,
+                  "frame": 164,
                   "value": 0
                 },
                 {
-                  "frame": 138,
+                  "frame": 178,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -1402,11 +1402,11 @@
               "property": "x",
               "keyframes": [
                 {
-                  "frame": 124,
+                  "frame": 164,
                   "value": 20
                 },
                 {
-                  "frame": 150,
+                  "frame": 190,
                   "value": 70,
                   "easing": "land"
                 }
@@ -1419,7 +1419,7 @@
           "type": "text",
           "content": "{{step3Title}}",
           "x": 90,
-          "y": 1470,
+          "y": 1350,
           "fontSize": 92,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": "{{headWeight}}",
@@ -1435,32 +1435,32 @@
             "stagger": 4,
             "duration": 22
           },
-          "startFrame": 124
+          "startFrame": 164
         },
         {
           "id": "s3-body",
           "type": "text",
           "content": "{{step3Body}}",
           "x": 92,
-          "y": 1582,
-          "fontSize": 38,
+          "y": 1462,
+          "fontSize": 40,
           "fontFamily": "{{fontBody}}",
           "fontWeight": 500,
           "color": "{{muted}}",
           "lineHeight": 1.3,
           "maxWidth": 820,
           "maxLines": 2,
-          "minFontSize": 23,
+          "minFontSize": 24,
           "animations": [
             {
               "property": "opacity",
               "keyframes": [
                 {
-                  "frame": 138,
+                  "frame": 178,
                   "value": 0
                 },
                 {
-                  "frame": 153,
+                  "frame": 193,
                   "value": 1,
                   "easing": "glide"
                 }
@@ -1470,12 +1470,12 @@
               "property": "y",
               "keyframes": [
                 {
-                  "frame": 138,
-                  "value": 1604
+                  "frame": 178,
+                  "value": 1484
                 },
                 {
-                  "frame": 160,
-                  "value": 1582,
+                  "frame": 200,
+                  "value": 1462,
                   "easing": "land"
                 }
               ]
@@ -1486,7 +1486,7 @@
           "id": "s3-line",
           "type": "rect",
           "x": 90,
-          "y": 1650,
+          "y": 1530,
           "width": 1,
           "height": 2,
           "radius": 0,
@@ -1497,11 +1497,11 @@
               "property": "width",
               "keyframes": [
                 {
-                  "frame": 130,
+                  "frame": 170,
                   "value": 0
                 },
                 {
-                  "frame": 160,
+                  "frame": 200,
                   "value": 860,
                   "easing": "land"
                 }
@@ -1510,10 +1510,10 @@
           ]
         },
         {
-          "id": "sfx-pop-126",
+          "id": "sfx-pop-166",
           "type": "audio",
           "src": "sfx:pop",
-          "startFrame": 126,
+          "startFrame": 166,
           "volume": 0.45
         },
         {
@@ -1707,7 +1707,7 @@
           "content": "{{cta}}",
           "x": 540,
           "y": 600,
-          "fontSize": 230,
+          "fontSize": 250,
           "fontFamily": "{{fontDisplay}}",
           "fontWeight": "{{headWeight}}",
           "color": "{{text}}",
@@ -1933,7 +1933,7 @@
               "value": 0
             },
             {
-              "frame": 530,
+              "frame": 560,
               "value": 920
             }
           ]
