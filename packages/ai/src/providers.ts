@@ -747,10 +747,13 @@ export function withModelRotation(primary: AiProvider, models: string[]): AiProv
         for (const [index, model] of order.entries()) {
           try { return await target.chat(messages, { ...options, model, ...(index < order.length - 1 ? { maxRetries: 0 } : {}) }); }
           catch (error) {
-            if (!isRateLimit(error)) throw error;
-            last = error;
             const text = error instanceof Error ? error.message : String(error);
-            if (/per day|TPD/i.test(text)) resting.set(model, Date.now() + waitFromError(text));
+            // A model this key cannot use is passed over like a spent one, and not asked again for a day.
+            const unusable = /does not exist or you do not have access|model_not_found|decommissioned|no longer supported/i.test(text);
+            if (!isRateLimit(error) && !unusable) throw error;
+            last = error;
+            if (unusable) resting.set(model, Date.now() + 24 * 3600_000);
+            else if (/per day|TPD/i.test(text)) resting.set(model, Date.now() + waitFromError(text));
             if (index < order.length - 1) console.warn(`${model} is rate limited; trying ${order[index + 1]}.`);
           }
         }

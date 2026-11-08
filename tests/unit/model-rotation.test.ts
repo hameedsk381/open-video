@@ -36,6 +36,20 @@ describe('Groq model rotation', () => {
     await expect(withModelRotation(broken, ['a', 'b']).chat([])).rejects.toThrow('Invalid API key');
   });
 
+  it('passes over a model the key cannot use, and does not ask it again', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const calls: (string | undefined)[] = [];
+    const provider: AiProvider = { id: 'groq', model: 'a', baseUrl: '', chat: async (_m, options) => {
+      calls.push(options?.model);
+      if (options?.model === 'a') throw new Error('The model `a` does not exist or you do not have access to it.');
+      return 'ok ' + options?.model;
+    } };
+    const rotating = withModelRotation(provider, ['a', 'b']);
+    expect(await rotating.chat([])).toBe('ok b'); calls.length = 0;
+    expect(await rotating.chat([])).toBe('ok b');
+    expect(calls).toEqual(['b']);
+  });
+
   it('respects a model the caller named', async () => {
     const { calls, provider } = make(new Set(['x']));
     await expect(withModelRotation(provider, ['a', 'b']).chat([], { model: 'x' })).rejects.toThrow();
