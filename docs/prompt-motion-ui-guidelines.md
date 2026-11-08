@@ -4,6 +4,26 @@
 
 ---
 
+## What the live site actually looks like, and how the studio follows it
+
+*Checked against prompt-motion.com on 2026-11-08. This section is the current guidance; the token tables below describe an earlier dark ("obsidian") adaptation that the live site does not use.*
+
+The site is **light and quiet**: a white canvas, near-black ink (`#111`), Geist, and almost no colour of its own, because the videos supply it.
+
+| On the site | In the studio |
+|---|---|
+| White canvas, soft grey (`#f5f5f5`) fields with no outline | `--bg #fff`, `--surface-2 #f5f5f5`; inputs and the composer are grey fills, outlined only on focus |
+| Black primary button, quiet grey secondary | `--primary` is the ink colour (`#111` light, `#f4f4f5` dark); secondary is a grey fill with no border; the blue accent is kept for focus rings, selection and links |
+| Title 30 px, weight 500, tracking about -0.025em | `h1` 30 px, headings weight 500 |
+| Outline pills with a lighter count (`Product UI 105`), a filled ink pill when selected | `.chip`, `.category-pill` and `.cat-count` |
+| A card is a rounded picture with a small caption: no box, no shadow, no lift | `.bento-card` is transparent with radius 16; the Home hero is the page, not a card |
+| Radii 12 to 20 px, whitespace instead of borders | `--radius-md 12`, `--radius-lg 16`, `--radius-xl 24` |
+| Slim top bar, no sidebar, masonry galleries, a two-pane prompt page, a single-column "Customize a prompt" list | **Not adopted**: the studio keeps its sidebar and layouts, since it is a workspace and not a gallery |
+
+Not matched: the site's font is Geist, which the studio does not bundle (it runs offline on system fonts, with Geist first in the stack for machines that have it). Adding `@fontsource-variable/geist` is one dependency. The site's own wording, logo, sponsor card and videos are not reused.
+
+---
+
 ## 1. Context and Goals
 
 ### 1.1 Product Context & Verified Brand Surface

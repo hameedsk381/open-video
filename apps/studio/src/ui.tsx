@@ -270,7 +270,7 @@ export const MenuIcon = ({ size = 16, ...p }: IconProps) => (
 /* ==================== Brand Mark / Logo ==================== */
 export const StudioBrandLogo = ({ size = 22 }: { size?: number }) => (
   <div className="brand-symbol" style={{ width: size, height: size }} aria-hidden>
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ color: 'var(--accent)' }}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text)' }}>
       <path d="M4 4h7.5c4.5 0 8.5 3.5 8.5 8s-4 8-8.5 8H4V4z" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       <polygon points="9,8 16,12 9,16" fill="currentColor" />
     </svg>

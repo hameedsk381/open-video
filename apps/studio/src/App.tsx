@@ -42,7 +42,7 @@ const apply = (mode: Mode) => {
 
 function ThemeToggle() {
   const [mode, setMode] = useState<Mode>(() => {
-    try { return (localStorage.getItem('ove-theme') as Mode) || 'dark'; } catch { return 'dark'; }
+    try { return (localStorage.getItem('ove-theme') as Mode) || 'light'; } catch { return 'light'; }
   });
 
   useEffect(() => {
