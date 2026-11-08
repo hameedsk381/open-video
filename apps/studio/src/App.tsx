@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { modKeyLabel } from './platform';
 import { api, connectJobs, useJobs, cleanUserStatus } from './api';
 import { CommandPalette } from './CommandPalette';
+import { desktop, folderName, type DesktopState } from './desktop';
 import { Making, Create } from './pages/Create';
 import { Editor } from './pages/Editor';
 import { Generation } from './pages/Generation';
@@ -17,11 +18,13 @@ import {
   ClockIcon,
   CompassIcon,
   FilmIcon,
+  FolderIcon,
   HomeIcon,
   ImagesIcon,
   MenuIcon,
   MoonIcon,
   PlusIcon,
+  RevealIcon,
   SearchIcon,
   SlidersIcon,
   SparklesIcon,
@@ -135,6 +138,43 @@ function useSession() {
   return [session, setSession] as const;
 }
 
+// Only the desktop build shows this card: the browser studio has no project folder to name or reveal. In the app, the folder
+// is the thing everything is saved into, so it takes the workspace card's place in the sidebar.
+function ProjectFolderCard() {
+  const [state, setState] = useState<DesktopState | null>(null);
+  const bridge = desktop;
+  useEffect(() => {
+    if (!bridge) return;
+    let alive = true;
+    bridge.getState().then(next => { if (alive) setState(next); }, () => {});
+    const stop = bridge.onState(next => setState(next));
+    return () => { alive = false; stop(); };
+  }, [bridge]);
+  if (!bridge) return null;
+  if (!state) {
+    return (
+      <div className="workspace-card">
+        <span className="ws-mark"><FolderIcon size={13} /></span>
+        <span className="ws-text"><b>Project folder</b><small>Loading…</small></span>
+      </div>
+    );
+  }
+  return (
+    <div className="workspace-card folder-card">
+      <button type="button" className="folder-open" onClick={() => void bridge.openProjectFolder()} title={`Project folder: ${state.projectRoot}. Click to open another.`}>
+        <span className="ws-mark"><FolderIcon size={13} /></span>
+        <span className="ws-text">
+          <b>{folderName(state.projectRoot)}</b>
+          <small>{state.projectRoot}</small>
+        </span>
+      </button>
+      <button type="button" className="folder-reveal" onClick={() => bridge.revealProjectFolder()} title="Show in File Explorer" aria-label="Show project folder in File Explorer">
+        <RevealIcon size={13} />
+      </button>
+    </div>
+  );
+}
+
 function Sidebar({ route, session, onSignOut }: { route: Route; session: Session; onSignOut: () => void }) {
   return (
     <aside className="sidebar">
@@ -146,13 +186,17 @@ function Sidebar({ route, session, onSignOut }: { route: Route; session: Session
         </span>
       </a>
 
-      <div className="workspace-card">
-        <span className="ws-mark">P</span>
-        <span className="ws-text">
-          <b>Personal studio</b>
-          <small>{session.state === 'in' ? session.user.email : 'Local workspace'}</small>
-        </span>
-      </div>
+      {desktop ? (
+        <ProjectFolderCard />
+      ) : (
+        <div className="workspace-card">
+          <span className="ws-mark">P</span>
+          <span className="ws-text">
+            <b>Personal studio</b>
+            <small>{session.state === 'in' ? session.user.email : 'Local workspace'}</small>
+          </span>
+        </div>
+      )}
 
       <nav className="side-nav">
         <span className="nav-label">Workspace</span>

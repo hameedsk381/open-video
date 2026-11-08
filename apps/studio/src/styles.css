@@ -191,6 +191,37 @@ h3 { font-size: 15px; }
 .workspace-card .ws-text { min-width: 0; }
 .workspace-card b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .workspace-card small { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Desktop build: the workspace card is the project folder, with opening and revealing split into two targets. */
+.workspace-card.folder-card { padding: 5px 6px 5px 5px; gap: 2px; }
+.folder-card .folder-open {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folder-card .folder-open:hover { background: var(--hover); }
+.folder-card .folder-reveal {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+}
+.folder-card .folder-reveal:hover { background: var(--hover); color: var(--text); }
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); padding: 6px 10px; }
 .side-nav a {

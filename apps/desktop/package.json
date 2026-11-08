@@ -1,0 +1,50 @@
+{
+  "name": "@ove/desktop",
+  "private": true,
+  "version": "0.3.15",
+  "description": "MotionRender Studio as a desktop app: the studio in a native window, backed by its own local server.",
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "smoke:headless": "electron . --smoke",
+    "fetch-tools": "node scripts/fetch-tools.mjs",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.motionrender.studio",
+    "productName": "MotionRender Studio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../../packages/ove",
+        "to": "motionrender",
+        "filter": [
+          "dist/**",
+          "studio/**",
+          "templates/**",
+          "blocks/**",
+          "themes/**",
+          "skills/**",
+          "package.json"
+        ]
+      },
+      {
+        "from": "resources/tools",
+        "to": "tools"
+      }
+    ]
+  }
+}

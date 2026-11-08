@@ -18,3 +18,7 @@ ai-videos/
 packages/cli/studio/
 tmp/
 
+# Desktop shell: fetched binaries (ffmpeg, Chromium) and electron-builder's installers
+apps/desktop/resources/tools/
+apps/desktop/release/
+

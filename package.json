@@ -18,6 +18,7 @@
     "build:studio": "pnpm --filter @ove/studio build",
     "build:fx": "node scripts/build-fx.mjs",
     "dev:studio": "pnpm --filter @ove/studio dev",
+    "dev:desktop": "pnpm --filter @ove/desktop dev",
     "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "eval:ai": "tsx scripts/eval-briefs.ts",
