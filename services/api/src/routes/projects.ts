@@ -1,4 +1,4 @@
-import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
@@ -25,6 +25,30 @@ const setText = (layer: any, content: string) => {
   else layer.content = content;
 };
 
+/**
+ * The blocks placed in a video ({ use, with }) and the settings each can be given, read from the file as written. A setting that is
+ * wired to a template variable ({{name}}) is left out: it is edited as that variable.
+ */
+const blockSlots = (raw: any) => {
+  const found: any[] = [], defs = raw?.components ?? {};
+  const walk = (layers: any, base: string, scene: string) => {
+    if (!Array.isArray(layers)) return;
+    layers.forEach((layer: any, index: number) => {
+      const path = `${base}[${index}]`, def = layer && typeof layer.use === 'string' ? defs[layer.use] : undefined;
+      if (def?.params) {
+        const params = Object.entries(def.params as Record<string, any>)
+          .filter(([, decl]) => ['string', 'number', 'boolean', 'color'].includes(decl?.type))
+          .map(([name, decl]) => ({ name, type: decl.type, description: decl.description, default: decl.default, value: layer.with?.[name] ?? decl.default }))
+          .filter(param => !(typeof param.value === 'string' && param.value.includes('{{')));
+        if (params.length) found.push({ path, scene, id: String(layer.id ?? layer.use), component: layer.use, description: def.description, params });
+      }
+      if (layer && Array.isArray(layer.children)) walk(layer.children, `${path}.children`, scene);
+    });
+  };
+  (raw?.scenes ?? []).forEach((scene: any, index: number) => walk(scene.layers, `scenes[${index}].layers`, String(scene.name ?? scene.id ?? '')));
+  return found;
+};
+
 /** Project reading and editing: everything the editor does that is not a job. Every call goes through the store, as the person asking. */
 export function projectRoutes(): Route[] {
   // A project edit writes the file's own JSON (variables, components and all), kept as a revision.
@@ -46,7 +70,7 @@ export function projectRoutes(): Route[] {
       id, name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, mode,
       scenes: composition.scenes.map(scene => ({ id: scene.id, name: scene.name, startFrame: scene.startFrame, durationFrames: scene.durationFrames, ...(scene.beat ? { beat: scene.beat } : {}) })),
       variables: mode === 'template' ? projectVariables(raw) : [], theme: Object.fromEntries(library.themeTokens.filter(token => token in declared).map(token => [token, values[token]])),
-      texts: mode === 'finished' ? textLayers(composition) : [], assets: await store.assets(c.who, id), revisions: (await store.revisions(c.who, id)).length,
+      texts: mode === 'finished' ? textLayers(composition) : [], assets: await store.assets(c.who, id), revisions: (await store.revisions(c.who, id)).length, blocks: blockSlots(raw),
       source: { raw, media: await measureMedia(raw, dir), base: `/files/${id}/` },
     };
   };
@@ -141,6 +165,21 @@ export function projectRoutes(): Route[] {
       const request = parseRequest(textsRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
       for (const edit of request.edits) setAtPath(composition, edit.path, layer => setText(layer, edit.content));
       await writeRaw(c, id, composition, { kind: 'edit', label: request.edits.length > 1 ? `Edited ${request.edits.length} lines of text` : 'Edited the text' });
+      c.json(200, { ok: true, edited: request.edits.length });
+    } },
+    { method: 'POST', path: '/api/blocks/props', handle: async c => {
+      // Sets the settings of placed blocks in the file as written, all in one saved change. The save checks the values against each block's declaration.
+      const request = parseRequest(blockPropsRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
+      for (const edit of request.edits) setAtPath(composition, edit.path, layer => {
+        const def = typeof layer.use === 'string' ? composition.components?.[layer.use] : undefined;
+        if (!def?.params) throw new Error('That layer is not a block with settings');
+        layer.with = { ...(layer.with ?? {}) };
+        for (const [name, value] of Object.entries(edit.values)) {
+          if (!def.params[name]) throw new Error(`"${layer.use}" has no setting "${name}"`);
+          layer.with[name] = def.params[name].type === 'number' ? Number(value) : value;
+        }
+      });
+      await writeRaw(c, id, composition, { kind: 'edit', label: request.edits.length > 1 ? `Edited ${request.edits.length} blocks` : 'Edited a block' });
       c.json(200, { ok: true, edited: request.edits.length });
     } },
     { method: 'POST', path: '/api/layer/snap', handle: async c => {

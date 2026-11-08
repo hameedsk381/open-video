@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback, type ReactNode } from 'react';
 import { dur, type Detail } from './api';
 import {
   Button,
@@ -27,6 +27,8 @@ export type TimelineScrubberProps = {
   onSelectScene?: (sceneId: string) => void;
   selectedLayerPath?: string | null;
   onSelectLayerPath?: (path: string | null) => void;
+  /** Shown above the track. */
+  header?: ReactNode;
 };
 
 export type MultiTrackItem = {
@@ -64,6 +66,7 @@ export function TimelineScrubber({
   onSelectScene,
   selectedLayerPath = null,
   onSelectLayerPath,
+  header,
 }: TimelineScrubberProps) {
   const total = Math.max(1, detail.durationFrames);
   const fps = detail.fps || 30;
@@ -457,6 +460,7 @@ export function TimelineScrubber({
 
   return (
     <div className="timeline-panel" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+      {header ? <div className="timeline-head">{header}</div> : null}
       {/* 1. Primary Track Bar (Scenes + Waveform + Playhead) */}
       <div
         ref={trackRef}
@@ -467,7 +471,7 @@ export function TimelineScrubber({
         style={{
           position: 'relative',
           touchAction: 'none',
-          height: 64,
+          height: 80,
           background: 'var(--surface-2)',
           border: '1px solid var(--border)',
           borderRadius: 8,
@@ -483,7 +487,7 @@ export function TimelineScrubber({
             top: 0,
             left: 0,
             right: 0,
-            height: 24,
+            height: 40,
             display: 'flex',
             borderBottom: '1px solid var(--border)',
           }}
@@ -498,6 +502,16 @@ export function TimelineScrubber({
             return (
               <div
                 key={scene.id || idx}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSeek(scene.startFrame);
+                    onSelectScene?.(scene.id);
+                  }
+                }}
                 onClick={e => {
                   e.stopPropagation();
                   onSeek(scene.startFrame);
@@ -519,7 +533,7 @@ export function TimelineScrubber({
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
                   color: color.text,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 600,
                   transition: 'background 0.15s ease',
                 }}
@@ -527,7 +541,7 @@ export function TimelineScrubber({
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {scene.name || scene.id}
                 </span>
-                <span style={{ fontSize: 12, opacity: 0.65, marginLeft: 4 }}>
+                <span style={{ fontSize: 12, opacity: 0.75, marginLeft: 6, flex: 'none' }}>
                   {dur(scene.durationFrames / fps)}
                 </span>
               </div>
@@ -590,14 +604,15 @@ export function TimelineScrubber({
                 top: 2,
                 left: 4,
                 fontSize: 12,
-                background: 'rgba(0,0,0,0.8)',
-                padding: '1px 4px',
+                background: 'var(--text)',
+                padding: '1px 5px',
                 borderRadius: 3,
-                color: '#fff',
+                color: 'var(--bg)',
+                whiteSpace: 'nowrap',
                 fontFamily: 'var(--mono)',
               }}
             >
-              f{hoverFrame}
+              {dur(hoverFrame / fps)} · f{hoverFrame}
             </div>
           </div>
         ) : null}
@@ -624,11 +639,12 @@ export function TimelineScrubber({
               top: 0,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 10,
-              height: 10,
+              width: 14,
+              height: 14,
               background: 'var(--accent)',
+              border: '2px solid var(--surface)',
               borderRadius: '50%',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
             }}
           />
         </div>
@@ -646,7 +662,7 @@ export function TimelineScrubber({
           borderRadius: 8,
           padding: '6px 12px',
           gap: 10,
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -692,7 +708,7 @@ export function TimelineScrubber({
               marginLeft: 4,
             }}
           >
-            Tracks {totalLayerCount ? `(${totalLayerCount})` : ''}
+            <span className="tl-lbl">Tracks </span>{totalLayerCount ? `(${totalLayerCount})` : ''}
           </Button>
         </div>
 
@@ -714,6 +730,7 @@ export function TimelineScrubber({
           </div>
 
           <div
+            className="tl-frame"
             style={{
               fontSize: 12,
               color: 'var(--muted)',
@@ -735,8 +752,10 @@ export function TimelineScrubber({
               icon={<ShieldIcon size={13} />}
               onClick={onToggleSafeZone}
               title="Toggle TikTok / Reels / Shorts 9:16 UI Safe Zone"
+              aria-label="Safe zone"
+              aria-pressed={showSafeZone}
             >
-              {showSafeZone ? 'Hide Safe-Zone' : 'Safe-Zone'}
+              <span className="tl-lbl">{showSafeZone ? 'Hide Safe-Zone' : 'Safe-Zone'}</span>
             </Button>
           ) : null}
         </div>
@@ -905,7 +924,7 @@ export function TimelineScrubber({
                     color: 'var(--text)',
                   }}
                 >
-                  <ImagesIcon size={12} style={{ color: '#34d399' }} />
+                  <ImagesIcon size={12} style={{ color: 'var(--green)' }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Media & Assets</span>
                   <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 'auto' }}>
                     {multiTrackData.mediaItems.length}
@@ -1158,12 +1177,12 @@ export function TimelineScrubber({
                             top: 4,
                             bottom: 4,
                             background: isSelected
-                              ? 'rgba(52, 211, 153, 0.32)'
+                              ? 'color-mix(in srgb, var(--green) 32%, transparent)'
                               : isActive
-                              ? 'rgba(52, 211, 153, 0.22)'
-                              : 'rgba(52, 211, 153, 0.12)',
-                            border: `1px solid ${isSelected ? '#34d399' : isActive ? 'rgba(52, 211, 153, 0.6)' : 'rgba(52, 211, 153, 0.3)'}`,
-                            boxShadow: isSelected ? '0 0 10px rgba(52, 211, 153, 0.65)' : undefined,
+                              ? 'color-mix(in srgb, var(--green) 22%, transparent)'
+                              : 'color-mix(in srgb, var(--green) 12%, transparent)',
+                            border: `1px solid ${isSelected ? 'var(--green)' : isActive ? 'color-mix(in srgb, var(--green) 60%, transparent)' : 'color-mix(in srgb, var(--green) 30%, transparent)'}`,
+                            boxShadow: isSelected ? '0 0 10px color-mix(in srgb, var(--green) 65%, transparent)' : undefined,
                             borderRadius: 4,
                             display: 'flex',
                             alignItems: 'center',

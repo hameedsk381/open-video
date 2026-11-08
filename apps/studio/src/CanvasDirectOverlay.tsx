@@ -285,16 +285,16 @@ export function CanvasDirectOverlay({
                 : '1px solid transparent',
               borderRadius: 4,
               boxShadow: isSelected
-                ? '0 0 12px rgba(70, 147, 241, 0.45)'
+                ? '0 0 12px color-mix(in srgb, var(--accent) 45%, transparent)'
                 : collision
                 ? '0 0 12px rgba(231, 173, 85, 0.35)'
                 : 'none',
               background: isSelected
-                ? 'rgba(70, 147, 241, 0.08)'
+                ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
                 : collision
                 ? 'rgba(231, 173, 85, 0.07)'
                 : isHovered
-                ? 'rgba(70, 147, 241, 0.04)'
+                ? 'color-mix(in srgb, var(--accent) 4%, transparent)'
                 : 'transparent',
               transition: 'border-color 0.1s ease, background 0.1s ease',
             }}

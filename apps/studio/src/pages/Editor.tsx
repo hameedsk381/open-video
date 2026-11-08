@@ -19,6 +19,7 @@ import {
   PaletteIcon,
   PlusIcon,
   ShieldIcon,
+  PanelRightIcon,
   SlidersIcon,
   SparklesIcon,
   Spinner,
@@ -30,15 +31,36 @@ import {
 // the side panel never needs to scroll sideways. Every older address (…/script, …/history, …/export) still opens its panel.
 const tabs = [
   ['edit', 'Edit', FilmIcon] as const,
-  ['ai', 'AI Director', SparklesIcon] as const,
+  ['ai', 'Ask AI', SparklesIcon] as const,
   ['look', 'Style', PaletteIcon] as const,
 ];
+const humanize = (name: string) => { const words = name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ').trim(); return words.charAt(0).toUpperCase() + words.slice(1); };
+/** The frame the player opens on: far enough into the first scene for its content to have appeared, not the empty first frame. */
+const posterFrame = (detail: Detail) => {
+  const first = detail.scenes[0];
+  if (!first) return 0;
+  return first.startFrame + Math.max(0, Math.min(Math.round(detail.fps * 1.2), Math.floor(first.durationFrames * 0.6)));
+};
+/** The layer at a path such as scenes[0].layers[2], in the file as written. */
+const rawLayerAt = (raw: any, path: string) => {
+  let node = raw;
+  for (const [, name, index] of path.matchAll(/([A-Za-z_]+)|\[(\d+)\]/g)) node = node?.[index === undefined ? name! : Number(index)];
+  return node;
+};
+/** A text layer whose words come from a template variable ({{name}}): it is edited as that variable, not as a line of its own. */
+const isBoundText = (detail: Detail, path: string) => {
+  const content = rawLayerAt(detail.source.raw, path)?.content;
+  return typeof content === 'string' && /\{\{[^}]+\}\}/.test(content);
+};
 /** The scene a script beat is shown in: the one that names the beat, then the one with the beat's own id, and only then the one in the same position. */
 const sceneForBeat = (beat: { id?: string }, index: number, scenes: Scene[]): Scene | undefined => scenes.find(s => s.beat && s.beat === beat.id) ?? scenes.find(s => s.id === beat.id) ?? scenes[index];
 const tabOf = (tab: string) => (tab === 'script' ? 'edit' : tab);
 /** Which panel an address opens: anything unknown opens Edit. */
 const paneOf = (tab: string) => (['script', 'ai', 'look', 'history', 'export'].includes(tab) ? tab : 'edit');
-const sideTitles: Record<string, string> = { history: 'Revisions', export: 'Export & review' };
+/** Placeholder rows while a panel's data loads. */
+const SkeletonRows = ({ n = 3 }: { n?: number }) => (
+  <div aria-hidden="true">{Array.from({ length: n }, (_, i) => <span key={i} className="skel skel-row" />)}</div>
+);
 
 const themeNames = ['bg', 'surface', 'text', 'muted', 'accent', 'accent2', 'radius', 'headWeight', 'fontDisplay', 'fontBody', 'texture', 'textureColor', 'textureOpacity', 'motion', 'transition', 'layout', 'density'];
 
@@ -60,6 +82,11 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
   const [seen, setSeen] = useState<Set<string>>(() => new Set([pane]));
   useEffect(() => { setSeen(prev => (prev.has(pane) ? prev : new Set(prev).add(pane))); }, [pane]);
   const open = (name: string) => pane === name || seen.has(name);
+  // The side panel can be put away to give the video the room; it is remembered, and opens again whenever a panel is asked for.
+  const [panelOpen, setPanelOpen] = useState(() => { try { return localStorage.getItem('ove-editor-panel') !== 'closed'; } catch { return true; } });
+  const setPanel = useCallback((next: boolean) => { setPanelOpen(next); try { localStorage.setItem('ove-editor-panel', next ? 'open' : 'closed'); } catch { /* not remembered */ } }, []);
+  const firstTab = useRef(true);
+  useEffect(() => { if (firstTab.current) { firstTab.current = false; return; } setPanelOpen(true); }, [tab]);
   // Saves in flight (any kind), so closing the tab mid-save warns; and the one timer that clears the "Saved" note.
   const [pending, setPending] = useState(0);
   const track = useCallback(async (work: () => Promise<void>) => { setPending(n => n + 1); try { await work(); } finally { setPending(n => n - 1); } }, []);
@@ -82,7 +109,12 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     const seq = ++loadSeq.current;
     setAiRevert(null);
     return api<Detail>(`/api/project?id=${encodeURIComponent(id)}`).then(
-      next => { if (seq === loadSeq.current) { loaded.current = true; setDetail(next); } },
+      next => {
+        if (seq !== loadSeq.current) return;
+        if (!keepFrame) { const start = posterFrame(next); frameAt.current = start; setCurrentFrame(start); }
+        loaded.current = true;
+        setDetail(next);
+      },
       e => { if (seq !== loadSeq.current) return; if (loaded.current) toastRef.current(`Could not refresh the project: ${(e as Error).message}`, 'error'); else setError((e as Error).message); }
     );
   }, [id]);
@@ -221,71 +253,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     go(editorPath(id, 'export'));
   };
 
-  return (
-    <div className="editor">
-      <div className="stage">
-        {composeNotes.length ? (
-          <Notice tone="warn" title="What the studio adjusted" onDismiss={dismissComposeNotes}>
-            <ul className="issue-list" style={{ margin: '4px 0 0' }}>
-              {composeNotes.map(change => <li key={change}>{change}</li>)}
-            </ul>
-          </Notice>
-        ) : null}
-        <div className="etop">
-          <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go('#/projects')}>
-            Projects
-          </Button>
-          <TitleInput detail={detail} save={name => save('/api/project/rename', { id, name }, 'Renamed')} />
-          <Button size="sm" variant="secondary" icon={<LayersIcon size={14} />} onClick={() => go(planPath(id))}>
-            Storyboard
-          </Button>
-          <span className="grow" />
-          {note ? (
-            <span className="saved" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>
-              <CheckIcon size={12} /> {note}
-            </span>
-          ) : null}
-          <div className="etop-actions">
-            <Button size="sm" variant="ghost" icon={<ClockIcon size={14} />} onClick={() => go(editorPath(id, 'history'))} title="Every saved version of this video, with compare and restore">
-              Revisions{detail.revisions ? ` · ${detail.revisions}` : ''}
-            </Button>
-            <Button size="sm" variant="ghost" icon={<ShieldIcon size={14} />} onClick={() => openExport('review')}>
-              Review
-            </Button>
-            <Button size="sm" variant="primary" icon={<DownloadIcon size={14} />} onClick={() => openExport('render')}>
-              Export
-            </Button>
-          </div>
-        </div>
-
-        <PlayerView
-          ref={player}
-          detail={detail}
-          startFrame={frameAt.current}
-          selectedSceneId={selectedSceneId}
-          onSelectScene={setSelectedSceneId}
-          compareTarget={compareTarget}
-          onCloseCompare={() => setCompareTarget(null)}
-          onRestoreCompare={async n => {
-            try {
-              await api('/api/restore', { file, n });
-              setNote(`Restored version #${n}`);
-              setCompareTarget(null);
-              await load(true);
-            } catch (e) {
-              toast((e as Error).message, 'error');
-            }
-          }}
-          onFrame={f => {
-            frameAt.current = f;
-            setCurrentFrame(f);
-          }}
-          selectedLayerPath={selectedTextPath}
-          onSelectLayerPath={setSelectedTextPath}
-          onSaveLayerText={saveDirectText}
-          onSnapLayers={snapLayers}
-        />
-
+  const sceneFocus = (
         <div className="scene-focus">
           <select
             className="input scene-select"
@@ -315,7 +283,78 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ) : (
             <span className="scene-meta">Pick a scene on the timeline to edit just that scene.</span>
           )}
+          <AddSceneMenu projectId={detail.id} save={save} />
         </div>
+  );
+
+  return (
+    <div className={`editor${panelOpen ? '' : ' panel-closed'}`}>
+      <div className="stage">
+        {composeNotes.length ? (
+          <Notice tone="warn" title="What the studio adjusted" onDismiss={dismissComposeNotes}>
+            <ul className="issue-list" style={{ margin: '4px 0 0' }}>
+              {composeNotes.map(change => <li key={change}>{change}</li>)}
+            </ul>
+          </Notice>
+        ) : null}
+        <div className="etop">
+          <Button size="sm" variant="ghost" className="collapse" icon={<ArrowLeftIcon size={14} />} title="Back to projects" aria-label="Back to projects" onClick={() => go('#/projects')}>
+            <span className="lbl">Projects</span>
+          </Button>
+          <TitleInput detail={detail} save={name => save('/api/project/rename', { id, name }, 'Renamed')} />
+          <Button size="sm" variant="secondary" className="collapse" icon={<LayersIcon size={14} />} title="Open the storyboard" aria-label="Storyboard" onClick={() => go(planPath(id))}>
+            <span className="lbl">Storyboard</span>
+          </Button>
+          <span className="grow" />
+          {note ? (
+            <span className="saved" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>
+              <CheckIcon size={12} /> {note}
+            </span>
+          ) : null}
+          <div className="etop-actions">
+            <Button size="sm" variant="ghost" className="collapse" icon={<ClockIcon size={14} />} onClick={() => go(editorPath(id, 'history'))} title="Every saved version of this video, with compare and restore" aria-label={`Revisions${detail.revisions ? `, ${detail.revisions} saved` : ''}`}>
+              <span className="lbl">Revisions</span>
+              {detail.revisions ? <span className="cnt">{detail.revisions}</span> : null}
+            </Button>
+            <Button size="sm" variant="ghost" className="collapse" icon={<ShieldIcon size={14} />} onClick={() => openExport('review')} title="Check the design: readability, safe zones and contrast" aria-label="Review the design">
+              <span className="lbl">Review</span>
+            </Button>
+            <Button size="sm" variant="primary" icon={<DownloadIcon size={14} />} onClick={() => openExport('render')}>
+              Export
+            </Button>
+            <Button size="sm" variant="ghost" icon={<PanelRightIcon size={14} />} onClick={() => setPanel(!panelOpen)} title={panelOpen ? 'Hide the side panel' : 'Show the side panel'} aria-label={panelOpen ? 'Hide the side panel' : 'Show the side panel'} aria-pressed={panelOpen} />
+          </div>
+        </div>
+
+        <PlayerView
+          ref={player}
+          detail={detail}
+          startFrame={frameAt.current}
+          selectedSceneId={selectedSceneId}
+          onSelectScene={setSelectedSceneId}
+          compareTarget={compareTarget}
+          onCloseCompare={() => setCompareTarget(null)}
+          onRestoreCompare={async n => {
+            try {
+              await api('/api/restore', { file, n });
+              setNote(`Restored version #${n}`);
+              setCompareTarget(null);
+              await load(true);
+            } catch (e) {
+              toast((e as Error).message, 'error');
+            }
+          }}
+          onFrame={f => {
+            frameAt.current = f;
+            setCurrentFrame(f);
+          }}
+          selectedLayerPath={selectedTextPath}
+          onSelectLayerPath={setSelectedTextPath}
+          onSaveLayerText={saveDirectText}
+          onSnapLayers={snapLayers}
+          timelineHeader={sceneFocus}
+        />
+
       </div>
 
       <div className="side">
@@ -341,7 +380,6 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           ) : pane === 'history' || pane === 'export' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <Button size="sm" variant="ghost" icon={<ArrowLeftIcon size={14} />} onClick={() => go(editorPath(id))}>Back to editing</Button>
-              <b style={{ fontSize: 13, color: 'var(--muted)' }}>{sideTitles[pane]}</b>
             </div>
           ) : null}
           {open('edit') ? (
@@ -434,26 +472,44 @@ function Edit({
 }) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
+  const [props, setProps] = useState<Record<string, any>>({});
   const [busy, setBusy] = useState(false);
   const { toast } = useUi();
 
   // A reload brings the saved values in, but a field the person has changed and not saved keeps what they typed.
-  const served = useRef<{ values: Record<string, any>; texts: Record<string, string> }>({ values: {}, texts: {} });
+  const served = useRef<{ values: Record<string, any>; texts: Record<string, string>; props: Record<string, any> }>({ values: {}, texts: {}, props: {} });
   useEffect(() => {
     const before = served.current;
     const nextValues: Record<string, any> = Object.fromEntries(detail.variables.map(v => [v.name, v.type === 'list' ? JSON.stringify(v.value, null, 2) : v.value]));
     const nextTexts: Record<string, string> = Object.fromEntries(detail.texts.map(t => [t.path, t.content]));
     setValues(cur => Object.fromEntries(Object.entries(nextValues).map(([k, v]) => [k, k in cur && !Object.is(cur[k], before.values[k]) ? cur[k] : v])));
     setTexts(cur => Object.fromEntries(Object.entries(nextTexts).map(([k, v]) => [k, k in cur && cur[k] !== before.texts[k] ? cur[k] : v])));
-    served.current = { values: nextValues, texts: nextTexts };
+    const nextProps: Record<string, any> = Object.fromEntries(detail.blocks.flatMap(b => b.params.map(p => [`${b.path}|${p.name}`, p.value ?? ''])));
+    setProps(cur => Object.fromEntries(Object.entries(nextProps).map(([k, v]) => [k, k in cur && !Object.is(cur[k], before.props[k]) ? cur[k] : v])));
+    served.current = { values: nextValues, texts: nextTexts, props: nextProps };
   }, [detail]);
 
   const fields = detail.variables.filter(v => !themeNames.includes(v.name));
+  // Text that no variable drives (all of it in a finished video, the literal lines in a template) is edited line by line.
+  const lines = detail.mode === 'template' ? detail.texts.filter(t => !isBoundText(detail, t.path)) : detail.texts;
 
   const apply = async () => {
     setBusy(true);
     try {
-      if (detail.mode === 'template') {
+      const changedLines = lines.filter(t => texts[t.path]?.trim() && texts[t.path] !== t.content);
+      if (changedLines.length) await api('/api/texts', { id: detail.id, edits: changedLines.map(t => ({ path: t.path, content: texts[t.path]! })) });
+      // The words of blocks (a stat's number, a button's label) are the block's settings.
+      const blockEdits = detail.blocks.flatMap(b => {
+        const values: Record<string, string | number | boolean> = {};
+        for (const p of b.params) {
+          const now = props[`${b.path}|${p.name}`];
+          if (now !== undefined && String(now) !== String(p.value ?? '')) values[p.name] = p.type === 'number' ? Number(now) : p.type === 'boolean' ? Boolean(now) : String(now);
+        }
+        return Object.keys(values).length ? [{ path: b.path, values }] : [];
+      });
+      if (blockEdits.length) await api('/api/blocks/props', { id: detail.id, edits: blockEdits });
+      const changedAny = changedLines.length + blockEdits.length > 0;
+      if (detail.mode === 'template' && fields.length) {
         const out: Record<string, unknown> = {};
         for (const v of fields) {
           const x = values[v.name];
@@ -461,10 +517,8 @@ function Edit({
         }
         await save('/api/variables', { id: detail.id, values: out });
       } else {
-        const changed = detail.texts.filter(t => texts[t.path]?.trim() && texts[t.path] !== t.content);
-        if (changed.length) await api('/api/texts', { id: detail.id, edits: changed.map(t => ({ path: t.path, content: texts[t.path]! })) });
-        setNote(changed.length ? 'Changes saved' : 'No changes detected');
-        if (changed.length) await reload(true);
+        setNote(changedAny ? 'Changes saved' : 'No changes detected');
+        if (changedAny) await reload(true);
       }
     } catch (e) {
       toast(e instanceof SyntaxError ? 'Please check your list format' : (e as Error).message, 'error');
@@ -477,10 +531,10 @@ function Edit({
 
   return (
     <>
-      <h2>Content & Copy</h2>
+      <h2>Edit</h2>
       <p className="sub">
         {detail.mode === 'template'
-          ? 'Customize your text and message. All motion animations update automatically.'
+          ? 'Change the words and settings of your video. Motion and layout follow.'
           : 'Edit copy for each scene in the order it appears on screen.'}
       </p>
 
@@ -524,11 +578,36 @@ function Edit({
               )}
             </Field>
           ))
-        ) : (
-          <p className="sub">No editable text slots in this video. You can ask AI to refine the scene, or add new scenes from Style.</p>
-        )
-      ) : detail.texts.length ? (
-        detail.texts.map((t: TextLayer) => {
+        ) : null
+      ) : null}
+      {detail.blocks.map(b => (
+        <section key={b.path}>
+          <h3 className="history-group">{humanize(b.component).toLowerCase() === b.scene.toLowerCase() ? b.scene : `${b.scene} · ${humanize(b.component)}`}</h3>
+          {b.params.map(p => {
+            const key = `${b.path}|${p.name}`;
+            return (
+              <Field key={key} label={humanize(p.name)} hint={p.description}>
+                {p.type === 'boolean' ? (
+                  <label className="check">
+                    <input type="checkbox" checked={!!props[key]} onChange={e => setProps({ ...props, [key]: e.target.checked })} />
+                    <span>{humanize(p.name)}</span>
+                  </label>
+                ) : p.type === 'color' ? (
+                  <input className="input" type="color" value={/^#[0-9a-fA-F]{6}$/.test(props[key]) ? props[key] : '#000000'} onChange={e => setProps({ ...props, [key]: e.target.value })} />
+                ) : p.type === 'number' ? (
+                  <input className="input" type="number" value={props[key] ?? ''} onChange={e => setProps({ ...props, [key]: e.target.value })} />
+                ) : (
+                  <textarea className="input" style={{ minHeight: String(props[key] ?? '').length > 60 ? 90 : 44 }} value={props[key] ?? ''} onChange={e => setProps({ ...props, [key]: e.target.value })} />
+                )}
+              </Field>
+            );
+          })}
+        </section>
+      ))}
+      {lines.length ? (
+        <>
+          {detail.mode === 'template' && fields.length ? <h3 className="history-group">Other text on screen</h3> : null}
+          {lines.map((t: TextLayer) => {
           const isSelected = selectedTextPath === t.path;
           return (
             <Field key={t.path} label={`${t.scene} · ${slotName(t.scene, t.id)}`}>
@@ -537,7 +616,7 @@ function Edit({
                 style={{
                   minHeight: t.content.length > 60 ? 90 : 44,
                   borderColor: isSelected ? 'var(--accent)' : undefined,
-                  boxShadow: isSelected ? '0 0 10px rgba(70, 147, 241, 0.35)' : undefined,
+                  boxShadow: isSelected ? '0 0 10px color-mix(in srgb, var(--accent) 35%, transparent)' : undefined,
                 }}
                 value={texts[t.path] ?? ''}
                 onFocus={() => onSelectTextPath?.(t.path)}
@@ -545,12 +624,14 @@ function Edit({
               />
             </Field>
           );
-        })
-      ) : (
-        <p className="sub">No text found in this video.</p>
-      )}
+          })}
+        </>
+      ) : null}
+      {(detail.mode === 'template' ? fields.length : 0) + lines.length + detail.blocks.length === 0 ? (
+        <p className="sub">This video has no text yet. Add a scene from Style, or ask the AI director to write some.</p>
+      ) : null}
 
-      {(detail.mode === 'template' ? fields.length : detail.texts.length) ? (
+      {(detail.mode === 'template' ? fields.length : 0) + lines.length + detail.blocks.length ? (
         <Button variant="primary" loading={busy} onClick={apply}>
           Save Changes
         </Button>
@@ -691,17 +772,17 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
 
   if (loading) {
     return (
-      <div style={{ padding: '20px 0' }}>
-        <Spinner size={20} />
-        <p className="sub" style={{ marginTop: 8 }}>Loading narrative script…</p>
-      </div>
+      <>
+        <h2>Script & beats</h2>
+        <SkeletonRows n={3} />
+      </>
     );
   }
 
   if (loadError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h2>Script & Narrative Beats</h2>
+        <h2>Script & beats</h2>
         <Notice tone="error" title="The script could not be loaded">
           <p style={{ margin: '4px 0 12px' }}>{loadError}</p>
           <Button variant="secondary" onClick={() => void loadPlan()}>Try again</Button>
@@ -713,7 +794,7 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
   if (!planState?.production || !beats.length) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h2>Script & Narrative Beats</h2>
+        <h2>Script & beats</h2>
         <p className="sub">
           Link spoken voiceover and on-screen copy directly to your video scenes. Editing lines updates and synchronizes with your timeline.
         </p>
@@ -735,7 +816,7 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <h2>Script & Narrative Beats</h2>
+        <h2>Script & beats</h2>
         <div style={{ display: 'flex', gap: 6 }}>
           <Button size="sm" variant={dirty ? 'primary' : 'secondary'} loading={saving} disabled={!dirty} onClick={saveScript}>
             Save
@@ -772,7 +853,7 @@ function ScriptTab({ detail, reload, setNote, currentFrame, onSeek }: ScriptTabP
                 borderRadius: 'var(--radius-sm)',
                 padding: '12px 14px',
                 transition: 'border-color 0.15s ease, background 0.15s ease',
-                boxShadow: isActive ? '0 0 14px rgba(70, 147, 241, 0.15)' : 'none',
+                boxShadow: isActive ? '0 0 14px color-mix(in srgb, var(--accent) 15%, transparent)' : 'none',
               }}
             >
               <div
@@ -1089,16 +1170,16 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
   };
 
   const chips = [
-    '⚡ Make it faster & punchier',
-    '✍️ Shorten headlines for high impact',
-    '🎯 Add strong call to action',
-    '✨ Modern, clean & minimal tone',
-    '🔥 Bolder typography & high energy',
+    'Make it faster and punchier',
+    'Shorten the headlines',
+    'Add a strong call to action',
+    'A modern, clean, minimal tone',
+    'Bolder type and more energy',
   ];
 
   return (
     <>
-      <h2>Ask the studio</h2>
+      <h2>Ask AI</h2>
       <p className="sub">
         Describe any change in plain words. The studio adjusts the type, timing and layout to match.
       </p>
@@ -1124,7 +1205,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
 
       <div className="chips">
         {chips.map(chipText => (
-          <button key={chipText} className="chip" onClick={() => onDraft(chipText.slice(3))}>
+          <button key={chipText} className="chip" onClick={() => onDraft(chipText)}>
             {chipText}
           </button>
         ))}
@@ -1190,18 +1271,18 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <b style={{ color: 'var(--text)', fontSize: 12 }}>{d.title}</b>
                     {d.badge ? (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: d.tone === 'positive' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(70, 147, 241, 0.15)', color: d.tone === 'positive' ? '#34d399' : 'var(--accent)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: d.tone === 'positive' ? 'color-mix(in srgb, var(--green) 15%, transparent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)', color: d.tone === 'positive' ? 'var(--green)' : 'var(--accent)' }}>
                         {d.badge}
                       </span>
                     ) : null}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontFamily: d.type === 'text' ? 'inherit' : 'var(--mono)', fontSize: 11.5 }}>
-                    <div style={{ color: '#f87171', display: 'flex', gap: 6, textDecoration: 'line-through', opacity: 0.85 }}>
-                      <span style={{ userSelect: 'none', color: '#f87171' }}>−</span>
+                    <div style={{ color: 'var(--red)', display: 'flex', gap: 6, textDecoration: 'line-through', opacity: 0.85 }}>
+                      <span style={{ userSelect: 'none', color: 'var(--red)' }}>−</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.before}</span>
                     </div>
-                    <div style={{ color: '#34d399', display: 'flex', gap: 6, fontWeight: 500 }}>
-                      <span style={{ userSelect: 'none', color: '#34d399' }}>+</span>
+                    <div style={{ color: 'var(--green)', display: 'flex', gap: 6, fontWeight: 500 }}>
+                      <span style={{ userSelect: 'none', color: 'var(--green)' }}>+</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.after}</span>
                     </div>
                   </div>
@@ -1209,7 +1290,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
               ))}
             </div>
           ) : beforeError ? (
-            <p className="sub" style={{ margin: 0, color: 'var(--danger, #f87171)' }}>
+            <p className="sub" style={{ margin: 0, color: 'var(--red)' }}>
               Could not list the changes: {beforeError}. You can still compare or revert.
             </p>
           ) : (
@@ -1236,7 +1317,7 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
       ) : null}
 
       <Button variant="primary" loading={busy} icon={<SparklesIcon size={14} />} onClick={run}>
-        {busy ? 'Directing AI…' : 'Apply AI Direction'}
+        {busy ? 'Working…' : 'Apply change'}
       </Button>
     </>
   );
@@ -1244,7 +1325,6 @@ function AskAi({ detail, file, reload, setNote, draft, onDraft, scene, sceneInde
 
 function Look({ detail, save }: PaneProps) {
   const [lib, setLib] = useState<Library | null>(null);
-  const [category, setCategory] = useState('all');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -1252,63 +1332,93 @@ function Look({ detail, save }: PaneProps) {
   }, []);
 
   const canTheme = Object.keys(detail.theme).length > 0;
-  const categories = lib ? ['all', ...new Set(lib.blocks.map(b => b.category))] : [];
 
   return (
     <>
-      <h2>Color Palettes & Themes</h2>
-      <p className="sub">Apply a curated brand theme across all video scenes instantly.</p>
+      <h2>Style</h2>
+      <p className="sub">Pick a colour theme for every scene at once.</p>
       {error ? <Notice tone="error">{error}</Notice> : null}
 
       <div className="themes">
-        {lib?.themes.map(t => (
-          <button
-            key={t.id}
-            className="theme"
-            disabled={!canTheme}
-            title={canTheme ? t.description : 'This video has custom colors'}
-            onClick={() => void save('/api/theme', { id: detail.id, theme: t.id }, `Theme applied: ${t.name}`).catch(() => {})}
-          >
-            <div className="swatches">
-              {['bg', 'surface', 'accent', 'accent2'].map(k => (
-                <i key={k} style={{ background: String(t.variables[k]) }} />
-              ))}
-            </div>
-            <b>{t.name}</b>
-          </button>
-        ))}
+        {lib
+          ? lib.themes.map(t => (
+              <button
+                key={t.id}
+                className="theme"
+                disabled={!canTheme}
+                title={canTheme ? t.description : 'This video has custom colors'}
+                onClick={() => void save('/api/theme', { id: detail.id, theme: t.id }, `Theme applied: ${t.name}`).catch(() => {})}
+              >
+                <div className="swatches">
+                  {['bg', 'surface', 'accent', 'accent2'].map(k => (
+                    <i key={k} style={{ background: String(t.variables[k]) }} />
+                  ))}
+                </div>
+                <b>{t.name}</b>
+              </button>
+            ))
+          : error ? null : [0, 1, 2, 3].map(i => <span key={i} className="skel" style={{ height: 74 }} aria-hidden="true" />)}
       </div>
-
-      <h2 style={{ marginTop: 32 }}>Add Scene from Catalog</h2>
-      <p className="sub">Insert production-ready scene blocks and overlays into your video.</p>
-
-      <select
-        className="input"
-        style={{ marginBottom: 10 }}
-        value={category}
-        onChange={e => setCategory(e.target.value)}
-      >
-        {categories.map(c => (
-          <option key={c} value={c}>
-            {c === 'all' ? 'All categories' : c}
-          </option>
-        ))}
-      </select>
-
-      {lib?.blocks
-        .filter(b => category === 'all' || b.category === category)
-        .map((b: Block) => (
-          <div className="row" key={b.id}>
-            <div>
-              <b>{b.name}</b>
-              <small>{b.description}</small>
-            </div>
-            <Button size="sm" onClick={() => void save('/api/add-block', { id: detail.id, block: b.id }, `Added ${b.name}`).catch(() => {})}>
-              Add Scene
-            </Button>
-          </div>
-        ))}
+      {lib && !canTheme ? <p className="sub">This video sets its own colours, so a theme cannot be applied to it.</p> : null}
     </>
+  );
+}
+
+/** Adds a scene or overlay from the catalog. It lives by the timeline, where scenes are. */
+function AddSceneMenu({ projectId, save }: { projectId: string; save: (path: string, body: unknown, done?: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [lib, setLib] = useState<Library | null>(null);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const search = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!lib) api<Library>('/api/library').then(setLib, e => setError(e.message));
+    const timer = window.setTimeout(() => search.current?.focus(), 0);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey); };
+  }, [open, lib]);
+
+  const q = query.trim().toLowerCase();
+  const shown = lib?.blocks.filter((b: Block) => !q || [b.name, b.description, b.category].some(text => String(text ?? '').toLowerCase().includes(q))) ?? [];
+
+  return (
+    <div className="add-scene">
+      <Button size="sm" variant="secondary" icon={<PlusIcon size={13} />} aria-expanded={open} onClick={() => setOpen(value => !value)}>
+        Add scene
+      </Button>
+      {open ? (
+        <>
+          <div className="add-scene-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="add-scene-pop" role="dialog" aria-label="Add a scene">
+            <input ref={search} className="input" type="search" placeholder="Search scenes and overlays" aria-label="Search scenes and overlays" value={query} onChange={e => setQuery(e.target.value)} />
+            <div className="add-scene-list">
+              {error ? (
+                <Notice tone="error">{error}</Notice>
+              ) : !lib ? (
+                <SkeletonRows n={4} />
+              ) : shown.length ? (
+                shown.map((b: Block) => (
+                  <div className="row" key={b.id}>
+                    <div>
+                      <b>{b.name}</b>
+                      <small>{b.description}</small>
+                    </div>
+                    <Button size="sm" onClick={() => { setOpen(false); void save('/api/add-block', { id: projectId, block: b.id }, `Added ${b.name}`).catch(() => {}); }}>
+                      Add
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <p className="sub">Nothing matches.</p>
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -1375,15 +1485,15 @@ function History({ detail, file, planFile, reload, setNote, onCompare }: PanePro
 
   return (
     <>
-      <h2>Edit history</h2>
+      <h2>Revisions</h2>
       <p className="sub">Every change is saved automatically. The timeline and the storyboard keep separate histories.</p>
       {error ? <Notice tone="error">{error}</Notice> : null}
 
       <h3 className="history-group">Timeline</h3>
-      {timeline === null ? <p className="sub">Loading…</p> : timeline.length === 0 ? <p className="sub">No timeline revisions yet.</p> : rows(timeline, 'timeline')}
+      {timeline === null ? <SkeletonRows n={3} /> : timeline.length === 0 ? <p className="sub">No timeline revisions yet.</p> : rows(timeline, 'timeline')}
 
       <h3 className="history-group">Storyboard</h3>
-      {plan === null ? <p className="sub">Loading…</p> : plan.length === 0 ? <p className="sub">No storyboard revisions yet. Start one from the Storyboard workspace.</p> : rows(plan, 'plan')}
+      {plan === null ? <SkeletonRows n={2} /> : plan.length === 0 ? <p className="sub">No storyboard revisions yet. Start one from the Storyboard workspace.</p> : rows(plan, 'plan')}
     </>
   );
 }
@@ -1451,7 +1561,7 @@ function Export({ detail, file, intent, onIntentDone }: PaneProps & {
 
   return (
     <>
-      <h2>Export Video</h2>
+      <h2>Export</h2>
       <p className="sub">
         {detail.width}×{detail.height} · {dur(detail.durationFrames / detail.fps)} · MP4 Video
       </p>

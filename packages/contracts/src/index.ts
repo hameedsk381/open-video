@@ -23,10 +23,15 @@ export type Asset = z.infer<typeof assetSchema>;
 export const sceneSummarySchema = z.object({ id: z.string(), name: z.string(), startFrame: z.number(), durationFrames: z.number(), beat: z.string().optional() });
 export type Scene = z.infer<typeof sceneSummarySchema>;
 
+/** One setting of a block placed in the video (a stat's number, a call to action's button words), with what it says now. */
+export const blockParamSchema = z.object({ name: z.string(), type: z.enum(['string', 'number', 'boolean', 'color']), description: z.string().optional(), default: z.unknown().optional(), value: z.unknown() });
+/** A block placed in a scene ({ use, with }) and the settings it can be given. */
+export const blockSlotSchema = z.object({ path: z.string(), scene: z.string(), id: z.string(), component: z.string(), description: z.string().optional(), params: z.array(blockParamSchema) });
+export type BlockSlot = z.infer<typeof blockSlotSchema>;
 export const detailSchema = z.object({
   id: z.string(), name: z.string(), width: z.number(), height: z.number(), fps: z.number(), durationFrames: z.number(), mode: projectModeSchema,
   scenes: z.array(sceneSummarySchema), variables: z.array(variableSchema), theme: z.record(z.string(), z.union([z.string(), z.number()])), texts: z.array(textLayerSchema),
-  assets: z.array(assetSchema), revisions: z.number(),
+  assets: z.array(assetSchema), revisions: z.number(), blocks: z.array(blockSlotSchema),
   /** What the browser Player needs: the composition as written, its measured media, and the URL its relative files are served under. */
   source: z.object({ raw: z.unknown(), media: z.record(z.string(), z.unknown()), base: z.string() }),
 });
@@ -155,6 +160,8 @@ export const variablesRequest = z.object({ id, values: z.record(z.string(), z.un
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
 /** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
 export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0), maxWidth: z.number().positive().optional() })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
+/** New settings for blocks, in one saved change: for each block's path, the settings to change. */
+export const blockPropsRequest = z.object({ id, edits: z.array(z.object({ path: z.string().min(1, 'path is required'), values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])) })).min(1, 'edits is required').max(100) });
 /** Several text edits in one saved change. */
 export const textsRequest = z.object({ id, edits: z.array(z.object({ path: z.string().min(1, 'path is required'), content: z.string().min(1, 'text is required') })).min(1, 'edits is required').max(200) });
 export const textRequest = z.object({ id, path: z.string().min(1, 'path is required'), content: z.string().min(1, 'text is required') });

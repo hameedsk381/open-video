@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react';
 import { type Detail } from './api';
+import type { ReactNode } from 'react';
 import { TimelineScrubber } from './TimelineScrubber';
 import { Badge, Button } from './ui';
 import { CanvasDirectOverlay } from './CanvasDirectOverlay';
@@ -36,6 +37,8 @@ export type PlayerViewProps = {
   onSelectLayerPath?: (path: string | null) => void;
   onSaveLayerText?: (path: string, content: string, variableName?: string) => Promise<void>;
   onSnapLayers?: (moves: LayerMove[]) => Promise<void>;
+  /** Shown at the top of the timeline: which scene is being edited, and adding one. */
+  timelineHeader?: ReactNode;
 };
 
 export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function PlayerView(
@@ -52,6 +55,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
     onSelectLayerPath,
     onSaveLayerText,
     onSnapLayers,
+    timelineHeader,
   },
   ref
 ) {
@@ -413,7 +417,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
                 width: 2,
                 transform: 'translateX(-50%)',
                 background: 'var(--accent)',
-                boxShadow: '0 0 10px rgba(70, 147, 241, 0.8)',
+                boxShadow: '0 0 10px color-mix(in srgb, var(--accent) 80%, transparent)',
                 zIndex: 4,
                 cursor: 'ew-resize',
                 pointerEvents: 'auto',
@@ -477,8 +481,8 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
             <div
               style={{
                 height: '8%',
-                background: 'rgba(239, 68, 68, 0.16)',
-                borderBottom: '1px dashed rgba(239, 68, 68, 0.6)',
+                background: 'color-mix(in srgb, var(--red) 16%, transparent)',
+                borderBottom: '1px dashed color-mix(in srgb, var(--red) 60%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -498,8 +502,8 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
               <div
                 style={{
                   width: '12%',
-                  background: 'rgba(239, 68, 68, 0.16)',
-                  borderLeft: '1px dashed rgba(239, 68, 68, 0.6)',
+                  background: 'color-mix(in srgb, var(--red) 16%, transparent)',
+                  borderLeft: '1px dashed color-mix(in srgb, var(--red) 60%, transparent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -520,8 +524,8 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
             <div
               style={{
                 height: '18%',
-                background: 'rgba(239, 68, 68, 0.16)',
-                borderTop: '1px dashed rgba(239, 68, 68, 0.6)',
+                background: 'color-mix(in srgb, var(--red) 16%, transparent)',
+                borderTop: '1px dashed color-mix(in srgb, var(--red) 60%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -566,6 +570,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
         onSelectScene={onSelectScene}
         selectedLayerPath={selectedLayerPath}
         onSelectLayerPath={onSelectLayerPath}
+        header={timelineHeader}
       />
     </>
   );

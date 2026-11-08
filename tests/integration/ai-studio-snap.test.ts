@@ -122,3 +122,41 @@ describe('POST /api/texts and scene beats', () => {
     expect(detail.scenes[0]).toMatchObject({ id: 's1', beat: 'intro' });
   });
 });
+
+describe('block settings', () => {
+  const withBlock = () => ({
+    ...composition,
+    variables: {},
+    components: { stat: { description: 'A number', params: { value: { type: 'string', default: '87%' }, size: { type: 'number', default: 60 }, bold: { type: 'boolean', default: false } },
+      layers: [{ id: 'n', type: 'text', content: '{{value}}', x: 100, y: 300, fontSize: '{{size}}' }] } },
+    scenes: [{ id: 's1', name: 'Numbers', startFrame: 0, durationFrames: 60, layers: [{ use: 'stat', id: 'stat-1', with: { value: '12%' } }] }],
+  });
+
+  it('lists a block and what each setting says now: its own value, or the default', async () => {
+    await writeFile(file(), JSON.stringify(withBlock(), null, 2));
+    const [block] = (await send('GET', '/api/project?id=snap')).json.blocks;
+    expect(block).toMatchObject({ path: 'scenes[0].layers[0]', scene: 'Numbers', component: 'stat', id: 'stat-1' });
+    expect(block.params.map((param: any) => [param.name, param.value])).toEqual([['value', '12%'], ['size', 60], ['bold', false]]);
+  });
+
+  it('changes settings in the file as written, in one revision', async () => {
+    const reply = await send('POST', '/api/blocks/props', { id: 'snap', edits: [{ path: 'scenes[0].layers[0]', values: { value: '99%', size: '80', bold: true } }] });
+    expect(reply).toMatchObject({ status: 200, json: { edited: 1 } });
+    const saved = await read();
+    expect(saved.scenes[0].layers[0]).toEqual({ use: 'stat', id: 'stat-1', with: { value: '99%', size: 80, bold: true } });
+    expect(Object.keys(saved.components)).toEqual(['stat']);
+    const [block] = (await send('GET', '/api/project?id=snap')).json.blocks;
+    expect(block.params.map((param: any) => param.value)).toEqual(['99%', 80, true]);
+  });
+
+  it('refuses a setting the block does not have, a layer that is not a block and a value of the wrong kind, changing nothing', async () => {
+    const before = await readFile(file(), 'utf8');
+    for (const body of [
+      { id: 'snap', edits: [{ path: 'scenes[0].layers[0]', values: { nope: 'x' } }] },
+      { id: 'snap', edits: [{ path: 'scenes[0]', values: { value: 'x' } }] },
+      { id: 'snap', edits: [{ path: 'scenes[0].layers[0]', values: { size: 'not a number' } }] },
+      { id: 'snap', edits: [] },
+    ]) expect((await send('POST', '/api/blocks/props', body)).status, JSON.stringify(body)).toBeGreaterThanOrEqual(400);
+    expect(await readFile(file(), 'utf8')).toBe(before);
+  });
+});
