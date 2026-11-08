@@ -79,7 +79,6 @@ export function narrationScene(composition: Composition, options: SceneOptions):
   if (options.audioSrc) next.assets.push({ id: 'narration', type: 'audio', src: options.audioSrc, metadata: {} });
   if (options.captionsSrc) next.assets.push({ id: 'narration-captions', type: 'captions', src: options.captionsSrc, metadata: {} });
   next.scenes = next.scenes.filter(scene => scene.id !== sceneId);
-  const short = Math.min(width, height);
   const layers: any[] = [];
   if (options.audioSrc) layers.push({ id: 'narration-audio', type: 'audio', src: 'narration', startFrame: 0 });
   // Captions draw downward from y (textBaseline top), so the block's top sits above the platform's bottom UI band

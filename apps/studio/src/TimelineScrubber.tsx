@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { dur, type Detail, type Scene } from './api';
+import { dur, type Detail } from './api';
 import {
   Button,
   PauseIcon,

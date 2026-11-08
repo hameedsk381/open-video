@@ -1,11 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { request, createServer } from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { request } from 'node:http';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AddressInfo } from 'node:net';
-import { setTimeout as delay } from 'node:timers/promises';
-import { createApp, createAccounts, createQuotas, MemoryUserStore, type App } from '@ove/api';
+import { createApp, createAccounts, MemoryUserStore, type App } from '@ove/api';
 import { InProcessQueue, createJobRunner } from '@ove/jobs';
 import { AiSettingsStore, FsProjectStore } from '@ove/storage';
 import { jobEnvFor, studioApp, studioLibrary, studioPlayer } from '../../packages/cli/src/ai-studio';
@@ -15,7 +13,6 @@ import type { Server } from 'node:http';
 
 // The hosted API: nobody gets in without an account, and what one account owns is out of reach of every other account, on every route.
 let root = '', port = 0, server: Server, app: App; const mails: { to: string; text: string }[] = [];
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const HOST = 'studio.test', ORIGIN = 'http://studio.test';
 type Reply = { status: number; headers: Record<string, string | string[] | undefined>; text: string; json: any };
 class Client {

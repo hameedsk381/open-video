@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react';
-import { dur, type Detail } from './api';
+import { type Detail } from './api';
 import { TimelineScrubber } from './TimelineScrubber';
 
 type LivePlayer = {

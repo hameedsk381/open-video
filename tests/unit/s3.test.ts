@@ -75,12 +75,10 @@ describe('S3 / Cloudflare R2 / MinIO Storage Client', () => {
   it('uploads object with SigV4 headers using putObject', async () => {
     let capturedUrl = '';
     let capturedHeaders: Record<string, string> = {};
-    let capturedBody: any = null;
 
     const mockFetch = vi.fn().mockImplementation((url, init) => {
       capturedUrl = String(url);
       capturedHeaders = init?.headers || {};
-      capturedBody = init?.body;
       return Promise.resolve({
         ok: true,
         status: 200,

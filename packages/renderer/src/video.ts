@@ -1,4 +1,4 @@
-import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path'; import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'; import { join } from 'node:path'; import { createHash, randomUUID } from 'node:crypto';
 import type { Composition } from '@ove/schema'; import { layerWindows } from '@ove/timeline'; import { resolveAssetSource, isUrl, cacheDir, touchCacheEntry } from '@ove/assets'; import { extractFrames } from '@ove/ffmpeg';
 // first: the source frame the decoded files start at; count: one past the last source frame available (first + files), so frame
 // indexes mean the same whether the whole source or only the shown part was decoded.

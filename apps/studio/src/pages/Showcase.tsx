@@ -7,10 +7,7 @@ import {
   CheckIcon,
   CopyIcon,
   FilmIcon,
-  PlayIcon,
-  PlusIcon,
   SearchIcon,
-  SparklesIcon,
   WandIcon,
   useUi,
 } from '../ui';

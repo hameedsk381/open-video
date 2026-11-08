@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   adaptCompositionAspect,
   parseAspectRatio,
-  STANDARD_ASPECTS,
-  loadComposition,
-  type Composition
+  loadComposition
 } from '@ove/core';
 
 describe('Responsive Multi-Aspect Ratio Engine', () => {

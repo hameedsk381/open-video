@@ -5,7 +5,6 @@ import { composeNotesKey } from '../composeReport';
 import { PlayerView, type PlayerHandle } from '../Player';
 import { editorPath, go, planPath } from '../router';
 import {
-  AlertCircleIcon,
   ArrowLeftIcon,
   Badge,
   Button,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { productionSchema, type Production } from '@ove/schema';
+import { productionSchema } from '@ove/schema';
 import { compileProduction, productionSummary } from '@ove/core';
 
 // The production manifest is the plan; compile is the contract between the plan and the renderer. These tests are

@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { loadComposition, safeZoneBands, type Composition } from '@ove/core';
 import type { VideoContent } from '@ove/schema';
 import { providerVision, visionProvider, type AiProvider, type ChatMessage } from './providers';

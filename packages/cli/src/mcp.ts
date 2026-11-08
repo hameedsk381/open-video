@@ -3,9 +3,9 @@
 // to create, inspect, validate, review, and render video compositions via stdio JSON-RPC 2.0.
 import readline from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname, basename } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, type ComposeOptions } from '@ove/ai';
-import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, describeError, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, compileProduction, type Composition } from '@ove/core';
+import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, compileProduction } from '@ove/core';
 import { composeSmart, templateChoices } from './templates';
 import { listThemes, listBlocks } from './blocks';
 import { readScript, scriptMarkdown } from './script';
@@ -343,7 +343,7 @@ async function handleToolCall(name: string, args: Record<string, any>) {
       });
 
       const compPath = resolve(folderName, 'composition.json');
-      const files = await writeCompositionProject(folderName, result.composition, { force: true });
+      await writeCompositionProject(folderName, result.composition, { force: true });
 
       // Whether the renderer actually looked at this video changes what the answer means, so say which happened: an
       // unchecked composition is not a checked one, and unresolved review errors never hide behind "Successfully".

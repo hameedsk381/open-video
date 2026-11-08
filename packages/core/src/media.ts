@@ -1,5 +1,5 @@
 // Measures audio and video assets for media-driven timing, and loads caption files into captions layers.
-import { spawn } from 'node:child_process'; import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path'; import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process'; import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'; import { join } from 'node:path'; import { createHash } from 'node:crypto';
 import { loadComposition, parseCaptions, captionLines, dropFillerWords, type Composition, type MediaInfo, type CaptionCue } from '@ove/schema'; import { layerWindows } from '@ove/timeline'; import { resolveAssetSource, isUrl, cacheDir, touchCacheEntry } from '@ove/assets'; import { ffmpegPath, ffprobePath } from '@ove/ffmpeg';
 type Measured = { duration: number; sounds: [number, number][] };
 const run = (cmd: string, args: string[]) => new Promise<string>((ok, fail) => { const child = spawn(cmd, args); let out = ''; child.stdout.on('data', d => out += d); child.stderr.on('data', d => out += d); child.on('error', fail); child.on('close', code => code === 0 ? ok(out) : fail(new Error(`${cmd} failed on ${args[args.indexOf('-i') + 1] ?? args.at(-1)}`))); });

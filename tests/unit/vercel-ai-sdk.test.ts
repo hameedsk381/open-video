@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createProvider, VercelAiProvider, type AiProvider } from '@ove/ai';
+import { createProvider, VercelAiProvider } from '@ove/ai';
 
 describe('VercelAiProvider', () => {
   beforeEach(() => {

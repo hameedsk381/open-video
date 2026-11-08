@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseComposition } from '@ove/schema';
-import { continuityIssues, type ReviewIssue } from '../../packages/core/src/review';
+import { continuityIssues } from '../../packages/core/src/review';
 import type { FrameReport, TextNote } from '@ove/graphics';
 
 // The continuity oracle: text that survives a hard cut should keep its place. Pure function over sampled frame

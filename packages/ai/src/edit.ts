@@ -6,7 +6,7 @@
 // audio, transcribe it, write the project). Like every AI path, nothing here renders: the output is ordinary
 // composition JSON checked and rendered by the same engine as a hand-written video.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import type { Composition } from '@ove/core';
 import { extractAudio, hasAudioStream, probe } from '@ove/ffmpeg';
 import { fillers } from '@ove/schema';
