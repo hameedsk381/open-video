@@ -100,6 +100,7 @@ export const explainerSchema = z.object({
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),
   handle: words(30).default('@yourhandle').describe('The creator handle, shown in the header'),
   voice: words(40).optional().describe('The Edge voice that speaks, such as en-IN-NeerjaNeural or en-US-AriaNeural'),
+  sources: z.array(z.object({ text: z.string().max(1000), source: z.string().max(200), url: z.string().max(500), date: z.string().max(20) })).max(30).default([]).describe('The facts the script was written from, with where each came from and when. They are not drawn; they stay with the script so its numbers can be checked.'),
   scenes: z.array(explainerSceneSchema).min(1).max(24).superRefine((scenes, ctx) => {
     scenes.forEach((scene, i) => { if (scene.kind === 'media' && (scene.src === undefined) === (scene.prompt === undefined)) ctx.addIssue({ code: 'custom', path: [i, 'src'], message: 'A media scene needs exactly one of "src" (a file) or "prompt" (a picture to draw)' }); });
   }),

@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { explainerSchema, type Explainer } from '@ove/schema';
 import { compileExplainer, type ExplainerAudio } from '@ove/core';
-import { createProvider, generateExplainerImages, needsImages, resolveSpeechEngine, type ProviderConfig, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
+import { createProvider, generateExplainerImages, needsImages, researchFacts, resolveSpeechEngine, type ProviderConfig, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
 
@@ -27,11 +27,20 @@ export { wavSeconds };
 /** `mr explainer write "what to explain"`: the model writes the script; compile it next. */
 async function writeCommand(argv: string[]): Promise<void> {
   const brief = argv[2];
-  if (!brief || brief.startsWith('--')) throw new Error('Usage: mr explainer write "what the video should explain" [--scenes 5] [--language English] [--voice <name>] [--media a.mp4,b.jpg] [--images] [--output explainer.json]');
+  if (!brief || brief.startsWith('--')) throw new Error('Usage: mr explainer write "what the video should explain" [--scenes 5] [--language English] [--voice <name>] [--media a.mp4,b.jpg] [--images] [--research] [--output explainer.json]');
   const provider = createProvider({ provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') });
   const scenes = option(argv, '--scenes') === undefined ? undefined : Number(option(argv, '--scenes'));
   if (scenes !== undefined && !(Number.isInteger(scenes) && scenes >= 2 && scenes <= 16)) throw new Error('--scenes must be a whole number from 2 to 16');
-  const { explainer, attempts } = await writeExplainer(provider, brief, { scenes, language: option(argv, '--language'), voice: option(argv, '--voice'), media: option(argv, '--media')?.split(',').map(item => item.trim()).filter(Boolean), images: argv.includes('--images'), onProgress: message => console.log(message) });
+  // --research: look up real facts first (Wikipedia, World Bank figures, exchange rates); the script may then state only those as fact.
+  let facts: Awaited<ReturnType<typeof researchFacts>>['facts'] = [];
+  if (argv.includes('--research')) {
+    console.log('Looking up facts…');
+    const found = await researchFacts(provider, brief);
+    facts = found.facts;
+    console.log(`  ${facts.length} fact${facts.length === 1 ? '' : 's'} found${facts.length ? ` (${[...new Set(facts.map(fact => fact.source.split(':')[0]!.split(',')[0]))].join(', ')})` : ''}`);
+    for (const note of found.notes) console.log(`  ${note}`);
+  }
+  const { explainer, attempts } = await writeExplainer(provider, brief, { facts, scenes, language: option(argv, '--language'), voice: option(argv, '--voice'), media: option(argv, '--media')?.split(',').map(item => item.trim()).filter(Boolean), images: argv.includes('--images'), onProgress: message => console.log(message) });
   const output = resolve(option(argv, '--output') ?? 'explainer.json');
   await writeFile(output, `${JSON.stringify(explainer, null, 2)}\n`);
   console.log(`Wrote ${output} (${explainer.scenes.length} scenes${attempts > 1 ? `, after ${attempts} attempts` : ''})\nNext: mr explainer compile ${relative(process.cwd(), output)}`);

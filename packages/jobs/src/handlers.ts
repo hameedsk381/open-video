@@ -6,7 +6,7 @@ import { dirname, join, relative as relativePath, resolve } from 'node:path';
 import { explainerSchema } from '@ove/schema';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
-  generateExplainerImages, needsImages, readBrand, resolveSpeechEngine, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
+  generateExplainerImages, needsImages, readBrand, researchFacts, resolveSpeechEngine, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
 } from '@ove/ai';
 import { compileExplainer, loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
@@ -176,9 +176,13 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'explainer', run: async progress => {
       let script: unknown = input.script;
       if (script === undefined || script === null) {
-        const written = await writeExplainer(resolveProvider(input), brief!, { scenes, language: optionalText(input.language), voice: optionalText(input.voiceName), images: boolOf(input.images), onProgress: message => progress(message) });
+        const ai = resolveProvider(input);
+        // Real facts first when asked (hosted requests only get this when they ask for it, like the other web lookups).
+        let facts: Awaited<ReturnType<typeof researchFacts>> = { facts: [], notes: [] };
+        if (boolOf(input.research)) { progress('Looking up facts…'); facts = await researchFacts(ai, brief!); }
+        const written = await writeExplainer(ai, brief!, { facts: facts.facts, scenes, language: optionalText(input.language), voice: optionalText(input.voiceName), images: boolOf(input.images), onProgress: message => progress(message) });
         script = written.explainer;
-        if (writeOnly) return { script, attempts: written.attempts };
+        if (writeOnly) return { script, attempts: written.attempts, notes: facts.notes };
       }
       const parsed = explainerSchema.safeParse(script);
       if (!parsed.success) throw new Error(`The script cannot be used:\n${parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n')}`);

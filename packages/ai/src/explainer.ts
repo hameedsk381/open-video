@@ -6,6 +6,7 @@ import { explainerSchema, type Explainer } from '@ove/schema';
 import { synthesizeEdgeSpeech } from './edge-tts';
 import { indicLanguageFor } from './indic-tts/models';
 import { extractJson } from './json';
+import type { Fact } from './facts';
 import type { AiProvider, ChatMessage } from './providers';
 
 export type WriteExplainerOptions = {
@@ -17,6 +18,8 @@ export type WriteExplainerOptions = {
   media?: string[];
   /** The provider can draw pictures: media scenes may then give a prompt to draw instead of a file (at most two). */
   images?: boolean;
+  /** Checked facts with their sources (see researchFacts). Every number and claim the script states as fact must come from these. */
+  facts?: Fact[];
   /** The Edge voice to put in the script, if one is wanted. */
   voice?: string;
   maxAttempts?: number;
@@ -42,12 +45,15 @@ const GUIDE = `Scene kinds (each scene has a "kind", an optional "step" label in
 const imageGuide = '- media (drawn): a picture made by an image model fills a frame on the board. {kind:"media", prompt:"<one clear picture described plainly: subject, setting, style; no words, letters or logos>", title?:"large text", caption?, say}. Use at most two, and only where a picture shows the idea better than a diagram.';
 const mediaGuide = (files: string[]) => `- media: a picture or video of the project fills a frame on the board. {kind:"media", src:"<one of the files below>", title?:"large text", caption?, credit?, say}\nAvailable media files (the only pictures and footage the video has; use each at most once): ${files.join(', ')}`;
 
+const factsBlock = (facts: Fact[]) => `Facts you may use, each with its source and date. State no number, date or claim as fact unless it is here, and name the source in the scene's note (stat) or caption (chart), such as "World Bank, 2025":\n${facts.map((fact, i) => `[${i + 1}] ${fact.text} (${fact.source}${fact.date ? `, ${fact.date}` : ''})`).join('\n')}`;
+
 export function explainerPrompt(brief: string, options: WriteExplainerOptions = {}): ChatMessage[] {
   const scenes = options.scenes ?? 5, language = options.language ?? 'English';
   const system = [
     'You write scripts for short vertical explainer videos: one idea, taught one scene at a time, with a spoken line over each scene.',
     `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
     [GUIDE, ...(options.media?.length ? [mediaGuide(options.media)] : []), ...(options.images ? [imageGuide] : [])].join('\n'),
+    ...(options.facts?.length ? [factsBlock(options.facts)] : []),
     'Rules:',
     ...(options.media?.length || options.images ? [] : ['- Do not use a media scene: this video has no pictures or footage.']),
     `- About ${scenes} scenes. Start with a title and end with a closing. Use a kind only when it shows the idea better than another; use each kind at most twice. Use stat, chart and timeline only for numbers and events you know to be true; never invent figures.`,
@@ -68,7 +74,7 @@ export async function writeExplainer(provider: AiProvider, brief: string, option
     const reply = await provider.chat(messages, { signal: options.signal });
     try {
       const parsed = explainerSchema.safeParse(extractJson(reply));
-      if (parsed.success) return { explainer: options.voice && !parsed.data.voice ? { ...parsed.data, voice: options.voice } : parsed.data, attempts: attempt };
+      if (parsed.success) return { explainer: { ...parsed.data, ...(options.voice && !parsed.data.voice ? { voice: options.voice } : {}), ...(options.facts?.length ? { sources: options.facts } : {}) }, attempts: attempt };
       problems = parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n');
     } catch (error) {
       problems = `- ${(error as Error).message}`;

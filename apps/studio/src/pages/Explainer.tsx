@@ -6,7 +6,7 @@ import { Button, Field, Notice, Page, WandIcon } from '../ui';
 // A topic in, a script out, then a video: the model writes what each scene shows and says, the person edits the words, and the same compiler
 // the command line uses draws the scenes. Nothing here is drawn by the model, so any topic comes out looking like the rest.
 type Scene = { kind: string; say?: string; [key: string]: unknown };
-type Script = { topic: string; series?: string; handle?: string; look?: string; aspect?: string; sketch?: boolean; voice?: string; scenes: Scene[]; [key: string]: unknown };
+type Script = { sources?: { source: string }[]; topic: string; series?: string; handle?: string; look?: string; aspect?: string; sketch?: boolean; voice?: string; scenes: Scene[]; [key: string]: unknown };
 
 const looks = ['navy', 'ink', 'paper', 'forest', 'sunset'];
 const aspects: [string, string][] = [['9:16', 'Vertical 9:16 (reels, shorts)'], ['4:5', 'Portrait 4:5 (feed posts)'], ['1:1', 'Square 1:1'], ['16:9', 'Wide 16:9 (YouTube)']];
@@ -20,6 +20,8 @@ export function Explainer() {
   const [scenes, setScenes] = useState('5');
   const [language, setLanguage] = useState('');
   const [images, setImages] = useState(false);
+  const [research, setResearch] = useState(false);
+  const [notes, setNotes] = useState<string[]>([]);
   const [script, setScript] = useState<Script | null>(null);
   const [raw, setRaw] = useState('');
   const [showRaw, setShowRaw] = useState(false);
@@ -36,8 +38,9 @@ export function Explainer() {
   const write = async () => {
     setBusy('write'); setError(''); setStatus('Writing the script…');
     try {
-      const result = await runJob<{ script: Script }>('/api/explainer', { brief: brief.trim(), writeOnly: true, scenes: Number(scenes), images, ...(language.trim() ? { language: language.trim() } : {}) }, job => setStatus(job.messages.at(-1) ?? 'Writing the script…'));
+      const result = await runJob<{ script: Script; notes?: string[] }>('/api/explainer', { brief: brief.trim(), writeOnly: true, scenes: Number(scenes), images, research, ...(language.trim() ? { language: language.trim() } : {}) }, job => setStatus(job.messages.at(-1) ?? 'Writing the script…'));
       adopt(result.script);
+      setNotes(result.notes ?? []);
     } catch (cause) { setError((cause as Error).message); } finally { setBusy(''); setStatus(''); }
   };
 
@@ -59,6 +62,11 @@ export function Explainer() {
   return (
     <Page title="Explainer" subtitle="Say what to explain. Get a script you can edit, then a finished video with a voice." narrow>
       {error ? <Notice tone="error" title="That did not work">{error}</Notice> : null}
+      {script && (script.sources?.length || notes.length) ? (
+        <Notice tone="neutral" title={script.sources?.length ? `Written from ${script.sources.length} looked-up fact${script.sources.length === 1 ? '' : 's'}` : 'No facts were looked up'}>
+          {script.sources?.length ? `Sources: ${[...new Set(script.sources.map(item => item.source))].join('; ')}. They stay with the script (Edit as JSON).` : null}{notes.length ? ` ${notes.join(' ')}` : ''}
+        </Notice>
+      ) : null}
       {!script ? (
         <div className="card" style={{ padding: 20, display: 'grid', gap: 14 }}>
           <Field label="What should the video explain?" hint="A topic, a question or a few notes. One idea works best.">
@@ -67,6 +75,7 @@ export function Explainer() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Field label="Scenes"><select className="input" value={scenes} onChange={event => setScenes(event.target.value)}>{[3, 4, 5, 6, 8, 10].map(n => <option key={n} value={n}>{n}</option>)}</select></Field>
             <Field label="Language" hint="Optional"><input className="input" value={language} onChange={event => setLanguage(event.target.value)} placeholder="English" /></Field>
+            <Field label="Facts" hint="Wikipedia, World Bank, exchange rates"><label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={research} onChange={event => setResearch(event.target.checked)} />Look up real facts first</label></Field>
             <Field label="Pictures" hint="Needs a model that can draw"><label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={images} onChange={event => setImages(event.target.checked)} />Let the script ask for drawn pictures</label></Field>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
