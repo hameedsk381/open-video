@@ -333,6 +333,9 @@ importers:
       esbuild:
         specifier: '>=0.20'
         version: 0.28.2
+      onnxruntime-node:
+        specifier: '>=1.20'
+        version: 1.31.1
       pg:
         specifier: ^8.0.0
         version: 8.23.1
@@ -3518,8 +3521,7 @@ snapshots:
 
   abbrev@4.0.0: {}
 
-  adm-zip@0.6.1:
-    optional: true
+  adm-zip@0.6.1: {}
 
   agent-base@7.1.4: {}
 
@@ -3785,14 +3787,12 @@ snapshots:
       es-define-property: 1.0.1
       es-errors: 1.3.0
       gopd: 1.2.0
-    optional: true
 
   define-properties@1.2.1:
     dependencies:
       define-data-property: 1.1.4
       has-property-descriptors: 1.0.2
       object-keys: 1.1.1
-    optional: true
 
   delayed-stream@1.0.0: {}
 
@@ -3962,8 +3962,7 @@ snapshots:
 
   escalade@3.2.0: {}
 
-  escape-string-regexp@4.0.0:
-    optional: true
+  escape-string-regexp@4.0.0: {}
 
   estree-walker@3.0.3:
     dependencies:
@@ -4090,13 +4089,11 @@ snapshots:
       matcher: 4.0.0
       semver: 7.8.5
       serialize-error: 8.1.0
-    optional: true
 
   globalthis@1.0.4:
     dependencies:
       define-properties: 1.2.1
       gopd: 1.2.0
-    optional: true
 
   gopd@1.2.0: {}
 
@@ -4123,7 +4120,6 @@ snapshots:
   has-property-descriptors@1.0.2:
     dependencies:
       es-define-property: 1.0.1
-    optional: true
 
   has-symbols@1.1.0: {}
 
@@ -4313,7 +4309,6 @@ snapshots:
   matcher@4.0.0:
     dependencies:
       escape-string-regexp: 4.0.0
-    optional: true
 
   math-intrinsics@1.1.0: {}
 
@@ -4417,8 +4412,7 @@ snapshots:
 
   normalize-url@6.1.0: {}
 
-  object-keys@1.1.1:
-    optional: true
+  object-keys@1.1.1: {}
 
   obug@2.2.1: {}
 
@@ -4426,15 +4420,13 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  onnxruntime-common@1.31.1:
-    optional: true
+  onnxruntime-common@1.31.1: {}
 
   onnxruntime-node@1.31.1:
     dependencies:
       adm-zip: 0.6.1
       global-agent: 4.1.7
       onnxruntime-common: 1.31.1
-    optional: true
 
   p-cancelable@2.1.1: {}
 
@@ -4723,7 +4715,6 @@ snapshots:
   serialize-error@8.1.0:
     dependencies:
       type-fest: 0.20.2
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:
@@ -4843,8 +4834,7 @@ snapshots:
   type-fest@0.13.1:
     optional: true
 
-  type-fest@0.20.2:
-    optional: true
+  type-fest@0.20.2: {}
 
   typescript@5.9.3: {}
 
