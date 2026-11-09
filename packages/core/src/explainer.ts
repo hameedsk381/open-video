@@ -18,8 +18,8 @@ const GOLD = '{{accent}}', MINT = '{{accent2}}', RED = '#ff5d6c', ORANGE = '#e8a
 const TONES = { gold: GOLD, mint: MINT, red: RED, muted: '{{muted}}' } as const;
 
 /* ---- the design in force while one script compiles ---- */
-type Active = { motion: 'rise' | 'drop' | 'blur' | 'fade'; cornerScale: number; weightCap: number; fonts: Record<string, string> };
-const NEUTRAL: Active = { motion: 'rise', cornerScale: 1, weightCap: 900, fonts: { '{{fontDisplay}}': 'Archivo', '{{fontBody}}': 'Inter' } };
+type Active = { motion: 'rise' | 'drop' | 'blur' | 'fade'; cornerScale: number; weightCap: number; fonts: Record<string, string>; layout: 'card' | 'editorial' };
+const NEUTRAL: Active = { motion: 'rise', cornerScale: 1, weightCap: 900, fonts: { '{{fontDisplay}}': 'Archivo', '{{fontBody}}': 'Inter' }, layout: 'card' };
 let active: Active = NEUTRAL;
 /** A corner radius in this design: the cards' own numbers are for the default soft corners. */
 const R = (radius: number) => Math.round(radius * active.cornerScale);
@@ -325,7 +325,63 @@ const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...tag('cta', s.cta, W / 2, 1450, MINT, at(frames, 0.6), 640),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, stat, chart, timeline, pile, media, phone, hex, closing };
+/* ---- the editorial layout: flush left, no boxes, hairline rules and large numerals (title, stat, steps and closing) ---- */
+const LEFT = 90;
+const captionLeft = (id: string, content: string | undefined, y: number, at: number): Layer[] => (content ? [text(id, content, LEFT, y, { size: 50, weight: 700, lh: 1.25, maxWidth: 900, anims: [rise(y, at, 30, 22)] })] : []);
+
+const titleEditorial: Kind<'title'> = (s, i) => ({ min: 165, layers: () => {
+  const hi = s.highlight !== undefined && s.highlight < s.lines.length ? s.highlight : s.lines.length === 3 ? 1 : 0;
+  let y = s.brand ? 700 : 560;
+  const placed = s.lines.map((line, k) => { const size = k === hi ? 176 : 92, at0 = y; y += Math.round(size * 1.08) + 10; return { line, k, size, y: at0 }; });
+  const top = placed[0]!.y, bottom = y;
+  return [...kicker(i, s.step),
+    ...(s.brand ? [text('brand', s.brand, LEFT - 6, 330, { font: '{{fontDisplay}}', weight: 900, size: 230, color: '{{text}}', opacity: 0.9, ls: -8, maxWidth: 940, maxLines: 1, minSize: 110, anims: [rise(330, 4, 50, 26)] })] : []),
+    rect('title-bar', 56, top, 12, bottom - top, { fill: GOLD, anims: [grow('height', bottom - top, 10, 28)] }),
+    ...(s.chip ? [label('chip', s.chip, 100, top - 70, { size: 24, ls: 6, color: MINT, anims: [fade(16, 12)] })] : []),
+    ...placed.map(({ line, k, size, y: at0 }) => (k === hi
+      ? text(`line-${k}`, line, 100, at0, { font: '{{fontDisplay}}', weight: 900, size, color: GOLD, maxWidth: 880, maxLines: 1, minSize: 80, anims: [rise(at0, 46 + k * 8, 30, 22)] })
+      : text(`line-${k}`, line, 100, at0, { size, weight: 800, maxWidth: 880, maxLines: 1, minSize: 50, anims: [rise(at0, 46 + k * 8, 30, 20)] }))),
+    rect('title-rule', 100, bottom + 36, 1, 10, { fill: MINT, radius: 5, anims: [grow('width', 240, 56, 26)] }),
+    sfx('whoosh', 0, 0.25), sfx('thump', 36, 0.35), sfx('pop', 58, 0.25)];
+} });
+
+const statEditorial: Kind<'stat'> = (s, i) => ({ min: 150, layers: () => [
+  ...kicker(i, s.step),
+  rect('stat-rule', LEFT, 400, 1, 12, { fill: TONES[s.tone], radius: 6, anims: [grow('width', 170, 4, 24)] }),
+  text('stat-value', s.value, LEFT - 6, 450, { font: '{{fontDisplay}}', weight: 900, size: 420, color: TONES[s.tone], maxWidth: 930, maxLines: 1, minSize: 140, ls: -14, anims: [rise(450, 12, 60, 28)] }),
+  rect('stat-hair', LEFT, 990, 1, 3, { fill: '{{muted}}', opacity: 0.5, anims: [grow('width', 900, 30, 26)] }),
+  text('stat-label', s.label, LEFT, 1040, { size: 70, weight: 800, maxWidth: 900, lh: 1.15, maxLines: 3, anims: [rise(1040, 34, 30, 22)] }),
+  ...(s.note ? [text('stat-note', s.note, LEFT, 1330, { size: 40, weight: 500, color: '{{muted}}', maxWidth: 900, lh: 1.25, anims: [fade(58, 14)] })] : []),
+  sfx('whoosh', 0, 0.2), sfx('thump', 18, 0.35)] });
+
+const stepsEditorial: Kind<'steps'> = (s, i) => ({ min: 90 + s.items.length * 70, layers: frames => {
+  const n = s.items.length, first = at(frames, 0.1), span = at(frames, 0.62) / n, pitch = 250;
+  return [...kicker(i, s.step), ...s.items.flatMap((item, k) => {
+    const start = first + Math.round(k * span), next = k + 1 < n ? first + Math.round((k + 1) * span) : undefined, y = 320 + k * pitch, ty = y + (item.detail ? 36 : 64);
+    return [
+      rect(`step-line-${k}`, LEFT, y + 206, 1, 3, { fill: '{{muted}}', opacity: 0.4, anims: [grow('width', 900, start, 24)] }),
+      rect(`step-on-${k}`, 56, y + 6, 12, 190, { fill: GOLD, opacity: 0, anims: [next === undefined ? anim('opacity', [start, 0], [start + 12, 1]) : anim('opacity', [start, 0], [start + 12, 1], [next, 1], [next + 14, 0])] }),
+      text(`step-num-${k}`, String(k + 1).padStart(2, '0'), LEFT - 6, y + 22, { font: '{{fontDisplay}}', weight: 900, size: 124, color: GOLD, opacity: 0.95, anims: [rise(y + 22, start, 24, 18)] }),
+      text(`step-title-${k}`, item.title, 300, ty, { font: '{{fontDisplay}}', weight: 800, size: 56, maxWidth: 690, maxLines: 1, minSize: 34, anims: [rise(ty, start + 6, 20, 16)] }),
+      ...(item.detail ? [text(`step-detail-${k}`, item.detail, 300, y + 112, { size: 34, color: '{{muted}}', maxWidth: 690, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
+      sfx('pop', start + 4, 0.25)];
+  }), ...captionLeft('caption', s.caption, 320 + n * pitch + 20, at(frames, 0.78)), sfx('whoosh', 0, 0.2)];
+} });
+
+const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
+  ...kicker(i, s.step),
+  rect('close-rule', LEFT, 330, 1, 12, { fill: GOLD, radius: 6, anims: [grow('width', 170, 4, 24)] }),
+  text('close-title', s.title, LEFT - 6, 380, { font: '{{fontDisplay}}', weight: 900, size: 150, color: GOLD, maxWidth: 920, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(380, 6, 40, 26)] }),
+  ...s.points.flatMap((point, k) => { const y = 1000 + k * 150, start = at(frames, 0.3) + k * 20; return [
+    label(`close-mark-${k}`, '→', LEFT, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
+    text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
+  text('cta-url', s.cta, LEFT - 4, 1430, { font: '{{fontDisplay}}', weight: 900, size: 84, color: MINT, maxWidth: 900, maxLines: 1, minSize: 40, anims: [rise(1430, at(frames, 0.6), 30, 22)] }),
+  rect('cta-bar', LEFT, 1536, 1, 10, { fill: GOLD, radius: 5, anims: [grow('width', 420, at(frames, 0.6) + 8, 26)] }),
+  sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
+
+/** The scenes that have an editorial layout use it when the design asks for it; every other scene is drawn the same way in every design. */
+const pick = <S extends ExplainerScene['kind']>(card: Kind<S>, editorial: Kind<S>): Kind<S> => (scene, i) => (active.layout === 'editorial' ? editorial(scene, i) : card(scene, i));
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, closing: pick(closing, closingEditorial) };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -349,7 +405,7 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
   const def = explainerLookDefs[spec.look];
   const chosen = { ...def.design, ...Object.fromEntries(Object.entries(spec.design ?? {}).filter(([, value]) => value !== undefined)) } as typeof def.design;
   const palette: Record<string, string | number> = { ...def.colors, ...spec.colors, fontDisplay: chosen.fontDisplay, fontBody: chosen.fontBody, texture: chosen.texture, transition: chosen.transition };
-  active = { motion: chosen.motion, cornerScale: explainerCornerScale[chosen.corners], weightCap: explainerWeightValue[chosen.weight], fonts: { '{{fontDisplay}}': chosen.fontDisplay, '{{fontBody}}': chosen.fontBody } };
+  active = { motion: chosen.motion, cornerScale: explainerCornerScale[chosen.corners], weightCap: explainerWeightValue[chosen.weight], fonts: { '{{fontDisplay}}': chosen.fontDisplay, '{{fontBody}}': chosen.fontBody }, layout: chosen.layout };
   try { return compileWith(spec, options, palette); } finally { active = NEUTRAL; }
 }
 

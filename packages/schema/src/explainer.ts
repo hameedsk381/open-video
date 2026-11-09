@@ -14,7 +14,7 @@ const common = {
 };
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour is a 6-digit hex such as #0b1c3f');
-import { explainerBodyFonts, explainerCorners, explainerDisplayFonts, explainerLookDefs, explainerLooks, explainerMotions, explainerTextures, explainerTransitions, explainerWeights } from './explainer-looks';
+import { explainerBodyFonts, explainerCorners, explainerDisplayFonts, explainerLayouts, explainerLookDefs, explainerLooks, explainerMotions, explainerTextures, explainerTransitions, explainerWeights } from './explainer-looks';
 /** The looks an explainer can wear: each is a whole design (colours, type, motion, texture, corners, weight); see explainer-looks. */
 export { explainerLooks };
 
@@ -101,6 +101,7 @@ export const explainerSchema = z.object({
     fontDisplay: z.enum(explainerDisplayFonts).optional().describe('Headline font'), fontBody: z.enum(explainerBodyFonts).optional().describe('Body font'),
     motion: z.enum(explainerMotions).optional().describe('How text arrives: rise, drop (from above), blur (comes into focus) or fade'), transition: z.enum(explainerTransitions).optional().describe('How scenes change'),
     texture: z.enum(explainerTextures).optional().describe('The pattern behind everything'), corners: z.enum(explainerCorners).optional().describe('How round the cards are'), weight: z.enum(explainerWeights).optional().describe('How heavy the headlines are'),
+    layout: z.enum(explainerLayouts).optional().describe('card: centred, in boxed cards. editorial: flush left, no boxes, hairline rules, large numerals (title, stat, steps and closing scenes)'),
   }).optional().describe('Changes parts of the look: any field left out keeps the look\'s own'),
   colors: z.object({ bg: hex, surface: hex, text: hex, muted: hex, accent: hex, accent2: hex }).partial().optional().describe('Colours that replace the look\'s own, by name'),
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),

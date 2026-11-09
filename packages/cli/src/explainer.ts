@@ -58,9 +58,9 @@ function looksCommand(argv: string[]): void {
   if (argv.includes('--json')) { console.log(JSON.stringify(explainerLookDefs, null, 2)); return; }
   for (const look of explainerLooks) {
     const { note, colors, design } = explainerLookDefs[look];
-    console.log(`${look.padEnd(10)} ${note}\n           ${colors.bg} on ${colors.accent}/${colors.accent2} · ${design.fontDisplay} + ${design.fontBody} · ${design.motion}, ${design.transition}, ${design.texture} texture, ${design.corners} corners, ${design.weight} weight`);
+    console.log(`${look.padEnd(10)} ${note}\n           ${colors.bg} on ${colors.accent}/${colors.accent2} · ${design.fontDisplay} + ${design.fontBody} · ${design.motion}, ${design.transition}, ${design.texture} texture, ${design.corners} corners, ${design.weight} weight, ${design.layout} layout`);
   }
-  console.log('\nPick one with "look" in the script; change parts of it with "design" ({ fontDisplay, fontBody, motion, transition, texture, corners, weight }) and "colors".');
+  console.log('\nPick one with "look" in the script; change parts of it with "design" ({ fontDisplay, fontBody, motion, transition, texture, corners, weight, layout }) and "colors".');
 }
 
 async function exampleCommand(argv: string[]): Promise<void> {

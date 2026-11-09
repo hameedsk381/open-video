@@ -60,6 +60,16 @@ describe('how different the looks are', () => {
       else expect(changed.png.equals(base.png), name).toBe(false);
     }
   }, 300_000);
+
+  it('draws the steps and closing scenes differently in the editorial layout, with nothing off the canvas', async () => {
+    const only = (scene: Record<string, unknown>, layout: string, frame: number) => renderStill(loadComposition(compileExplainer(explainerSchema.parse({ topic: 'CACHES', series: 'HOW IT WORKS', handle: '@motionrender', look: 'newsprint', design: { layout }, scenes: [scene] })).composition), { frame, baseDir: process.cwd() }).then(picture);
+    const steps = { kind: 'steps', items: [{ title: 'Request', detail: 'The app asks for a key' }, { title: 'Lookup', detail: 'Memory is checked first' }, { title: 'Serve' }], caption: 'Three steps.', say: 'x' };
+    const closing = { kind: 'closing', title: 'Cache what you reread', points: ['Measure hit rate', 'Set a sane expiry'], cta: 'motionrender.io', say: 'x' };
+    for (const [name, scene, frame] of [['steps', steps, 160], ['closing', closing, 120]] as const) {
+      const card = await only(scene, 'card', frame), editorial = await only(scene, 'editorial', frame);
+      expect(shapeDistance(card, editorial), `${name}: card and editorial layouts`).toBeGreaterThan(MIN_SHAPE);
+    }
+  }, 300_000);
 });
 
 // Calibrated on the thirteen looks as shipped. Overall: the closest pair (navy and forest, which differ only in palette) is 0.078 apart. Shape alone:

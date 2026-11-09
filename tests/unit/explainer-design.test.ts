@@ -89,6 +89,25 @@ describe('a script changing the design', () => {
   it('does not leak into the next video', () => {
     make({ look: 'terminal', design: { motion: 'fade', corners: 'sharp' } });
     expect(allLayers(make()).find(layer => layer.id === 'stat-card').radius).toBe(22);
+    expect(allLayers(make()).some(layer => layer.id === 'stat-hair')).toBe(false);
+  });
+
+  it('lays title, stat, steps and closing out flush left, without cards, when the design is editorial', () => {
+    const all = [...scenes, { kind: 'steps', items: [{ title: 'A' }, { title: 'B' }], say: 'x' }, { kind: 'closing', title: 'Done', points: ['one'], cta: 'x.io', say: 'x' }];
+    const ids = (design: Record<string, unknown>) => allLayers(make({ scenes: all, design })).map(layer => layer.id as string);
+    const card = ids({ layout: 'card' }), editorial = ids({ layout: 'editorial' });
+    expect(card).toContain('stat-card');
+    expect(editorial).not.toContain('stat-card');
+    expect(editorial).toEqual(expect.arrayContaining(['stat-hair', 'title-bar', 'step-line-0', 'close-rule']));
+    expect(loadComposition(make({ scenes: all, design: { layout: 'editorial' } }))).toBeTruthy();
+    expect(explainerSchema.safeParse({ topic: 'T', design: { layout: 'columns' }, scenes }).success).toBe(false);
+  });
+
+  it('gives the print-like looks the editorial layout and leaves the others as cards', () => {
+    const layouts = Object.fromEntries(explainerLooks.map(look => [look, explainerLookDefs[look].design.layout]));
+    expect(layouts).toMatchObject({ navy: 'card', ink: 'card', newsprint: 'editorial', sage: 'editorial', terminal: 'editorial', slate: 'editorial' });
+    expect(allLayers(make({ look: 'newsprint' })).some(layer => layer.id === 'stat-card')).toBe(false);
+    expect(allLayers(make({ look: 'newsprint', design: { layout: 'card' } })).some(layer => layer.id === 'stat-card')).toBe(true);
   });
 });
 
