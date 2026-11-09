@@ -1,0 +1,122 @@
+// Making a folder ready for an agent: instructions it reads on its own (AGENTS.md for Codex and most agents, CLAUDE.md for Claude Code), the skills,
+// and the MCP server configured for each client. `mr init` uses it for a new project and `mr setup` for an existing folder. Nothing here touches a
+// user-level config file: those are printed by `mr mcp --config <client>` for the person to apply.
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { skillsRoot } from './init';
+
+export const MCP_COMMAND = { command: 'npx', args: ['-y', 'motionrender', 'mcp'] };
+export type McpClient = 'claude-code' | 'claude-desktop' | 'codex' | 'cursor';
+export const mcpClients: McpClient[] = ['claude-code', 'claude-desktop', 'codex', 'cursor'];
+
+const START = '<!-- motionrender:start -->', END = '<!-- motionrender:end -->';
+
+/** The instructions an agent reads before making a video: what to run, in what order, and how to know it is right. */
+export const agentInstructions = (): string => `${START}
+# MotionRender: making videos
+
+MotionRender (\`motionrender\`, short \`mr\`) turns JSON into frame-exact video. You write the JSON; the engine draws, times, checks and renders it. **You are the model: nothing here needs an AI key.** The \`mr ai\` commands are optional.
+
+## Pick the route
+1. **Explainer** (a vertical video that teaches one idea, scene by scene, with spoken lines): write an \`explainer.json\`. Run \`mr explainer kinds\` for the scene kinds and an example of each, and \`mr schema --explainer\` for every field. This is the fastest route to something good.
+2. **Composition** (anything else: reels, promos, product videos, kinetic type): write a \`composition.json\` against \`mr schema\`. Start from \`mr init <dir> --template <id>\` (\`mr blocks\` lists ready-made scenes) rather than from nothing.
+3. **Code** (logic JSON cannot say: generated layouts, data-driven scenes): see the \`ove-code-video\` and \`ove-react-video\` skills.
+
+## The loop (do not skip the looking)
+1. Write the script or composition.
+2. \`mr explainer validate explainer.json\` or \`mr validate composition.json\`: fix what it lists, all at once.
+3. \`mr explainer compile explainer.json\` (add \`--no-voice\` for a quick silent build) to get \`composition.json\`.
+4. \`mr still composition.json --frame 90 --output still.png\` and **open the picture**. Check a few frames, not one.
+5. \`mr review composition.json --output review.png\`: automated design, type, safe-zone and loudness checks. Fix errors; read warnings.
+6. \`mr render composition.json --output out.mp4\`.
+Never say a video is done before you have looked at a still of it.
+
+## Facts, pictures, voices
+- Numbers must be real. \`mr explainer write "..." --research\` looks them up (Wikipedia, World Bank, exchange rates), or call the \`motionrender_facts\` tool. Put the source in the scene's note or caption.
+- A media scene takes a file from the project (\`assets/...\`) or a \`prompt\` (needs an image model: \`--images\`). Stock photos: the studio's Media tab.
+- Voices: Edge is free and online; \`--speech-engine indic\` speaks Hindi, Bengali, Tamil and eight more on this machine (needs \`npm i onnxruntime-node\`; the first line downloads about 88 MB, CC-BY-4.0, credit the model author).
+
+## Tools (MCP)
+The same things are available as MCP tools: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\`, \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.
+
+## Good to know
+- 9:16 is the default. Keep text out of the top 8%, bottom 18% and right 11% (platform buttons cover them); \`mr review\` flags it.
+- One idea per scene, a spoken line per scene, five to eight scenes. Scenes last as long as their line.
+- Code layers (\`code\`, \`react\`, \`p5\`) run JavaScript while rendering and need \`--allow-code\`, for files you trust. \`model\` (3D .glb), \`physics\`, \`sketch\` and \`shader\` do not.
+- First render on a machine: \`mr doctor\` checks Node 22+, FFmpeg and the browser; \`mr browser install\` fetches Chromium.
+- Skills with the detail are in \`.claude/skills\` and \`.agent/skills\` (start with \`ove\`, then \`ove-explainer\`).
+${END}
+`;
+
+const claudeInstructions = (): string => `${START}
+# MotionRender
+
+@AGENTS.md
+
+For Claude Code: the MotionRender MCP server is configured in \`.mcp.json\` (approve it when asked), and the skills are in \`.claude/skills\`.
+${END}
+`;
+
+/** Writes the block into a file, replacing an earlier MotionRender block and leaving the rest of the file alone. */
+async function putBlock(file: string, block: string, force: boolean): Promise<'created' | 'updated' | 'kept'> {
+  if (!existsSync(file)) { await mkdir(dirname(file), { recursive: true }); await writeFile(file, block); return 'created'; }
+  const current = await readFile(file, 'utf8'), from = current.indexOf(START), to = current.indexOf(END);
+  if (from >= 0 && to > from) { await writeFile(file, current.slice(0, from) + block.trimEnd() + current.slice(to + END.length)); return 'updated'; }
+  if (current.includes('MotionRender') && !force) return 'kept';
+  await writeFile(file, `${current.trimEnd()}\n\n${block}`);
+  return 'updated';
+}
+
+/** Adds the MotionRender server to a {"mcpServers": {...}} file (.mcp.json, .cursor/mcp.json), keeping every other server. */
+async function putMcpJson(file: string): Promise<'created' | 'updated'> {
+  let data: { mcpServers?: Record<string, unknown> } = {}, existed = false;
+  if (existsSync(file)) { existed = true; try { data = JSON.parse(await readFile(file, 'utf8')); } catch { throw new Error(`${file} is not valid JSON; fix it or remove it, then run setup again`); } }
+  data.mcpServers = { ...data.mcpServers, motionrender: MCP_COMMAND };
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, JSON.stringify(data, null, 2) + '\n');
+  return existed ? 'updated' : 'created';
+}
+
+const CODEX_BLOCK = `[mcp_servers.motionrender]\ncommand = "npx"\nargs = ["-y", "motionrender", "mcp"]\n`;
+
+async function putCodexToml(file: string): Promise<'created' | 'updated' | 'kept'> {
+  if (existsSync(file)) {
+    const current = await readFile(file, 'utf8');
+    if (current.includes('[mcp_servers.motionrender]')) return 'kept';
+    await writeFile(file, `${current.trimEnd()}\n\n${CODEX_BLOCK}`);
+    return 'updated';
+  }
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, CODEX_BLOCK);
+  return 'created';
+}
+
+export type SetupOptions = { force?: boolean; skills?: boolean };
+
+/** Makes a folder ready for agents. Returns what was written, one line each. */
+export async function setupAgents(dir: string, options: SetupOptions = {}): Promise<string[]> {
+  const out: string[] = [], note = (file: string, what: string) => out.push(`${what.padEnd(8)} ${relative(dir, file) || file}`);
+  const agents = join(dir, 'AGENTS.md'), claude = join(dir, 'CLAUDE.md');
+  note(agents, await putBlock(agents, agentInstructions(), options.force === true));
+  note(claude, await putBlock(claude, claudeInstructions(), options.force === true));
+  note(join(dir, '.mcp.json'), await putMcpJson(join(dir, '.mcp.json')));
+  note(join(dir, '.cursor', 'mcp.json'), await putMcpJson(join(dir, '.cursor', 'mcp.json')));
+  note(join(dir, '.codex', 'config.toml'), await putCodexToml(join(dir, '.codex', 'config.toml')));
+  if (options.skills !== false) {
+    await cp(skillsRoot, join(dir, '.claude', 'skills'), { recursive: true, force: true });
+    await cp(skillsRoot, join(dir, '.agent', 'skills'), { recursive: true, force: true });
+    out.push('written  .claude/skills and .agent/skills');
+  }
+  return out;
+}
+
+/** The MCP configuration for one client, as text to apply (user-level files are never edited for you). */
+export function mcpConfig(client: McpClient): string {
+  switch (client) {
+    case 'claude-code': return `# Claude Code (this project, shared through .mcp.json)\nclaude mcp add --scope project motionrender -- npx -y motionrender mcp\n# or just for you:\nclaude mcp add motionrender -- npx -y motionrender mcp`;
+    case 'claude-desktop': return `# Claude Desktop: add to claude_desktop_config.json\n# (Windows: %APPDATA%\\Claude\\claude_desktop_config.json, macOS: ~/Library/Application Support/Claude/claude_desktop_config.json)\n${JSON.stringify({ mcpServers: { motionrender: MCP_COMMAND } }, null, 2)}`;
+    case 'codex': return `# Codex: one command\ncodex mcp add motionrender -- npx -y motionrender mcp\n# or add to ~/.codex/config.toml (or .codex/config.toml in a trusted project)\n${CODEX_BLOCK.trimEnd()}`;
+    case 'cursor': return `# Cursor: add to .cursor/mcp.json (this project) or ~/.cursor/mcp.json\n${JSON.stringify({ mcpServers: { motionrender: MCP_COMMAND } }, null, 2)}`;
+  }
+}

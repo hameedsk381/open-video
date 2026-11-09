@@ -11,6 +11,7 @@ import { listThemes, listBlocks } from './blocks';
 import { readScript, scriptMarkdown } from './script';
 import { readProduction, summaryText } from './production';
 import { assetNoteLines, collectAssetNotes } from './asset-notes';
+import { AGENT_TOOLS, handleAgentTool, listResources, readResource } from './mcp-agent-tools';
 
 const TOOLS = [
   {
@@ -256,7 +257,8 @@ export async function runMcp(_argv: string[]) {
           result: {
             protocolVersion: '2024-11-05',
             capabilities: {
-              tools: {}
+              tools: {},
+              resources: {}
             },
             serverInfo: {
               name: 'motionrender',
@@ -270,8 +272,12 @@ export async function runMcp(_argv: string[]) {
         send({
           jsonrpc: '2.0',
           id,
-          result: { tools: TOOLS }
+          result: { tools: [...TOOLS, ...AGENT_TOOLS] }
         });
+      } else if (method === 'resources/list') {
+        send({ jsonrpc: '2.0', id, result: { resources: await listResources() } });
+      } else if (method === 'resources/read') {
+        send({ jsonrpc: '2.0', id, result: { contents: [await readResource(String(params?.uri ?? ''))] } });
       } else if (method === 'tools/call') {
         const toolName = params?.name;
         const args = params?.arguments ?? {};
@@ -302,6 +308,8 @@ export async function runMcp(_argv: string[]) {
 }
 
 async function handleToolCall(name: string, args: Record<string, any>) {
+  const agentTool = await handleAgentTool(name, args);
+  if (agentTool) return agentTool;
   switch (name) {
     case 'motionrender_create_video': {
       const prompt = String(args.prompt || '').trim();

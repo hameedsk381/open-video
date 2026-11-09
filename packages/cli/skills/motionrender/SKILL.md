@@ -5,7 +5,7 @@ description: Create and edit videos with MotionRender (mr/motionrender) by writi
 
 # Making videos with MotionRender
 
-This is the entry-point skill for OVE: start here, choose the route below, and load the short task guide that matches the request — `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Come back here for field details.
+This is the entry-point skill for OVE: start here, choose the route below, and load the short task guide that matches the request — `ove-explainer` (a vertical explainer video written as scenes and spoken lines: the fastest route for anything that teaches one idea, and it needs no AI key), `ove-react-video` (high-end React videos with spring physics, glassmorphism and kinetic typography), `ove-code-video` (video written as code, code layers), `ove-make-reel` (social video from blocks), `ove-voiceover-captions`, `ove-batch-videos` and `ove-ai-compose` (AI drafts, refine, history). Come back here for field details.
 
 An OVE video is one JSON file, `composition.json`. You never write rendering code: you edit data, check it, look at frames, and render. `composition.schema.json` next to it is the authoritative JSON Schema; read it when unsure about a field.
 

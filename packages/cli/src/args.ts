@@ -6,7 +6,7 @@ const variables = ['--var', '--vars'];
 const renderValues = ['--output', '--format', '--codec', '--frames', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--workers', '--chunk-size', '--token', '--batch', '--aspect'];
 export const commandSpecs: Record<string, Spec> = {
   init: { values: ['--template'], flags: ['--force', '--no-skill'], positionals: 1 },
-  schema: { values: ['--output'] },
+  schema: { values: ['--output'], flags: ['--explainer'] },
   doctor: {},
   cache: { values: ['--older-than'], positionals: 1 },
   browser: { positionals: 1 },
@@ -19,7 +19,8 @@ export const commandSpecs: Record<string, Spec> = {
   theme: { flags: ['--json'], positionals: 2 },
   figma: { values: ['--token', '--out', '--output-comp', '--fps', '--duration'], positionals: 1 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
-  mcp: {},
+  mcp: { values: ['--config'] },
+  setup: { flags: ['--force', '--no-skills'], positionals: 1 },
   serve: {},
   'job-worker': {},
   dev: { values: ['--port', '--allow-host', '--aspect', ...variables], flags: ['--allow-code'], positionals: 1 },
@@ -28,7 +29,7 @@ export const commandSpecs: Record<string, Spec> = {
   captions: { values: ['--output', ...variables], positionals: 1 },
   script: { values: ['--output', '--set'], flags: ['--json'], positionals: 1 },
   production: { values: ['--output'], flags: ['--json'], positionals: 2 },
-  explainer: { values: ['--output', '--voice', '--provider', '--model', '--base-url', '--scenes', '--language', '--media', '--speech-engine'], flags: ['--no-voice', '--images', '--research'], positionals: 2 },
+  explainer: { values: ['--output', '--voice', '--provider', '--model', '--base-url', '--scenes', '--language', '--media', '--speech-engine'], flags: ['--no-voice', '--images', '--research', '--json'], positionals: 2 },
   still: { values: ['--frame', '--output', '--aspect', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', '--aspect', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },

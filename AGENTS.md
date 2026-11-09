@@ -1,6 +1,6 @@
 # MotionRender for AI Agents: Claude, Codex, Cursor & MCP
 
-MotionRender (`motionrender`, `mr`) is designed from the ground up for AI agents and coding assistants. Videos are defined as structured, frame-deterministic JSON compositions (`composition.json`), allowing any language model to author, modify, inspect, and render broadcast-grade motion graphics without writing complex rendering scripts.
+MotionRender (`motionrender`, `mr`) is designed from the ground up for AI agents and coding assistants. **The agent is the model: nothing needs an AI key.** You read the schema, write the JSON (a `composition.json`, or an `explainer.json` for a video that teaches one idea), and the engine validates, draws, checks and renders it. Videos are defined as structured, frame-deterministic JSON compositions (`composition.json`), allowing any language model to author, modify, inspect, and render broadcast-grade motion graphics without writing complex rendering scripts.
 
 ---
 
@@ -31,10 +31,29 @@ Add to your `claude_desktop_config.json` (`%APPDATA%\Claude\claude_desktop_confi
 ```
 
 #### Claude Code CLI
-Add directly with:
+Add directly with (the `--` keeps `-y` for npx):
 ```bash
-claude mcp add motionrender npx -y motionrender mcp
+claude mcp add motionrender -- npx -y motionrender mcp
 ```
+Or for the whole project: `claude mcp add --scope project motionrender -- npx -y motionrender mcp` (writes `.mcp.json`).
+
+#### OpenAI Codex
+```bash
+codex mcp add motionrender -- npx -y motionrender mcp
+```
+Or add to `~/.codex/config.toml` (or `.codex/config.toml` in a trusted project):
+```toml
+[mcp_servers.motionrender]
+command = "npx"
+args = ["-y", "motionrender", "mcp"]
+```
+
+#### Print any of these, or set a folder up in one step
+```bash
+npx -y motionrender mcp --config all      # claude-code | claude-desktop | codex | cursor | all
+npx -y motionrender setup .               # AGENTS.md, CLAUDE.md, .mcp.json, .cursor/mcp.json, .codex/config.toml and the skills
+```
+`setup` keeps whatever is already in those files: it adds a marked MotionRender block and your other MCP servers stay.
 
 #### Cursor IDE
 Add to `.cursor/mcp.json`:
@@ -69,14 +88,22 @@ Add to `.cursor/mcp.json`:
 | `motionrender_adapt_aspect` | `file`, `aspect`, `output?` | Adapts a composition to another aspect ratio (`9:16`, `16:9`, `1:1`, `4:5`, `3:4` or `WIDTHxHEIGHT`). Overwrites the input unless `output` is given. |
 | `motionrender_batch_render` | `file`, `data`, `outputPattern`, `limit?`, `scale?` | Renders one personalised video per row of a JSON array (or a `rows.json` path) from a template composition; `outputPattern` can use `{{variables}}`, e.g. `out/{{name}}.mp4`. |
 | `motionrender_transcribe_audio` | `audio`, `output?`, `language?` | Transcribes an audio file into word-level timestamps and subtitle cues for kinetic captions. |
+| `motionrender_schema` | `kind?` | The JSON Schema of a `composition` or an `explainer` script. Read it before writing either by hand. |
+| `motionrender_explainer_kinds` | *(none)* | Every explainer scene kind with what it shows, when to use it and a valid example. |
+| `motionrender_explainer_validate` | `file` or `script` | Checks an explainer script and lists every problem with its path. |
+| `motionrender_explainer_compile` | `file` or `script`, `outputDir?`, `voice?`, `voiceName?`, `language?`, `speechEngine?` | Builds an explainer script into `composition.json`; each scene lasts as long as its spoken line. Silent unless `voice: true`. |
+| `motionrender_facts` | `lookups` | Real, sourced facts for a script from Wikipedia, the World Bank and exchange rates, with no key. |
+| `motionrender_environment` | *(none)* | Checks Node, FFmpeg and the browser, and says what is missing. Run it first if a render fails. |
+| `motionrender_init` | `dir`, `template?`, `force?` | Starts a project folder with a starter composition and the agent instructions and skills. |
 | `motionrender_import_figma` | `input`, `token?`, `outputTheme?`, `outputComp?` | Imports design tokens (colours, type, radii) and scene layers from a Figma file or exported tokens JSON. |
 
 ---
 
 ## 3. Claude Skills (`.claude/skills`)
 
-For Claude Code or Anthropic agent environments, MotionRender includes 15 skills (`motionrender` and `ove` are the same entry point under two names). One project agent also lives in `.claude/agents/`: `solution-architect`, which maps the monorepo and writes architecture notes.
+For Claude Code or Anthropic agent environments, MotionRender includes 16 skills (`motionrender` and `ove` are the same entry point under two names). One project agent also lives in `.claude/agents/`: `solution-architect`, which maps the monorepo and writes architecture notes.
 - `motionrender` / `ove`: Main entry point and composition grammar.
+- `ove-explainer`: Vertical explainer videos from scenes and spoken lines (how-it-works, system design, money basics): the fastest route to a finished video, no AI key needed.
 - `ove-agent`: Autonomous video director: brief to a finished React or JSON video, with a visual self-check loop.
 - `ove-ai-compose`: Generate or change a video from a brief with `ove ai`, keeping every AI change reversible.
 - `ove-make-reel`: Quick vertical or square social videos from ready-made blocks and themes.
@@ -121,3 +148,22 @@ Generate / Edit composition.json
 `mr render composition.json --output out.mp4`
 ```
 
+
+### The explainer loop (no AI key needed)
+
+For a video that teaches one idea, write the script instead of the layers:
+```
+`mr explainer kinds`  (or the motionrender_explainer_kinds tool)   what each scene shows, with examples
+       ↓
+Real numbers: `motionrender_facts`, or `mr explainer write "<topic>" --research`
+       ↓
+Write explainer.json   (`mr schema --explainer` lists every field)
+       ↓
+`mr explainer validate explainer.json`   (every problem at once, with paths)
+       ↓
+`mr explainer compile explainer.json`    (add --no-voice for a quick silent build)
+       ↓
+`mr still composition.json --frame 90`   (look at several scenes, not one)
+       ↓
+`mr review composition.json` → `mr render composition.json --output out.mp4`
+```

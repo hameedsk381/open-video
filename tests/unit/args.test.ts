@@ -17,7 +17,7 @@ describe('command-line options', () => {
     expect(() => checkArgs(['render', 'a.json', 'b.json'])).toThrow('Unexpected argument "b.json" for ove render'); });
   it('keeps --frames working for review alongside --sheet-frames', () => { expect(checkArgs(['review', 'v.json', '--frames', '12'])).toContain('--frames'); expect(checkArgs(['review', 'v.json', '--sheet-frames', '12'])).toContain('--sheet-frames'); });
   it('recognises help anywhere and covers every command', () => { expect(wantsHelp(['render', '--help'])).toBe(true); expect(wantsHelp(['-h'])).toBe(true); expect(wantsHelp(['help'])).toBe(true); expect(wantsHelp(['render', 'v.json'])).toBe(false);
-    expect(Object.keys(commandSpecs).sort()).toEqual(['add', 'agent', 'ai', 'blocks', 'browser', 'build', 'cache', 'captions', 'dev', 'doctor', 'explainer', 'figma', 'init', 'inspect', 'job-worker', 'mcp', 'production', 'render', 'review', 'schema', 'script', 'serve', 'still', 'theme', 'thumbnail', 'track', 'validate', 'worker']); });
+    expect(Object.keys(commandSpecs).sort()).toEqual(['add', 'agent', 'ai', 'blocks', 'browser', 'build', 'cache', 'captions', 'dev', 'doctor', 'explainer', 'figma', 'init', 'inspect', 'job-worker', 'mcp', 'production', 'render', 'review', 'schema', 'script', 'serve', 'setup', 'still', 'theme', 'thumbnail', 'track', 'validate', 'worker']); });
   it('recognises version flags and command', () => {
     expect(wantsVersion(['--version'])).toBe(true);
     expect(wantsVersion(['-v'])).toBe(true);

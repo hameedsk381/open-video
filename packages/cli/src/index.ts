@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
-import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; 
+import { explainerJsonSchema } from '@ove/schema'; import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; 
 const usage = `MotionRender: JSON-first, frame-deterministic motion graphics video engine.
 
 Usage:
@@ -8,7 +8,7 @@ Usage:
 
 Commands:
   mr init <dir> [--template id] [--force] [--no-skill]
-  mr schema [--output composition.schema.json]
+  mr schema [--explainer] [--output composition.schema.json]   the JSON Schema of a composition, or of an explainer script
   mr doctor                      check Node, FFmpeg encoders and the browser
   mr cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
   mr browser install             download Playwright's Chromium for rendering
@@ -21,7 +21,8 @@ Commands:
   mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
-  mr mcp                         start Model Context Protocol (MCP) server for Claude, Cursor, Codex & AI agents
+  mr mcp [--config claude-code|codex|cursor|claude-desktop|all]   start the Model Context Protocol (MCP) server for Claude, Cursor, Codex & AI agents, or print the config to add it
+  mr setup [dir] [--force] [--no-skills]   make a folder ready for agents: AGENTS.md, CLAUDE.md, MCP config for Claude Code, Codex and Cursor, and the skills
   mr dev <composition.json> [--port 3000] [--allow-host name] [variables]
   mr validate <composition.json> [variables]
     (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
@@ -32,6 +33,7 @@ Commands:
   mr production validate <production.json> [--json]   check a production manifest: cast, references, shots and script links
   mr production compile <production.json> [--output composition.json]   compile the shot list into a renderable composition
   mr explainer write "<what to explain>" [--scenes N] [--language L]   the AI writes the explainer script
+  mr explainer kinds [--json] | example [--output explainer.json]   what each scene kind shows, with a valid example (no AI needed to write a script)
   mr explainer validate|compile <explainer.json> [--output composition.json] [--no-voice] [--voice <name>]   an explainer script (scenes + spoken lines) into a video
   mr still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
   mr review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
@@ -120,7 +122,8 @@ try {
     else throw new Error('Usage: ove cache size, or ove cache clean [--older-than 30d]'); }
   else if (command === 'serve') { const { runServe } = await import('./serve'); await runServe(); }
   else if (command === 'job-worker') { const { runJobWorker } = await import('./serve'); await runJobWorker(); }
-  else if (command === 'mcp') { const { runMcp } = await import('./mcp'); await runMcp(argv); }
+  else if (command === 'mcp') { const which=option('--config'); if (which) { const { mcpClients, mcpConfig } = await import('./agent-setup'); const list=which === 'all' ? mcpClients : [which as (typeof mcpClients)[number]]; for (const client of list) { if (!mcpClients.includes(client)) throw new Error(`Unknown client "${which}": use ${mcpClients.join(', ')} or all`); console.log(mcpConfig(client)+'\n'); } } else { const { runMcp } = await import('./mcp'); await runMcp(argv); } }
+  else if (command === 'setup') { const { setupAgents } = await import('./agent-setup'); const dir=resolve(file && !file.startsWith('--') ? file : '.'); const written=await setupAgents(dir,{force:flag('--force'),skills:!flag('--no-skills')}); console.log(`Ready for agents in ${dir}\n${written.map(line=>`  ${line}`).join('\n')}\n\nClaude Code: open the folder and approve the MotionRender MCP server. Codex: it reads AGENTS.md; for the tools run: mr mcp --config codex`); }
   else if (command === 'worker') { const port=option('--port') === undefined ? undefined : Number(option('--port')); const concurrency=option('--concurrency') === undefined ? undefined : Number(option('--concurrency'));
     const worker=await startWorker({ port, host: option('--host'), token: option('--token') ?? process.env.OVE_WORKER_TOKEN, concurrency, log: line => console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`) });
     console.log(`Worker listening on ${worker.url}
@@ -129,7 +132,7 @@ Render with: ove render video.json --output out.mp4 --workers ${worker.url} --to
 Press Ctrl+C to stop.`);
     const stop=() => { worker.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
   else if (command === 'browser') { if (file !== 'install') throw new Error('Usage: ove browser install'); console.log('Downloading Playwright Chromium…'); await ensureChromium(); }
-  else if (command === 'schema') { const json=JSON.stringify(compositionJsonSchema,null,2)+'\n'; const output=option('--output'); if (output) { await writeFile(resolve(output),json); console.log(`Wrote ${resolve(output)}`); } else process.stdout.write(json); }
+  else if (command === 'schema') { const json=JSON.stringify(argv.includes('--explainer') ? explainerJsonSchema : compositionJsonSchema,null,2)+'\n'; const output=option('--output'); if (output) { await writeFile(resolve(output),json); console.log(`Wrote ${resolve(output)}`); } else process.stdout.write(json); }
   else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const template=option('--template'); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill'),template}); console.log(`Created ${resolve(file)}${template ? ` from template "${template}"` : ''}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
   else if (command === 'dev') { if (!file || file.startsWith('--')) throw new Error(usage); const port=option('--port') === undefined ? undefined : Number(option('--port')); if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536)) throw new Error('--port must be a port number');
     const allowHosts=argv.flatMap((arg, i) => arg === '--allow-host' && argv[i+1] ? [argv[i+1]!] : []); const dev=await startDevServer(file, { port, values: await suppliedValues(), allowHosts, allowCode: flag('--allow-code'), aspect: option('--aspect') }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
