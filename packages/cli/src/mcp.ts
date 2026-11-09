@@ -262,7 +262,7 @@ export async function runMcp(_argv: string[]) {
             },
             serverInfo: {
               name: 'motionrender',
-              version: '0.5.0'
+              version: '0.5.1'
             }
           }
         });
