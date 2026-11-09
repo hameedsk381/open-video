@@ -103,7 +103,6 @@ services:
       DATA_DIR: /data
       JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}"
       WORKER_CONCURRENCY: "${AI_CONCURRENCY:-1}"
-      OVE_AI_TTS_PROVIDER: "${OVE_AI_TTS_PROVIDER:-}"
       WEBHOOK_URL: "${WEBHOOK_URL:-}"
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     networks: [internal, edge]     # calls the AI provider

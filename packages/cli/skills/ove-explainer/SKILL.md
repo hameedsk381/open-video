@@ -25,7 +25,8 @@ An explainer is a short video that teaches **one idea**, one scene at a time, dr
 - `topic` is the header on every scene (`"URL SHORTENER"`); `series` is the small label before it (`"SYSTEM DESIGN"`); `handle` is the creator.
 
 ## Look and shape
-- `look`: `navy` (default), `ink` (black with an orange signal), `paper` (light), `forest`, `sunset`. `colors` replaces any of `bg`, `surface`, `text`, `muted`, `accent`, `accent2` with a 6-digit hex.
+- **Choose the look for the subject: it is a whole design, not a palette.** `mr explainer looks` lists them: `navy` (finance and tech, the safe default), `ink`, `paper`, `forest`, `sunset`, `ocean`, `terminal` (developers, monospace), `blueprint` (how things are built), `candy` (friendly, rounded), `sage` (serif, slow topics), `newsprint` (news and history, serif headlines), `neon` (games, the future), `slate` (neutral software). Each carries its own type pairing, motion, transition, texture, corners and weight. **Do not use the same look for every video, and do not leave it at the default unless the subject is finance or technology.**
+- `design` changes parts of the look: `{ "fontDisplay": "Playfair Display", "fontBody": "Source Sans 3", "motion": "rise|drop|blur|fade", "transition": "fade|zoom|wipe|push", "texture": "none|grid|dots|scanlines|paper", "corners": "sharp|soft|round", "weight": "medium|bold|black" }`. A serious subject wants sharp corners and calm motion, a playful one round corners; `colors` replaces any of `bg`, `surface`, `text`, `muted`, `accent`, `accent2` with a 6-digit hex (keep the contrast high).
 - `aspect`: `9:16` (default; reels, shorts), `4:5`, `1:1`, `16:9`. Other shapes show the 9:16 column scaled to fit, centred on the board: good for a feed post, plain for landscape.
 - `sketch: true` draws every shape by hand, redrawn every few frames like a cartoon.
 - The header sits below the top strip that Reels and Shorts cover, and nothing is drawn in the bottom band. Keep it that way: do not add text there.
@@ -35,8 +36,10 @@ An explainer is a short video that teaches **one idea**, one scene at a time, dr
 - Credit the source in `credit` for stock photos and clips. Drawn pictures are credited "AI-generated picture" unless you set `credit`.
 
 ## Voice
-- Edge (default) is free and needs internet: `"voice": "en-IN-NeerjaNeural"` in the script or `--voice`. `--no-voice` skips recording.
-- On this machine, no network after the first download: `--speech-engine indic --language hi` (Hindi, Bengali, Marathi, Gujarati, Punjabi, Tamil, Telugu, Kannada, Malayalam, Assamese, Odia). Needs `npm i onnxruntime-node`. It reads native scripts only: write the lines in Devanagari, Bengali and so on, not in Latin letters. The first line downloads about 88 MB; the voices are CC-BY-4.0, so credit the model author (Sulabh Katiyar, indic-tiny-tts) where you publish.
+- The free Edge voices: no key, but internet is needed. Set `"voice": "en-IN-NeerjaNeural"` in the script, or `--voice`. Others that work: `en-US-AriaNeural`, `hi-IN-SwaraNeural`, `te-IN-ShrutiNeural`. `--no-voice` builds silently.
+- `"voiceRate": 12` (percent, -40 to +60) speeds the voice up; +10 to +15 suits a promo, and a slower reading suits a calm explainer. Lines are recorded once and reused until the words, the voice or the rate change.
+- Speak the line as you want it heard: spell out what the voice would stumble on ("F O S S A P dot in", "A I"). Write Telugu or Hindi lines in their own script with a matching voice.
+- Edge is an unofficial Microsoft service: it can drop a connection (the build retries twice) or change without notice. Its terms for commercial use are not checked here.
 
 ## Mistakes to avoid
 - Inventing numbers. Look them up, name the source.

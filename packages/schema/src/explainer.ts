@@ -14,8 +14,9 @@ const common = {
 };
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour is a 6-digit hex such as #0b1c3f');
-/** The looks an explainer can wear. Each sets the board, the cards, the text and the two signal colours. */
-export const explainerLooks = ['navy', 'ink', 'paper', 'forest', 'sunset'] as const;
+import { explainerBodyFonts, explainerCorners, explainerDisplayFonts, explainerLookDefs, explainerLooks, explainerMotions, explainerTextures, explainerTransitions, explainerWeights } from './explainer-looks';
+/** The looks an explainer can wear: each is a whole design (colours, type, motion, texture, corners, weight); see explainer-looks. */
+export { explainerLooks };
 
 export const explainerSceneSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('title'), ...common,
@@ -95,7 +96,12 @@ export const explainerSchema = z.object({
   series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
   aspect: z.enum(['9:16', '1:1', '4:5', '16:9']).default('9:16').describe('The shape of the video. Scenes are drawn as a 9:16 column; other shapes show that column, scaled to fit, centred on the board'),
   sketch: z.boolean().default(false).describe('Draw the whole board by hand: wobbly outlines, redrawn every few frames like a cartoon'),
-  look: z.enum(explainerLooks).default('navy').describe('The colours of the board: navy, ink (black with an orange signal), paper (light), forest or sunset'),
+  look: z.enum(explainerLooks).default('navy').describe(`The whole design of the board. Choose the one that suits the subject, not the default: ${explainerLooks.map(name => `${name} (${explainerLookDefs[name].note})`).join('; ')}`),
+  design: z.object({
+    fontDisplay: z.enum(explainerDisplayFonts).optional().describe('Headline font'), fontBody: z.enum(explainerBodyFonts).optional().describe('Body font'),
+    motion: z.enum(explainerMotions).optional().describe('How text arrives: rise, drop (from above), blur (comes into focus) or fade'), transition: z.enum(explainerTransitions).optional().describe('How scenes change'),
+    texture: z.enum(explainerTextures).optional().describe('The pattern behind everything'), corners: z.enum(explainerCorners).optional().describe('How round the cards are'), weight: z.enum(explainerWeights).optional().describe('How heavy the headlines are'),
+  }).optional().describe('Changes parts of the look: any field left out keeps the look\'s own'),
   colors: z.object({ bg: hex, surface: hex, text: hex, muted: hex, accent: hex, accent2: hex }).partial().optional().describe('Colours that replace the look\'s own, by name'),
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),
   handle: words(30).default('@yourhandle').describe('The creator handle, shown in the header'),

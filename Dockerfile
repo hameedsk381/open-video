@@ -8,7 +8,7 @@
 #
 #   docker build --target api    -t ove-api .
 #   docker build --target worker -t ove-worker .
-#   docker build --target agent  -t motionrender-agent .   (add --build-arg WITH_INDIC=1 for the on-device Indic voices)
+#   docker build --target agent  -t motionrender-agent .
 #   docker build                 -t ove-studio .        (studio: docker run --rm -p 127.0.0.1:3100:3100 -e GROQ_API_KEY=... -v ove-data:/data ove-studio)
 #
 # The all-in-one studio has no login: publish its port only to the machine you trust. The hosted stack is infrastructure/docker/compose.yml.
@@ -70,11 +70,9 @@ CMD ["job-worker"]
 # AGENTS.md, the skills and the MCP config are already in place. The container stays up so commands can be run in it; it runs as the unprivileged
 # node user, and Chromium's own sandbox is off (OVE_CHROMIUM_ARGS=--no-sandbox) because the container is the sandbox.
 FROM chromium AS agent
-ARG WITH_INDIC=0
-RUN if [ "$WITH_INDIC" = "1" ]; then npm install -g --omit=dev onnxruntime-node; fi
 RUN mkdir -p /work && ove setup /work --local \
  && chown -R node:node /work /home/node
-ENV HOME=/home/node OVE_TTS_DIR=/home/node/.cache/motionrender/tts
+ENV HOME=/home/node
 USER node
 WORKDIR /work
 VOLUME /work

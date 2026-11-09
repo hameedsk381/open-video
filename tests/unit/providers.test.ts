@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { audioCacheKey, clearFreeLlmModelCache, concatWav, createProvider, inferChatTask, MockProvider, providerVision, resolveSpeechEngine, VercelAiProvider, visionProvider, type AiProvider } from '@ove/ai';
+import { audioCacheKey, clearFreeLlmModelCache, concatWav, createProvider, inferChatTask, MockProvider, providerVision, VercelAiProvider, visionProvider, type AiProvider } from '@ove/ai';
 
 // One integration layer: every network provider is VercelAiProvider (the Vercel AI SDK) with per-vendor driver and
 // defaults; the FreeLLMAPI task-aware routing is policy on top of it; the mock stays offline. Speech is the pluggable
@@ -28,10 +28,6 @@ beforeEach(() => {
   vi.stubEnv('ANTHROPIC_API_KEY', '');
   vi.stubEnv('OPENROUTER_API_KEY', '');
   vi.stubEnv('LITELLM_BASE_URL', '');
-  vi.stubEnv('OVE_AI_TTS_PROVIDER', '');
-  vi.stubEnv('OVE_AI_SPEECH_MODEL', '');
-  vi.stubEnv('OVE_AI_SPEECH_VOICE', '');
-  vi.stubEnv('OVE_AI_VOICE', '');
   clearFreeLlmModelCache();
 });
 
@@ -278,56 +274,17 @@ describe('image and transcription through the SDK', () => {
   });
 });
 
-describe('speech engines', () => {
-  it('defaults to the free edge engine and says so on the provider', () => {
-    expect(resolveSpeechEngine()).toBe('edge');
-    const provider = createProvider({ provider: 'freellmapi', apiKey: 'k' });
-    expect(provider.speechEngine).toBe('edge');
+describe('speech', () => {
+  it('gives every network provider the free Edge voice, and the offline mock none', () => {
+    for (const name of ['groq', 'freellmapi', 'openai', 'anthropic', 'google', 'openrouter']) expect(createProvider({ provider: name, apiKey: 'k' }).speak, name).toBeTypeOf('function');
+    expect(createProvider({ provider: 'mock' }).speak).toBeUndefined();
+  });
+
+  it('no longer has an engine to choose: the old setting changes nothing', () => {
+    vi.stubEnv('OVE_AI_TTS_PROVIDER', 'native');
+    const provider = createProvider({ provider: 'openai', apiKey: 'k' }) as { speechEngine?: unknown; speak?: unknown };
+    expect(provider.speechEngine).toBeUndefined();
     expect(provider.speak).toBeTypeOf('function');
-  });
-
-  it('switches to the provider endpoint by config or environment', () => {
-    expect(resolveSpeechEngine({ speechEngine: 'native' })).toBe('native');
-    vi.stubEnv('OVE_AI_TTS_PROVIDER', 'groq');
-    expect(resolveSpeechEngine()).toBe('native');
-    expect(createProvider({ provider: 'openai', apiKey: 'k', speechEngine: 'native' }).speechEngine).toBe('native');
-  });
-
-  it('speaks through the provider audio endpoint and returns WAV', async () => {
-    const calls: { url: string; init: RequestInit }[] = [];
-    const wav = new Uint8Array([82, 73, 70, 70, 1, 2, 3]);
-    vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init: RequestInit = {}) => {
-      calls.push({ url: String(url), init });
-      return new Response(wav, { status: 200 });
-    }));
-    const provider = new VercelAiProvider({ provider: 'openai', baseUrl: 'https://api.openai.com/v1', apiKey: 'k', speechEngine: 'native' });
-    const spoken = await provider.speak('Hello world', { voice: 'onyx' });
-    expect(calls[0]!.url).toBe('https://api.openai.com/v1/audio/speech');
-    const body = JSON.parse(String(calls[0]!.init.body));
-    expect(body).toMatchObject({ model: 'gpt-4o-mini-tts', input: 'Hello world', response_format: 'wav', voice: 'onyx' });
-    expect((calls[0]!.init.headers as Record<string, string>).authorization).toBe('Bearer k');
-    expect(spoken.extension).toBe('wav');
-    expect(Array.from(spoken.data)).toEqual(Array.from(wav));
-  });
-
-  it('names Groq speech model and drops an Edge voice id the endpoint cannot read', async () => {
-    const bodies: any[] = [];
-    vi.stubGlobal('fetch', vi.fn(async (_url: string | URL, init: RequestInit = {}) => {
-      bodies.push(JSON.parse(String(init.body)));
-      return new Response(new Uint8Array([1]), { status: 200 });
-    }));
-    await new VercelAiProvider({ provider: 'openai', apiKey: 'k', speechEngine: 'native' }).speak('hi', { voice: 'en-US-AvaNeural' });
-    expect(bodies[0]).toMatchObject({ model: 'gpt-4o-mini-tts', voice: 'nova' });
-    await new VercelAiProvider({ provider: 'groq', apiKey: 'g', speechEngine: 'native' }).speak('hi');
-    expect(bodies[1]).toMatchObject({ model: 'canopylabs/orpheus-v1-english' });
-    expect(bodies[1].voice).toBeUndefined();
-    await new VercelAiProvider({ provider: 'freellmapi', apiKey: 'g', speechEngine: 'native' }).speak('hi');
-    expect(bodies[2]).toMatchObject({ model: 'auto' });
-  });
-
-  it('refuses native speech on providers with no audio endpoint', async () => {
-    const provider = new VercelAiProvider({ provider: 'anthropic', apiKey: 'a', speechEngine: 'native' });
-    await expect(provider.speak('hi')).rejects.toThrow(/no speech endpoint/);
   });
 
   it('keys the transcript cache on the audio bytes, not its length', () => {

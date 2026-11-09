@@ -2,9 +2,8 @@
 // answer is checked against the explainer schema. A reply that does not fit is sent back with the exact problems, a few times at most.
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import { explainerSchema, type Explainer } from '@ove/schema';
+import { explainerBodyFonts, explainerDisplayFonts, explainerLookDefs, explainerLooks, explainerSchema, lookForTopic, type Explainer } from '@ove/schema';
 import { synthesizeEdgeSpeech } from './edge-tts';
-import { indicLanguageFor } from './indic-tts/models';
 import { extractJson } from './json';
 import type { Fact } from './facts';
 import type { AiProvider, ChatMessage } from './providers';
@@ -42,6 +41,13 @@ const GUIDE = `Scene kinds (each scene has a "kind", an optional "step" label in
 - closing: the takeaway. {kind:"closing", title, points?:[up to 3], cta?:"Follow for more", say}
 "tone" is one of gold, mint, red, muted.`;
 
+/** The design the model is asked to choose: the subject decides it, and no look is the house style. */
+const designGuide = [
+  'Design: choose how this video LOOKS, for this subject, as "look" and (to change parts of it) "design". The subject decides, there is no house style: do not reach for navy by default, and do not use the same look for every topic.',
+  `"look" is one of: ${explainerLooks.map(name => `${name} (${explainerLookDefs[name].note})`).join('; ')}.`,
+  `"design" is optional and changes parts of the look: {"fontDisplay": one of ${explainerDisplayFonts.join(', ')}, "fontBody": one of ${explainerBodyFonts.join(', ')}, "motion": rise|drop|blur|fade, "transition": fade|zoom|wipe|push, "texture": none|grid|dots|scanlines|paper, "corners": sharp|soft|round, "weight": medium|bold|black}. Change only what the subject asks for: a serious subject wants sharp corners and calm motion, a playful one round corners and bounce.`,
+].join('\n');
+
 const imageGuide = '- media (drawn): a picture made by an image model fills a frame on the board. {kind:"media", prompt:"<one clear picture described plainly: subject, setting, style; no words, letters or logos>", title?:"large text", caption?, say}. Use at most two, and only where a picture shows the idea better than a diagram.';
 const mediaGuide = (files: string[]) => `- media: a picture or video of the project fills a frame on the board. {kind:"media", src:"<one of the files below>", title?:"large text", caption?, credit?, say}\nAvailable media files (the only pictures and footage the video has; use each at most once): ${files.join(', ')}`;
 
@@ -51,8 +57,9 @@ export function explainerPrompt(brief: string, options: WriteExplainerOptions = 
   const scenes = options.scenes ?? 5, language = options.language ?? 'English';
   const system = [
     'You write scripts for short vertical explainer videos: one idea, taught one scene at a time, with a spoken line over each scene.',
-    `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
+    `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","look":"...","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
     [GUIDE, ...(options.media?.length ? [mediaGuide(options.media)] : []), ...(options.images ? [imageGuide] : [])].join('\n'),
+    designGuide,
     ...(options.facts?.length ? [factsBlock(options.facts)] : []),
     'Rules:',
     ...(options.media?.length || options.images ? [] : ['- Do not use a media scene: this video has no pictures or footage.']),
@@ -73,7 +80,10 @@ export async function writeExplainer(provider: AiProvider, brief: string, option
     options.onProgress?.(attempt === 1 ? `Writing the script with ${provider.id}…` : `Fixing the script (attempt ${attempt})…`);
     const reply = await provider.chat(messages, { signal: options.signal });
     try {
-      const parsed = explainerSchema.safeParse(extractJson(reply));
+      const raw = extractJson(reply) as Record<string, unknown> | null;
+      // A reply with no look at all would come out in the default one every time: give it the look its topic maps to, so videos still differ.
+      if (raw && typeof raw === 'object' && raw.look === undefined) raw.look = lookForTopic(typeof raw.topic === 'string' ? raw.topic : brief);
+      const parsed = explainerSchema.safeParse(raw);
       if (parsed.success) return { explainer: { ...parsed.data, ...(options.voice && !parsed.data.voice ? { voice: options.voice } : {}), ...(options.facts?.length ? { sources: options.facts } : {}) }, attempts: attempt };
       problems = parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n');
     } catch (error) {
@@ -98,14 +108,12 @@ export function wavSeconds(bytes: Uint8Array): number {
   throw new Error('That WAV recording has no readable length');
 }
 
-/** Records a scene's line to `file`, or reuses the recording made earlier for the same words, voice and engine. */
-export async function speakLine(text: string, voice: string | undefined, file: string, provider?: AiProvider, askedLanguage?: string, rate?: number): Promise<{ seconds: number; fresh: boolean }> {
-  // A language written for the script ("Hinglish (Hindi in Latin letters)") is not one the on-device voice can be asked for: leave it to the voice.
-  const language = provider?.speechEngine === 'indic' && askedLanguage && !indicLanguageFor(askedLanguage) ? undefined : askedLanguage;
-  const stamp = createHash('sha1').update(`${provider?.speechEngine ?? 'edge'}\n${language ?? ''}\n${voice ?? ''}\n${rate ? `rate ${rate}\n` : ''}${text}`).digest('hex'), mark = `${file}.txt`;
+/** Records a scene's line with the Edge voice to `file`, or reuses the recording made earlier for the same words, voice and speed. */
+export async function speakLine(text: string, voice: string | undefined, file: string, rate?: number): Promise<{ seconds: number; fresh: boolean }> {
+  const stamp = createHash('sha1').update(`edge\n\n${voice ?? ''}\n${rate ? `rate ${rate}\n` : ''}${text}`).digest('hex'), mark = `${file}.txt`;
   const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
   if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { seconds: wavSeconds(bytes), fresh: false }; }
-  const speech = provider?.speak ? await provider.speak(text, { voice, language }) : await synthesizeEdgeSpeech(text, { voice, rate });
+  const speech = await synthesizeEdgeSpeech(text, { voice, rate });
   if (!/wav/i.test(speech.extension)) throw new Error(`The voice answered with ${speech.extension} audio; only WAV is read here`);
   const bytes = Buffer.from(speech.data);
   await writeFile(file, bytes); await writeFile(mark, stamp);

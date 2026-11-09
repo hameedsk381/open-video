@@ -71,7 +71,6 @@ services:
       TRUST_PROXY: "1"
       SIGNUPS: "${SIGNUPS:-1}"
       REQUIRE_VERIFIED: "${REQUIRE_VERIFIED:-0}"
-      OVE_AI_TTS_PROVIDER: "${OVE_AI_TTS_PROVIDER:-}"
       WEBHOOK_URL: "${WEBHOOK_URL:-}"
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     volumes: ["data:/data"]
@@ -123,7 +122,6 @@ services:
       DATA_DIR: /data
       JOB_TIMEOUT_SECONDS: "${AI_TIMEOUT_SECONDS:-300}"
       AI_CONCURRENCY: "${AI_CONCURRENCY:-1}"
-      OVE_AI_TTS_PROVIDER: "${OVE_AI_TTS_PROVIDER:-}"
       WEBHOOK_URL: "${WEBHOOK_URL:-}"
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     networks: [dokploy-network, internal]

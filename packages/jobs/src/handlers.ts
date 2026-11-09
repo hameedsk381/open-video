@@ -6,7 +6,7 @@ import { dirname, join, relative as relativePath, resolve } from 'node:path';
 import { explainerSchema } from '@ove/schema';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
-  generateExplainerImages, needsImages, readBrand, researchFacts, resolveSpeechEngine, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
+  generateExplainerImages, needsImages, readBrand, researchFacts, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
 } from '@ove/ai';
 import { compileExplainer, loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
@@ -193,15 +193,13 @@ export function createHandlers(env: JobEnv) {
       if (needsImages(spec)) spec = (await generateExplainerImages(spec, resolveProvider(input), { dir, onProgress: message => progress(message) })).spec;
       const missing = spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && scene.src !== undefined && !existsSync(resolve(dir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
       if (missing.length) throw new Error(`The video needs files that are not in the project: ${missing.join(', ')}. Add them in the Media tab first.`);
-      const voiceName = optionalText(input.voiceName) ?? spec.voice, language = optionalText(input.language), assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number } | undefined)[] = [];
+      const voiceName = optionalText(input.voiceName) ?? spec.voice, assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number } | undefined)[] = [];
       if (boolOf(input.voice) && spec.scenes.some(scene => scene.say)) {
-        // Edge needs no key; the native and local engines speak through the provider the rest of the job uses.
-        const voiceProvider = resolveSpeechEngine() === 'edge' ? undefined : resolveProvider(input);
         await mkdir(assets, { recursive: true });
         for (const [i, scene] of spec.scenes.entries()) {
           if (!scene.say) { audio.push(undefined); continue; }
           progress(`Recording the voice for scene ${i + 1} of ${spec.scenes.length}…`);
-          const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file, voiceProvider, language, spec.voiceRate);
+          const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file, spec.voiceRate);
           audio.push({ src: relativePath(dir, file).replace(/\\/g, '/'), seconds: made.seconds });
         }
       }

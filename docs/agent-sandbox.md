@@ -8,8 +8,6 @@ The agent is the model: nothing here needs an AI key. It reads `/work/AGENTS.md`
 
 ```bash
 docker build --target agent -t motionrender-agent .
-# with the on-device Indic voices (adds onnxruntime-node):
-docker build --target agent --build-arg WITH_INDIC=1 -t motionrender-agent .
 ```
 
 The image installs the same tarball that `pnpm build:package` publishes, so it runs the packaged product. It runs as the unprivileged `node` user. Chromium's own sandbox is off (`OVE_CHROMIUM_ARGS=--no-sandbox`), because the container is the sandbox. It stays up (`sleep infinity`) so that commands can be run in it.
@@ -70,7 +68,6 @@ Rendering needs nothing. With egress locked down, allow only what the features y
 |---|---|
 | `speech.platform.bing.com` | the free Edge voice (`explainer compile` without `--no-voice`) |
 | `en.wikipedia.org`, `api.worldbank.org`, `api.frankfurter.dev` | `mr facts` and `--research` |
-| `huggingface.co` | the first use of an on-device Indic voice (about 88 MB per language; needs the `WITH_INDIC=1` image) |
 | your image provider's API | drawn pictures in `media` scenes (`--images`), only if you use them |
 
 Videos with code layers (`code`, `react`, `p5`) run JavaScript while rendering and need `--allow-code`. A sandbox is the right place to allow that for code an agent wrote: the render page already refuses all `http`, `https`, `ws` and `ftp` requests, and the container adds the process-level boundary.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { explainerSchema, loadComposition, type Explainer } from '@ove/schema';
+import { explainerLooks, explainerSchema, loadComposition, type Explainer } from '@ove/schema';
 import { compileExplainer } from '@ove/core';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -123,12 +123,12 @@ describe('the header and the look', () => {
   });
   it('dresses the board in the chosen look, and lets chosen colours replace any of it', () => {
     expect(one().variables.bg.default).toBe('#0b1c3f');
-    for (const look of ['navy', 'ink', 'paper', 'forest', 'sunset']) { const c = one({ look }); expect(() => loadComposition(c), look).not.toThrow(); }
+    for (const look of explainerLooks) { const c = one({ look }); expect(() => loadComposition(c), look).not.toThrow(); }
     expect(one({ look: 'paper' }).variables).toMatchObject({ bg: { default: '#f4efe6' }, text: { default: '#1a1a1a' } });
     const custom = one({ look: 'forest', colors: { accent: '#112233' } }).variables;
     expect(custom.accent.default).toBe('#112233'); expect(custom.bg.default).toBe('#0c2a22');
     expect(explainerSchema.safeParse({ topic: 'T', colors: { bg: 'blue' }, scenes: [{ kind: 'closing', title: 'x' }] }).success).toBe(false);
-    expect(explainerSchema.safeParse({ topic: 'T', look: 'neon', scenes: [{ kind: 'closing', title: 'x' }] }).success).toBe(false);
+    expect(explainerSchema.safeParse({ topic: 'T', look: 'plum', scenes: [{ kind: 'closing', title: 'x' }] }).success).toBe(false);
   });
 });
 

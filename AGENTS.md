@@ -91,7 +91,7 @@ Add to `.cursor/mcp.json`:
 | `motionrender_schema` | `kind?` | The JSON Schema of a `composition` or an `explainer` script. Read it before writing either by hand. |
 | `motionrender_explainer_kinds` | *(none)* | Every explainer scene kind with what it shows, when to use it and a valid example. |
 | `motionrender_explainer_validate` | `file` or `script` | Checks an explainer script and lists every problem with its path. |
-| `motionrender_explainer_compile` | `file` or `script`, `outputDir?`, `voice?`, `voiceName?`, `language?`, `speechEngine?` | Builds an explainer script into `composition.json`; each scene lasts as long as its spoken line. Silent unless `voice: true`. |
+| `motionrender_explainer_compile` | `file` or `script`, `outputDir?`, `voice?`, `voiceName?` | Builds an explainer script into `composition.json`; each scene lasts as long as its spoken line. Silent unless `voice: true`. |
 | `motionrender_facts` | `lookups` | Real, sourced facts for a script from Wikipedia, the World Bank and exchange rates, with no key. |
 | `motionrender_environment` | *(none)* | Checks Node, FFmpeg and the browser, and says what is missing. Run it first if a render fails. |
 | `motionrender_init` | `dir`, `template?`, `force?` | Starts a project folder with a starter composition and the agent instructions and skills. |
@@ -154,6 +154,8 @@ Generate / Edit composition.json
 For a video that teaches one idea, write the script instead of the layers:
 ```
 `mr explainer kinds`  (or the motionrender_explainer_kinds tool)   what each scene shows, with examples
+       ↓
+`mr explainer looks`   pick the look for THIS subject (13 whole designs; do not default to navy)
        ↓
 Real numbers: `mr facts country India internet_users` (or `wikipedia`, `exchange`), or the motionrender_facts tool
        ↓

@@ -22,6 +22,7 @@ MotionRender (\`motionrender\`, short \`mr\`) turns JSON into frame-exact video.
 
 ## Pick the route
 1. **Explainer** (a vertical video that teaches one idea, scene by scene, with spoken lines): write an \`explainer.json\`. Run \`mr explainer kinds\` for the scene kinds and an example of each, and \`mr schema --explainer\` for every field. This is the fastest route to something good.
+   **Choose the look for the subject, not the default:** \`mr explainer looks\` lists 13 whole designs (colours, type, motion, texture, corners, weight). Do not use the same look for every video, and do not leave it at navy unless the subject is finance or technology. \`design\` in the script changes parts of a look.
 2. **Composition** (anything else: reels, promos, product videos, kinetic type): write a \`composition.json\` against \`mr schema\`. Start from \`mr init <dir> --template <id>\` (\`mr blocks\` lists ready-made scenes) rather than from nothing.
 3. **Code** (logic JSON cannot say: generated layouts, data-driven scenes): see the \`ove-code-video\` and \`ove-react-video\` skills.
 
@@ -37,7 +38,7 @@ Never say a video is done before you have looked at a still of it.
 ## Facts, pictures, voices
 - Numbers must be real, never from memory. Look them up (no key needed): \`mr facts country India,Brazil internet_users\`, \`mr facts wikipedia "Load balancing"\`, \`mr facts exchange USD INR\` (\`mr facts indicators\` lists the figures; add \`--json\`), or the \`motionrender_facts\` tool. Every fact has a source and date: put it in the scene's note or caption and in the script's \`sources\`. If a lookup fails, say so and leave the number out; do not guess.
 - A media scene takes a file from the project (\`assets/...\`) or a \`prompt\` (needs an image model: \`--images\`). Stock photos: the studio's Media tab.
-- Voices: Edge is free and online; \`--speech-engine indic\` speaks Hindi, Bengali, Tamil and eight more on this machine (needs \`npm i onnxruntime-node\`; the first line downloads about 88 MB, CC-BY-4.0, credit the model author).
+- Voices: the free Edge voices, which need internet but no key: \`en-IN-NeerjaNeural\`, \`en-US-AriaNeural\`, \`hi-IN-SwaraNeural\`, \`te-IN-ShrutiNeural\` (set \`voice\` in the script; \`voiceRate\` speeds it up or slows it down, +12 suits a promo). \`--no-voice\` builds silently.
 
 ## Tools (MCP)
 The same things are available as MCP tools: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\` (or \`mr facts\`), \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.

@@ -50,7 +50,7 @@ describe('the agent image', () => {
     expect(agent).toMatch(/WORKDIR \/work/);
     expect(agent).toMatch(/ENTRYPOINT \[\]/);
     expect(agent).toMatch(/CMD \["sleep", "infinity"\]/);
-    expect(agent).toMatch(/WITH_INDIC/);
+    expect(agent).not.toMatch(/INDIC|onnxruntime/);
   });
 });
 

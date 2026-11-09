@@ -34,7 +34,7 @@ Commands:
   mr production validate <production.json> [--json]   check a production manifest: cast, references, shots and script links
   mr production compile <production.json> [--output composition.json]   compile the shot list into a renderable composition
   mr explainer write "<what to explain>" [--scenes N] [--language L]   the AI writes the explainer script
-  mr explainer kinds [--json] | example [--output explainer.json]   what each scene kind shows, with a valid example (no AI needed to write a script)
+  mr explainer kinds [--json] | looks [--json] | example [--output explainer.json]   what each scene kind shows, with a valid example (no AI needed to write a script)
   mr explainer validate|compile <explainer.json> [--output composition.json] [--no-voice] [--voice <name>]   an explainer script (scenes + spoken lines) into a video
   mr still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
   mr review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks

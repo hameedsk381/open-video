@@ -3,8 +3,8 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
-import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, indicModelStates, narrate, narrateSmart, planBatch, providerCapabilities,
-  refineVideo, renderBatch, shortsFrom, ttsCacheDir, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
+import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, narrateSmart, planBatch, providerCapabilities,
+  refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, loadComposition, renderMedia, type Composition } from '@ove/core';
 import { composeSmart } from './templates';
 import { readScript } from './script';
@@ -12,7 +12,6 @@ import { convertFileToReact } from './react-compose';
 
 const usage = `Usage:
   ove ai doctor                                     show the provider, model and capabilities
-  ove ai voices [--json]           the on-device voices for Hindi, Bengali, Tamil and eight more: which are downloaded
   ove ai capabilities [--json]     list every registered capability the AI may use
   ove ai history <composition.json>   list the kept revisions of an AI-made video
   ove ai restore <composition.json> <n>   bring revision n back (nothing is lost: the restore is a revision too)
@@ -42,9 +41,8 @@ const usage = `Usage:
       [--duration 18] [--fps 30] [render options]
   ove ai studio [--port 3100] [--out ai-videos]   open a local page for the AI commands in a browser
 
-Provider options (all commands): --provider groq|freellmapi|openai|anthropic|google|openrouter|mock (default: groq), --model name, --base-url URL, --speech-engine edge|native|indic|local
-Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, GROQ_API_KEY, FREELLMAPI_API_KEY, FREELLMAPI_BASE_URL, OVE_AI_TTS_PROVIDER (edge by default),
-             OVE_TTS_DIR (where the on-device voices are kept; default ~/.cache/motionrender/tts), OVE_TTS_MIRROR (a Hugging Face mirror).
+Provider options (all commands): --provider groq|freellmapi|openai|anthropic|google|openrouter|mock (default: groq), --model name, --base-url URL
+Environment: OVE_AI_PROVIDER, OVE_AI_MODEL, OVE_AI_API_KEY, GROQ_API_KEY, FREELLMAPI_API_KEY, FREELLMAPI_BASE_URL. Narration uses the free Edge voices (internet needed, no key).
 Render options: --crf, --bitrate, --audio-bitrate, --scale, --loudness, --concurrency, --preset, --codec, --format`;
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -57,7 +55,6 @@ function providerFrom(argv: string[]) {
     provider: option(argv, '--provider'),
     model: option(argv, '--model'),
     baseUrl: option(argv, '--base-url'),
-    speechEngine: option(argv, '--speech-engine') as ProviderConfig['speechEngine'],
   };
   return createProvider(config);
 }
@@ -458,39 +455,23 @@ async function batchCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
-async function doctorCommand(argv: string[]): Promise<number> {
+function doctorCommand(argv: string[]): number {
   let provider;
   try { provider = providerFrom(argv); } catch (error) { console.log(`No provider ready: ${describeError(error)}`); return 1; }
-  const capabilities = providerCapabilities(provider), local = provider.speechEngine === 'indic' ? await indicModelStates() : undefined;
-  if (flag(argv, '--json')) { console.log(JSON.stringify({ provider: provider.id, model: provider.model, baseUrl: provider.baseUrl, speechEngine: provider.speechEngine, capabilities, ...(local ? { voices: { dir: ttsCacheDir(), languages: local } } : {}) }, null, 2)); return 0; }
+  const capabilities = providerCapabilities(provider);
+  if (flag(argv, '--json')) { console.log(JSON.stringify({ provider: provider.id, model: provider.model, baseUrl: provider.baseUrl, capabilities }, null, 2)); return 0; }
   console.log(`Provider     ${provider.id}`);
   console.log(`Model        ${provider.model}`);
   console.log(`Endpoint     ${provider.baseUrl}`);
-  console.log(`Speech       ${capabilities.speech ? `${provider.speechEngine ?? 'edge'} engine` : 'none'}`);
+  console.log(`Speech       ${capabilities.speech ? 'Edge voices (free, needs internet)' : 'none'}`);
   console.log(`Capabilities ${Object.entries(capabilities).filter(([, on]) => on).map(([name]) => name).join(', ')}`);
   console.log(`Credential   ${provider.apiKey ? 'configured' : 'NOT SET'}`);
   if (provider.id === 'groq' && !provider.apiKey) console.log('  Groq needs GROQ_API_KEY (or OVE_AI_API_KEY); requests fail without it.');
   if (provider.id === 'freellmapi' && !provider.apiKey) console.log('  The gateway needs FREELLMAPI_API_KEY (or OPENAI_API_KEY / OVE_AI_API_KEY); requests fail without it.');
   console.log(`\n${describeProvider(provider)}`);
   if (!capabilities.speech) console.log('  Narration needs speech: only an offline mock runs without it — set a key, or pass --provider.');
-  if (capabilities.speech && provider.speechEngine === 'native') console.log('  Speech comes from the provider endpoint (--speech-engine native / OVE_AI_TTS_PROVIDER=native); captions are transcribed from it.');
-  if (local) {
-    const ready = local.filter(state => state.ready).map(state => state.code);
-    console.log(`  Speech is made on this machine in ${ready.length} of ${local.length} languages (${ready.join(', ') || 'none downloaded yet'}), kept in ${ttsCacheDir()}; see "ove ai voices".`);
-  }
   if (!capabilities.image) console.log('  Images need a provider with image generation; the Groq adapter here has none, so use FreeLLMAPI, OpenAI or another (--provider), or supply pictures with --asset.');
   console.log('\nSet GROQ_API_KEY in .env (the default provider), or pass --provider.');
-  return 0;
-}
-
-/** `ove ai voices`: what the on-device voice speaks, and which models are already on disk. */
-async function voicesCommand(argv: string[]): Promise<number> {
-  const states = await indicModelStates(), dir = ttsCacheDir();
-  if (flag(argv, '--json')) { console.log(JSON.stringify({ dir, languages: states }, null, 2)); return 0; }
-  console.log(`On-device voices, kept in ${dir}${process.env.OVE_TTS_DIR ? ' (OVE_TTS_DIR)' : ' (set OVE_TTS_DIR to move them)'}.`);
-  for (const state of states) console.log(`  ${state.code}  ${state.name.padEnd(12)} ${state.ready ? 'ready' : 'downloads on first use (about 88 MB)'}`);
-  console.log(`\nRecord with one: ove ai narrate script.txt --speech-engine indic --language hi`);
-  console.log('No key and no network are needed once the model is on disk. The models are CC-BY-4.0 (Sulabh Katiyar, indic-tiny-tts).');
   return 0;
 }
 
@@ -536,8 +517,7 @@ export async function runAi(argv: string[]): Promise<number> {
   const sub = argv[1];
   try {
     switch (sub) {
-      case 'doctor': return await doctorCommand(argv);
-      case 'voices': return await voicesCommand(argv);
+      case 'doctor': return doctorCommand(argv);
       case 'capabilities': return await capabilitiesCommand(argv);
       case 'compose': return await composeCommand(argv);
       case 'refine': return await refineCommand(argv);

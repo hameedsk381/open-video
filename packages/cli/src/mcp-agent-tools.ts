@@ -38,8 +38,8 @@ export const AGENT_TOOLS = [
   },
   {
     name: 'motionrender_explainer_compile',
-    description: 'Build an explainer script into composition.json (then use motionrender_render_still to look at it and motionrender_render_video to make the MP4). Each scene lasts as long as its spoken line. voice: true records the lines with a free Edge voice (needs internet) or the on-device Indic voice (speechEngine "indic"); the default is silent. Media scenes may give a prompt instead of a file, which needs an image model.',
-    inputSchema: { type: 'object', properties: { ...scriptInput, outputDir: { type: 'string', description: 'Where composition.json goes (default: beside the file; required with an inline script)' }, voice: { type: 'boolean', description: 'Record the spoken lines (default false)' }, voiceName: { type: 'string', description: 'Edge voice such as en-IN-NeerjaNeural, or an on-device voice' }, language: { type: 'string', description: 'For the on-device voice: hi, bn, ta, te, ml, gu, pa, kn, mr, as or or' }, speechEngine: { type: 'string', enum: ['edge', 'indic'], description: 'edge (default, online, free) or indic (on this machine, 11 Indic languages)' } } },
+    description: 'Build an explainer script into composition.json (then use motionrender_render_still to look at it and motionrender_render_video to make the MP4). Each scene lasts as long as its spoken line. voice: true records the lines with a free Edge voice (needs internet, no key); the default is silent. Media scenes may give a prompt instead of a file, which needs an image model.',
+    inputSchema: { type: 'object', properties: { ...scriptInput, outputDir: { type: 'string', description: 'Where composition.json goes (default: beside the file; required with an inline script)' }, voice: { type: 'boolean', description: 'Record the spoken lines (default false)' }, voiceName: { type: 'string', description: 'Edge voice, such as en-IN-NeerjaNeural, en-US-AriaNeural or te-IN-ShrutiNeural' } } },
   },
   {
     name: 'motionrender_facts',
@@ -88,7 +88,7 @@ export async function handleAgentTool(name: string, args: Record<string, any>): 
       const target = args.outputDir ? resolve(String(args.outputDir)) : dir;
       if (!target) throw new Error('outputDir is required when the script is given inline');
       const logs: string[] = [];
-      const built = await buildExplainer(parsed.data as Explainer, { output: join(target, 'composition.json'), voice: args.voice === true, voiceName: args.voiceName, language: args.language, speechEngine: args.speechEngine, log: message => logs.push(message) });
+      const built = await buildExplainer(parsed.data as Explainer, { output: join(target, 'composition.json'), voice: args.voice === true, voiceName: args.voiceName, log: message => logs.push(message) });
       return reply([`Built ${built.output}`, `- ${built.scenes} scenes, ${built.spoken} spoken line${built.spoken === 1 ? '' : 's'}${args.voice === true ? ' recorded' : ' (silent: pass voice: true to record them)'}`,
         ...(built.pictures.made + built.pictures.reused ? [`- pictures: ${built.pictures.made} drawn, ${built.pictures.reused} reused`] : []), ...logs.filter(line => !/^pictures:/.test(line)).map(line => `- ${line}`), ...built.notes.map(note => `- ${note}`),
         'Next: motionrender_render_still (frame 90) to look at it, motionrender_review_video to check it, then motionrender_render_video.'].join('\n'));

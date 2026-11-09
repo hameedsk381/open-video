@@ -2,7 +2,7 @@
 // diagram on the same dark board, with the same header and footer on every scene, so any topic gets a consistent video. Nothing here
 // runs while rendering: the result is plain composition JSON, frame-exact like any other.
 import type { Explainer, ExplainerScene } from '@ove/schema';
-import { explainerLooks } from '@ove/schema';
+import { explainerCornerScale, explainerFontMaxWeight, explainerLookDefs, explainerWeightValue } from '@ove/schema';
 
 type Layer = Record<string, any>;
 type Anim = { property: string; keyframes: { frame: number; value: number | string; easing?: string }[] };
@@ -17,17 +17,39 @@ const CAPTION_Y = 1430;
 const GOLD = '{{accent}}', MINT = '{{accent2}}', RED = '#ff5d6c', ORANGE = '#e8a548', GREEN = '#3fae8c', CLEAR = '#00000000';
 const TONES = { gold: GOLD, mint: MINT, red: RED, muted: '{{muted}}' } as const;
 
+/* ---- the design in force while one script compiles ---- */
+type Active = { motion: 'rise' | 'drop' | 'blur' | 'fade'; cornerScale: number; weightCap: number; fonts: Record<string, string> };
+const NEUTRAL: Active = { motion: 'rise', cornerScale: 1, weightCap: 900, fonts: { '{{fontDisplay}}': 'Archivo', '{{fontBody}}': 'Inter' } };
+let active: Active = NEUTRAL;
+/** A corner radius in this design: the cards' own numbers are for the default soft corners. */
+const R = (radius: number) => Math.round(radius * active.cornerScale);
+/** A font weight the font really has: no heavier than the headline weight chosen, and no heavier than the font goes. */
+const weightFor = (family: string, weight: number | string): number | string => {
+  const wanted = typeof weight === 'number' ? weight : Number.parseInt(weight, 10);
+  if (!Number.isFinite(wanted)) return weight;
+  const font = active.fonts[family] ?? family, cap = family === '{{fontDisplay}}' ? active.weightCap : 1000;
+  return Math.min(wanted, cap, explainerFontMaxWeight[font] ?? 1000);
+};
+
 /* ---- drawing helpers ---- */
 const anim = (property: string, ...keys: [number, number | string, string?][]): Anim => ({ property, keyframes: keys.map(([frame, value, easing]) => ({ frame, value, ...(easing ? { easing } : {}) })) });
 const fade = (delay = 0, dur = 18, to = 1): Anim => anim('opacity', [delay, 0], [delay + dur, to, 'glide']);
-const rise = (y: number, delay = 0, dist = 40, dur = 24): Anim[] => [fade(delay, Math.round(dur * 0.7)), anim('y', [delay, y + dist], [delay + dur, y, 'land'])];
+/** How something arrives, in the design's own way: from below (rise), from above (drop), into focus (blur) or simply fading in. */
+const rise = (y: number, delay = 0, dist = 40, dur = 24): Anim[] => {
+  switch (active.motion) {
+    case 'fade': return [fade(delay, Math.round(dur * 0.9))];
+    case 'blur': return [fade(delay, Math.round(dur * 0.7)), anim('blur', [delay, 16], [delay + dur, 0, 'land'])];
+    case 'drop': return [fade(delay, Math.round(dur * 0.7)), anim('y', [delay, y - dist], [delay + dur, y, 'land'])];
+    default: return [fade(delay, Math.round(dur * 0.7)), anim('y', [delay, y + dist], [delay + dur, y, 'land'])];
+  }
+};
 const pop = (delay = 0, dur = 20, from = 0.6): Anim[] => [fade(delay, 8), anim('scale', [delay, from], [delay + dur, 1, 'pop'])];
 const grow = (property: string, to: number, delay = 0, dur = 24): Anim => anim(property, [delay, 0], [delay + dur, to, 'land']);
 const flat = (beats?: Beat[]) => (beats?.length ? { animations: beats.flat() } : {});
 
 type TextOptions = { size?: number; weight?: number | string; font?: string; color?: string; ls?: number; lh?: number; maxWidth?: number; maxLines?: number; minSize?: number; align?: 'left' | 'center' | 'right'; opacity?: number; italic?: boolean; anims?: Beat[] };
 const text = (id: string, content: string, x: number, y: number, o: TextOptions = {}): Layer => ({
-  id, type: 'text', content, x, y, fontSize: o.size ?? 48, fontFamily: o.font ?? '{{fontBody}}', fontWeight: o.weight ?? 500, color: o.color ?? '{{text}}',
+  id, type: 'text', content, x, y, fontSize: o.size ?? 48, fontFamily: o.font ?? '{{fontBody}}', fontWeight: weightFor(o.font ?? '{{fontBody}}', o.weight ?? 500), color: o.color ?? '{{text}}',
   ...(o.ls !== undefined ? { letterSpacing: o.ls } : {}), ...(o.lh ? { lineHeight: o.lh } : {}), ...(o.maxWidth ? { maxWidth: o.maxWidth } : {}),
   ...(o.maxLines ? { maxLines: o.maxLines, minFontSize: o.minSize ?? Math.round((o.size ?? 48) * 0.6) } : {}), ...(o.align ? { textAlign: o.align } : {}),
   ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.italic ? { fontStyle: 'italic' } : {}), ...flat(o.anims),
@@ -37,7 +59,7 @@ const center = (id: string, content: string, y: number, o: TextOptions = {}) => 
 
 type ShapeOptions = { radius?: number; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number; anims?: Beat[] };
 const rect = (id: string, x: number, y: number, width: number, height: number, o: ShapeOptions = {}): Layer => ({
-  id, type: 'rect', x, y, width: Math.max(1, width), height: Math.max(1, height), radius: o.radius ?? 0, fill: o.fill ?? '{{surface}}',
+  id, type: 'rect', x, y, width: Math.max(1, width), height: Math.max(1, height), radius: R(o.radius ?? 0), fill: o.fill ?? '{{surface}}',
   ...(o.stroke ? { stroke: o.stroke, strokeWidth: o.strokeWidth ?? 2 } : {}), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...flat(o.anims),
 });
 const circle = (id: string, x: number, y: number, width: number, o: ShapeOptions = {}): Layer => ({
@@ -254,7 +276,7 @@ const media: Kind<'media'> = (s, i) => ({ min: 120, layers: () => {
   const src = s.src;
   const shadeFrom = FRAME.y + Math.round(FRAME.h * 0.4), bottom = FRAME.y + FRAME.h, captionY = 1450, titleY = captionY - (s.caption ? 370 : 230); // the words stay above the platforms' bottom band; only the picture reaches the frame's foot
   return [
-    { id: 'footage', type: VIDEO.test(src) ? 'video' : 'image', src, x: FRAME.x, y: FRAME.y, width: FRAME.w, height: FRAME.h, radius: 28, objectFit: 'cover', ...(VIDEO.test(src) ? { muted: true, loop: true } : {}) },
+    { id: 'footage', type: VIDEO.test(src) ? 'video' : 'image', src, x: FRAME.x, y: FRAME.y, width: FRAME.w, height: FRAME.h, radius: R(28), objectFit: 'cover', ...(VIDEO.test(src) ? { muted: true, loop: true } : {}) },
     { ...rect('scrim', FRAME.x, shadeFrom, FRAME.w, bottom - shadeFrom, { radius: 28, anims: [fade(0, 10)] }), fill: { type: 'linear', from: [0, 0], to: [0, bottom - shadeFrom], stops: [{ offset: 0, color: '#00000000' }, { offset: 1, color: '#000000e6' }] } },
     ...kicker(i, s.step),
     ...(s.title ? [center('media-title', s.title, titleY, { font: '{{fontDisplay}}', weight: 900, size: 110, color: '#ffffff', maxWidth: 840, maxLines: 3, minSize: 60, lh: 1.0, anims: [rise(titleY, 8, 40, 26)] })] : []),
@@ -307,20 +329,12 @@ const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, s
 
 /* ---- the whole video ---- */
 const theme = {
-  bg: ['color', '#0b1c3f', 'page background (a 6-digit hex)'], surface: ['color', '#10295a', 'raised surfaces and cards'], text: ['color', '#f1efe8', 'main text'], muted: ['color', '#8ea3c9', 'secondary text'],
-  accent: ['color', '#f4c542', 'the one signal colour'], accent2: ['color', '#37d3a3', 'a softer partner for the accent'], radius: ['number', 28, 'corner radius of cards and buttons'], headWeight: ['number', 800, 'weight of headlines'],
-  fontDisplay: ['string', 'Archivo', 'headline font'], fontBody: ['string', 'Inter', 'body font'], texture: ['string', 'grid', 'background texture: none, grid, dots, scanlines or paper'],
-  textureColor: ['color', '#8fb0ff', 'texture ink'], textureOpacity: ['number', 0.05, 'texture strength'], motion: ['string', 'rise', 'how headlines arrive: rise, slide, pop or blur'], transition: ['string', 'fade', 'how scenes change: fade, zoom, wipe or push'],
+  bg: ['color', 'page background (a 6-digit hex)'], surface: ['color', 'raised surfaces and cards'], text: ['color', 'main text'], muted: ['color', 'secondary text'],
+  accent: ['color', 'the one signal colour'], accent2: ['color', 'a softer partner for the accent'],
+  fontDisplay: ['string', 'headline font'], fontBody: ['string', 'body font'], texture: ['string', 'background texture: none, grid, dots, scanlines or paper'],
+  textureColor: ['color', 'texture ink'], textureOpacity: ['number', 'texture strength'], transition: ['string', 'how scenes change: fade, zoom, wipe or push'],
 } as const;
 
-/** The board's colours for each look; `colors` in the script replaces any of them. */
-const looks: Record<typeof explainerLooks[number], Record<string, string | number>> = {
-  navy: {},
-  ink: { bg: '#0a0a0b', surface: '#17171c', text: '#f4f1ea', muted: '#9a968c', accent: '#ff4a1c', accent2: '#ffb199', textureColor: '#ffffff' },
-  paper: { bg: '#f4efe6', surface: '#fffaf0', text: '#1a1a1a', muted: '#6b655a', accent: '#c2410c', accent2: '#0f766e', textureColor: '#000000', textureOpacity: 0.05 },
-  forest: { bg: '#0c2a22', surface: '#12392f', text: '#eef5ef', muted: '#8fb3a4', accent: '#f2c14e', accent2: '#7bdcb5', textureColor: '#9fe8c8' },
-  sunset: { bg: '#2a1033', surface: '#3a1a47', text: '#fff3ec', muted: '#c9a5c9', accent: '#ff9f43', accent2: '#ff6b81', textureColor: '#ffc2d4' },
-};
 
 /** What was said over one scene: the audio file (relative to the composition) and how long it runs. */
 export type ExplainerAudio = { src: string; seconds: number };
@@ -331,6 +345,15 @@ export type ExplainerCompiled = { composition: Record<string, unknown>; notes: s
  * shorter than its pictures need; `audio[i]` is the recording of scene i's `say`, if there is one.
  */
 export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] } = {}): ExplainerCompiled {
+  // The look is a whole design; the script's `design` and `colors` change parts of it.
+  const def = explainerLookDefs[spec.look];
+  const chosen = { ...def.design, ...Object.fromEntries(Object.entries(spec.design ?? {}).filter(([, value]) => value !== undefined)) } as typeof def.design;
+  const palette: Record<string, string | number> = { ...def.colors, ...spec.colors, fontDisplay: chosen.fontDisplay, fontBody: chosen.fontBody, texture: chosen.texture, transition: chosen.transition };
+  active = { motion: chosen.motion, cornerScale: explainerCornerScale[chosen.corners], weightCap: explainerWeightValue[chosen.weight], fonts: { '{{fontDisplay}}': chosen.fontDisplay, '{{fontBody}}': chosen.fontBody } };
+  try { return compileWith(spec, options, palette); } finally { active = NEUTRAL; }
+}
+
+function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] }, palette: Record<string, string | number>): ExplainerCompiled {
   const notes: string[] = [];
   const [cw, ch] = SIZES[spec.aspect], fit = Math.min(cw / W, ch / H), column = cw !== W || ch !== H;
   const scenes = spec.scenes.map((scene, i) => {
@@ -350,7 +373,7 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
   // The header and footer are not scene layers, so no scene camera reaches them: scale the column by hand.
   const board = column ? [{ id: 'column', type: 'group', x: (cw - W * fit) / 2, y: (ch - H * fit) / 2, scale: fit, children: overlay }] : overlay;
   const variables = {
-    ...Object.fromEntries(Object.entries(theme).map(([key, [type, value, description]]) => [key, { type, default: ({ ...looks[spec.look], ...spec.colors } as Record<string, string | number>)[key] ?? value, description: `Theme: ${description}` }])),
+    ...Object.fromEntries(Object.entries(theme).map(([key, [type, description]]) => [key, { type, default: palette[key], description: `Theme: ${description}` }])),
     topic: { type: 'string', default: spec.topic, description: 'The topic, in the header' }, handle: { type: 'string', default: spec.handle, description: 'The creator handle, in the header' },
   };
   const composition = {

@@ -37,7 +37,6 @@ GROQ_API_KEY=your_groq_key_here          # the default provider
 # FREELLMAPI_MODEL=auto
 
 # Narration speech: empty = the free Edge TTS engine; native = the provider's own audio endpoint
-OVE_AI_TTS_PROVIDER=
 
 # Optional Scaling & Worker Settings
 WORKER_CONCURRENCY=1

@@ -401,13 +401,13 @@ async function synthesizeEdgeSpeechOnce(text: string, options: EdgeSpeechOptions
 }
 
 /**
- * Attaches Edge TTS as the speech and word-boundary transcription engine for any AiProvider. Opting out is
- * `OVE_AI_TTS_PROVIDER=native` (or the SDK's `speechEngine`), which is decided in `createProvider`, not here.
+ * Attaches Edge TTS as the speech and word-boundary transcription engine for any AiProvider. Audio it did not make
+ * (a recording someone supplies) is still transcribed by the provider's own transcription, when it has one.
  */
 export function attachEdgeAudio(provider: AiProvider): AiProvider {
   const prevTranscribe = provider.transcribe;
 
-  provider.speak = async (text: string, options: { voice?: string; language?: string; signal?: AbortSignal } = {}) => {
+  provider.speak = async (text: string, options: { voice?: string; language?: string; rate?: number; signal?: AbortSignal } = {}) => {
     const res = await synthesizeEdgeSpeech(text, options);
     return { data: res.data, extension: res.extension };
   };

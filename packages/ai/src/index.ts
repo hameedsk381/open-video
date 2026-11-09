@@ -25,10 +25,6 @@ export * from './scenes';
 export * from './content';
 export * from './registry';
 export * from './edge-tts';
-// The local voices: ONNX speech for eleven Indic languages, in this process, with no key and free word timings.
-export { ensureIndicModel, indicLanguage, indicLanguageFor, indicLanguages, indicModelDir, indicModelStates, ttsCacheDir, type IndicLanguage, type IndicLanguageInfo, type ModelState } from './indic-tts/models';
-export { attachIndicAudio, indicLanguageForRequest, indicModel, synthesizeIndicSpeech, type IndicSpeakOptions, type IndicSpeech } from './indic-tts/engine';
-export { loadIndicModel, synthesizeIndic, type IndicModel } from './indic-tts/synthesis';
 export * from './plan';
 export * from './copy';
 export * from './smart';
