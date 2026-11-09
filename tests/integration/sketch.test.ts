@@ -48,3 +48,24 @@ describe('sketch layers', () => {
     expect(same(await png(wholly), await png(clean))).toBe(false);
   });
 });
+
+describe('sketch on paths and labels on physics bodies', () => {
+  const path = (extra: Record<string, unknown> = {}) => ({ id: 'tri', type: 'path', x: 60, y: 30, d: 'M0 120 L100 0 L200 120 Z', fill: '#ffcc00', stroke: '#ffffff', strokeWidth: 3, ...extra });
+  it('draws a path by hand, the same every time', async () => {
+    const [clean, hand, again] = await Promise.all([png(video([path()])), png(video([path({ sketch: {} })])), png(video([path({ sketch: {} })]))]);
+    expect(same(clean, hand)).toBe(false);
+    expect(same(hand, again)).toBe(true);
+  });
+
+  it('reaches paths when the whole video is sketched, unless one opts out', async () => {
+    const [whole, hand, clean] = await Promise.all([png(video([path()], { sketch: {} })), png(video([path({ sketch: {} })])), png(video([path({ sketch: false })], { sketch: {} }))]);
+    expect(same(whole, hand)).toBe(true);
+    expect(same(clean, whole)).toBe(false);
+  });
+
+  it('writes a label on a body', async () => {
+    const world = (label?: string) => video([{ id: 'w', type: 'physics', x: 0, y: 0, width: 320, height: 180, bodies: [{ shape: 'rect', x: 160, y: 140, width: 120, height: 60, static: true, fill: '#cc3333', ...(label ? { label } : {}) }] }]);
+    const [plain, labelled] = await Promise.all([png(world(), 10), png(world('LOAD'), 10)]);
+    expect(same(plain, labelled)).toBe(false);
+  });
+});

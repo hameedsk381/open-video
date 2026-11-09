@@ -138,7 +138,7 @@ export const librarySchema = z.object({ blocks: z.array(blockSchema), themes: z.
 export type Library = z.infer<typeof librarySchema>;
 
 /* Jobs and status */
-export const jobKindSchema = z.enum(['thumbnail', 'compose', 'render', 'review', 'narrate', 'transcribe', 'image', 'batch', 'refine', 'import']);
+export const jobKindSchema = z.enum(['thumbnail', 'compose', 'explainer', 'render', 'review', 'narrate', 'transcribe', 'image', 'batch', 'refine', 'import']);
 export type JobKind = z.infer<typeof jobKindSchema>;
 export const jobSchema = z.object({
   id: z.string(), kind: jobKindSchema, status: z.enum(['queued', 'running', 'done', 'error']), messages: z.array(z.string()), result: z.unknown().optional(),

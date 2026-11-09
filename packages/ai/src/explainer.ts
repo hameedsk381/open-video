@@ -1,6 +1,9 @@
 // Writes an explainer script from a brief. The model only chooses scenes and words; it never draws, so a small model is enough and every
 // answer is checked against the explainer schema. A reply that does not fit is sent back with the exact problems, a few times at most.
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
 import { explainerSchema, type Explainer } from '@ove/schema';
+import { synthesizeEdgeSpeech } from './edge-tts';
 import { extractJson } from './json';
 import type { AiProvider, ChatMessage } from './providers';
 
@@ -28,6 +31,8 @@ const GUIDE = `Scene kinds (each scene has a "kind", an optional "step" label in
 - chart: compare amounts (type "bars") or show a change over time (type "line"). {kind:"chart", type, items:[{label, value}] (2-8, values are plain numbers), unit?, highlight?, caption?, say}
 - timeline: what happened or happens, in order. {kind:"timeline", events:[{when, title, detail?}] (2-6), caption?, say}
 - pile: many small things fall into a container and pile up, to show load, volume or overflow. {kind:"pile", title?:"REQUESTS", bucket?:"SERVER", count?:5-120, shape?:"circle"|"rect", tone?:"mixed"|"gold"|"mint"|"red", caption?, say}
+- phone: a phone screen shows a short conversation or notifications, for apps, messages and alerts. {kind:"phone", app:"Chat", messages:[{side:"in"|"out", text}] (1-5), caption?, say}
+- hex: a map of hexagon cells with a few lit, for regions, zones, cells or sharding. {kind:"hex", columns?:3-7, rows?:2-6, lit?:[cell numbers], tags?:["Zone A"] (up to 3), caption?, say}
 - closing: the takeaway. {kind:"closing", title, points?:[up to 3], cta?:"Follow for more", say}
 "tone" is one of gold, mint, red, muted.`;
 
@@ -67,4 +72,30 @@ export async function writeExplainer(provider: AiProvider, brief: string, option
     messages.push({ role: 'assistant', content: reply }, { role: 'user', content: `That script has problems:\n${problems}\nReply with the corrected JSON object only.` });
   }
   throw new Error(`The model's script could not be used after ${limit} attempts:\n${problems}`);
+}
+
+/** The length of a PCM WAV recording in seconds, read from its header (which is all the spoken lines need). */
+export function wavSeconds(bytes: Uint8Array): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), tag = (at: number) => String.fromCharCode(...bytes.slice(at, at + 4));
+  if (bytes.length < 44 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('That is not a WAV recording');
+  let byteRate = 0;
+  for (let at = 12; at + 8 <= bytes.length;) {
+    const size = view.getUint32(at + 4, true);
+    if (tag(at) === 'fmt ') byteRate = view.getUint32(at + 16, true);
+    if (tag(at) === 'data') { if (!byteRate) break; return Math.min(size, bytes.length - at - 8) / byteRate; }
+    at += 8 + size + (size % 2);
+  }
+  throw new Error('That WAV recording has no readable length');
+}
+
+/** Records a scene's line to `file`, or reuses the recording made earlier for the same words and voice. */
+export async function speakLine(text: string, voice: string | undefined, file: string): Promise<{ seconds: number; fresh: boolean }> {
+  const stamp = createHash('sha1').update(`${voice ?? ''}\n${text}`).digest('hex'), mark = `${file}.txt`;
+  const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
+  if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { seconds: wavSeconds(bytes), fresh: false }; }
+  const speech = await synthesizeEdgeSpeech(text, { voice });
+  if (!/wav/i.test(speech.extension)) throw new Error(`The voice answered with ${speech.extension} audio; only WAV is read here`);
+  const bytes = Buffer.from(speech.data);
+  await writeFile(file, bytes); await writeFile(mark, stamp);
+  return { seconds: wavSeconds(bytes), fresh: true };
 }

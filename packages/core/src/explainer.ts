@@ -9,6 +9,7 @@ type Anim = { property: string; keyframes: { frame: number; value: number | stri
 type Beat = Anim | Anim[];
 
 const FPS = 30, W = 1080, H = 1920;
+const SIZES = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] } as const;
 const GOLD = '{{accent}}', MINT = '{{accent2}}', RED = '#ff5d6c', ORANGE = '#e8a548', GREEN = '#3fae8c', CLEAR = '#00000000';
 const TONES = { gold: GOLD, mint: MINT, red: RED, muted: '{{muted}}' } as const;
 
@@ -256,6 +257,37 @@ const media: Kind<'media'> = (s, i) => ({ min: 120, layers: () => {
     sfx('whoosh', 0, 0.2)];
 } });
 
+const phone: Kind<'phone'> = (s, i) => ({ min: 180 + s.messages.length * 22, layers: frames => {
+  const x = 260, y = 250, w = 560, h = 1200, inner = 26, top = y + 110, layers: Layer[] = [...kicker(i, s.step),
+    rect('phone-body', x, y, w, h, { radius: 70, fill: '{{surface}}', stroke: '{{muted}}', strokeWidth: 6, anims: [fade(2, 14)] }),
+    rect('phone-screen', x + inner, y + inner, w - inner * 2, h - inner * 2, { radius: 48, fill: '{{bg}}', anims: [fade(4, 14)] }),
+    rect('phone-notch', x + w / 2 - 70, y + inner + 14, 140, 18, { radius: 9, fill: '{{surface}}' }),
+    label('phone-app', s.app, x + w / 2, y + 68, { size: 24, ls: 5, color: '{{muted}}', align: 'center', anims: [fade(8, 10)] })];
+  const bubbleW = 380, gap = 28, step = 22; let at0 = 14, cursor = top + 20;
+  s.messages.forEach((m, k) => {
+    const lines = Math.max(1, Math.ceil(m.text.length / 22)), bh = 56 + lines * 40, out = m.side === 'out', bx = out ? x + w - inner - 20 - bubbleW : x + inner + 20, start = at0 + k * step;
+    layers.push(rect(`bubble-${k}`, bx, cursor, bubbleW, bh, { radius: 30, fill: out ? GOLD : '{{surface}}', anims: [fade(start, 10)] }),
+      text(`bubble-text-${k}`, m.text, bx + 28, cursor + 26, { size: 32, weight: 600, color: out ? '{{bg}}' : '{{text}}', maxWidth: bubbleW - 56, maxLines: 4, minSize: 22, lh: 1.25, anims: [rise(cursor + 26, start, 16, 14)] }), sfx(out ? 'pop' : 'ding', start + 1, 0.2));
+    cursor += bh + gap;
+  });
+  return [...layers, ...caption('phone-caption', s.caption, y + h + 70, at(frames, 0.55)), sfx('whoosh', 0, 0.2)];
+} });
+
+const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
+  const { rows, columns } = s, root3 = Math.sqrt(3), r = Math.min(112, 920 / ((columns + 0.5) * root3)), cw = root3 * r, total = rows * columns;
+  const gx = (W - (columns + 0.5) * cw) / 2, gy = 420, rnd = rng(s.seed);
+  const lit = (s.lit ?? Array.from({ length: Math.min(total, 4) }, () => Math.floor(rnd() * total))).filter(c => c < total);
+  const layers: Layer[] = [...kicker(i, s.step)];
+  for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+    const idx = row * columns + col, k = lit.indexOf(idx), on = k >= 0, x = gx + col * cw + (row % 2 ? cw / 2 : 0), y = gy + row * r * 1.5, start = 4 + (row + col) * 3;
+    const d = 'M' + [0, 1, 2, 3, 4, 5].map(n => { const a = ((60 * n - 30) * Math.PI) / 180; return `${(cw / 2 + (r - 4) * Math.cos(a)).toFixed(1)} ${(r + (r - 4) * Math.sin(a)).toFixed(1)}`; }).join(' L') + ' Z';
+    layers.push({ id: `hex-${idx}`, type: 'path', x, y, d, fill: on ? [GOLD, MINT, RED][k % 3] : '{{surface}}', stroke: on ? '{{text}}' : '{{muted}}', strokeWidth: on ? 3 : 2, ...flat([fade(start, 10, on ? 1 : 0.7), ...(on ? [anim('opacity', [at(frames, 0.3) + k * 10, 0.55], [at(frames, 0.3) + k * 10 + 12, 1, 'pop'])] : [])]) });
+  }
+  s.tags.forEach((t, k) => { if (lit[k] === undefined) return; const row = Math.floor(lit[k]! / columns), col = lit[k]! % columns, cx = gx + col * cw + (row % 2 ? cw / 2 : 0) + cw / 2, cy = gy + row * r * 1.5 + r;
+    layers.push(label(`hex-tag-${k}`, t, cx, cy - 12, { size: 20, ls: 2, color: '{{bg}}', align: 'center', maxWidth: cw - 8, maxLines: 1, minSize: 12, anims: [fade(at(frames, 0.3) + k * 10 + 6, 10)] })); });
+  return [...layers, ...caption('hex-caption', s.caption, gy + rows * r * 1.5 + r * 1.4 + 40, at(frames, 0.5)), sfx('whoosh', 0, 0.2), ...lit.slice(0, 4).map((_, k) => sfx('pop', at(frames, 0.3) + k * 10, 0.2))];
+} });
+
 const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...kicker(i, s.step),
   center('close-title', s.title, 520, { font: '{{fontDisplay}}', weight: 900, size: 130, color: GOLD, maxWidth: 900, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(520, 6, 40, 26)] }),
@@ -265,7 +297,7 @@ const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...tag('cta', s.cta, W / 2, 1560, MINT, at(frames, 0.6), 640),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, stat, chart, timeline, pile, media, closing };
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, stat, chart, timeline, pile, media, phone, hex, closing };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -294,11 +326,13 @@ export type ExplainerCompiled = { composition: Record<string, unknown>; notes: s
  */
 export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] } = {}): ExplainerCompiled {
   const notes: string[] = [];
+  const [cw, ch] = SIZES[spec.aspect], fit = Math.min(cw / W, ch / H), column = cw !== W || ch !== H;
   const scenes = spec.scenes.map((scene, i) => {
     const draw = (kinds[scene.kind] as Kind<any>)(scene, i), spoken = options.audio?.[i];
     const frames = Math.max(draw.min, spoken ? Math.ceil((spoken.seconds + 0.6) * FPS) + 8 : 0);
     if (spoken && frames > draw.min) notes.push(`Scene ${i + 1} (${scene.kind}) runs ${(frames / FPS).toFixed(1)} s to fit its spoken line.`);
     return { id: `s${i + 1}-${scene.kind}`, name: `${i + 1}. ${scene.kind}`, durationFrames: frames,
+      ...(column ? { camera: { x: W / 2, y: H / 2, zoom: fit } } : {}),
       ...(i > 0 ? { transitionIn: { type: '{{transition}}', durationFrames: 14 } } : {}),
       layers: [...draw.layers(frames), ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
   });
@@ -308,14 +342,16 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
     label('header-handle', '{{handle}}', W - 60, 64, { size: 22, ls: 3, color: '{{muted}}', align: 'right' }),
     text('follow', 'Follow', 60, 1810, { size: 46, weight: 800, italic: true }),
   ];
+  // The header and footer are not scene layers, so no scene camera reaches them: scale the column by hand.
+  const board = column ? [{ id: 'column', type: 'group', x: (cw - W * fit) / 2, y: (ch - H * fit) / 2, scale: fit, children: overlay }] : overlay;
   const variables = {
     ...Object.fromEntries(Object.entries(theme).map(([key, [type, value, description]]) => [key, { type, default: ({ ...looks[spec.look], ...spec.colors } as Record<string, string | number>)[key] ?? value, description: `Theme: ${description}` }])),
     topic: { type: 'string', default: spec.topic, description: 'The topic, in the header' }, handle: { type: 'string', default: spec.handle, description: 'The creator handle, in the header' },
   };
   const composition = {
-    version: '1.0', id: spec.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'explainer', name: spec.topic, width: W, height: H, fps: FPS, durationFrames: 'auto', background: '{{bg}}',
+    version: '1.0', id: spec.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'explainer', name: spec.topic, width: cw, height: ch, fps: FPS, durationFrames: 'auto', background: '{{bg}}',
     texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -16 },
-    ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay,
+    ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay: board,
   };
   return { composition, notes };
 }

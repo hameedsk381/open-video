@@ -73,6 +73,16 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     title: words(60).optional().describe('Large text over the lower part of the picture, such as the name of a place or idea'),
     caption: words(120).optional().describe('One sentence under the title'),
     credit: words(80).optional().describe('A small credit line in a corner, such as "Video: Bo Reel on Pexels"') }),
+  z.object({ kind: z.literal('phone'), ...common,
+    app: words(20).describe('The name of the app, in the bar at the top of the phone, such as "Chat" or "Maps"'),
+    messages: z.array(z.object({ side: z.enum(['in', 'out']).default('in').describe('in: arrives from someone else, on the left. out: sent from this phone, on the right'), text: words(70) })).min(1).max(5).describe('What shows on the screen, one bubble after another'),
+    caption: words(90).optional().describe('A line under the phone') }),
+  z.object({ kind: z.literal('hex'), ...common,
+    columns: z.number().int().min(3).max(7).default(5), rows: z.number().int().min(2).max(6).default(4),
+    lit: z.array(z.number().int().min(0).max(41)).max(12).optional().describe('Which cells light up, counted left to right, top to bottom. Left out, a few are chosen'),
+    tags: z.array(words(14)).max(3).default([]).describe('Short names pinned on the first lit cells, such as "Zone A"'),
+    seed: z.number().int().default(3).describe('Picks the lit cells when lit is left out'),
+    caption: words(90).optional().describe('A line under the map') }),
   z.object({ kind: z.literal('closing'), ...common,
     title: words(40).describe('The takeaway, large'),
     points: z.array(words(60)).max(3).default([]).describe('Up to three short reminders'),
@@ -82,6 +92,7 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
 export const explainerSchema = z.object({
   version: z.literal('1.0').default('1.0'),
   series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
+  aspect: z.enum(['9:16', '1:1', '4:5', '16:9']).default('9:16').describe('The shape of the video. Scenes are drawn as a 9:16 column; other shapes show that column, scaled to fit, centred on the board'),
   sketch: z.boolean().default(false).describe('Draw the whole board by hand: wobbly outlines, redrawn every few frames like a cartoon'),
   look: z.enum(explainerLooks).default('navy').describe('The colours of the board: navy, ink (black with an orange signal), paper (light), forest or sunset'),
   colors: z.object({ bg: hex, surface: hex, text: hex, muted: hex, accent: hex, accent2: hex }).partial().optional().describe('Colours that replace the look\'s own, by name'),
@@ -95,4 +106,4 @@ export type Explainer = z.infer<typeof explainerSchema>;
 export type ExplainerInput = z.input<typeof explainerSchema>;
 export type ExplainerScene = z.infer<typeof explainerSceneSchema>;
 /** The scene kinds, for prompts and menus. */
-export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'closing'] as const;
+export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'closing'] as const;

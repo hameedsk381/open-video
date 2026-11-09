@@ -10,7 +10,7 @@ import type { Ctx, Route } from '../types';
 
 // URL path to job kind. Requests are checked now, so a bad one is refused with its reason before anything is queued.
 const jobRoutes: Record<string, JobKind> = {
-  '/api/compose': 'compose', '/api/refine': 'refine', '/api/import': 'import', '/api/render': 'render', '/api/thumbnail': 'thumbnail', '/api/review': 'review',
+  '/api/compose': 'compose', '/api/explainer': 'explainer', '/api/refine': 'refine', '/api/import': 'import', '/api/render': 'render', '/api/thumbnail': 'thumbnail', '/api/review': 'review',
   '/api/narrate': 'narrate', '/api/transcribe': 'transcribe', '/api/image': 'image', '/api/batch': 'batch',
 };
 

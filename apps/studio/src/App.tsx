@@ -10,6 +10,7 @@ import { Editor } from './pages/Editor';
 import { Generation } from './pages/Generation';
 import { Home } from './pages/Home';
 import { Assets } from './pages/Assets';
+import { Explainer } from './pages/Explainer';
 import { Settings } from './pages/Library';
 import { ProductionPlan } from './pages/ProductionPlan';
 import { Projects } from './pages/Projects';
@@ -84,6 +85,7 @@ function ThemeToggle() {
 const nav = [
   ['home', '#/', 'Home', HomeIcon] as const,
   ['new', '#/new', 'Create', PlusIcon] as const,
+  ['explainer', '#/explainer', 'Explainer', SparklesIcon] as const,
   ['projects', '#/projects', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Assets', ImagesIcon] as const,
   ['generation', '#/generation', 'Activity', ClockIcon] as const,
@@ -96,6 +98,7 @@ const sections: Record<Route['name'], string> = {
   projects: 'Projects',
   library: 'Assets',
   generation: 'Activity',
+  explainer: 'Explainer',
   settings: 'Settings',
   new: 'Create',
   reset: 'Account',
@@ -284,6 +287,8 @@ export function App() {
         <Generation />
       ) : route.name === 'editor' ? (
         <Editor key={route.id} id={route.id} tab={route.tab} />
+      ) : route.name === 'explainer' ? (
+        <Explainer />
       ) : route.name === 'library' ? (
         <Assets />
       ) : route.name === 'settings' ? (

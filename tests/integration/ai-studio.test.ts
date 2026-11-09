@@ -198,3 +198,30 @@ Enjoy your video!
     expect(still.headers['content-type']).toBe('image/png');
   });
 });
+
+describe('explainer jobs', () => {
+  const script = { topic: 'Caches', handle: '@t', aspect: '1:1', scenes: [{ kind: 'stat', value: '10×', label: 'faster reads', say: 'Caches make reads faster.' }, { kind: 'phone', app: 'Chat', messages: [{ text: 'Hi' }] }] };
+
+  it('turns a script into a composition in the project, without a voice when it is off', async () => {
+    const result = await finished(await post('/api/explainer', { script, folder: 'explainer-job', voice: false }));
+    expect(result.scenes).toBe(3); // two scenes and the header / footer overlay scene
+    const written = JSON.parse(await readFile(join(root, 'explainer-job', 'composition.json'), 'utf8'));
+    expect([written.width, written.height]).toEqual([1080, 1080]);
+    expect(JSON.parse(await readFile(join(root, 'explainer-job', 'explainer.json'), 'utf8')).topic).toBe('Caches');
+  }, 60_000);
+
+  it('says what is wrong with a script, all at once', async () => {
+    const reply = await post('/api/explainer', { script: { topic: 'X', scenes: [{ kind: 'hex', columns: 9 }, { kind: 'phone', app: 'A', messages: [] }] }, folder: 'bad-explainer', voice: false });
+    expect(reply.status).toBe(202);
+    const started = json(reply).job;
+    let job = started;
+    for (let attempt = 0; attempt < 100 && job.status !== 'error' && job.status !== 'done'; attempt++) { await delay(100); job = json(await send('GET', `/api/job?id=${started.id}`)).job; }
+    expect(job.status).toBe('error');
+    expect(job.error).toMatch(/scenes\.0\.columns/);
+    expect(job.error).toMatch(/scenes\.1\.messages/);
+  });
+
+  it('needs a topic or a script', async () => {
+    expect((await post('/api/explainer', {})).status).toBeGreaterThanOrEqual(400);
+  });
+});

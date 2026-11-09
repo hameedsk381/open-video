@@ -1,13 +1,12 @@
 // `mr explainer`: from an explainer script (what each scene is about and what is said over it) to a composition. validate checks the
 // script; the default run also records each scene's spoken line with a free Edge voice, so every scene lasts as long as its line,
 // and writes composition.json for the existing still / review / render commands.
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { explainerSchema, type Explainer } from '@ove/schema';
 import { compileExplainer, type ExplainerAudio } from '@ove/core';
-import { createProvider, synthesizeEdgeSpeech, writeExplainer } from '@ove/ai';
+import { createProvider, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
 
@@ -23,31 +22,10 @@ export function missingMedia(spec: Explainer, baseDir: string): string[] {
   return spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && !existsSync(resolve(baseDir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
 }
 
-/** The length of a PCM WAV recording in seconds, read from its header (which is all the spoken lines need). */
-export function wavSeconds(bytes: Uint8Array): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), tag = (at: number) => String.fromCharCode(...bytes.slice(at, at + 4));
-  if (bytes.length < 44 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('That is not a WAV recording');
-  let byteRate = 0;
-  for (let at = 12; at + 8 <= bytes.length;) {
-    const size = view.getUint32(at + 4, true);
-    if (tag(at) === 'fmt ') byteRate = view.getUint32(at + 16, true);
-    if (tag(at) === 'data') { if (!byteRate) break; return Math.min(size, bytes.length - at - 8) / byteRate; }
-    at += 8 + size + (size % 2);
-  }
-  throw new Error('That WAV recording has no readable length');
-}
+export { wavSeconds };
 
 /** Records a scene's line, or reuses the recording made earlier for the same words and voice. */
-async function speak(text: string, voice: string | undefined, file: string): Promise<ExplainerAudio & { fresh: boolean }> {
-  const stamp = createHash('sha1').update(`${voice ?? ''}\n${text}`).digest('hex'), mark = `${file}.txt`;
-  const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
-  if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { src: '', seconds: wavSeconds(bytes), fresh: false }; }
-  const speech = await synthesizeEdgeSpeech(text, { voice });
-  if (!/wav/i.test(speech.extension)) throw new Error(`The voice answered with ${speech.extension} audio; only WAV is read here`);
-  const bytes = Buffer.from(speech.data);
-  await writeFile(file, bytes); await writeFile(mark, stamp);
-  return { src: '', seconds: wavSeconds(bytes), fresh: true };
-}
+const speak = async (text: string, voice: string | undefined, file: string) => speakLine(text, voice, file);
 
 /** `mr explainer write "what to explain"`: the model writes the script; compile it next. */
 async function writeCommand(argv: string[]): Promise<void> {

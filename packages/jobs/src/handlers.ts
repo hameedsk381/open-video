@@ -1,12 +1,14 @@
 // The studio's jobs. Each handler checks its request straight away (so a bad request is refused before it is queued) and gives back the
 // work to run. They know nothing about HTTP: the files they touch come through JobPaths, the AI through the provider, and the rest is injected.
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, relative as relativePath, resolve } from 'node:path';
+import { explainerSchema } from '@ove/schema';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
-  readBrand, sanitizeCompositionJson, saveRevision, writeCompositionProject, type ComposeOptions,
+  readBrand, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
 } from '@ove/ai';
-import { loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
+import { compileExplainer, loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
 import { boolOf, canvasFor, folderName, integerIn, optionalNumber, optionalText, renderSettings, textOf } from './input';
 import { addBrandContact, addBrandLogo } from './brand-logo';
@@ -159,6 +161,49 @@ export function createHandlers(env: JobEnv) {
         scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(options.review),
         issues: result.issues.filter(issue => issue.severity === 'error').map(issue => issue.message), narration,
       };
+    } };
+  };
+
+  /**
+   * An explainer: scenes and spoken lines in, a video out. With `brief` the model writes the script; with `writeOnly` that is all that happens
+   * and the script comes back for editing. With `script` the script is checked, each spoken line is recorded (when `voice` is on) and the
+   * project gets a composition, like a composed one.
+   */
+  const explainer = (input: Input): JobSpec => {
+    const brief = optionalText(input.brief), writeOnly = boolOf(input.writeOnly);
+    if (!brief && input.script === undefined) throw new Error('Say what to explain, or send a script');
+    const scenes = input.scenes === undefined || input.scenes === '' ? undefined : integerIn(input.scenes, 5, 'scenes', 2, 16);
+    return { kind: 'explainer', run: async progress => {
+      let script: unknown = input.script;
+      if (script === undefined || script === null) {
+        const written = await writeExplainer(resolveProvider(input), brief!, { scenes, language: optionalText(input.language), voice: optionalText(input.voiceName), onProgress: message => progress(message) });
+        script = written.explainer;
+        if (writeOnly) return { script, attempts: written.attempts };
+      }
+      const parsed = explainerSchema.safeParse(script);
+      if (!parsed.success) throw new Error(`The script cannot be used:\n${parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n')}`);
+      const spec = parsed.data, dir = paths.projectDir(input.folder, spec.topic);
+      const missing = spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && !existsSync(resolve(dir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
+      if (missing.length) throw new Error(`The video needs files that are not in the project: ${missing.join(', ')}. Add them in the Media tab first.`);
+      const voiceName = optionalText(input.voiceName) ?? spec.voice, assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number } | undefined)[] = [];
+      if (boolOf(input.voice) && spec.scenes.some(scene => scene.say)) {
+        await mkdir(assets, { recursive: true });
+        for (const [i, scene] of spec.scenes.entries()) {
+          if (!scene.say) { audio.push(undefined); continue; }
+          progress(`Recording the voice for scene ${i + 1} of ${spec.scenes.length}…`);
+          const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file);
+          audio.push({ src: relativePath(dir, file).replace(/\\/g, '/'), seconds: made.seconds });
+        }
+      }
+      progress('Building the scenes…');
+      const { composition, notes } = compileExplainer(spec, { audio });
+      await mkdir(dir, { recursive: true });
+      await writeFile(resolve(dir, 'explainer.json'), JSON.stringify(spec, null, 2) + '\n');
+      await ensureBaseline(resolve(dir, 'composition.json'));
+      const files = await writeCompositionProject(dir, composition as any, { force: true });
+      await saveRevision(files.composition, { kind: 'compose', label: spec.topic.slice(0, 160), brief: (brief ?? spec.topic).slice(0, 4000), attempts: 1 });
+      const loaded = loadComposition(composition);
+      return { dir, ...resultFile(files.composition), script: spec, frames: loaded.durationFrames, seconds: loaded.durationFrames / loaded.fps, scenes: loaded.scenes.length, attempts: 1, warnings: notes, reviewed: false, issues: [] };
     } };
   };
 
@@ -343,6 +388,6 @@ export function createHandlers(env: JobEnv) {
     } };
   };
 
-  return { compose, refine, import: importJson, render, thumbnail, review, narrate: narrateJob, transcribe, image, batch };
+  return { compose, explainer, refine, import: importJson, render, thumbnail, review, narrate: narrateJob, transcribe, image, batch };
 }
 export type Handlers = ReturnType<typeof createHandlers>;

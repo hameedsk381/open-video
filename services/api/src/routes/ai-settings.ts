@@ -56,4 +56,4 @@ export function aiSettingsRoutes(): Route[] {
   ];
 }
 
-export const AI_JOB_KINDS = new Set(['compose', 'refine', 'narrate', 'transcribe', 'image', 'batch']);
+export const AI_JOB_KINDS = new Set(['compose', 'explainer', 'refine', 'narrate', 'transcribe', 'image', 'batch']);
