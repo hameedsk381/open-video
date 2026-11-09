@@ -6,6 +6,7 @@
 // the free Edge TTS engine by default (attachEdgeAudio), or the provider's own endpoint with OVE_AI_TTS_PROVIDER=native.
 // An offline MockProvider covers tests and development with no key and no network.
 import { attachEdgeAudio } from './edge-tts';
+import { attachIndicAudio } from './indic-tts/engine';
 import { generateImage, generateText, experimental_transcribe, type ModelMessage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -28,7 +29,7 @@ export type ChatOptions = {
 };
 export type ImageOptions = { size?: string; signal?: AbortSignal };
 export type ImageResult = { data: Uint8Array; extension: string };
-export type SpeakOptions = { voice?: string; signal?: AbortSignal };
+export type SpeakOptions = { voice?: string; language?: string; speed?: number; seed?: number; signal?: AbortSignal };
 export type AudioResult = { data: Uint8Array; extension: string };
 
 /**
@@ -36,12 +37,15 @@ export type AudioResult = { data: Uint8Array; extension: string };
  * `edge` is the reverse-engineered Microsoft Edge endpoint: free, needs no key, and returns word boundaries with the
  * audio. `native` calls the speech endpoint of the provider you already pay, so narration follows your provider rather
  * than a third party that can change the protocol without notice — captions then come from transcribing the result.
+ * `indic` runs the released indic-tiny-tts models in this process: no key, no network after the model is downloaded,
+ * Hindi/Bengali/Tamil and eight more languages, and word timings that need no transcription.
  */
-export type SpeechEngine = 'edge' | 'native';
+export type SpeechEngine = 'edge' | 'native' | 'indic';
 
-/** `OVE_AI_TTS_PROVIDER` (or the SDK's `speechEngine`) picks the engine; `groq` and `openai` are accepted as aliases for `native`. */
+/** `OVE_AI_TTS_PROVIDER` (or the SDK's `speechEngine`) picks the engine; `groq` and `openai` are aliases for `native`, `local` and `offline` for `indic`. */
 export function resolveSpeechEngine(config?: ProviderConfig): SpeechEngine {
   const raw = (config?.speechEngine ?? process.env.OVE_AI_TTS_PROVIDER ?? '').trim().toLowerCase();
+  if (raw === 'indic' || raw === 'local' || raw === 'offline') return 'indic';
   return raw === 'native' || raw === 'groq' || raw === 'openai' ? 'native' : 'edge';
 }
 export type TranscriptWord = { text: string; start: number; end: number };
@@ -815,20 +819,26 @@ function createBaseProvider(config: ProviderConfig = {}): AiProvider {
       id = defaultProviderId();
     }
   }
-  if (id === 'mock') return new MockProvider();
+  if (id === 'mock') return attachSpeech(new MockProvider(), resolveSpeechEngine(config));
   // Every network provider — groq, anthropic, nvidia, freellmapi, openai, google, openrouter, litellm, custom —
   // is the same Vercel AI SDK integration; only the driver and defaults differ. Speech is the one part that is not:
-  // the edge engine (the default, needs no key) replaces speak/transcribe with Edge TTS, the native engine keeps the
-  // provider's own endpoints.
+  // edge (the default) and indic both replace speak/transcribe with an engine that needs no key, and native keeps
+  // the provider's own endpoints.
   const networkProvider = new VercelAiProvider({ ...config, provider: id });
-  const configured = networkProvider.speechEngine === 'native' ? networkProvider : attachEdgeAudio(networkProvider);
+  const configured = attachSpeech(networkProvider, networkProvider.speechEngine);
   // Nothing configured and nothing but the gateway default to choose: a request here would carry no credential, so
   // say so and hand back the offline provider rather than failing at the endpoint minutes into a render.
   if ((id === 'groq' || id === 'freellmapi') && !explicit && !configured.apiKey) {
     console.warn('No AI provider is configured (set GROQ_API_KEY, or FREELLMAPI_API_KEY, or pass --provider): using the offline mock, which writes placeholder videos and makes no requests.');
-    return new MockProvider();
+    return attachSpeech(new MockProvider(), resolveSpeechEngine(config));
   }
   return configured;
+}
+
+/** The engine picks itself for a provider: `native` leaves the provider's own speech in place, the others attach theirs. */
+function attachSpeech(provider: AiProvider, engine: SpeechEngine): AiProvider {
+  if (engine === 'indic') return attachIndicAudio(provider);
+  return engine === 'native' ? provider : attachEdgeAudio(provider);
 }
 
 export function describeProvider(provider: AiProvider): string {

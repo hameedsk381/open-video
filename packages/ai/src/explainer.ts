@@ -88,12 +88,12 @@ export function wavSeconds(bytes: Uint8Array): number {
   throw new Error('That WAV recording has no readable length');
 }
 
-/** Records a scene's line to `file`, or reuses the recording made earlier for the same words and voice. */
-export async function speakLine(text: string, voice: string | undefined, file: string): Promise<{ seconds: number; fresh: boolean }> {
-  const stamp = createHash('sha1').update(`${voice ?? ''}\n${text}`).digest('hex'), mark = `${file}.txt`;
+/** Records a scene's line to `file`, or reuses the recording made earlier for the same words, voice and engine. */
+export async function speakLine(text: string, voice: string | undefined, file: string, provider?: AiProvider, language?: string): Promise<{ seconds: number; fresh: boolean }> {
+  const stamp = createHash('sha1').update(`${provider?.speechEngine ?? 'edge'}\n${language ?? ''}\n${voice ?? ''}\n${text}`).digest('hex'), mark = `${file}.txt`;
   const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
   if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { seconds: wavSeconds(bytes), fresh: false }; }
-  const speech = await synthesizeEdgeSpeech(text, { voice });
+  const speech = provider?.speak ? await provider.speak(text, { voice, language }) : await synthesizeEdgeSpeech(text, { voice });
   if (!/wav/i.test(speech.extension)) throw new Error(`The voice answered with ${speech.extension} audio; only WAV is read here`);
   const bytes = Buffer.from(speech.data);
   await writeFile(file, bytes); await writeFile(mark, stamp);

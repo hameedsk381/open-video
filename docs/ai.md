@@ -39,6 +39,8 @@ export OVE_AI_BASE_URL=...               # any OpenAI-compatible endpoint (also 
 export OVE_AI_TRANSCRIPTION_MODEL=whisper-1   # transcription; per-provider default
 export OVE_AI_IMAGE_MODEL=gpt-image-1         # image generation; `auto` on gateways
 export OVE_AI_TTS_PROVIDER=native             # speech from the provider, not Edge (default: edge)
+export OVE_AI_TTS_PROVIDER=indic              # or speech on this machine, in 11 Indic languages, with no key
+export OVE_TTS_DIR=~/.cache/motionrender/tts  # where the on-device voices are kept (the default)
 export OVE_AI_VOICE=hannah                    # narration voice; names are per engine, see Speech engines
 
 # No key, no network: a deterministic stand-in for trying the pipeline
@@ -68,12 +70,24 @@ Narration is the one part of the pipeline that is not the chat provider, and it 
   routes speech the way it routes chat. Narration then follows your provider instead of a third party. It bills with
   that provider, and word timings come from transcribing the result, so captions need the provider's transcription
   model.
+- **`indic`** speaks Hindi, Bengali, Marathi, Gujarati, Punjabi, Tamil, Telugu, Kannada, Malayalam, Assamese and Odia
+  on your own machine: three small ONNX graphs per language (about 88 MB), run by `onnxruntime-node` in this process.
+  No key, no network and no Python once the model is on disk, and the sounds are at 24 kHz. The word timings are the
+  durations that shaped the audio, so captions need no transcription at all. The first line in a language downloads
+  its model from Hugging Face (verified against the file's sha256) into `~/.cache/motionrender/tts` (`OVE_TTS_DIR`
+  moves it, `OVE_TTS_MIRROR` points the download at a mirror). `ove ai voices` lists the languages and what is
+  already downloaded. Numbers are spelled out in Hindi; other languages read digits by digit, and forms the text
+  pipeline does not read (dates, clock times, `$` prices) are dropped rather than spoken wrong. The models are
+  [indic-tiny-tts](https://huggingface.co/collections/sulabhkatiyar/indic-tiny-tts-models) by Sulabh Katiyar, licensed
+  CC-BY-4.0: any video made with them must credit the model author.
 
-Choose it per call with `--speech-engine native`, or for the whole process with `OVE_AI_TTS_PROVIDER=native` (`groq`
-and `openai` are accepted aliases, and unset means `edge`); name the model with `OVE_AI_SPEECH_MODEL`. Anthropic and
-Google have no speech endpoint, so `native` refuses there rather than pretending. Voice names are per-engine: `--voice`
-/ `OVE_AI_VOICE` values are passed to the native endpoint as given, but an Edge `…Neural` id means nothing to it, so
-that falls back to the endpoint's own default (or `OVE_AI_SPEECH_VOICE`).
+Choose it per call with `--speech-engine native` (or `indic`), or for the whole process with
+`OVE_AI_TTS_PROVIDER=native` (`groq`/`openai` are accepted aliases for `native`, `local`/`offline` for `indic`, and
+unset means `edge`); name the native model with `OVE_AI_SPEECH_MODEL`. Anthropic and Google have no speech endpoint,
+so `native` refuses there rather than pretending. Voice names are per-engine: `--voice` / `OVE_AI_VOICE` values are
+passed to the native endpoint as given, but an Edge `…Neural` id means nothing to it, so that falls back to the
+endpoint's own default (or `OVE_AI_SPEECH_VOICE`). The local engine picks its language from `--language` first, then
+from a voice id's locale (`hi-IN-…` means Hindi), else Hindi.
 
 With Groq and no model chosen, a rate-limited call moves on to the next Groq chat model (each has its own daily allowance): `openai/gpt-oss-120b`, `qwen/qwen3.8-27b`, `llama-3.3-70b-versatile`, `openai/gpt-oss-20b`. `OVE_AI_GROQ_MODELS` (comma separated) replaces that list and `OVE_AI_GROQ_MODELS=off` turns it off.
 
@@ -81,7 +95,7 @@ With Groq and no model chosen, a rate-limited call moves on to the next Groq cha
 
 Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
 `OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, `OVE_AI_SPEECH_MODEL`, `OVE_AI_SPEECH_VOICE`, `OVE_AI_TTS_PROVIDER`,
-`OVE_AI_VOICE`, plus the per-vendor keys above and
+`OVE_AI_VOICE`, `OVE_TTS_DIR`, `OVE_TTS_MIRROR`, plus the per-vendor keys above and
 `FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
 `ove ai doctor` prints what is configured, which speech engine is wired up, and what it can do.
 

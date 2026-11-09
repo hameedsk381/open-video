@@ -103,7 +103,7 @@ export async function narrate(provider: AiProvider, options: NarrateOptions): Pr
   if (!text) throw new Error('Nothing to narrate: pass a script file or --brief "what the video is about"');
   await mkdir(options.outDir, { recursive: true });
   options.onProgress?.('Synthesising speech…');
-  const audio = await provider.speak(text, { voice: options.voice, signal: options.signal });
+  const audio = await provider.speak(text, { voice: options.voice, language: options.language, signal: options.signal });
   const audioFile = join(options.outDir, `narration.${audio.extension}`);
   await writeFile(audioFile, audio.data);
   options.onProgress?.('Transcribing for word timings…');

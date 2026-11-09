@@ -114,7 +114,7 @@ export async function narrateScenes(provider: AiProvider, composition: Compositi
   let like: { channels: number; sampleRate: number; bits: number } | undefined;
   for (const [i, line] of lines.entries()) {
     options.onProgress?.(`Speaking line ${i + 1}/${lines.length}…`);
-    const spoken = await provider.speak(line, { voice: options.voice, signal: options.signal });
+    const spoken = await provider.speak(line, { voice: options.voice, language: options.language, signal: options.signal });
     if (spoken.extension !== 'wav') throw new Error(`Scene-by-scene voiceover needs WAV speech, not ${spoken.extension}`);
     const info = wavInfo(spoken.data);
     like ??= info;

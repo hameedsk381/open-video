@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { explainerSchema, type Explainer } from '@ove/schema';
 import { compileExplainer, type ExplainerAudio } from '@ove/core';
-import { createProvider, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
+import { createProvider, resolveSpeechEngine, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
 
@@ -23,9 +23,6 @@ export function missingMedia(spec: Explainer, baseDir: string): string[] {
 }
 
 export { wavSeconds };
-
-/** Records a scene's line, or reuses the recording made earlier for the same words and voice. */
-const speak = async (text: string, voice: string | undefined, file: string) => speakLine(text, voice, file);
 
 /** `mr explainer write "what to explain"`: the model writes the script; compile it next. */
 async function writeCommand(argv: string[]): Promise<void> {
@@ -54,13 +51,18 @@ export async function runExplainer(argv: string[]): Promise<void> {
   const output = resolve(option(argv, '--output') ?? join(dirname(resolve(file)), 'composition.json')), assets = join(dirname(output), 'assets');
   const missing = missingMedia(spec, dirname(output));
   if (missing.length) throw new Error(`The video needs files that are not next to it (${dirname(output)}):\n${missing.map(item => `- ${item}`).join('\n')}\nAdd them in the editor's Media tab or copy them there, then compile again.`);
-  const voice = option(argv, '--voice') ?? spec.voice, withVoice = !argv.includes('--no-voice') && spoken > 0;
+  const voice = option(argv, '--voice') ?? spec.voice, language = option(argv, '--language');
+  const withVoice = !argv.includes('--no-voice') && spoken > 0;
+  // The Edge engine needs no key, so only the other engines build a provider; `createProvider` routes the speech seam the same way a render does.
+  const voiceProvider = withVoice && resolveSpeechEngine() !== 'edge'
+    ? createProvider({ provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') })
+    : undefined;
   const audio: (ExplainerAudio | undefined)[] = [];
   if (withVoice) {
     await mkdir(assets, { recursive: true });
     for (const [i, scene] of spec.scenes.entries()) {
       if (!scene.say) { audio.push(undefined); continue; }
-      const name = `voice-${i + 1}.wav`, made = await speak(scene.say, voice, join(assets, name));
+      const name = `voice-${i + 1}.wav`, made = await speakLine(scene.say, voice, join(assets, name), voiceProvider, language);
       console.log(`  scene ${i + 1}: ${made.fresh ? 'recorded' : 'reused'} ${made.seconds.toFixed(1)} s`);
       audio.push({ src: relative(dirname(output), join(assets, name)).replace(/\\/g, '/'), seconds: made.seconds });
     }
