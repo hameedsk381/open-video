@@ -28,7 +28,7 @@ export const commandSpecs: Record<string, Spec> = {
   captions: { values: ['--output', ...variables], positionals: 1 },
   script: { values: ['--output', '--set'], flags: ['--json'], positionals: 1 },
   production: { values: ['--output'], flags: ['--json'], positionals: 2 },
-  explainer: { values: ['--output', '--voice', '--provider', '--model', '--base-url', '--scenes', '--language', '--media'], flags: ['--no-voice'], positionals: 2 },
+  explainer: { values: ['--output', '--voice', '--provider', '--model', '--base-url', '--scenes', '--language', '--media', '--speech-engine'], flags: ['--no-voice'], positionals: 2 },
   still: { values: ['--frame', '--output', '--aspect', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', '--aspect', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },

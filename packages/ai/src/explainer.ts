@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { explainerSchema, type Explainer } from '@ove/schema';
 import { synthesizeEdgeSpeech } from './edge-tts';
+import { indicLanguageFor } from './indic-tts/models';
 import { extractJson } from './json';
 import type { AiProvider, ChatMessage } from './providers';
 
@@ -89,7 +90,9 @@ export function wavSeconds(bytes: Uint8Array): number {
 }
 
 /** Records a scene's line to `file`, or reuses the recording made earlier for the same words, voice and engine. */
-export async function speakLine(text: string, voice: string | undefined, file: string, provider?: AiProvider, language?: string): Promise<{ seconds: number; fresh: boolean }> {
+export async function speakLine(text: string, voice: string | undefined, file: string, provider?: AiProvider, askedLanguage?: string): Promise<{ seconds: number; fresh: boolean }> {
+  // A language written for the script ("Hinglish (Hindi in Latin letters)") is not one the on-device voice can be asked for: leave it to the voice.
+  const language = provider?.speechEngine === 'indic' && askedLanguage && !indicLanguageFor(askedLanguage) ? undefined : askedLanguage;
   const stamp = createHash('sha1').update(`${provider?.speechEngine ?? 'edge'}\n${language ?? ''}\n${voice ?? ''}\n${text}`).digest('hex'), mark = `${file}.txt`;
   const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
   if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { seconds: wavSeconds(bytes), fresh: false }; }

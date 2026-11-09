@@ -247,3 +247,20 @@ describe('model downloads', () => {
     }
   });
 });
+
+describe('spoken explainer lines', () => {
+  it('leave a script language label like "Hinglish" out of the on-device voice request, but pass a real one', async () => {
+    const { mkdtemp, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { speakLine } = await import('../../packages/ai/src/explainer');
+    const dir = await mkdtemp(join(tmpdir(), 'ove-say-')), asked: (string | undefined)[] = [];
+    const provider = { speechEngine: 'indic', speak: async (_text: string, options: { language?: string }) => { asked.push(options.language); return { data: encodeWav([new Float32Array(2400)], 24000), extension: 'wav' }; } } as unknown as Parameters<typeof speakLine>[3];
+    try {
+      await speakLine('नमस्ते', undefined, join(dir, 'a.wav'), provider, 'Hinglish (Hindi in Latin letters)');
+      await speakLine('নমস্কার', undefined, join(dir, 'b.wav'), provider, 'Bengali');
+      await speakLine('नमस्ते', undefined, join(dir, 'c.wav'), provider, undefined);
+      expect(asked).toEqual([undefined, 'Bengali', undefined]);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+});
