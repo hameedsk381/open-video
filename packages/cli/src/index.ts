@@ -23,7 +23,7 @@ Commands:
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   mr mcp [--config claude-code|codex|cursor|claude-desktop|all]   start the Model Context Protocol (MCP) server for Claude, Cursor, Codex & AI agents, or print the config to add it
   mr facts wikipedia <topic> | country <names> <indicator> | exchange <base> <quotes> [--json]   real, sourced facts for a script (Wikipedia, World Bank, exchange rates); no key
-  mr setup [dir] [--force] [--no-skills]   make a folder ready for agents: AGENTS.md, CLAUDE.md, MCP config for Claude Code, Codex and Cursor, and the skills
+  mr setup [dir] [--force] [--no-skills] [--local]   make a folder ready for agents (--local: the MCP config runs the installed mr, for an image or machine that has it): AGENTS.md, CLAUDE.md, MCP config for Claude Code, Codex and Cursor, and the skills
   mr dev <composition.json> [--port 3000] [--allow-host name] [variables]
   mr validate <composition.json> [variables]
     (code layers run JavaScript from the file: dev, still, review, render and thumbnail need --allow-code, for files you trust)
@@ -124,7 +124,7 @@ try {
   else if (command === 'serve') { const { runServe } = await import('./serve'); await runServe(); }
   else if (command === 'job-worker') { const { runJobWorker } = await import('./serve'); await runJobWorker(); }
   else if (command === 'mcp') { const which=option('--config'); if (which) { const { mcpClients, mcpConfig } = await import('./agent-setup'); const list=which === 'all' ? mcpClients : [which as (typeof mcpClients)[number]]; for (const client of list) { if (!mcpClients.includes(client)) throw new Error(`Unknown client "${which}": use ${mcpClients.join(', ')} or all`); console.log(mcpConfig(client)+'\n'); } } else { const { runMcp } = await import('./mcp'); await runMcp(argv); } }
-  else if (command === 'setup') { const { setupAgents } = await import('./agent-setup'); const dir=resolve(file && !file.startsWith('--') ? file : '.'); const written=await setupAgents(dir,{force:flag('--force'),skills:!flag('--no-skills')}); console.log(`Ready for agents in ${dir}\n${written.map(line=>`  ${line}`).join('\n')}\n\nClaude Code: open the folder and approve the MotionRender MCP server. Codex: it reads AGENTS.md; for the tools run: mr mcp --config codex`); }
+  else if (command === 'setup') { const { setupAgents } = await import('./agent-setup'); const dir=resolve(file && !file.startsWith('--') ? file : '.'); const written=await setupAgents(dir,{force:flag('--force'),skills:!flag('--no-skills'),local:flag('--local')}); console.log(`Ready for agents in ${dir}\n${written.map(line=>`  ${line}`).join('\n')}\n\nClaude Code: open the folder and approve the MotionRender MCP server. Codex: it reads AGENTS.md; for the tools run: mr mcp --config codex`); }
   else if (command === 'worker') { const port=option('--port') === undefined ? undefined : Number(option('--port')); const concurrency=option('--concurrency') === undefined ? undefined : Number(option('--concurrency'));
     const worker=await startWorker({ port, host: option('--host'), token: option('--token') ?? process.env.OVE_WORKER_TOKEN, concurrency, log: line => console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`) });
     console.log(`Worker listening on ${worker.url}

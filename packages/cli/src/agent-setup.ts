@@ -7,6 +7,8 @@ import { dirname, join, relative } from 'node:path';
 import { skillsRoot } from './init';
 
 export const MCP_COMMAND = { command: 'npx', args: ['-y', 'motionrender', 'mcp'] };
+/** For a machine or image that already has motionrender installed: no download on first use. */
+export const MCP_COMMAND_LOCAL = { command: 'mr', args: ['mcp'] };
 export type McpClient = 'claude-code' | 'claude-desktop' | 'codex' | 'cursor';
 export const mcpClients: McpClient[] = ['claude-code', 'claude-desktop', 'codex', 'cursor'];
 
@@ -69,30 +71,31 @@ async function putBlock(file: string, block: string, force: boolean): Promise<'c
 }
 
 /** Adds the MotionRender server to a {"mcpServers": {...}} file (.mcp.json, .cursor/mcp.json), keeping every other server. */
-async function putMcpJson(file: string): Promise<'created' | 'updated'> {
+async function putMcpJson(file: string, command: { command: string; args: string[] }): Promise<'created' | 'updated'> {
   let data: { mcpServers?: Record<string, unknown> } = {}, existed = false;
   if (existsSync(file)) { existed = true; try { data = JSON.parse(await readFile(file, 'utf8')); } catch { throw new Error(`${file} is not valid JSON; fix it or remove it, then run setup again`); } }
-  data.mcpServers = { ...data.mcpServers, motionrender: MCP_COMMAND };
+  data.mcpServers = { ...data.mcpServers, motionrender: command };
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, JSON.stringify(data, null, 2) + '\n');
   return existed ? 'updated' : 'created';
 }
 
-const CODEX_BLOCK = `[mcp_servers.motionrender]\ncommand = "npx"\nargs = ["-y", "motionrender", "mcp"]\n`;
+const codexBlock = (command: { command: string; args: string[] }) => `[mcp_servers.motionrender]\ncommand = "${command.command}"\nargs = [${command.args.map(arg => `"${arg}"`).join(', ')}]\n`;
+const CODEX_BLOCK = codexBlock(MCP_COMMAND);
 
-async function putCodexToml(file: string): Promise<'created' | 'updated' | 'kept'> {
+async function putCodexToml(file: string, command: { command: string; args: string[] }): Promise<'created' | 'updated' | 'kept'> {
   if (existsSync(file)) {
     const current = await readFile(file, 'utf8');
     if (current.includes('[mcp_servers.motionrender]')) return 'kept';
-    await writeFile(file, `${current.trimEnd()}\n\n${CODEX_BLOCK}`);
+    await writeFile(file, `${current.trimEnd()}\n\n${codexBlock(command)}`);
     return 'updated';
   }
   await mkdir(dirname(file), { recursive: true });
-  await writeFile(file, CODEX_BLOCK);
+  await writeFile(file, codexBlock(command));
   return 'created';
 }
 
-export type SetupOptions = { force?: boolean; skills?: boolean };
+export type SetupOptions = { force?: boolean; skills?: boolean; /** The server is started with the installed `mr mcp`, not `npx -y motionrender mcp`. */ local?: boolean };
 
 /** Makes a folder ready for agents. Returns what was written, one line each. */
 export async function setupAgents(dir: string, options: SetupOptions = {}): Promise<string[]> {
@@ -100,9 +103,10 @@ export async function setupAgents(dir: string, options: SetupOptions = {}): Prom
   const agents = join(dir, 'AGENTS.md'), claude = join(dir, 'CLAUDE.md');
   note(agents, await putBlock(agents, agentInstructions(), options.force === true));
   note(claude, await putBlock(claude, claudeInstructions(), options.force === true));
-  note(join(dir, '.mcp.json'), await putMcpJson(join(dir, '.mcp.json')));
-  note(join(dir, '.cursor', 'mcp.json'), await putMcpJson(join(dir, '.cursor', 'mcp.json')));
-  note(join(dir, '.codex', 'config.toml'), await putCodexToml(join(dir, '.codex', 'config.toml')));
+  const command = options.local ? MCP_COMMAND_LOCAL : MCP_COMMAND;
+  note(join(dir, '.mcp.json'), await putMcpJson(join(dir, '.mcp.json'), command));
+  note(join(dir, '.cursor', 'mcp.json'), await putMcpJson(join(dir, '.cursor', 'mcp.json'), command));
+  note(join(dir, '.codex', 'config.toml'), await putCodexToml(join(dir, '.codex', 'config.toml'), command));
   if (options.skills !== false) {
     await cp(skillsRoot, join(dir, '.claude', 'skills'), { recursive: true, force: true });
     await cp(skillsRoot, join(dir, '.agent', 'skills'), { recursive: true, force: true });

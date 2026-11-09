@@ -20,7 +20,7 @@ export const commandSpecs: Record<string, Spec> = {
   figma: { values: ['--token', '--out', '--output-comp', '--fps', '--duration'], positionals: 1 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
   mcp: { values: ['--config'] },
-  setup: { flags: ['--force', '--no-skills'], positionals: 1 },
+  setup: { flags: ['--force', '--no-skills', '--local'], positionals: 1 },
   facts: { values: ['--lookups'], flags: ['--json'], positionals: 3 },
   serve: {},
   'job-worker': {},

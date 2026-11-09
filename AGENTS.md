@@ -167,3 +167,13 @@ Write explainer.json   (`mr schema --explainer` lists every field)
        ↓
 `mr review composition.json` → `mr render composition.json --output out.mp4`
 ```
+
+## 6. In a sandbox, with nothing installed
+
+Node 22+, FFmpeg and a browser are the usual hurdle. The `agent` image has them, the CLI, and a `/work` folder that already holds `AGENTS.md`, the skills and the MCP config:
+```bash
+docker build --target agent -t motionrender-agent .
+docker run -d --name motionrender --shm-size=1g -v motionrender-work:/work motionrender-agent
+docker exec motionrender mr doctor
+```
+It works the same in a sandbox runtime such as OpenSandbox or in CI. `node scripts/agent-smoke.mjs --docker motionrender-agent` tests it end to end. See `docs/agent-sandbox.md` for sizing, the network hosts to allow and what is and is not verified. On a machine that has `mr` installed, `mr setup . --local` writes MCP configs that run it directly instead of through `npx`.
