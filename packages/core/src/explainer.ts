@@ -10,6 +10,10 @@ type Beat = Anim | Anim[];
 
 const FPS = 30, W = 1080, H = 1920;
 const SIZES = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] } as const;
+// The header sits just under the strip that platforms cover (the top 8% of a vertical video), and nothing is drawn in the bottom band or the right-hand column where their buttons and captions go.
+const HEADER_Y = 170;
+// A two-line caption at 52 px ends above the bottom band (y 1574 in a 1920-high video).
+const CAPTION_Y = 1430;
 const GOLD = '{{accent}}', MINT = '{{accent2}}', RED = '#ff5d6c', ORANGE = '#e8a548', GREEN = '#3fae8c', CLEAR = '#00000000';
 const TONES = { gold: GOLD, mint: MINT, red: RED, muted: '{{muted}}' } as const;
 
@@ -53,7 +57,7 @@ const rng = (seed: number) => () => { seed = (seed + 0x6d2b79f5) | 0; let t = Ma
 type Draw = { min: number; layers: (frames: number) => Layer[] };
 type Kind<S extends ExplainerScene['kind']> = (scene: Extract<ExplainerScene, { kind: S }>, i: number) => Draw;
 const at = (frames: number, fraction: number) => Math.round(frames * fraction);
-const kicker = (i: number, step?: string): Layer[] => (step ? [label(`kicker-${i}`, `— ${step}`, 60, 150, { size: 22, ls: 4, color: '{{muted}}', anims: [fade(2, 12)] })] : []);
+const kicker = (i: number, step?: string): Layer[] => (step ? [label(`kicker-${i}`, `— ${step}`, 60, 218, { size: 22, ls: 4, color: '{{muted}}', anims: [fade(2, 12)] })] : []);
 
 const title: Kind<'title'> = (s, i) => ({ min: 165, layers: () => {
   const n = s.lines.length, hi = s.highlight !== undefined && s.highlight < n ? s.highlight : n === 3 ? 1 : 0;
@@ -93,7 +97,7 @@ const flow: Kind<'flow'> = (s, i) => ({ min: 240, layers: frames => {
     ...packets, ...belt,
     ...(s.note ? tag('note', s.note.text, 565, mid + 60, TONES[s.note.tone], 70, 300) : []),
     ...(s.result ? tag('result', s.result.text, 565, mid + 270, TONES[s.result.tone], at(frames, 0.62), 380) : []),
-    ...caption('caption', s.caption, 1580, at(frames, 0.34)),
+    ...caption('caption', s.caption, CAPTION_Y, at(frames, 0.34)),
     sfx('whoosh', 0, 0.2), sfx('thump', 12, 0.3), ...(s.result ? [sfx('ding', at(frames, 0.62) + 2, 0.25)] : [])];
 } });
 
@@ -174,7 +178,7 @@ const compare: Kind<'compare'> = (s, i) => ({ min: 120 + (s.left.points.length +
         text(`${side}-point-${k}`, point, x + 100, y - 4, { size: 44, weight: 700, maxWidth: 320, maxLines: 4, minSize: 30, lh: 1.2, anims: [rise(y - 4, start, 24, 18)] }),
         sfx('pop', start + 2, 0.2)];
     })];
-  return [...kicker(i, s.step), ...column('left', s.left, 60, RED, '✗'), ...column('right', s.right, 570, MINT, '✓'), ...caption('caption', s.caption, 1500, at(frames, 0.8)), sfx('whoosh', 0, 0.2)];
+  return [...kicker(i, s.step), ...column('left', s.left, 60, RED, '✗'), ...column('right', s.right, 570, MINT, '✓'), ...caption('caption', s.caption, CAPTION_Y, at(frames, 0.8)), sfx('whoosh', 0, 0.2)];
 } });
 
 const VIDEO = /\.(mp4|mov|webm|mkv)$/i;
@@ -210,7 +214,7 @@ const chart: Kind<'chart'> = (s, i) => ({ min: 180, layers: frames => {
         label(`value-${k}`, fmt(item.value), px(k), py(item.value) - (on ? 78 : 64), { size: on ? 34 : 28, ls: 1, color: on ? GOLD : '{{text}}', align: 'center', maxWidth: pitch, anims: [fade(start + 6, 10)] }));
     });
   }
-  return [...layers, ...caption('caption', s.caption, 1500, at(frames, 0.7)), sfx('whoosh', 0, 0.2)];
+  return [...layers, ...caption('caption', s.caption, CAPTION_Y, at(frames, 0.7)), sfx('whoosh', 0, 0.2)];
 } });
 
 const timeline: Kind<'timeline'> = (s, i) => ({ min: 100 + s.events.length * 60, layers: frames => {
@@ -240,25 +244,27 @@ const pile: Kind<'pile'> = (s, i) => ({ min: 200 + Math.round(s.count * 1.5), la
     { id: 'pile', type: 'physics', x: PILE.x, y: PILE.y, width: PILE.w, height: PILE.h, walls: 'box', seed: 7, substeps: 3,
       emit: [{ shape: s.shape, x: PILE.w / 2, y: -70, spread: PILE.w / 2 - size, width: size, widthJitter: Math.round(size * 0.3), count: s.count, every, at: 14, restitution: 0.35, friction: 0.15, fill: fills }] },
     ...(s.bucket ? [label('bucket-label', s.bucket, W / 2, PILE.y + PILE.h + 40, { size: 26, ls: 6, color: '{{text}}', align: 'center', anims: [fade(8, 12)] })] : []),
-    ...caption('caption', s.caption, 1560, at(frames, 0.7)), sfx('whoosh', 0, 0.2), sfx('thump', at(frames, 0.5), 0.25)];
+    ...caption('caption', s.caption, CAPTION_Y, at(frames, 0.7)), sfx('whoosh', 0, 0.2), sfx('thump', at(frames, 0.5), 0.25)];
 } });
 
 // The picture or clip sits in a rounded frame inside the board, so the header and footer stay readable whatever is behind them.
-const FRAME = { x: 60, y: 210, w: 960, h: 1530 };
+const FRAME = { x: 60, y: 262, w: 960, h: 1478 };
 const media: Kind<'media'> = (s, i) => ({ min: 120, layers: () => {
-  const shadeFrom = FRAME.y + Math.round(FRAME.h * 0.4), bottom = FRAME.y + FRAME.h, titleY = bottom - (s.caption ? 560 : 420);
+  if (!s.src) throw new Error('A media scene that is still a prompt has no picture yet: make the pictures first (mr explainer compile does, with an image model)');
+  const src = s.src;
+  const shadeFrom = FRAME.y + Math.round(FRAME.h * 0.4), bottom = FRAME.y + FRAME.h, captionY = 1450, titleY = captionY - (s.caption ? 370 : 230); // the words stay above the platforms' bottom band; only the picture reaches the frame's foot
   return [
-    { id: 'footage', type: VIDEO.test(s.src) ? 'video' : 'image', src: s.src, x: FRAME.x, y: FRAME.y, width: FRAME.w, height: FRAME.h, radius: 28, objectFit: 'cover', ...(VIDEO.test(s.src) ? { muted: true, loop: true } : {}) },
+    { id: 'footage', type: VIDEO.test(src) ? 'video' : 'image', src, x: FRAME.x, y: FRAME.y, width: FRAME.w, height: FRAME.h, radius: 28, objectFit: 'cover', ...(VIDEO.test(src) ? { muted: true, loop: true } : {}) },
     { ...rect('scrim', FRAME.x, shadeFrom, FRAME.w, bottom - shadeFrom, { radius: 28, anims: [fade(0, 10)] }), fill: { type: 'linear', from: [0, 0], to: [0, bottom - shadeFrom], stops: [{ offset: 0, color: '#00000000' }, { offset: 1, color: '#000000e6' }] } },
     ...kicker(i, s.step),
     ...(s.title ? [center('media-title', s.title, titleY, { font: '{{fontDisplay}}', weight: 900, size: 110, color: '#ffffff', maxWidth: 840, maxLines: 3, minSize: 60, lh: 1.0, anims: [rise(titleY, 8, 40, 26)] })] : []),
-    ...(s.caption ? [center('media-caption', s.caption, bottom - 190, { size: 46, weight: 600, color: '#ffffff', maxWidth: 820, lh: 1.25, anims: [rise(bottom - 190, 24, 30, 22)] })] : []),
-    ...(s.credit ? [label('media-credit', s.credit, FRAME.x + FRAME.w - 30, bottom - 52, { size: 18, ls: 2, color: '#ffffff', align: 'right', opacity: 0.75 })] : []),
+    ...(s.caption ? [center('media-caption', s.caption, captionY, { size: 46, weight: 600, color: '#ffffff', maxWidth: 820, lh: 1.25, anims: [rise(captionY, 24, 30, 22)] })] : []),
+    ...(s.credit ? [label('media-credit', s.credit, FRAME.x + 30, FRAME.y + 28, { size: 18, ls: 2, color: '#ffffff', opacity: 0.75 })] : []),
     sfx('whoosh', 0, 0.2)];
 } });
 
 const phone: Kind<'phone'> = (s, i) => ({ min: 180 + s.messages.length * 22, layers: frames => {
-  const x = 260, y = 250, w = 560, h = 1200, inner = 26, top = y + 110, layers: Layer[] = [...kicker(i, s.step),
+  const x = 260, y = 240, w = 560, h = 1140, inner = 26, top = y + 110, layers: Layer[] = [...kicker(i, s.step),
     rect('phone-body', x, y, w, h, { radius: 70, fill: '{{surface}}', stroke: '{{muted}}', strokeWidth: 6, anims: [fade(2, 14)] }),
     rect('phone-screen', x + inner, y + inner, w - inner * 2, h - inner * 2, { radius: 48, fill: '{{bg}}', anims: [fade(4, 14)] }),
     rect('phone-notch', x + w / 2 - 70, y + inner + 14, 140, 18, { radius: 9, fill: '{{surface}}' }),
@@ -270,7 +276,7 @@ const phone: Kind<'phone'> = (s, i) => ({ min: 180 + s.messages.length * 22, lay
       text(`bubble-text-${k}`, m.text, bx + 28, cursor + 26, { size: 32, weight: 600, color: out ? '{{bg}}' : '{{text}}', maxWidth: bubbleW - 56, maxLines: 4, minSize: 22, lh: 1.25, anims: [rise(cursor + 26, start, 16, 14)] }), sfx(out ? 'pop' : 'ding', start + 1, 0.2));
     cursor += bh + gap;
   });
-  return [...layers, ...caption('phone-caption', s.caption, y + h + 70, at(frames, 0.55)), sfx('whoosh', 0, 0.2)];
+  return [...layers, ...caption('phone-caption', s.caption, CAPTION_Y, at(frames, 0.55)), sfx('whoosh', 0, 0.2)];
 } });
 
 const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
@@ -285,7 +291,7 @@ const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
   }
   s.tags.forEach((t, k) => { if (lit[k] === undefined) return; const row = Math.floor(lit[k]! / columns), col = lit[k]! % columns, cx = gx + col * cw + (row % 2 ? cw / 2 : 0) + cw / 2, cy = gy + row * r * 1.5 + r;
     layers.push(label(`hex-tag-${k}`, t, cx, cy - 12, { size: 20, ls: 2, color: '{{bg}}', align: 'center', maxWidth: cw - 8, maxLines: 1, minSize: 12, anims: [fade(at(frames, 0.3) + k * 10 + 6, 10)] })); });
-  return [...layers, ...caption('hex-caption', s.caption, gy + rows * r * 1.5 + r * 1.4 + 40, at(frames, 0.5)), sfx('whoosh', 0, 0.2), ...lit.slice(0, 4).map((_, k) => sfx('pop', at(frames, 0.3) + k * 10, 0.2))];
+  return [...layers, ...caption('hex-caption', s.caption, Math.min(CAPTION_Y, gy + rows * r * 1.5 + r * 1.4 + 40), at(frames, 0.5)), sfx('whoosh', 0, 0.2), ...lit.slice(0, 4).map((_, k) => sfx('pop', at(frames, 0.3) + k * 10, 0.2))];
 } });
 
 const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
@@ -294,7 +300,7 @@ const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...s.points.flatMap((point, k) => { const y = 1000 + k * 150, start = at(frames, 0.3) + k * 20; return [
     label(`close-mark-${k}`, '✓', 90, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
     text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
-  ...tag('cta', s.cta, W / 2, 1560, MINT, at(frames, 0.6), 640),
+  ...tag('cta', s.cta, W / 2, 1450, MINT, at(frames, 0.6), 640),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
 const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, stat, chart, timeline, pile, media, phone, hex, closing };
@@ -337,10 +343,9 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
       layers: [...draw.layers(frames), ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
   });
   const overlay: Layer[] = [
-    label('header-kind', `${spec.series} ·`, 60, 64, { size: 22, ls: 3, color: '{{muted}}' }),
-    label('header-topic', '{{topic}}', 60 + (spec.series.length + 3) * 16.2, 64, { size: 22, ls: 3, color: GOLD }),
-    label('header-handle', '{{handle}}', W - 60, 64, { size: 22, ls: 3, color: '{{muted}}', align: 'right' }),
-    text('follow', 'Follow', 60, 1810, { size: 46, weight: 800, italic: true }),
+    label('header-kind', `${spec.series} ·`, 60, HEADER_Y, { size: 22, ls: 3, color: '{{muted}}' }),
+    label('header-topic', '{{topic}}', 60 + (spec.series.length + 3) * 16.2, HEADER_Y, { size: 22, ls: 3, color: GOLD }),
+    label('header-handle', '{{handle}}', W - 120, HEADER_Y, { size: 22, ls: 3, color: '{{muted}}', align: 'right' }),
   ];
   // The header and footer are not scene layers, so no scene camera reaches them: scale the column by hand.
   const board = column ? [{ id: 'column', type: 'group', x: (cw - W * fit) / 2, y: (ch - H * fit) / 2, scale: fit, children: overlay }] : overlay;

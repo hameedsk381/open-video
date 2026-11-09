@@ -19,6 +19,7 @@ export function Explainer() {
   const [brief, setBrief] = useState('');
   const [scenes, setScenes] = useState('5');
   const [language, setLanguage] = useState('');
+  const [images, setImages] = useState(false);
   const [script, setScript] = useState<Script | null>(null);
   const [raw, setRaw] = useState('');
   const [showRaw, setShowRaw] = useState(false);
@@ -35,7 +36,7 @@ export function Explainer() {
   const write = async () => {
     setBusy('write'); setError(''); setStatus('Writing the script…');
     try {
-      const result = await runJob<{ script: Script }>('/api/explainer', { brief: brief.trim(), writeOnly: true, scenes: Number(scenes), ...(language.trim() ? { language: language.trim() } : {}) }, job => setStatus(job.messages.at(-1) ?? 'Writing the script…'));
+      const result = await runJob<{ script: Script }>('/api/explainer', { brief: brief.trim(), writeOnly: true, scenes: Number(scenes), images, ...(language.trim() ? { language: language.trim() } : {}) }, job => setStatus(job.messages.at(-1) ?? 'Writing the script…'));
       adopt(result.script);
     } catch (cause) { setError((cause as Error).message); } finally { setBusy(''); setStatus(''); }
   };
@@ -66,6 +67,7 @@ export function Explainer() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Field label="Scenes"><select className="input" value={scenes} onChange={event => setScenes(event.target.value)}>{[3, 4, 5, 6, 8, 10].map(n => <option key={n} value={n}>{n}</option>)}</select></Field>
             <Field label="Language" hint="Optional"><input className="input" value={language} onChange={event => setLanguage(event.target.value)} placeholder="English" /></Field>
+            <Field label="Pictures" hint="Needs a model that can draw"><label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={images} onChange={event => setImages(event.target.checked)} />Let the script ask for drawn pictures</label></Field>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <Button variant="primary" icon={<WandIcon />} loading={busy === 'write'} disabled={!brief.trim()} onClick={() => void write()}>Write the script</Button>

@@ -15,6 +15,8 @@ export type WriteExplainerOptions = {
   language?: string;
   /** Picture and video files the video has (such as assets/city.mp4). Only these can appear, in media scenes; with none, there are no media scenes. */
   media?: string[];
+  /** The provider can draw pictures: media scenes may then give a prompt to draw instead of a file (at most two). */
+  images?: boolean;
   /** The Edge voice to put in the script, if one is wanted. */
   voice?: string;
   maxAttempts?: number;
@@ -37,6 +39,7 @@ const GUIDE = `Scene kinds (each scene has a "kind", an optional "step" label in
 - closing: the takeaway. {kind:"closing", title, points?:[up to 3], cta?:"Follow for more", say}
 "tone" is one of gold, mint, red, muted.`;
 
+const imageGuide = '- media (drawn): a picture made by an image model fills a frame on the board. {kind:"media", prompt:"<one clear picture described plainly: subject, setting, style; no words, letters or logos>", title?:"large text", caption?, say}. Use at most two, and only where a picture shows the idea better than a diagram.';
 const mediaGuide = (files: string[]) => `- media: a picture or video of the project fills a frame on the board. {kind:"media", src:"<one of the files below>", title?:"large text", caption?, credit?, say}\nAvailable media files (the only pictures and footage the video has; use each at most once): ${files.join(', ')}`;
 
 export function explainerPrompt(brief: string, options: WriteExplainerOptions = {}): ChatMessage[] {
@@ -44,9 +47,9 @@ export function explainerPrompt(brief: string, options: WriteExplainerOptions = 
   const system = [
     'You write scripts for short vertical explainer videos: one idea, taught one scene at a time, with a spoken line over each scene.',
     `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
-    options.media?.length ? `${GUIDE}\n${mediaGuide(options.media)}` : GUIDE,
+    [GUIDE, ...(options.media?.length ? [mediaGuide(options.media)] : []), ...(options.images ? [imageGuide] : [])].join('\n'),
     'Rules:',
-    ...(options.media?.length ? [] : ['- Do not use a media scene: this video has no pictures or footage.']),
+    ...(options.media?.length || options.images ? [] : ['- Do not use a media scene: this video has no pictures or footage.']),
     `- About ${scenes} scenes. Start with a title and end with a closing. Use a kind only when it shows the idea better than another; use each kind at most twice. Use stat, chart and timeline only for numbers and events you know to be true; never invent figures.`,
     `- Write the spoken lines ("say") and every label in ${language}. Spoken lines are short sentences a person can say in one breath, 12 to 22 words, one idea each, and they must not repeat the on-screen text word for word.`,
     '- Labels, ids and the topic are short; the topic and "step" lines are UPPER CASE. Keep every text within a few words, because it is drawn in a box.',

@@ -819,7 +819,7 @@ function createBaseProvider(config: ProviderConfig = {}): AiProvider {
       id = defaultProviderId();
     }
   }
-  if (id === 'mock') return attachSpeech(new MockProvider(), resolveSpeechEngine(config));
+  if (id === 'mock') return mockProvider(config);
   // Every network provider — groq, anthropic, nvidia, freellmapi, openai, google, openrouter, litellm, custom —
   // is the same Vercel AI SDK integration; only the driver and defaults differ. Speech is the one part that is not:
   // edge (the default) and indic both replace speak/transcribe with an engine that needs no key, and native keeps
@@ -830,9 +830,15 @@ function createBaseProvider(config: ProviderConfig = {}): AiProvider {
   // say so and hand back the offline provider rather than failing at the endpoint minutes into a render.
   if ((id === 'groq' || id === 'freellmapi') && !explicit && !configured.apiKey) {
     console.warn('No AI provider is configured (set GROQ_API_KEY, or FREELLMAPI_API_KEY, or pass --provider): using the offline mock, which writes placeholder videos and makes no requests.');
-    return attachSpeech(new MockProvider(), resolveSpeechEngine(config));
+    return mockProvider(config);
   }
   return configured;
+}
+
+/** The offline stand-in stays offline: it only gains speech when the on-device engine is chosen, never through Edge or a provider endpoint. */
+function mockProvider(config: ProviderConfig): AiProvider {
+  const mock = new MockProvider();
+  return resolveSpeechEngine(config) === 'indic' ? attachIndicAudio(mock) : mock;
 }
 
 /** The engine picks itself for a provider: `native` leaves the provider's own speech in place, the others attach theirs. */

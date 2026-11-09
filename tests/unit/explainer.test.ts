@@ -76,7 +76,7 @@ describe('compiling a script', () => {
       const ids = scene.layers.map((layer: any) => layer.id);
       expect(new Set(ids).size, scene.id).toBe(ids.length);
     }
-    expect(composition.overlay.map((layer: any) => layer.id)).toEqual(['header-kind', 'header-topic', 'header-handle', 'follow']);
+    expect(composition.overlay.map((layer: any) => layer.id)).toEqual(['header-kind', 'header-topic', 'header-handle']);
     expect(composition.variables.topic.default).toBe('KITCHEN SINK'); expect(composition.variables.handle.default).toBe('@me');
     expect(composition.variables.bg.default).toMatch(/^#/);
   });
@@ -84,10 +84,10 @@ describe('compiling a script', () => {
   it('shows a picture or clip in a rounded frame on the board, with its text over the lower part', () => {
     const scenes = (compileExplainer(everything).composition as any).scenes as any[];
     const [clip, still] = scenes.filter(scene => scene.id.endsWith('-media'));
-    expect(clip.layers[0]).toMatchObject({ id: 'footage', type: 'video', src: 'assets/city.mp4', muted: true, loop: true, x: 60, y: 210, width: 960, height: 1530, radius: 28, objectFit: 'cover' });
+    expect(clip.layers[0]).toMatchObject({ id: 'footage', type: 'video', src: 'assets/city.mp4', muted: true, loop: true, x: 60, y: 262, width: 960, height: 1478, radius: 28, objectFit: 'cover' });
     expect(still.layers[0]).toMatchObject({ type: 'image', src: 'assets/photo.jpg' }); expect(still.layers.some((layer: any) => layer.id === 'media-title')).toBe(false);
     for (const id of ['scrim', 'media-title', 'media-caption', 'media-credit']) expect(clip.layers.find((layer: any) => layer.id === id), id).toBeDefined();
-    // Inside the frame, so the header (top) and footer (bottom) never sit on footage.
+    // Inside the frame, so the header never sits on footage.
     for (const layer of clip.layers.filter((layer: any) => ['footage', 'scrim'].includes(layer.id))) expect(layer.y + (layer.height ?? 0)).toBeLessThanOrEqual(1740);
   });
 

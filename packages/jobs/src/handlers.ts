@@ -6,7 +6,7 @@ import { dirname, join, relative as relativePath, resolve } from 'node:path';
 import { explainerSchema } from '@ove/schema';
 import {
   assetIdFromPath, assetProblems, captionAudio, composeVideo, createProvider, ensureBaseline, extractJson, fieldsFromRows, generateImage, mergeNarration, narrate, planBatch, refineVideo, renderBatch,
-  readBrand, resolveSpeechEngine, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
+  generateExplainerImages, needsImages, readBrand, resolveSpeechEngine, sanitizeCompositionJson, saveRevision, speakLine, writeCompositionProject, writeExplainer, type ComposeOptions,
 } from '@ove/ai';
 import { compileExplainer, loadComposition, renderMedia, reviewComposition, type Composition } from '@ove/core';
 import { S3Client, loadS3ConfigFromEnv } from '@ove/storage';
@@ -176,14 +176,18 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'explainer', run: async progress => {
       let script: unknown = input.script;
       if (script === undefined || script === null) {
-        const written = await writeExplainer(resolveProvider(input), brief!, { scenes, language: optionalText(input.language), voice: optionalText(input.voiceName), onProgress: message => progress(message) });
+        const written = await writeExplainer(resolveProvider(input), brief!, { scenes, language: optionalText(input.language), voice: optionalText(input.voiceName), images: boolOf(input.images), onProgress: message => progress(message) });
         script = written.explainer;
         if (writeOnly) return { script, attempts: written.attempts };
       }
       const parsed = explainerSchema.safeParse(script);
       if (!parsed.success) throw new Error(`The script cannot be used:\n${parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n')}`);
-      const spec = parsed.data, dir = paths.projectDir(input.folder, spec.topic);
-      const missing = spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && !existsSync(resolve(dir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
+      let spec = parsed.data;
+      const dir = paths.projectDir(input.folder, spec.topic);
+      // Media scenes that give a prompt are drawn now, once; the script kept in the project still has the prompt.
+      const source = spec;
+      if (needsImages(spec)) spec = (await generateExplainerImages(spec, resolveProvider(input), { dir, onProgress: message => progress(message) })).spec;
+      const missing = spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && scene.src !== undefined && !existsSync(resolve(dir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
       if (missing.length) throw new Error(`The video needs files that are not in the project: ${missing.join(', ')}. Add them in the Media tab first.`);
       const voiceName = optionalText(input.voiceName) ?? spec.voice, language = optionalText(input.language), assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number } | undefined)[] = [];
       if (boolOf(input.voice) && spec.scenes.some(scene => scene.say)) {
@@ -200,7 +204,7 @@ export function createHandlers(env: JobEnv) {
       progress('Building the scenes…');
       const { composition, notes } = compileExplainer(spec, { audio });
       await mkdir(dir, { recursive: true });
-      await writeFile(resolve(dir, 'explainer.json'), JSON.stringify(spec, null, 2) + '\n');
+      await writeFile(resolve(dir, 'explainer.json'), JSON.stringify(source, null, 2) + '\n');
       await ensureBaseline(resolve(dir, 'composition.json'));
       const files = await writeCompositionProject(dir, composition as any, { force: true });
       await saveRevision(files.composition, { kind: 'compose', label: spec.topic.slice(0, 160), brief: (brief ?? spec.topic).slice(0, 4000), attempts: 1 });

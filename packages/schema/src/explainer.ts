@@ -69,7 +69,8 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     tone: z.enum(['mixed', 'gold', 'mint', 'red']).default('mixed').describe('Colour of the pieces'),
     caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
   z.object({ kind: z.literal('media'), ...common,
-    src: words(200).describe('A picture or video file of the project, relative to the video (such as assets/city.mp4); it fills a rounded frame on the board'),
+    src: words(200).optional().describe('A picture or video file of the project, relative to the video (such as assets/city.mp4); it fills a rounded frame on the board. Give this or prompt, not both'),
+    prompt: words(400).optional().describe('Instead of a file: what to draw, as a plain description of one clear picture without words or logos. The picture is made with the image model when the video is built, and needs one'),
     title: words(60).optional().describe('Large text over the lower part of the picture, such as the name of a place or idea'),
     caption: words(120).optional().describe('One sentence under the title'),
     credit: words(80).optional().describe('A small credit line in a corner, such as "Video: Bo Reel on Pexels"') }),
@@ -99,7 +100,9 @@ export const explainerSchema = z.object({
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),
   handle: words(30).default('@yourhandle').describe('The creator handle, shown in the header'),
   voice: words(40).optional().describe('The Edge voice that speaks, such as en-IN-NeerjaNeural or en-US-AriaNeural'),
-  scenes: z.array(explainerSceneSchema).min(1).max(24),
+  scenes: z.array(explainerSceneSchema).min(1).max(24).superRefine((scenes, ctx) => {
+    scenes.forEach((scene, i) => { if (scene.kind === 'media' && (scene.src === undefined) === (scene.prompt === undefined)) ctx.addIssue({ code: 'custom', path: [i, 'src'], message: 'A media scene needs exactly one of "src" (a file) or "prompt" (a picture to draw)' }); });
+  }),
 });
 
 export type Explainer = z.infer<typeof explainerSchema>;
