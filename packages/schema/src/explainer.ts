@@ -13,6 +13,10 @@ const common = {
   say: words(420).optional().describe('What is said over this scene. The scene lasts as long as the line, so write it as speech: short sentences, one idea.'),
 };
 
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour is a 6-digit hex such as #0b1c3f');
+/** The looks an explainer can wear. Each sets the board, the cards, the text and the two signal colours. */
+export const explainerLooks = ['navy', 'ink', 'paper', 'forest', 'sunset'] as const;
+
 export const explainerSceneSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('title'), ...common,
     brand: words(20).optional().describe('A big name at the top, such as the company or the subject'),
@@ -43,6 +47,32 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     left: z.object({ title: words(24), points: z.array(words(48)).min(1).max(4) }).describe('The problem side (red): what goes wrong'),
     right: z.object({ title: words(24), points: z.array(words(48)).min(1).max(4) }).describe('The answer side (green): what works'),
     caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
+  z.object({ kind: z.literal('stat'), ...common,
+    value: words(14).describe('The one big number or short phrase, such as "87%" or "3×"'),
+    label: words(90).describe('What the number means, in one line'),
+    note: words(90).optional().describe('A smaller line under it, such as where the number comes from'),
+    tone: tone.default('gold').describe('Colour of the number') }),
+  z.object({ kind: z.literal('chart'), ...common,
+    type: z.enum(['bars', 'line']).default('bars').describe('bars: compare amounts side by side. line: show a change over time.'),
+    items: z.array(z.object({ label: words(14), value: z.number().min(0).max(1e9) })).min(2).max(8).describe('One bar or point each, in order, with a short label and a value'),
+    unit: words(6).optional().describe('Added after each value, such as "%" or "ms"'),
+    highlight: z.number().int().min(0).max(7).optional().describe('Which bar or point is picked out in gold; the largest by default'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
+  z.object({ kind: z.literal('timeline'), ...common,
+    events: z.array(z.object({ when: words(16), title: words(48), detail: words(80).optional() })).min(2).max(6).describe('What happened or happens, in order, down the screen'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
+  z.object({ kind: z.literal('pile'), ...common,
+    title: words(24).optional().describe('A label above what falls, such as "REQUESTS" or "ORDERS"'),
+    bucket: words(16).optional().describe('A label on the container, such as "SERVER" or "QUEUE"'),
+    count: z.number().int().min(5).max(120).default(40).describe('How many pieces fall'),
+    shape: z.enum(['circle', 'rect']).default('circle').describe('The shape of each piece'),
+    tone: z.enum(['mixed', 'gold', 'mint', 'red']).default('mixed').describe('Colour of the pieces'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
+  z.object({ kind: z.literal('media'), ...common,
+    src: words(200).describe('A picture or video file of the project, relative to the video (such as assets/city.mp4); it fills a rounded frame on the board'),
+    title: words(60).optional().describe('Large text over the lower part of the picture, such as the name of a place or idea'),
+    caption: words(120).optional().describe('One sentence under the title'),
+    credit: words(80).optional().describe('A small credit line in a corner, such as "Video: Bo Reel on Pexels"') }),
   z.object({ kind: z.literal('closing'), ...common,
     title: words(40).describe('The takeaway, large'),
     points: z.array(words(60)).max(3).default([]).describe('Up to three short reminders'),
@@ -51,14 +81,18 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
 
 export const explainerSchema = z.object({
   version: z.literal('1.0').default('1.0'),
+  series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
+  sketch: z.boolean().default(false).describe('Draw the whole board by hand: wobbly outlines, redrawn every few frames like a cartoon'),
+  look: z.enum(explainerLooks).default('navy').describe('The colours of the board: navy, ink (black with an orange signal), paper (light), forest or sunset'),
+  colors: z.object({ bg: hex, surface: hex, text: hex, muted: hex, accent: hex, accent2: hex }).partial().optional().describe('Colours that replace the look\'s own, by name'),
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),
   handle: words(30).default('@yourhandle').describe('The creator handle, shown in the header'),
   voice: words(40).optional().describe('The Edge voice that speaks, such as en-IN-NeerjaNeural or en-US-AriaNeural'),
-  scenes: z.array(explainerSceneSchema).min(1).max(16),
+  scenes: z.array(explainerSceneSchema).min(1).max(24),
 });
 
 export type Explainer = z.infer<typeof explainerSchema>;
 export type ExplainerInput = z.input<typeof explainerSchema>;
 export type ExplainerScene = z.infer<typeof explainerSceneSchema>;
 /** The scene kinds, for prompts and menus. */
-export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'closing'] as const;
+export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'closing'] as const;

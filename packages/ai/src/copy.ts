@@ -31,7 +31,7 @@ export function screenText(composition: Pick<Composition, 'scenes'>): ScreenText
   const walk = (layers: any[], scene: number) => {
     for (const layer of layers ?? []) {
       if (!layer || typeof layer !== 'object') continue;
-      if (layer.type === 'react' || layer.type === 'code') opaque = true;
+      if (layer.type === 'react' || layer.type === 'code' || layer.type === 'p5') opaque = true;
       if (layer.type === 'text') {
         const text = typeof layer.content === 'string' && layer.content.trim() ? layer.content : Array.isArray(layer.spans) ? spansText(layer.spans) : typeof layer.text === 'string' ? layer.text : '';
         if (text.trim()) found.push({ scene, layer: String(layer.id ?? ''), text });

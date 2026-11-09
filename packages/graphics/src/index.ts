@@ -4,7 +4,7 @@ import type { EvaluatedLayer } from '@ove/timeline'; import { captionLines, drop
 export type CaptionWordState = { text: string; state: 0 | 1 | 2; emphasis?: boolean };
 // `vars` are a shader or react layer's variables at this frame: its vars, animated --name values, --t (seconds) and --frame.
 // `mediaTime` is where a lottie layer's animation is, in seconds (after trim, speed and looping by the runtime).
-export type DrawOperation = { kind: 'text'|'image'|'video'|'captions'|'rect'|'circle'|'path'|'group'|'lottie'|'shader'|'code'|'react'; layer: EvaluatedLayer; children?: DrawOperation[]; frameKey?: string; fontPrefix?: string; fontStack?: string; spanStacks?: string[]; caption?: { words: CaptionWordState[] } | null; vars?: Record<string, string | number>; mediaTime?: number };
+export type DrawOperation = { kind: 'text'|'image'|'video'|'captions'|'rect'|'circle'|'path'|'group'|'lottie'|'shader'|'code'|'react'|'physics'|'p5'; layer: EvaluatedLayer; children?: DrawOperation[]; frameKey?: string; fontPrefix?: string; fontStack?: string; spanStacks?: string[]; caption?: { words: CaptionWordState[] } | null; vars?: Record<string, string | number>; mediaTime?: number };
 // "center" origins become pixels: half the width/height, a circle's own centre (0), and for text the middle of maxWidth given its
 // alignment and of one line vertically (use pixel values for exact pivots on multi-line text).
 const resolveOrigin = (value: unknown, layer: any, axis: 'x'|'y'): number => { if (value !== 'center') return typeof value === 'number' ? value : 0; if (layer.type === 'circle') return 0;
@@ -16,9 +16,11 @@ export const toDrawOperations = (layers: EvaluatedLayer[]): DrawOperation[] => l
 export const flattenLayers = (layers: readonly any[]): any[] => layers.flatMap(l => l.type === 'group' ? [l, ...flattenLayers(l.children ?? [])] : [l]);
 export const flattenOperations = (operations: readonly DrawOperation[]): DrawOperation[] => operations.flatMap(op => op.kind === 'group' ? [op, ...flattenOperations(op.children ?? [])] : [op]);
 // The Lottie animations a composition draws, by src.
-export const collectCodeSources = (layers: readonly any[]): string[] => [...new Set(flattenLayers(layers).filter(l => (l.type === 'code' || l.type === 'react') && typeof l.src === 'string').map(l => l.src as string))];
+export const collectCodeSources = (layers: readonly any[]): string[] => [...new Set(flattenLayers(layers).filter(l => (l.type === 'code' || l.type === 'react' || l.type === 'p5') && typeof l.src === 'string').map(l => l.src as string))];
 /** True when any layer runs the composition's own JavaScript. */
-export const hasCodeLayers = (layers: readonly any[]): boolean => flattenLayers(layers).some(l => l.type === 'code' || l.type === 'react');
+export const hasCodeLayers = (layers: readonly any[]): boolean => flattenLayers(layers).some(l => l.type === 'code' || l.type === 'react' || l.type === 'p5');
+/** True when any layer is a p5.js sketch, which needs the p5 library loaded. */
+export const hasP5Layers = (layers: readonly any[]): boolean => flattenLayers(layers).some(l => l.type === 'p5');
 /** True when any layer is a React component (its markup can name any image asset the composition declares). */
 export const hasReactLayers = (layers: readonly any[]): boolean => flattenLayers(layers).some(l => l.type === 'react');
 export const collectLottieSources = (layers: readonly any[]): string[] => [...new Set(flattenLayers(layers).filter(l => l.type === 'lottie').map(l => l.src as string))];
@@ -103,5 +105,5 @@ export function captionAt(layer: { cues?: CaptionCue[]; maxWords: number; mode: 
 export const prepareOperations = (operations: DrawOperation[], fps = 30): DrawOperation[] => { for (const op of flattenOperations(operations)) { if (op.kind !== 'text' && op.kind !== 'captions') continue; const layer = op.layer as any; op.fontPrefix = `${layer.fontStyle} ${layer.fontWeight}`; op.fontStack = fontStack(layer.fontFamily);
   if (layer.spans?.length) op.spanStacks = layer.spans.map((span: any) => fontStack(span.fontFamily ?? layer.fontFamily));
   if (op.kind === 'captions') op.caption = captionAt(layer, (layer.localFrame - layer.startFrame)/fps); }
-  for (const op of flattenOperations(operations)) { const layer = op.layer as any, own = layer.localFrame - layer.startFrame; if (op.kind === 'lottie') op.mediaTime = (layer.trimStart + own*layer.playbackRate)/fps; if (op.kind !== 'shader' && op.kind !== 'code' && op.kind !== 'react') continue;
-    op.vars = { ...layer.vars, ...Object.fromEntries(Object.entries(layer).filter(([key]) => key.startsWith('--'))), '--t': Math.round(own/fps*1e6)/1e6, '--frame': own, ...(op.kind === 'code' || op.kind === 'react' ? { '--fps': fps } : {}) } as Record<string, string | number>; } return operations; };
+  for (const op of flattenOperations(operations)) { const layer = op.layer as any, own = layer.localFrame - layer.startFrame; if (op.kind === 'lottie') op.mediaTime = (layer.trimStart + own*layer.playbackRate)/fps; if (op.kind !== 'shader' && op.kind !== 'code' && op.kind !== 'react' && op.kind !== 'physics' && op.kind !== 'p5') continue;
+    op.vars = { ...layer.vars, ...Object.fromEntries(Object.entries(layer).filter(([key]) => key.startsWith('--'))), '--t': Math.round(own/fps*1e6)/1e6, '--frame': own, ...(op.kind === 'code' || op.kind === 'react' || op.kind === 'physics' || op.kind === 'p5' ? { '--fps': fps } : {}) } as Record<string, string | number>; } return operations; };

@@ -126,7 +126,7 @@ async function renderOne(composition: Composition, baseDir: string, output: stri
 }
 
 /** A composition with React or code layers executes JavaScript while rendering, so the commands it suggests need --allow-code. */
-const hasCodeLayers = (composition: Composition) => composition.scenes.some(scene => scene.layers.some(layer => layer.type === 'react' || layer.type === 'code'));
+const hasCodeLayers = (composition: Composition) => composition.scenes.some(scene => scene.layers.some(layer => layer.type === 'react' || layer.type === 'code' || layer.type === 'p5'));
 
 // Writes an AI change to a composition file, keeping what was there (the first time) and the result as numbered revisions.
 async function trackedWrite(file: string, composition: Composition, meta: RevisionMeta) {

@@ -2,6 +2,7 @@
 // diagram on the same dark board, with the same header and footer on every scene, so any topic gets a consistent video. Nothing here
 // runs while rendering: the result is plain composition JSON, frame-exact like any other.
 import type { Explainer, ExplainerScene } from '@ove/schema';
+import { explainerLooks } from '@ove/schema';
 
 type Layer = Record<string, any>;
 type Anim = { property: string; keyframes: { frame: number; value: number | string; easing?: string }[] };
@@ -57,9 +58,9 @@ const title: Kind<'title'> = (s, i) => ({ min: 165, layers: () => {
   const n = s.lines.length, hi = s.highlight !== undefined && s.highlight < n ? s.highlight : n === 3 ? 1 : 0;
   const ys = ({ 1: [1100], 2: [1000, 1150], 3: [960, 1080, 1290] } as Record<number, number[]>)[n]!;
   return [...kicker(i, s.step),
-    ...(s.brand ? [text('brand', s.brand, W / 2, 360, { font: '{{fontDisplay}}', weight: 900, size: 250, color: '#c4cfe6', align: 'center', ls: -8, maxWidth: 940, maxLines: 1, minSize: 120, anims: [rise(360, 4, 50, 26)] })] : []),
+    ...(s.brand ? [text('brand', s.brand, W / 2, 360, { font: '{{fontDisplay}}', weight: 900, size: 250, color: '{{text}}', opacity: 0.85, align: 'center', ls: -8, maxWidth: 940, maxLines: 1, minSize: 120, anims: [rise(360, 4, 50, 26)] })] : []),
     ...(s.chip ? tag('chip', s.chip, W / 2, 700, MINT, 20, 620) : []),
-    outline('card', 110, 900, 860, 560, GOLD, { radius: 18, fill: '#0d2250', strokeWidth: 4, anims: [pop(34, 20, 0.9)] }),
+    outline('card', 110, 900, 860, 560, GOLD, { radius: 18, fill: '{{surface}}', strokeWidth: 4, anims: [pop(34, 20, 0.9)] }),
     ...s.lines.map((line, k) => k === hi
       ? center(`line-${k}`, line, ys[k]!, { font: '{{fontDisplay}}', weight: 900, size: 150, maxWidth: 780, color: GOLD, maxLines: 1, minSize: 80, anims: [rise(ys[k]!, 46 + k * 8, 30, 22)] })
       : center(`line-${k}`, line, ys[k]!, { size: 84, weight: 800, maxWidth: 780, maxLines: 1, minSize: 50, anims: [rise(ys[k]!, 46 + k * 8, 30, 20)] })),
@@ -136,7 +137,7 @@ const grid: Kind<'grid'> = (s, i) => ({ min: 240, layers: frames => {
   if (s.callout) layers.push(...tag('callout', s.callout, Math.min(W - 300, Math.max(300, hx + cellSize / 2 - 140)), hy + pitch * 2 + 20, RED, call, Math.min(700, s.callout.length * 17 + 56)));
   if (s.result) {
     const cardY = gy + rows * pitch + 28;
-    layers.push(outline('card', 230, cardY, 620, 190, GOLD, { radius: 14, fill: '#0d2250', strokeWidth: 3, anims: [pop(card, 18, 0.9)] }),
+    layers.push(outline('card', 230, cardY, 620, 190, GOLD, { radius: 14, fill: '{{surface}}', strokeWidth: 3, anims: [pop(card, 18, 0.9)] }),
       ...(s.resultNote ? [label('card-kicker', 'THIS IS CALLED', W / 2, cardY + 30, { size: 20, ls: 5, color: '{{muted}}', align: 'center', anims: [fade(card + 10, 10)] })] : []),
       center('card-title', s.result, cardY + (s.resultNote ? 76 : 50), { font: '{{fontDisplay}}', weight: 900, size: 84, color: GOLD, maxWidth: 560, maxLines: 1, minSize: 50, anims: [rise(cardY + (s.resultNote ? 76 : 50), card + 14, 24, 18)] }),
       ...(s.resultNote ? [label('card-note', s.resultNote, W / 2, cardY + 168, { size: 20, ls: 3, color: '{{muted}}', align: 'center', anims: [fade(card + 24, 10)] })] : []),
@@ -175,6 +176,86 @@ const compare: Kind<'compare'> = (s, i) => ({ min: 120 + (s.left.points.length +
   return [...kicker(i, s.step), ...column('left', s.left, 60, RED, '✗'), ...column('right', s.right, 570, MINT, '✓'), ...caption('caption', s.caption, 1500, at(frames, 0.8)), sfx('whoosh', 0, 0.2)];
 } });
 
+const VIDEO = /\.(mp4|mov|webm|mkv)$/i;
+const stat: Kind<'stat'> = (s, i) => ({ min: 150, layers: () => [
+  ...kicker(i, s.step),
+  outline('stat-card', 90, 380, 900, 560, GOLD, { radius: 22, fill: '{{surface}}', strokeWidth: 4, anims: [pop(6, 20, 0.92)] }),
+  center('stat-value', s.value, 500, { font: '{{fontDisplay}}', weight: 900, size: 340, color: TONES[s.tone], maxWidth: 820, maxLines: 1, minSize: 120, ls: -10, anims: [pop(16, 24, 0.7)] }),
+  center('stat-label', s.label, 1010, { size: 64, weight: 800, maxWidth: 880, lh: 1.2, anims: [rise(1010, 34, 30, 22)] }),
+  ...(s.note ? [center('stat-note', s.note, 1300, { size: 40, weight: 500, color: '{{muted}}', maxWidth: 820, lh: 1.25, anims: [fade(58, 14)] })] : []),
+  sfx('whoosh', 0, 0.2), sfx('thump', 18, 0.35)] });
+
+const chart: Kind<'chart'> = (s, i) => ({ min: 180, layers: frames => {
+  const n = s.items.length, max = Math.max(...s.items.map(item => item.value), 1), left = 90, width = 900, base = 1280, tall = 700, pitch = width / n;
+  const fmt = (value: number) => `${Number.isInteger(value) ? value : value.toFixed(1)}${s.unit ?? ''}`;
+  const hi = s.highlight !== undefined && s.highlight < n ? s.highlight : s.items.reduce((best, item, k, all) => (item.value > all[best]!.value ? k : best), 0);
+  const first = at(frames, 0.12), span = at(frames, 0.5), height = (value: number) => Math.max(6, Math.round((value / max) * tall));
+  const layers: Layer[] = [...kicker(i, s.step), rect('axis', left, base, width, 4, { fill: '{{muted}}', opacity: 0.6, anims: [grow('width', width, 4, 24)] })];
+  s.items.forEach((item, k) => layers.push(label(`cat-${k}`, item.label, left + k * pitch + pitch / 2, base + 24, { size: 22, ls: 1, color: '{{muted}}', align: 'center', maxWidth: pitch - 8, maxLines: 2, minSize: 14, anims: [fade(first + Math.round(k * span / n) + 8, 10)] })));
+  if (s.type === 'bars') {
+    s.items.forEach((item, k) => {
+      const h = height(item.value), bw = Math.round(pitch * 0.6), x = Math.round(left + k * pitch + (pitch - bw) / 2), start = first + Math.round(k * span / n), on = k === hi;
+      layers.push(
+        rect(`bar-${k}`, x, base - h, bw, h, { radius: 10, fill: on ? GOLD : '{{muted}}', opacity: on ? 1 : 0.75, anims: [[anim('y', [start, base], [start + 26, base - h, 'land']), anim('height', [start, 1], [start + 26, h, 'land']), fade(start, 8, on ? 1 : 0.75)]] }),
+        label(`value-${k}`, fmt(item.value), x + bw / 2, base - h - 46, { size: 30, ls: 1, color: on ? GOLD : '{{text}}', align: 'center', maxWidth: pitch, anims: [fade(start + 18, 10)] }),
+        ...(on ? [sfx('pop', start + 20, 0.3)] : []));
+    });
+  } else {
+    const px = (k: number) => Math.round(left + pitch / 2 + k * pitch), py = (value: number) => base - height(value);
+    layers.push({ id: 'line', type: 'path', d: s.items.map((item, k) => `${k ? 'L' : 'M'}${px(k)} ${py(item.value)}`).join(' '), x: 0, y: 0, stroke: GOLD, strokeWidth: 8, lineCap: 'round', lineJoin: 'round', trimEnd: 0, animations: [anim('trimEnd', [first, 0], [first + span, 1, 'land'])] });
+    s.items.forEach((item, k) => {
+      const start = first + Math.round((k / Math.max(1, n - 1)) * span), on = k === hi;
+      layers.push(circle(`dot-${k}`, px(k), py(item.value), on ? 36 : 24, { fill: on ? GOLD : '{{bg}}', stroke: GOLD, strokeWidth: 5, anims: [pop(start, 12, 0.5)] }),
+        label(`value-${k}`, fmt(item.value), px(k), py(item.value) - (on ? 78 : 64), { size: on ? 34 : 28, ls: 1, color: on ? GOLD : '{{text}}', align: 'center', maxWidth: pitch, anims: [fade(start + 6, 10)] }));
+    });
+  }
+  return [...layers, ...caption('caption', s.caption, 1500, at(frames, 0.7)), sfx('whoosh', 0, 0.2)];
+} });
+
+const timeline: Kind<'timeline'> = (s, i) => ({ min: 100 + s.events.length * 60, layers: frames => {
+  const n = s.events.length, pitch = Math.min(300, Math.floor(1000 / (n - 1))), top = 400, first = at(frames, 0.1), span = at(frames, 0.62) / n;
+  const spine = (n - 1) * pitch;
+  return [...kicker(i, s.step),
+    rect('spine', 187, top, 6, spine, { radius: 3, fill: '{{muted}}', opacity: 0.6, anims: [anim('height', [first, 1], [first + Math.round(span * (n - 1)) + 20, spine, 'linear'])] }),
+    ...s.events.flatMap((event, k) => {
+      const y = top + k * pitch, start = first + Math.round(k * span);
+      return [circle(`dot-${k}`, 190, y, 44, { fill: '{{bg}}', stroke: k === n - 1 ? GOLD : MINT, strokeWidth: 5, anims: [pop(start, 14, 0.5)] }),
+        label(`when-${k}`, event.when, 270, y - 52, { size: 24, ls: 4, color: GOLD, maxWidth: 700, anims: [fade(start + 4, 10)] }),
+        text(`title-${k}`, event.title, 270, y - 14, { font: '{{fontDisplay}}', weight: 800, size: 56, maxWidth: 720, maxLines: 2, minSize: 36, lh: 1.05, anims: [rise(y - 14, start + 6, 20, 16)] }),
+        ...(event.detail ? [text(`detail-${k}`, event.detail, 270, y + 62, { size: 34, color: '{{muted}}', maxWidth: 720, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
+        sfx('pop', start + 4, 0.2)];
+    }),
+    ...caption('caption', s.caption, top + spine + 200, at(frames, 0.8)), sfx('whoosh', 0, 0.2)];
+} });
+
+// Things falling into a container and piling up, simulated with real physics so they tumble and settle the same way on every render.
+const PILE = { x: 240, y: 430, w: 600, h: 880 };
+const pile: Kind<'pile'> = (s, i) => ({ min: 200 + Math.round(s.count * 1.5), layers: frames => {
+  const fills = { mixed: [GOLD, MINT, ORANGE], gold: [GOLD], mint: [MINT], red: [RED] }[s.tone], every = Math.max(1, Math.floor(at(frames, 0.6) / s.count)), size = s.count > 70 ? 34 : s.count > 40 ? 42 : 52;
+  const edge = (id: string, x: number, y: number, w: number, h: number) => rect(id, x, y, w, h, { radius: 5, fill: '{{muted}}', anims: [fade(4, 12)] });
+  return [...kicker(i, s.step),
+    ...(s.title ? [label('pile-title', s.title, W / 2, 262, { size: 28, ls: 6, color: GOLD, align: 'center', anims: [fade(6, 12)] })] : []),
+    edge('bucket-left', PILE.x - 14, PILE.y + 120, 14, PILE.h - 120), edge('bucket-right', PILE.x + PILE.w, PILE.y + 120, 14, PILE.h - 120), edge('bucket-floor', PILE.x - 14, PILE.y + PILE.h, PILE.w + 28, 14),
+    { id: 'pile', type: 'physics', x: PILE.x, y: PILE.y, width: PILE.w, height: PILE.h, walls: 'box', seed: 7, substeps: 3,
+      emit: [{ shape: s.shape, x: PILE.w / 2, y: -70, spread: PILE.w / 2 - size, width: size, widthJitter: Math.round(size * 0.3), count: s.count, every, at: 14, restitution: 0.35, friction: 0.15, fill: fills }] },
+    ...(s.bucket ? [label('bucket-label', s.bucket, W / 2, PILE.y + PILE.h + 40, { size: 26, ls: 6, color: '{{text}}', align: 'center', anims: [fade(8, 12)] })] : []),
+    ...caption('caption', s.caption, 1560, at(frames, 0.7)), sfx('whoosh', 0, 0.2), sfx('thump', at(frames, 0.5), 0.25)];
+} });
+
+// The picture or clip sits in a rounded frame inside the board, so the header and footer stay readable whatever is behind them.
+const FRAME = { x: 60, y: 210, w: 960, h: 1530 };
+const media: Kind<'media'> = (s, i) => ({ min: 120, layers: () => {
+  const shadeFrom = FRAME.y + Math.round(FRAME.h * 0.4), bottom = FRAME.y + FRAME.h, titleY = bottom - (s.caption ? 560 : 420);
+  return [
+    { id: 'footage', type: VIDEO.test(s.src) ? 'video' : 'image', src: s.src, x: FRAME.x, y: FRAME.y, width: FRAME.w, height: FRAME.h, radius: 28, objectFit: 'cover', ...(VIDEO.test(s.src) ? { muted: true, loop: true } : {}) },
+    { ...rect('scrim', FRAME.x, shadeFrom, FRAME.w, bottom - shadeFrom, { radius: 28, anims: [fade(0, 10)] }), fill: { type: 'linear', from: [0, 0], to: [0, bottom - shadeFrom], stops: [{ offset: 0, color: '#00000000' }, { offset: 1, color: '#000000e6' }] } },
+    ...kicker(i, s.step),
+    ...(s.title ? [center('media-title', s.title, titleY, { font: '{{fontDisplay}}', weight: 900, size: 110, color: '#ffffff', maxWidth: 840, maxLines: 3, minSize: 60, lh: 1.0, anims: [rise(titleY, 8, 40, 26)] })] : []),
+    ...(s.caption ? [center('media-caption', s.caption, bottom - 190, { size: 46, weight: 600, color: '#ffffff', maxWidth: 820, lh: 1.25, anims: [rise(bottom - 190, 24, 30, 22)] })] : []),
+    ...(s.credit ? [label('media-credit', s.credit, FRAME.x + FRAME.w - 30, bottom - 52, { size: 18, ls: 2, color: '#ffffff', align: 'right', opacity: 0.75 })] : []),
+    sfx('whoosh', 0, 0.2)];
+} });
+
 const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...kicker(i, s.step),
   center('close-title', s.title, 520, { font: '{{fontDisplay}}', weight: 900, size: 130, color: GOLD, maxWidth: 900, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(520, 6, 40, 26)] }),
@@ -184,7 +265,7 @@ const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...tag('cta', s.cta, W / 2, 1560, MINT, at(frames, 0.6), 640),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, closing };
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title, flow, grid, steps, compare, stat, chart, timeline, pile, media, closing };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -193,6 +274,15 @@ const theme = {
   fontDisplay: ['string', 'Archivo', 'headline font'], fontBody: ['string', 'Inter', 'body font'], texture: ['string', 'grid', 'background texture: none, grid, dots, scanlines or paper'],
   textureColor: ['color', '#8fb0ff', 'texture ink'], textureOpacity: ['number', 0.05, 'texture strength'], motion: ['string', 'rise', 'how headlines arrive: rise, slide, pop or blur'], transition: ['string', 'fade', 'how scenes change: fade, zoom, wipe or push'],
 } as const;
+
+/** The board's colours for each look; `colors` in the script replaces any of them. */
+const looks: Record<typeof explainerLooks[number], Record<string, string | number>> = {
+  navy: {},
+  ink: { bg: '#0a0a0b', surface: '#17171c', text: '#f4f1ea', muted: '#9a968c', accent: '#ff4a1c', accent2: '#ffb199', textureColor: '#ffffff' },
+  paper: { bg: '#f4efe6', surface: '#fffaf0', text: '#1a1a1a', muted: '#6b655a', accent: '#c2410c', accent2: '#0f766e', textureColor: '#000000', textureOpacity: 0.05 },
+  forest: { bg: '#0c2a22', surface: '#12392f', text: '#eef5ef', muted: '#8fb3a4', accent: '#f2c14e', accent2: '#7bdcb5', textureColor: '#9fe8c8' },
+  sunset: { bg: '#2a1033', surface: '#3a1a47', text: '#fff3ec', muted: '#c9a5c9', accent: '#ff9f43', accent2: '#ff6b81', textureColor: '#ffc2d4' },
+};
 
 /** What was said over one scene: the audio file (relative to the composition) and how long it runs. */
 export type ExplainerAudio = { src: string; seconds: number };
@@ -213,19 +303,19 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
       layers: [...draw.layers(frames), ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
   });
   const overlay: Layer[] = [
-    label('header-kind', 'SYSTEM DESIGN ·', 60, 64, { size: 22, ls: 3, color: '{{muted}}' }),
-    label('header-topic', '{{topic}}', 60 + 16 * 16.2, 64, { size: 22, ls: 3, color: GOLD }),
+    label('header-kind', `${spec.series} ·`, 60, 64, { size: 22, ls: 3, color: '{{muted}}' }),
+    label('header-topic', '{{topic}}', 60 + (spec.series.length + 3) * 16.2, 64, { size: 22, ls: 3, color: GOLD }),
     label('header-handle', '{{handle}}', W - 60, 64, { size: 22, ls: 3, color: '{{muted}}', align: 'right' }),
     text('follow', 'Follow', 60, 1810, { size: 46, weight: 800, italic: true }),
   ];
   const variables = {
-    ...Object.fromEntries(Object.entries(theme).map(([key, [type, value, description]]) => [key, { type, default: value, description: `Theme: ${description}` }])),
+    ...Object.fromEntries(Object.entries(theme).map(([key, [type, value, description]]) => [key, { type, default: ({ ...looks[spec.look], ...spec.colors } as Record<string, string | number>)[key] ?? value, description: `Theme: ${description}` }])),
     topic: { type: 'string', default: spec.topic, description: 'The topic, in the header' }, handle: { type: 'string', default: spec.handle, description: 'The creator handle, in the header' },
   };
   const composition = {
     version: '1.0', id: spec.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'explainer', name: spec.topic, width: W, height: H, fps: FPS, durationFrames: 'auto', background: '{{bg}}',
     texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -16 },
-    variables, scenes, overlay,
+    ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay,
   };
   return { composition, notes };
 }

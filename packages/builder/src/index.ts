@@ -32,6 +32,8 @@ export const audio = (src: string, options: LayerOptions & { volume?: number } =
 export const sfx = (name: 'whoosh' | 'click' | 'tick' | 'pop' | 'thump' | 'ding' | 'riser', options: LayerOptions & { volume?: number } = {}): Layer => layer('audio', { src: `sfx:${name}`, ...options });
 export const group = (children: Layer[], options: LayerOptions & { width?: Value; height?: Value; layout?: { direction?: 'row' | 'column'; gap?: number; padding?: number; align?: 'start' | 'center' | 'end'; justify?: 'start' | 'center' | 'end' | 'space-between' } } = {}): Layer => layer('group', { ...options, children });
 export const lottie = (src: string, options: LayerOptions & { width: number; height: number; loop?: boolean }): Layer => layer('lottie', { src, ...options });
+/** Bodies that fall, bounce and pile up (matter.js), simulated from the layer's first frame so every render agrees. */
+export const physics = (options: LayerOptions & { width: number; height: number; bodies?: Record<string, unknown>[]; emit?: Record<string, unknown>[]; gravity?: { x?: number; y?: number }; walls?: 'box' | 'floor' | 'none'; seed?: number; substeps?: number; sketch?: Record<string, unknown> | false }): Layer => layer('physics', options);
 export const shader = (fragment: string, options: LayerOptions & { width: number; height: number; vars?: Record<string, number | string> }): Layer => layer('shader', { fragment, ...options });
 export const captions = (src: string, options: LayerOptions = {}): Layer => layer('captions', { src, ...options });
 /** A reusable component declared with `video.component(...)`, placed with values for its parameters. */
@@ -47,6 +49,12 @@ export type CodeArgs = { frame: number; t: number; fps: number; width: number; h
  */
 export const code = (draw: ((ctx: CanvasRenderingContext2D, args: CodeArgs) => void) | string, options: LayerOptions & { width: number; height: number; props?: Record<string, unknown>; resolution?: number }): Layer =>
   layer('code', { code: typeof draw === 'string' ? draw : `const draw = ${draw.toString()};`, ...options });
+/**
+ * A p5.js sketch: `draw(p, args)` runs once per frame on a p5 canvas with the random and noise seeds set first, so a frame is a pure function of
+ * its number (do not build up state from frame to frame). Give a function (copied as text, so it must not use anything from the surrounding file) or source. Needs `--allow-code`.
+ */
+export const p5 = (draw: ((p: any, args: CodeArgs) => void) | string, options: LayerOptions & { width: number; height: number; props?: Record<string, unknown>; resolution?: number; seed?: number }): Layer =>
+  layer('p5', { code: typeof draw === 'string' ? draw : `const draw = ${draw.toString()};`, ...options });
 
 // ---- animation
 /** Keyframes from [frame, value, easing?] triples: `keyframes('y', [[0, 40, 'land'], [18, 0]])`. */

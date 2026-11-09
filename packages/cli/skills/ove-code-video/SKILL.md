@@ -71,6 +71,14 @@ code(function draw(ctx, { frame, t, fps, width, height, props, api }) {
 - It executes JavaScript while rendering, so `ove still|review|render|dev|thumbnail` refuse it unless you pass `--allow-code`. Pass that flag only for files you wrote or have read. The AI commands and the Studio never accept code layers; do not paste code layers from other people.
 - Check with `ove still <file> --frame <n> --allow-code`, and look at frames at the start, middle and end.
 
+## Hand-drawn, physics and p5.js
+
+Three libraries are built in; each is drawn the same on every render and in the Player.
+
+- **Hand-drawn (rough.js).** Any rectangle or circle takes `sketch: {}` (or `{ roughness, bowing, fillStyle, hachureGap, fillWeight, boil, seed }`): loose double-stroke outlines, and a solid fill with hand-cut edges or hatching (`hachure`, `cross-hatch`, `zigzag`, `dots`, `dashed`). A top-level `sketch` on the composition reaches every rectangle, circle and physics layer; a layer opts out with `sketch: false`. `boil: 6` redraws the lines every 6 frames like a hand-redrawn cartoon. No `--allow-code` needed.
+- **Physics (matter.js).** `physics(...)` (or `{ type: 'physics' }`) is a world of bodies that fall, bounce and pile up: `bodies` (set circles and rectangles, `static` ones to land on, `at` to appear later) and `emit` (many bodies: `count`, `every` frames, `spread`, `widthJitter`, `fill` as one colour or a list). `gravity`, `walls` (`box`, `floor`, `none`) and `seed` shape it. It is simulated from the layer's first frame with fixed steps, so any frame can be drawn alone and every render agrees. No `--allow-code` needed.
+- **p5.js.** `p5((p, args) => { ... }, { width, height })` runs a p5 sketch's drawing once per frame: `p` is the p5 instance, `args` is `{ frame, t, fps, width, height, props, api }`. Before each frame the random and noise seeds are set and the canvas is cleared, so `p.random()` and `p.noise()` repeat and a frame depends only on its number. Do not build a picture up from frame to frame, and use `args.t`, not `millis()` tricks, for time. Like `code`, it runs JavaScript while rendering, so it needs `--allow-code`, and the AI commands never write it. p5.js is large and is loaded only for videos that have a p5 layer.
+
 ## Choosing
 
 Prefer the builder plus ordinary layers. Use React components when you think in components, props and JSX (charts, dashboards, lists from data); the output is drawn as HTML/SVG, so it suits text, layout and vector graphics, not pixel-level drawing. Reach for a code layer only for visuals nothing else draws, and keep it small and deterministic.

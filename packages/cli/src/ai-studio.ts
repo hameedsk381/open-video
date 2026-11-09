@@ -8,6 +8,7 @@ import { createProvider, narrateSmart, providerCapabilities, type AiProvider } f
 import { describeError, sfxFile } from '@ove/core';
 import { builtinFontFaces } from '@ove/graphics';
 import { builtinFontDir } from '@ove/graphics/fonts';
+import { p5Source } from '@ove/graphics/runtime';
 import { sfxNames } from '@ove/schema';
 import { createApp, loopbackAuth, type ApiLibrary, type PlayerFiles, type StockOptions } from '@ove/api';
 import { InProcessQueue, canvasFor, createFsPaths, createJobRunner, folderName, localInputFile, type JobEnv } from '@ove/jobs';
@@ -46,6 +47,7 @@ export const studioLibrary: ApiLibrary = {
 /** The Player and what it loads beside itself (the same files `ove dev` serves). */
 export const studioPlayer: PlayerFiles = {
   script: playerScript,
+  async p5() { return p5Source(); },
   async sound(name) { return (sfxNames as readonly string[]).includes(name) ? readFile(await sfxFile(name as (typeof sfxNames)[number])) : undefined; },
   async font(path) { const face = builtinFontFaces.find(f => `/fonts/${f.file}` === path); return face ? readFile(join(builtinFontDir(face.pkg), face.file)) : undefined; },
 };

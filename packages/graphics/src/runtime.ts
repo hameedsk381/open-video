@@ -14,6 +14,25 @@ const lottiePath = () => { const bundled = join(runtimeDir(), lottieFile); retur
 /** The Lottie player as source; it defines a global `lottie` when run as a script. */
 export const lottieSource: string = readFileSync(lottiePath(), 'utf8');
 export const lottiePlayerPath = lottiePath;
+// rough.js draws shapes as if by hand. Shipped next to the runtime in the published package; read from the roughjs package otherwise.
+const roughFile = 'rough.js';
+const roughPath = () => { const bundled = join(runtimeDir(), roughFile); return existsSync(bundled) ? bundled : createRequire(import.meta.url).resolve('roughjs/bundled/rough.js'); };
+/** rough.js as source; it defines a global `rough` when run as a script. */
+export const roughSource: string = readFileSync(roughPath(), 'utf8');
+export const roughLibraryPath = roughPath;
+// matter.js is the physics engine. Wrapped so its UMD header finds the global object even where a script's own `this` is undefined (a bundled module).
+const matterFile = 'matter.min.js';
+const matterPath = () => { const bundled = join(runtimeDir(), matterFile); return existsSync(bundled) ? bundled : createRequire(import.meta.url).resolve('matter-js/build/matter.min.js'); };
+/** matter.js as source; it defines a global `Matter` when run as a script. */
+export const matterSource: string = `(function(){${readFileSync(matterPath(), 'utf8')}\n}).call(typeof globalThis!=='undefined'?globalThis:this);`;
+export const matterLibraryPath = matterPath;
+// p5.js (pinned to 1.11): creative-coding sketches. It is about 1 MB, so it is read when asked for and only videos with p5 layers load it.
+const p5File = 'p5.min.js';
+const p5Path = () => { const bundled = join(runtimeDir(), p5File); return existsSync(bundled) ? bundled : createRequire(import.meta.url).resolve('p5/lib/p5.min.js'); };
+let p5Text: string | undefined;
+/** p5.js as source; it defines a global `p5` when run as a script. */
+export const p5Source = (): string => (p5Text ??= readFileSync(p5Path(), 'utf8'));
+export const p5LibraryPath = p5Path;
 /** The whole page runtime: text layout followed by createCanvasRuntime(canvas, measurePath). */
 export const canvasRuntimeSource: string = `${textLayoutSource}\n${read('canvas-runtime.js')}`;
 // The same layout code compiled here, for the unit tests and anything in Node that needs to predict how text wraps.

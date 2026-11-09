@@ -13,9 +13,16 @@ const model = (...replies: string[]) => { const seen: any[][] = []; const provid
 describe('writing an explainer script', () => {
   it('tells the model every scene kind, the language and how many scenes', () => {
     const [system, user] = explainerPrompt('How a cache works', { scenes: 6, language: 'Hinglish (Hindi in Latin letters)' });
-    for (const kind of explainerKinds) expect(system!.content as string).toContain(`- ${kind}:`);
+    for (const kind of explainerKinds.filter(kind => kind !== 'media')) expect(system!.content as string).toContain(`- ${kind}:`);
     expect(system!.content).toMatch(/About 6 scenes/); expect(system!.content).toMatch(/Hinglish/);
     expect(user!.content).toContain('How a cache works');
+  });
+
+  it('offers media scenes only when the video has pictures or footage to show, and only those files', () => {
+    const none = explainerPrompt('How a cache works')[0]!.content as string;
+    expect(none).not.toContain('- media:'); expect(none).toMatch(/Do not use a media scene/);
+    const some = explainerPrompt('How a cache works', { media: ['assets/server-room.mp4', 'assets/chip.jpg'] })[0]!.content as string;
+    expect(some).toContain('- media:'); expect(some).toContain('assets/server-room.mp4, assets/chip.jpg'); expect(some).not.toMatch(/Do not use a media scene/);
   });
 
   it('returns a script that fits, through the fences and prose models add', async () => {

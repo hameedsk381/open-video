@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { explainerSchema, loadComposition, type Explainer } from '@ove/schema';
 import { compileExplainer } from '@ove/core';
-import { readExplainer, wavSeconds } from '../../packages/cli/src/explainer';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { missingMedia, readExplainer, wavSeconds } from '../../packages/cli/src/explainer';
 
 // An explainer script is what a person or an AI writes: scenes and spoken lines. It must compile to a valid, readable composition for any
 // topic, with the same header on every scene, and each scene as long as its line.
@@ -28,7 +31,7 @@ describe('the explainer script', () => {
   });
 
   it('keeps scripts small enough to draw', () => {
-    const scenes = Array.from({ length: 17 }, () => ({ kind: 'closing', title: 'x' }));
+    const scenes = Array.from({ length: 25 }, () => ({ kind: 'closing', title: 'x' }));
     expect(explainerSchema.safeParse({ topic: 'T', scenes }).success).toBe(false);
     expect(explainerSchema.safeParse({ topic: 'T', scenes: [{ kind: 'steps', items: [{ title: 'a' }] }] }).success).toBe(false);
     expect(explainerSchema.safeParse({ topic: 'T', scenes: [{ kind: 'grid', mode: 'counters', rows: 40 }] }).success).toBe(false);
@@ -47,6 +50,14 @@ describe('compiling a script', () => {
       { kind: 'grid', mode: 'heatmap', rows: 4, cols: 4 },
       { kind: 'steps', items: [{ title: 'one' }, { title: 'two', detail: 'more' }, { title: 'three' }, { title: 'four' }, { title: 'five', detail: 'last' }], caption: 'Steps.' },
       { kind: 'compare', left: { title: 'BAD', points: ['a', 'b', 'c', 'd'] }, right: { title: 'GOOD', points: ['e'] } },
+      { kind: 'stat', value: '87%', label: 'of viewers keep watching', note: 'Source: an internal study', tone: 'mint' },
+      { kind: 'chart', type: 'bars', unit: '%', items: [{ label: 'Mon', value: 10 }, { label: 'Tue', value: 42.5 }, { label: 'Wed', value: 0 }] },
+      { kind: 'chart', type: 'line', items: [{ label: '2019', value: 3 }, { label: '2020', value: 9 }, { label: '2021', value: 6 }, { label: '2022', value: 12 }], highlight: 3, caption: 'Growth, year by year.' },
+      { kind: 'timeline', events: [{ when: '1990', title: 'It begins' }, { when: '2005', title: 'It spreads', detail: 'Everyone joins' }, { when: 'TODAY', title: 'It is everywhere' }], caption: 'A short history.' },
+      { kind: 'pile', title: 'REQUESTS', bucket: 'SERVER', count: 60, shape: 'rect', tone: 'red', caption: 'They pile up.' },
+      { kind: 'pile', count: 5 },
+      { kind: 'media', src: 'assets/city.mp4', title: 'Big city', caption: 'Where the traffic is.', credit: 'Video: Someone on Pexels' },
+      { kind: 'media', src: 'assets/photo.jpg' },
       { kind: 'closing', title: 'The takeaway', points: ['x', 'y', 'z'], cta: 'Follow' },
     ],
   });
@@ -70,6 +81,16 @@ describe('compiling a script', () => {
     expect(composition.variables.bg.default).toMatch(/^#/);
   });
 
+  it('shows a picture or clip in a rounded frame on the board, with its text over the lower part', () => {
+    const scenes = (compileExplainer(everything).composition as any).scenes as any[];
+    const [clip, still] = scenes.filter(scene => scene.id.endsWith('-media'));
+    expect(clip.layers[0]).toMatchObject({ id: 'footage', type: 'video', src: 'assets/city.mp4', muted: true, loop: true, x: 60, y: 210, width: 960, height: 1530, radius: 28, objectFit: 'cover' });
+    expect(still.layers[0]).toMatchObject({ type: 'image', src: 'assets/photo.jpg' }); expect(still.layers.some((layer: any) => layer.id === 'media-title')).toBe(false);
+    for (const id of ['scrim', 'media-title', 'media-caption', 'media-credit']) expect(clip.layers.find((layer: any) => layer.id === id), id).toBeDefined();
+    // Inside the frame, so the header (top) and footer (bottom) never sit on footage.
+    for (const layer of clip.layers.filter((layer: any) => ['footage', 'scrim'].includes(layer.id))) expect(layer.y + (layer.height ?? 0)).toBeLessThanOrEqual(1740);
+  });
+
   it('works for the example scripts too', () => {
     for (const name of ['uber-heatmap', 'url-shortener']) expect(() => loadComposition(compileExplainer(parse(example(name))).composition), name).not.toThrow();
   });
@@ -89,6 +110,36 @@ describe('compiling a script', () => {
     const short = (compileExplainer(everything).composition as any).scenes[2].layers.length;
     const long = (compileExplainer(everything, { audio: [undefined, undefined, { src: 'a.wav', seconds: 14 }] }).composition as any).scenes[2].layers.length;
     expect(long).toBeGreaterThan(short);
+  });
+});
+
+describe('the header and the look', () => {
+  const one = (extra: Record<string, unknown> = {}) => (compileExplainer(parse({ topic: 'T', scenes: [{ kind: 'closing', title: 'x' }], ...extra })).composition as any);
+  it('puts the series label in the header, with the topic after it', () => {
+    const header = one({ series: 'MONEY BASICS' }).overlay;
+    expect(header[0]).toMatchObject({ id: 'header-kind', content: 'MONEY BASICS ·' });
+    expect(header[1].x).toBeCloseTo(60 + ('MONEY BASICS'.length + 3) * 16.2, 5);
+    expect(one().overlay[0].content).toBe('EXPLAINED ·');
+  });
+  it('dresses the board in the chosen look, and lets chosen colours replace any of it', () => {
+    expect(one().variables.bg.default).toBe('#0b1c3f');
+    for (const look of ['navy', 'ink', 'paper', 'forest', 'sunset']) { const c = one({ look }); expect(() => loadComposition(c), look).not.toThrow(); }
+    expect(one({ look: 'paper' }).variables).toMatchObject({ bg: { default: '#f4efe6' }, text: { default: '#1a1a1a' } });
+    const custom = one({ look: 'forest', colors: { accent: '#112233' } }).variables;
+    expect(custom.accent.default).toBe('#112233'); expect(custom.bg.default).toBe('#0c2a22');
+    expect(explainerSchema.safeParse({ topic: 'T', colors: { bg: 'blue' }, scenes: [{ kind: 'closing', title: 'x' }] }).success).toBe(false);
+    expect(explainerSchema.safeParse({ topic: 'T', look: 'neon', scenes: [{ kind: 'closing', title: 'x' }] }).success).toBe(false);
+  });
+});
+
+describe('the files a script names', () => {
+  it('finds the pictures and clips that are not there, and names their scene', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ove-explainer-')); mkdirSync(join(dir, 'assets'));
+    try {
+      writeFileSync(join(dir, 'assets', 'here.jpg'), 'x');
+      const spec = parse({ topic: 'T', scenes: [{ kind: 'closing', title: 'x' }, { kind: 'media', src: 'assets/here.jpg' }, { kind: 'media', src: 'assets/gone.mp4' }] });
+      expect(missingMedia(spec, dir)).toEqual(['assets/gone.mp4 (scene 3)']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });
 
