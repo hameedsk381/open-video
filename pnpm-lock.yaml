@@ -296,6 +296,9 @@ importers:
       roughjs:
         specifier: ^4.6.6
         version: 4.6.6
+      three:
+        specifier: 0.187.0
+        version: 0.187.0
 
   packages/jobs:
     dependencies:
@@ -2457,6 +2460,9 @@ packages:
 
   three@0.170.0:
     resolution: {integrity: sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==}
+
+  three@0.187.0:
+    resolution: {integrity: sha512-Qiu7R+Cmh8CstZsY1uJOSWnVlfo7ZtNLV7mF8Jltk3LB3AtDu9cRZlcnRKkAk8Y4z6KKw35z7Y7Urd7jWY8etA==}
 
   tiny-async-pool@1.3.0:
     resolution: {integrity: sha512-01EAw5EDrcVrdgyCLgoSPvqznC0sVxDSVeiOz09FUpjh71G79VCqneOr+xvt7T1r76CF6ZZfPjHorN2+d+3mqA==}
@@ -4736,6 +4742,8 @@ snapshots:
       rimraf: 2.6.3
 
   three@0.170.0: {}
+
+  three@0.187.0: {}
 
   tiny-async-pool@1.3.0:
     dependencies:

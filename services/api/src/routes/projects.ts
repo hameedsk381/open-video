@@ -134,6 +134,7 @@ export function projectRoutes(): Route[] {
       if (!asset) throw new Error(`There is no media file "${request.name}" in this project`);
       if (request.as === 'sound' ? asset.kind !== 'audio' : asset.kind === 'audio') throw new Error(request.as === 'sound' ? 'Only sound files can be added as sound' : 'Sound files are added as sound, not as a picture');
       if (request.as === 'logo' && asset.kind !== 'image') throw new Error('Only pictures can be a logo');
+      if (asset.kind === 'model' && request.as !== 'picture') throw new Error('A 3D model is placed in the scene, not used as a background or a logo');
       const composition = await c.deps.store.readRaw(c.who, id), scenes = Array.isArray(composition.scenes) ? composition.scenes : [];
       if (!scenes.length) throw new Error('This video has no scene to add it to');
       const index = Math.min(request.scene ?? 0, scenes.length - 1), scene = scenes[index];
@@ -142,7 +143,7 @@ export function projectRoutes(): Route[] {
       const taken = new Set<string>(); const collect = (layers: any) => { for (const layer of Array.isArray(layers) ? layers : []) { if (layer?.id) taken.add(String(layer.id)); collect(layer?.children); } }; collect(scene.layers);
       const base = asset.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_-]+/g, '-');
       const unique = (prefix: string) => { let n = 1, name = `${prefix}-${base}`; while (taken.has(name)) name = `${prefix}-${base}-${++n}`; return name; };
-      const media = asset.kind === 'video' ? { type: 'video', src: asset.path, muted: true, loop: true } : { type: 'image', src: asset.path };
+      const media = asset.kind === 'video' ? { type: 'video', src: asset.path, muted: true, loop: true } : asset.kind === 'model' ? { type: 'model', src: asset.path, spin: 30 } : { type: 'image', src: asset.path };
       let layer: any, at = scene.layers.length;
       // A scene block draws its own full-screen backdrop (a layer named bg), which would hide a background placed behind it. This scene's
       // blocks switch to a copy without it, named <block>_over_media; the original stays for every other scene that uses it.
@@ -159,7 +160,7 @@ export function projectRoutes(): Route[] {
         }
       }
       if (request.as === 'background') { layer = { id: unique('bg'), ...media, x: 0, y: 0, width, height, objectFit: 'cover' }; at = 0; }
-      else if (request.as === 'picture') { const box = Math.round(Math.min(width, height) * 0.5); layer = { id: unique('pic'), ...media, x: Math.round((width - box) / 2), y: Math.round((height - box) / 2), width: box, height: box, objectFit: 'contain' }; }
+      else if (request.as === 'picture') { const box = Math.round(Math.min(width, height) * 0.5); layer = { id: unique('pic'), ...media, x: Math.round((width - box) / 2), y: Math.round((height - box) / 2), width: box, height: box, ...(asset.kind === 'model' ? {} : { objectFit: 'contain' }) }; }
       else if (request.as === 'logo') { const box = Math.round(width * 0.18), margin = Math.round(width * 0.05); layer = { id: unique('logo'), ...media, x: width - box - margin, y: Math.round(height * (height >= width ? 0.1 : 0.05)), width: box, height: box, objectFit: 'contain', fixed: true }; }
       else layer = { id: unique('sound'), type: 'audio', src: asset.path, volume: 1, startFrame: 0, ...(Number(scene.durationFrames) > 0 ? { endFrame: Number(scene.durationFrames) } : {}) };
       scene.layers.splice(at, 0, layer);

@@ -34,7 +34,7 @@ export type ApiLibrary = {
 };
 
 /** Files the browser Player loads next to itself. */
-export type PlayerFiles = { script(): Promise<string>; /** p5.js, for videos with p5 layers; served beside the Player. */ p5?(): Promise<string>; sound(name: string): Promise<Buffer | undefined>; font(path: string): Promise<Buffer | undefined> };
+export type PlayerFiles = { script(): Promise<string>; /** p5.js, for videos with p5 layers; served beside the Player. */ p5?(): Promise<string>; /** three.js, for videos with 3D model layers; served beside the Player. */ three?(): Promise<string>; sound(name: string): Promise<Buffer | undefined>; font(path: string): Promise<Buffer | undefined> };
 
 export type AppDeps = {
   /** Local: one person, loopback only, Chromium work may run in this process. Hosted: sign-in required, work only through the queue. */

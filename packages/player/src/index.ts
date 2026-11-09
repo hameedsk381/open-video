@@ -2,12 +2,16 @@
 // renderer's own canvas runtime, so pictures match renders; timing comes from the wall clock, and frames that cannot be drawn in
 // time are skipped rather than slowing playback. Video layers use <video> elements kept in sync with the playhead (close, not
 // frame-exact like a render), and audio is scheduled with Web Audio, where playbackRate also changes pitch (renders keep pitch).
-import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, collectLottieSources, collectCodeSources, hasCodeLayers, hasP5Layers, hasReactLayers, builtinFontFaces, type DrawOperation } from '@ove/graphics';
+import { loadComposition, parseCaptions, isBuiltinSound, builtinSoundName, type Composition, type MediaInfo } from '@ove/schema'; import { evaluateFrame, audioWindows, soundIntervals, volumeEnvelope } from '@ove/timeline'; import { toDrawOperations, prepareOperations, flattenOperations, collectImageSources, collectLottieSources, collectModelSources, hasModelLayers, collectCodeSources, hasCodeLayers, hasP5Layers, hasReactLayers, builtinFontFaces, type DrawOperation } from '@ove/graphics';
 import { createCanvasRuntime, type CanvasRuntime } from 'ove:canvas-runtime';
 export type PlayerEvent = 'frame' | 'play' | 'pause' | 'ended' | 'error';
 // p5.js is large, so it is fetched once, and only for a video that has a p5 layer.
 let p5Loading: Promise<void> | undefined;
 const loadP5 = (url: string): Promise<void> => (p5Loading ??= new Promise<void>((ok, fail) => { if ((globalThis as any).p5) return ok(); const script = document.createElement('script'); script.src = url; script.onload = () => ok(); script.onerror = () => { p5Loading = undefined; fail(new Error(`Could not load p5.js from ${url}`)); }; document.head.append(script); }));
+
+// three.js (for 3D models) is large too: fetched once, and only for a video that has a model layer.
+let threeLoading: Promise<void> | undefined;
+const loadThree = (url: string): Promise<void> => (threeLoading ??= new Promise<void>((ok, fail) => { if ((globalThis as any).OVE_THREE) return ok(); const script = document.createElement('script'); script.src = url; script.onload = () => ok(); script.onerror = () => { threeLoading = undefined; fail(new Error(`Could not load three.js from ${url}`)); }; document.head.append(script); }));
 
 export type PlayerOptions = {
   /** A composition as JSON (variables are resolved with `values`) or an already loaded one. */ composition: unknown; values?: Record<string, unknown>;
@@ -16,6 +20,7 @@ export type PlayerOptions = {
   /** Where the built-in Inter font files are served from. Defaults to the `fonts` folder next to the Player script (the package ships it in `dist/fonts`). */ fontBase?: string | URL;
   /** Where the built-in sound effects (sfx:…) are served from. Defaults to the `sfx` folder next to the Player script. */ sfxBase?: string | URL;
   /** Lets the composition's code layers run in this page. They execute the composition's JavaScript with the page's full powers, so pass true only for compositions you wrote or trust. */ allowCode?: boolean;
+  /** Where three.js is loaded from, for 3D model layers. Defaults to `three-runtime.js` next to the Player script. */ threeUrl?: string | URL;
   /** Where p5.js is loaded from, for p5 layers. Defaults to `p5.min.js` next to the Player script. */ p5Url?: string | URL;
   controls?: boolean; loop?: boolean; autoplay?: boolean; /** 0–1, multiplies every sound. */ volume?: number };
 export type Player = { readonly element: HTMLElement; readonly composition: Composition; readonly frame: number; readonly playing: boolean;
@@ -50,7 +55,10 @@ export async function createPlayer(container: HTMLElement, options: PlayerOption
     if (hasCodeLayers(composition.scenes.flatMap(s => s.layers)) && !options.allowCode) throw new Error('This composition has code layers, which run JavaScript in this page. Pass allowCode: true only if you trust it.');
     const codes = Object.fromEntries(collectCodeSources(composition.scenes.flatMap(s => s.layers)).map(src => [src, { url: resolveSrc(src) }]));
     if (hasP5Layers(composition.scenes.flatMap(s => s.layers))) await loadP5(String(options.p5Url ?? new URL('p5.min.js', import.meta.url)));
-    await runtime.load(images, fonts, lotties, codes);
+    const layerList = composition.scenes.flatMap(s => s.layers);
+    if (hasModelLayers(layerList)) await loadThree(String(options.threeUrl ?? new URL('three-runtime.js', import.meta.url)));
+    const models = Object.fromEntries(collectModelSources(layerList).map(src => [src, resolveSrc(src)]));
+    await runtime.load(images, fonts, lotties, codes, models);
     for (const video of videos.values()) { video.pause(); video.removeAttribute('src'); video.load(); } videos = new Map();
     const videoLayers = composition.scenes.flatMap(s => flattenAll(s.layers)).filter((l: any) => l.type === 'video');
     await Promise.all(videoLayers.map((layer: any) => new Promise<void>(ok => { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.src = resolveSrc(layer.src); v.addEventListener('loadeddata', () => ok(), { once: true }); v.addEventListener('error', () => { emit('error', new Error(`Could not load video ${layer.src}`)); ok(); }, { once: true }); videos.set(layer.id, v); })));

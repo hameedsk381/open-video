@@ -27,7 +27,7 @@ export function assetProblems(composition: Composition, policy: AssetPolicy): st
     for (const layer of layers ?? []) {
       if (!layer || typeof layer !== 'object') continue;
       if (layer.type === 'code' || layer.type === 'react' || layer.type === 'p5') problems.push(`Layer "${layer.id}" is a ${layer.type === 'react' ? 'React' : 'code'} layer; AI-written and pasted compositions cannot contain code, so use text, shapes, html or shader layers instead.`);
-      if (['image', 'video', 'audio', 'lottie', 'captions'].includes(layer.type)) check(String(layer.src ?? ''), `Layer "${layer.id}"`);
+      if (['image', 'video', 'audio', 'lottie', 'model', 'captions'].includes(layer.type)) check(String(layer.src ?? ''), `Layer "${layer.id}"`);
       if (layer.type === 'group') walk(layer.children ?? []);
     }
   };

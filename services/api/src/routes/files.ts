@@ -77,6 +77,7 @@ export function publicRoutes(): Route[] {
   };
   return [
     { method: 'GET', path: '/p5.min.js', open: true, handle: async c => { const p5 = c.deps.player.p5; if (!p5) return c.json(404, { error: 'This server does not serve p5.js' }); c.send(200, 'text/javascript; charset=utf-8', await p5()); } },
+    { method: 'GET', path: '/three-runtime.js', open: true, handle: async c => { const three = c.deps.player.three; if (!three) return c.json(404, { error: 'This server does not serve three.js' }); c.send(200, 'text/javascript; charset=utf-8', await three()); } },
     { method: 'GET', path: '/player.js', open: true, handle: async c => c.send(200, 'text/javascript; charset=utf-8', await c.deps.player.script()) },
     { method: 'GET', path: '/sfx/*', open: true, handle: async c => {
       const sound = await c.deps.player.sound(c.url.pathname.slice(5).replace(/\.wav$/, ''));

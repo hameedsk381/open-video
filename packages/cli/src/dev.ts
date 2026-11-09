@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'; import { watch } from 'node:fs'; import { readFile, writeFile } from 'node:fs/promises'; import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
-import { p5Source } from '@ove/graphics/runtime';
+import { p5Source, threeSource } from '@ove/graphics/runtime';
 import { loadComposition, sfxNames, variablesSchema, resolveVariables, describeError, type Composition, type MediaInfo } from '@ove/schema'; import { measureMedia, attachCaptions, sfxFile, adaptCompositionAspect } from '@ove/core'; import { createRenderer, defaultConcurrency, type Renderer } from '@ove/renderer'; import { builtinFontFaces } from '@ove/graphics'; import { builtinFontDir } from '@ove/graphics/fonts'; import { devPage } from './dev-page'; import { findRawLayers, layerTimeline, applyLayerEdit, applySceneEdit, applyKeyframeEdit, formatLike } from './studio';
 // allowHosts: extra host names (e.g. a reverse proxy's) the server answers to, besides 127.0.0.1 and localhost.
 export type DevOptions = { port?: number; values?: Record<string, unknown>; concurrency?: number; allowHosts?: string[]; /** Run code layers (JavaScript from the composition) in the preview: only for compositions you trust. */ allowCode?: boolean; aspect?: string };
@@ -47,6 +47,7 @@ export async function startDevServer(file: string, options: DevOptions = {}): Pr
       // Live playback: the page runs the Player with the same raw composition and values, loading media through /media/.
       if (req.method === 'GET' && url.pathname === '/api/source') return send(res, 200, 'application/json', JSON.stringify({ raw: raw ?? null, values, media, allowCode: options.allowCode === true }));
       if (req.method === 'GET' && url.pathname === '/player.js') return send(res, 200, 'text/javascript; charset=utf-8', await playerScript());
+      if (req.method === 'GET' && url.pathname === '/three-runtime.js') return send(res, 200, 'text/javascript; charset=utf-8', threeSource());
       if (req.method === 'GET' && url.pathname === '/p5.min.js') return send(res, 200, 'text/javascript; charset=utf-8', p5Source());
       // Built-in sound effects for the Player (it loads them from ./sfx/ beside player.js).
       if (req.method === 'GET' && url.pathname.startsWith('/sfx/')) { const name=url.pathname.slice(5).replace(/\.wav$/, ''); if (!(sfxNames as readonly string[]).includes(name)) return send(res, 404, 'text/plain', 'Not found');

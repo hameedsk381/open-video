@@ -7,7 +7,7 @@ type Use = 'background' | 'picture' | 'logo' | 'sound';
 const SITE: Record<string, string> = { pexels: 'Pexels', pixabay: 'Pixabay' };
 
 const sizeOf = (bytes: number) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
-const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/flac,.mkv,.m4a';
+const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/flac,.mkv,.m4a,.glb';
 
 const choices: Record<string, { use: Use; label: string; hint: string; done: string }[]> = {
   image: [
@@ -19,6 +19,7 @@ const choices: Record<string, { use: Use; label: string; hint: string; done: str
     { use: 'background', label: 'Background', hint: 'Fill the whole scene, behind everything', done: 'Added as the background of' },
     { use: 'picture', label: 'Clip', hint: 'Place it in the middle of the scene', done: 'Added a clip to' },
   ],
+  model: [{ use: 'picture', label: '3D model', hint: 'Place it in the middle, slowly turning', done: 'Added a 3D model to' }],
   audio: [{ use: 'sound', label: 'Add sound', hint: 'Play it during the scene', done: 'Added sound to' }],
 };
 

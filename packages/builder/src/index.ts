@@ -158,3 +158,10 @@ export async function resolveBuildable(value: Buildable): Promise<Record<string,
   if (resolved && typeof resolved === 'object') return resolved as Record<string, unknown>;
   throw new Error('The file must export a video from createVideo(...), a composition object, or a function returning one');
 }
+
+/**
+ * A 3D model (.glb) fitted to a width × height box and drawn with three.js. `spin` turns it like a turntable; yaw, pitch, roll and zoom can also be animated
+ * through the CSS variables --yaw, --pitch, --roll and --zoom. Does not need `--allow-code`: a model file is data.
+ */
+export const model = (src: string, options: LayerOptions & { width: number; height: number; yaw?: number; pitch?: number; roll?: number; spin?: number; zoom?: number; fov?: number; light?: number; animation?: string | number; animationSpeed?: number; resolution?: number }): Layer =>
+  layer('model', { src, ...options });

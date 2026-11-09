@@ -79,6 +79,17 @@ Three libraries are built in; each is drawn the same on every render and in the 
 - **Physics (matter.js).** `physics(...)` (or `{ type: 'physics' }`) is a world of bodies that fall, bounce and pile up: `bodies` (set circles and rectangles, `static` ones to land on, `at` to appear later) and `emit` (many bodies: `count`, `every` frames, `spread`, `widthJitter`, `fill` as one colour or a list). `gravity`, `walls` (`box`, `floor`, `none`) and `seed` shape it. It is simulated from the layer's first frame with fixed steps, so any frame can be drawn alone and every render agrees. No `--allow-code` needed.
 - **p5.js.** `p5((p, args) => { ... }, { width, height })` runs a p5 sketch's drawing once per frame: `p` is the p5 instance, `args` is `{ frame, t, fps, width, height, props, api }`. Before each frame the random and noise seeds are set and the canvas is cleared, so `p.random()` and `p.noise()` repeat and a frame depends only on its number. Do not build a picture up from frame to frame, and use `args.t`, not `millis()` tricks, for time. Like `code`, it runs JavaScript while rendering, so it needs `--allow-code`, and the AI commands never write it. p5.js is large and is loaded only for videos that have a p5 layer.
 
+## 3D models
+
+A `model` layer draws a 3D model (a `.glb` file, or a `.gltf` with its pictures and data embedded) with three.js: `{ "type": "model", "src": "assets/robot.glb", "x": 140, "y": 400, "width": 800, "height": 800, "spin": 30 }` (or `model(src, { width, height, ... })` in the builder).
+
+- The model is centred and fitted to the box, so it never clips whatever its angle. `zoom` sizes it in the box and `fov` flattens or exaggerates the perspective; the background is transparent, so it sits over whatever is behind it.
+- Turn it with `yaw`, `pitch` and `roll` (degrees), or `spin` (degrees per second added to yaw). To animate them, animate the variables `--yaw`, `--pitch`, `--roll` and `--zoom` on the layer, like shader variables: `{ "property": "--yaw", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 90, "value": 180, "easing": "land" }] }`.
+- `animation` plays one of the model's own animations by name or number, at the time the frame gives (`animationSpeed` scales it). A wrong name lists the ones the file has.
+- A frame depends only on its number, so renders repeat exactly. A model file is data, so `--allow-code` is not needed. three.js is loaded only for videos that have a model layer.
+- Limits: no model compression plugins (Draco, meshopt, KTX2 textures) and no `.gltf` that points at separate files. Export the model as a plain `.glb`.
+- In the studio, upload a `.glb` in the Media tab and add it to a scene.
+
 ## Choosing
 
 Prefer the builder plus ordinary layers. Use React components when you think in components, props and JSX (charts, dashboards, lists from data); the output is drawn as HTML/SVG, so it suits text, layout and vector graphics, not pixel-level drawing. Reach for a code layer only for visuals nothing else draws, and keep it small and deterministic.

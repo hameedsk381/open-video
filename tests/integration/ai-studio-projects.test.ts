@@ -1,3 +1,4 @@
+import { makeGlb } from './glb';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { existsSync } from 'node:fs';
 import { request } from 'node:http';
@@ -184,5 +185,22 @@ describe('Studio media library', () => {
     expect((await post('/api/asset/delete', { id, name: 'ghost.png' })).status).toBe(400);
     expect((await post('/api/asset/delete', { id, name: '../composition.json', force: true })).status).toBe(400);
     expect(existsSync(join(root, id, 'composition.json'))).toBe(true);
+  });
+});
+
+describe('Studio 3D models', () => {
+  it('takes a .glb upload and places it in a scene as a slowly turning model, nowhere else', async () => {
+    const id = (json(await post('/api/project/blank', { name: 'Model Room', aspect: '9:16' })) as { id: string }).id;
+    const scene = (await get('/api/library')).blocks.find((block: any) => block.kind === 'scene');
+    await post('/api/add-block', { id, block: scene.id });
+    expect((await send('POST', `/api/upload?project=${id}&name=box.glb`, { origin: base(), 'content-type': 'application/octet-stream' }, makeGlb() as any)).status).toBe(200);
+    expect((await get(`/api/project?id=${id}`)).assets.map((asset: any) => [asset.name, asset.kind])).toEqual([['box.glb', 'model']]);
+    expect((await post('/api/asset/use', { id, name: 'box.glb', as: 'background', scene: 0 })).status).toBeGreaterThanOrEqual(400);
+    expect((await post('/api/asset/use', { id, name: 'box.glb', as: 'logo', scene: 0 })).status).toBeGreaterThanOrEqual(400);
+    expect((await post('/api/asset/use', { id, name: 'box.glb', as: 'picture', scene: 0 })).status).toBe(200);
+    const layer = JSON.parse(await readFile(join(root, id, 'composition.json'), 'utf8')).scenes[0].layers.find((item: any) => item.type === 'model');
+    expect(layer).toMatchObject({ src: 'assets/box.glb', spin: 30 });
+    expect(layer.objectFit).toBeUndefined();
+    expect(Number(layer.width)).toBeGreaterThan(0);
   });
 });

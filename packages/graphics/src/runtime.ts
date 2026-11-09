@@ -33,6 +33,21 @@ let p5Text: string | undefined;
 /** p5.js as source; it defines a global `p5` when run as a script. */
 export const p5Source = (): string => (p5Text ??= readFileSync(p5Path(), 'utf8'));
 export const p5LibraryPath = p5Path;
+// three.js with its glTF loader, for `model` layers: bundled into one script that defines a global `OVE_THREE` ({ THREE, GLTFLoader }). The
+// published package ships the bundle in dist/runtime; from source it is built with esbuild when first asked for, and only videos with model layers load it.
+const threeFile = 'three-runtime.js';
+const threeBundled = () => join(runtimeDir(), threeFile);
+const threeEntry = "import * as THREE from 'three'; import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'; globalThis.OVE_THREE = { THREE, GLTFLoader };";
+/** Builds the three.js runtime script from the three package (needs esbuild, which the repository has; the published package ships the result). */
+export const buildThreeSource = (): string => {
+  const { buildSync } = createRequire(import.meta.url)('esbuild') as typeof import('esbuild');
+  const out = buildSync({ stdin: { contents: threeEntry, resolveDir: fileURLToPath(new URL('..', import.meta.url)), loader: 'js' }, bundle: true, format: 'iife', minify: true, write: false, legalComments: 'none', logLevel: 'silent' });
+  return out.outputFiles[0]!.text;
+};
+let threeText: string | undefined;
+/** The three.js runtime as source; it defines a global `OVE_THREE` when run as a script. */
+export const threeSource = (): string => (threeText ??= existsSync(threeBundled()) ? readFileSync(threeBundled(), 'utf8') : buildThreeSource());
+export const threeRuntimeFile = threeFile;
 /** The whole page runtime: text layout followed by createCanvasRuntime(canvas, measurePath). */
 export const canvasRuntimeSource: string = `${textLayoutSource}\n${read('canvas-runtime.js')}`;
 // The same layout code compiled here, for the unit tests and anything in Node that needs to predict how text wraps.

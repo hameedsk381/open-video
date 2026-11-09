@@ -5,12 +5,13 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { builtinFontFaces } from '../../packages/graphics/src/index';
 import { builtinFontDir } from '../../packages/graphics/src/fonts';
-import { p5Source } from '../../packages/graphics/src/runtime';
+import { p5Source, threeSource } from '../../packages/graphics/src/runtime';
+import { makeGlb } from './glb';
 
 // The libraries behind sketch, physics and p5 layers also have to work in the browser Player: rough.js and matter.js ride inside it, and
 // p5.js is fetched from beside it only for a video that has a p5 layer.
 let browser: Browser, page: Page, script = '';
-const p5Requests: string[] = [];
+const p5Requests: string[] = [], threeRequests: string[] = [];
 const base = { version: '1.0', width: 320, height: 180, fps: 30, durationFrames: 120, background: '#102030' };
 const withLayers = (id: string, layers: unknown[]) => ({ ...base, id, name: id, scenes: [{ id: 's', name: 'S', durationFrames: 120, layers }] });
 
@@ -24,6 +25,8 @@ beforeAll(async () => {
     if (face) return route.fulfill({ contentType: 'font/woff2', body: await readFile(join(builtinFontDir(face.pkg), face.file)) });
     if (url.pathname === '/player.js') return route.fulfill({ contentType: 'text/javascript', body: script });
     if (url.pathname === '/p5.min.js') { p5Requests.push(url.pathname); return route.fulfill({ contentType: 'text/javascript', body: p5Source() }); }
+    if (url.pathname === '/three-runtime.js') { threeRequests.push(url.pathname); return route.fulfill({ contentType: 'text/javascript', body: threeSource() }); }
+    if (url.pathname === '/box.glb') return route.fulfill({ contentType: 'model/gltf-binary', body: makeGlb() });
     return route.fulfill({ contentType: 'text/html', body: '<!doctype html><div id="host"></div>' });
   });
   await page.goto('http://player.test/');
@@ -63,5 +66,15 @@ describe('browser Player: sketch, physics and p5 layers', () => {
     expect(p5Requests).toHaveLength(1);
     await run(sketch, 'await player.seek(5); return 1;', ', allowCode: true');
     expect(p5Requests).toHaveLength(1);
+  }, 180_000);
+
+  it('loads three.js once, and only for a video that has a model layer, then draws the model', async () => {
+    expect(threeRequests).toHaveLength(0);
+    const box = withLayers('box', [{ id: 'm', type: 'model', src: 'box.glb', width: 320, height: 180, yaw: 20 }]);
+    const result = await run(box, 'await player.seek(0); return { n: count((r, g, b) => r > 120 && r > g * 1.8 && r > b * 1.8) };') as { n: number };
+    expect(result.n).toBeGreaterThan(2000);
+    expect(threeRequests).toHaveLength(1);
+    await run(box, 'await player.seek(3); return 1;');
+    expect(threeRequests).toHaveLength(1);
   }, 180_000);
 });
