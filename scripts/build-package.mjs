@@ -4,14 +4,14 @@
 //   dist/index.d.ts type declarations, emitted by tsc and re-pointed from @ove/* workspace names to relative files
 //   dist/player.js  the browser Player (motionrender/player), minified, with its own declarations
 //   templates/, skills/  copied next to dist so `ove init` finds them the same way it does in the workspace
-// playwright and zod stay external: they are the package's dependencies. Run with tsx (pnpm build:package) since it imports TypeScript.
+// playwright and zod stay external: they are the package's dependencies. onnxruntime-node (native binaries, for the on-device Indic voices) stays external too: it is an optional peer, loaded only when that voice is used. Run with tsx (pnpm build:package) since it imports TypeScript.
 import { bundlePlayer } from '../packages/player/src/bundle.ts';
 import { build } from 'esbuild'; import { execFileSync } from 'node:child_process'; import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'; import { dirname, join, relative, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)), '..'), out=join(root, 'packages', 'ove'), dist=join(out, 'dist');
 await rm(dist, { recursive: true, force: true }); await rm(join(out, 'templates'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'studio'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
 // esbuild is external too: the CLI only reaches it to bundle the Player when running from source, never from this package, which ships player.js.
 const nodeBanner = "import { createRequire as __createRequire } from 'node:module'; var require = __createRequire(import.meta.url);";
-const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: nodeBanner }, external: ['playwright', 'zod', 'pg', 'bullmq', 'esbuild'], logLevel: 'warning', legalComments: 'none' };
+const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: nodeBanner }, external: ['playwright', 'zod', 'pg', 'bullmq', 'esbuild', 'onnxruntime-node'], logLevel: 'warning', legalComments: 'none' };
 await build({ ...common, entryPoints: [join(root, 'packages/core/src/index.ts')], outfile: join(dist, 'index.js') });
 await build({ ...common, entryPoints: [join(root, 'packages/cli/src/index.ts')], outfile: join(dist, 'cli.js') });
 await build({ ...common, platform: 'neutral', banner: undefined, entryPoints: [join(root, 'packages/builder/src/index.ts')], outfile: join(dist, 'builder.js') });
