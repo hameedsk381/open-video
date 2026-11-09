@@ -201,7 +201,7 @@ export function createHandlers(env: JobEnv) {
         for (const [i, scene] of spec.scenes.entries()) {
           if (!scene.say) { audio.push(undefined); continue; }
           progress(`Recording the voice for scene ${i + 1} of ${spec.scenes.length}…`);
-          const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file, voiceProvider, language);
+          const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file, voiceProvider, language, spec.voiceRate);
           audio.push({ src: relativePath(dir, file).replace(/\\/g, '/'), seconds: made.seconds });
         }
       }

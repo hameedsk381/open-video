@@ -235,10 +235,25 @@ function toWav(mp3: Buffer): Promise<Uint8Array> {
   });
 }
 
-export async function synthesizeEdgeSpeech(
-  text: string,
-  options: { voice?: string; language?: string; signal?: AbortSignal } = {}
-): Promise<EdgeSpeechResult> {
+type EdgeSpeechOptions = { voice?: string; language?: string; /** Speaking speed as a percentage change: -30 is slower, +25 is faster (default 0). */ rate?: number; signal?: AbortSignal };
+
+/**
+ * Speech from the Edge voice service. The service sometimes drops a connection, so a failed attempt is made twice more (after a short wait)
+ * before giving up, and the failure says what it was instead of an unreadable event object.
+ */
+export async function synthesizeEdgeSpeech(text: string, options: EdgeSpeechOptions = {}): Promise<EdgeSpeechResult> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try { return await synthesizeEdgeSpeechOnce(text, options); } catch (error) {
+      last = error;
+      if (options.signal?.aborted) throw error;
+      if (attempt < 3) await new Promise(done => setTimeout(done, 700 * attempt));
+    }
+  }
+  throw last instanceof Error ? last : new Error('Could not reach the Edge voice service after three tries. Check the internet connection and try again, or use another speech engine.');
+}
+
+async function synthesizeEdgeSpeechOnce(text: string, options: EdgeSpeechOptions): Promise<EdgeSpeechResult> {
   const voice = resolveEdgeVoice(options.voice, options.language);
   const locale = voice.split('-').slice(0, 2).join('-') || 'en-US';
 
@@ -272,9 +287,9 @@ export async function synthesizeEdgeSpeech(
       clearTimeout(timeout);
       resolve();
     };
-    ws.onerror = (err: any) => {
+    ws.onerror = () => {
       clearTimeout(timeout);
-      reject(err);
+      reject(new Error('Could not reach the Edge voice service (the connection failed)'));
     };
   });
 
@@ -282,7 +297,8 @@ export async function synthesizeEdgeSpeech(
   ws.send(speechConfig);
 
   const reqId = generateUUID();
-  const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${locale}"><voice name="${voice}"><prosody pitch="+0Hz" rate="+0%" volume="+0%">${escapeXml(text)}</prosody></voice></speak>`;
+  const percent = Math.max(-50, Math.min(100, Math.round(options.rate ?? 0))), rateText = `${percent >= 0 ? '+' : ''}${percent}%`;
+  const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${locale}"><voice name="${voice}"><prosody pitch="+0Hz" rate="${rateText}" volume="+0%">${escapeXml(text)}</prosody></voice></speak>`;
   const ssmlMsg = `X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`;
   ws.send(ssmlMsg);
 
@@ -350,10 +366,10 @@ export async function synthesizeEdgeSpeech(
       }
     };
 
-    ws.onerror = (err: any) => {
+    ws.onerror = () => {
       clearTimeout(timeout);
       try { ws.close(); } catch {}
-      reject(err);
+      reject(new Error('The Edge voice service dropped the connection while speaking'));
     };
 
     ws.onclose = () => {

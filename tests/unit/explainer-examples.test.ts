@@ -19,6 +19,14 @@ describe('explainer kind docs', () => {
     expect(() => loadComposition(compileExplainer(spec).composition)).not.toThrow();
   });
 
+  it('let a script speed its voice up or slow it down, within limits', () => {
+    const script = (voiceRate: unknown) => explainerSchema.safeParse({ topic: 'T', voiceRate, scenes: [{ kind: 'title', lines: ['A'] }] }).success;
+    expect(script(12)).toBe(true);
+    expect(script(-40)).toBe(true);
+    expect(script(61)).toBe(false);
+    expect(script(2.5)).toBe(false);
+  });
+
   it('come with a JSON Schema an editor or an agent can read', () => {
     const schema = explainerJsonSchema as { properties?: Record<string, unknown> };
     expect(Object.keys(schema.properties ?? {})).toEqual(expect.arrayContaining(['topic', 'scenes', 'look', 'aspect', 'sources']));

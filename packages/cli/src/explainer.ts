@@ -114,7 +114,7 @@ export async function buildExplainer(script: Explainer, options: BuildExplainerO
     await mkdir(assets, { recursive: true });
     for (const [i, scene] of spec.scenes.entries()) {
       if (!scene.say) { audio.push(undefined); continue; }
-      const name = `voice-${i + 1}.wav`, made = await speakLine(scene.say, voice, join(assets, name), voiceProvider, options.language);
+      const name = `voice-${i + 1}.wav`, made = await speakLine(scene.say, voice, join(assets, name), voiceProvider, options.language, spec.voiceRate);
       log(`scene ${i + 1}: ${made.fresh ? 'recorded' : 'reused'} ${made.seconds.toFixed(1)} s`);
       audio.push({ src: relative(dir, join(assets, name)).replace(/\\/g, '/'), seconds: made.seconds });
     }
