@@ -155,7 +155,7 @@ For a video that teaches one idea, write the script instead of the layers:
 ```
 `mr explainer kinds`  (or the motionrender_explainer_kinds tool)   what each scene shows, with examples
        ↓
-Real numbers: `motionrender_facts`, or `mr explainer write "<topic>" --research`
+Real numbers: `mr facts country India internet_users` (or `wikipedia`, `exchange`), or the motionrender_facts tool
        ↓
 Write explainer.json   (`mr schema --explainer` lists every field)
        ↓

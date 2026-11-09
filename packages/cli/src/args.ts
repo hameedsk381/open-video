@@ -21,6 +21,7 @@ export const commandSpecs: Record<string, Spec> = {
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
   mcp: { values: ['--config'] },
   setup: { flags: ['--force', '--no-skills'], positionals: 1 },
+  facts: { values: ['--lookups'], flags: ['--json'], positionals: 3 },
   serve: {},
   'job-worker': {},
   dev: { values: ['--port', '--allow-host', '--aspect', ...variables], flags: ['--allow-code'], positionals: 1 },

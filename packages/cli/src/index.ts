@@ -22,6 +22,7 @@ Commands:
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
   mr mcp [--config claude-code|codex|cursor|claude-desktop|all]   start the Model Context Protocol (MCP) server for Claude, Cursor, Codex & AI agents, or print the config to add it
+  mr facts wikipedia <topic> | country <names> <indicator> | exchange <base> <quotes> [--json]   real, sourced facts for a script (Wikipedia, World Bank, exchange rates); no key
   mr setup [dir] [--force] [--no-skills]   make a folder ready for agents: AGENTS.md, CLAUDE.md, MCP config for Claude Code, Codex and Cursor, and the skills
   mr dev <composition.json> [--port 3000] [--allow-host name] [variables]
   mr validate <composition.json> [variables]
@@ -169,6 +170,7 @@ Press Ctrl+C to stop.`);
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
   else if (command === 'script') await (await import('./script')).runScript(argv);
   else if (command === 'production') await (await import('./production')).runProduction(argv);
+  else if (command === 'facts') await (await import('./facts')).runFacts(argv);
   else if (command === 'explainer') await (await import('./explainer')).runExplainer(argv);
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);

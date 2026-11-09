@@ -33,12 +33,12 @@ MotionRender (\`motionrender\`, short \`mr\`) turns JSON into frame-exact video.
 Never say a video is done before you have looked at a still of it.
 
 ## Facts, pictures, voices
-- Numbers must be real. \`mr explainer write "..." --research\` looks them up (Wikipedia, World Bank, exchange rates), or call the \`motionrender_facts\` tool. Put the source in the scene's note or caption.
+- Numbers must be real, never from memory. Look them up (no key needed): \`mr facts country India,Brazil internet_users\`, \`mr facts wikipedia "Load balancing"\`, \`mr facts exchange USD INR\` (\`mr facts indicators\` lists the figures; add \`--json\`), or the \`motionrender_facts\` tool. Every fact has a source and date: put it in the scene's note or caption and in the script's \`sources\`. If a lookup fails, say so and leave the number out; do not guess.
 - A media scene takes a file from the project (\`assets/...\`) or a \`prompt\` (needs an image model: \`--images\`). Stock photos: the studio's Media tab.
 - Voices: Edge is free and online; \`--speech-engine indic\` speaks Hindi, Bengali, Tamil and eight more on this machine (needs \`npm i onnxruntime-node\`; the first line downloads about 88 MB, CC-BY-4.0, credit the model author).
 
 ## Tools (MCP)
-The same things are available as MCP tools: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\`, \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.
+The same things are available as MCP tools: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\` (or \`mr facts\`), \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.
 
 ## Good to know
 - 9:16 is the default. Keep text out of the top 8%, bottom 18% and right 11% (platform buttons cover them); \`mr review\` flags it.

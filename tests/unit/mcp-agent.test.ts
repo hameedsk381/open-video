@@ -123,6 +123,6 @@ describe('setup for agents', () => {
 
   it('gives instructions that name every command and tool an agent is told to use', () => {
     const text = agentInstructions();
-    for (const needle of ['mr explainer kinds', 'mr schema --explainer', 'mr explainer validate', 'mr explainer compile', 'mr still', 'mr review', 'mr render', 'motionrender_facts', 'motionrender_environment']) expect(text, needle).toContain(needle);
+    for (const needle of ['mr explainer kinds', 'mr schema --explainer', 'mr explainer validate', 'mr explainer compile', 'mr still', 'mr review', 'mr render', 'motionrender_facts', 'mr facts country', 'motionrender_environment']) expect(text, needle).toContain(needle);
   });
 });
