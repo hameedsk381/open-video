@@ -31,6 +31,8 @@ Commands:
   mr script <composition.json> --set script.json   replace the script in a video (validated against its sources)
   mr production validate <production.json> [--json]   check a production manifest: cast, references, shots and script links
   mr production compile <production.json> [--output composition.json]   compile the shot list into a renderable composition
+  mr explainer write "<what to explain>" [--scenes N] [--language L]   the AI writes the explainer script
+  mr explainer validate|compile <explainer.json> [--output composition.json] [--no-voice] [--voice <name>]   an explainer script (scenes + spoken lines) into a video
   mr still <composition.json> [--frame 0] [--output still.png] [--transparent] [variables]
   mr review <composition.json> [--output review.png] [--every 15] [--sheet-frames 20] [--json] [variables]   contact sheet and design checks
   mr render <composition.json> [--output output.mp4] [render options] [variables]
@@ -164,6 +166,7 @@ Press Ctrl+C to stop.`);
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }
   else if (command === 'script') await (await import('./script')).runScript(argv);
   else if (command === 'production') await (await import('./production')).runProduction(argv);
+  else if (command === 'explainer') await (await import('./explainer')).runExplainer(argv);
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
     else { const values=await suppliedValues(), targetAspect=option('--aspect');

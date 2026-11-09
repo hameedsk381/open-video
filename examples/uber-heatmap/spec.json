@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "topic": "UBER LIVE HEATMAP",
+  "handle": "@yourhandle",
+  "voice": "en-IN-NeerjaNeural",
+  "scenes": [
+    {
+      "kind": "title",
+      "step": "INTERVIEW QUESTION",
+      "brand": "Uber",
+      "chip": "SYSTEM DESIGN INTERVIEW",
+      "lines": ["Drivers ka", "LIVE HEATMAP", "kaise banaoge?"],
+      "say": "Uber ka interview question: drivers ka live heatmap kaise banaoge?"
+    },
+    {
+      "kind": "flow",
+      "step": "STEP 1 · UPDATES → SERVER",
+      "sources": ["D17", "D42", "D08", "D25", "D91", "D30", "D64"],
+      "buffer": "QUEUE",
+      "sink": "SERVER",
+      "spike": "10× SPIKE",
+      "note": { "text": "JAISE KAFKA", "tone": "gold" },
+      "result": { "text": "0 UPDATE GUM ✓", "tone": "mint" },
+      "caption": "Har driver, har kuch second mein\nlocation bhejta hai.",
+      "say": "Har driver kuch second mein location bhejta hai. Spike aaya, toh hum queue rakhte hain, jaise Kafka."
+    },
+    {
+      "kind": "grid",
+      "step": "STEP 3 · HAR CELL KA COUNTER",
+      "mode": "counters",
+      "hot": { "row": 4, "col": 5 },
+      "caption": "Har cell mein kitne drivers hain,\nbas wahi count rakhna hai.",
+      "say": "Ab server har cell ka counter rakhta hai. Driver cell mein aaya, count ek badha."
+    },
+    {
+      "kind": "grid",
+      "step": "STEP 4 · COUNT → RANG",
+      "mode": "heatmap",
+      "hot": { "row": 1, "col": 6 },
+      "callout": "BHEED ZYADA, DRIVERS KAM",
+      "result": "Live heatmap",
+      "resultNote": "cell ka count = rang",
+      "say": "Count ke hisaab se rang: laal matlab zyada, hara matlab kam. Isi ko kehte hain live heatmap."
+    }
+  ]
+}

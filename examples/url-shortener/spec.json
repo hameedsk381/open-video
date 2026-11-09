@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "topic": "URL SHORTENER",
+  "handle": "@yourhandle",
+  "voice": "en-IN-PrabhatNeural",
+  "scenes": [
+    {
+      "kind": "title",
+      "step": "INTERVIEW QUESTION",
+      "brand": "Short",
+      "chip": "SYSTEM DESIGN INTERVIEW",
+      "lines": ["How do you build a", "URL SHORTENER", "for millions of users?"],
+      "say": "How would you build a URL shortener that serves millions of users?"
+    },
+    {
+      "kind": "flow",
+      "step": "STEP 1 · TRAFFIC → SERVER",
+      "sources": ["Web", "App", "API", "Bot"],
+      "buffer": "LOAD BALANCER",
+      "sink": "SERVER",
+      "spike": "100× TRAFFIC",
+      "note": { "text": "SPREAD THE LOAD", "tone": "gold" },
+      "result": { "text": "NO ONE SERVER FALLS ✓", "tone": "mint" },
+      "caption": "Every click goes through a load balancer first.",
+      "say": "Every click hits a load balancer first, so no single server takes the whole spike."
+    },
+    {
+      "kind": "steps",
+      "step": "STEP 2 · MAKE THE SHORT LINK",
+      "items": [
+        { "title": "Get a unique ID", "detail": "From a counter or a distributed ID service" },
+        { "title": "Encode it in base62", "detail": "Digits and letters turn a big number into 7 characters" },
+        { "title": "Store the pair", "detail": "short code → long URL, in a key-value store" },
+        { "title": "Redirect on click", "detail": "Look up the code, answer with a 301" }
+      ],
+      "caption": "A short link is just an ID, written short.",
+      "say": "Get a unique ID, encode it in base sixty two, store the pair, and redirect when someone clicks."
+    },
+    {
+      "kind": "compare",
+      "step": "STEP 3 · WHERE DO IDS COME FROM?",
+      "left": { "title": "ONE COUNTER", "points": ["One machine becomes the bottleneck", "The next link is easy to guess"] },
+      "right": { "title": "ID RANGES", "points": ["Each server owns a range of IDs", "Links stay hard to guess"] },
+      "caption": "Hand out ranges, not single numbers.",
+      "say": "A single counter is a bottleneck and easy to guess. Give each server its own range of IDs instead."
+    },
+    {
+      "kind": "closing",
+      "title": "A short link is just an ID",
+      "points": ["Generate a unique ID", "Encode it short", "Cache the redirect"],
+      "cta": "Follow for more",
+      "say": "Generate a unique ID, encode it short, and cache the redirect. That is the whole idea."
+    }
+  ]
+}
