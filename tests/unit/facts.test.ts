@@ -13,7 +13,7 @@ function bank(rows: ReturnType<typeof row>[]) {
   const fetcher = (async (url: string, init?: RequestInit) => {
     calls.push(url);
     expect(init?.redirect).toBe('error');
-    expect((init?.headers as Record<string, string>)['user-agent']).toMatch(/MotionRender/);
+    expect((init!.headers as Record<string, string>)['user-agent']).toMatch(/MotionRender/);
     if (url.includes('/v2/country?')) return json([{}, countries]);
     if (url.includes('/indicator/')) return json([{}, rows]);
     if (url.includes('opensearch')) return json(['x', ['Load balancing (computing)']]);
