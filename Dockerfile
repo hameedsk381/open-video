@@ -13,7 +13,7 @@
 #
 # The all-in-one studio has no login: publish its port only to the machine you trust. The hosted stack is infrastructure/docker/compose.yml.
 
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 ENV CI=true
 # The package build renders the built-in sound effects with ffmpeg.
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/* && corepack enable
@@ -24,7 +24,7 @@ RUN pnpm install --frozen-lockfile \
  && mkdir -p /out && cd packages/ove && npm pack --pack-destination /out
 
 # System runtime base with ffmpeg, shared across images.
-FROM node:22-bookworm-slim AS runtime-base
+FROM node:26-bookworm-slim AS runtime-base
 ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 
