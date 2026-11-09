@@ -102,7 +102,7 @@ Add to `.cursor/mcp.json`:
 
 ## 3. Claude Skills (`.claude/skills`)
 
-For Claude Code or Anthropic agent environments, MotionRender includes 16 skills (`motionrender` and `ove` are the same entry point under two names). One project agent also lives in `.claude/agents/`: `solution-architect`, which maps the monorepo and writes architecture notes.
+For Claude Code or Anthropic agent environments, MotionRender includes 17 skills (`motionrender` and `ove` are the same entry point under two names). One project agent also lives in `.claude/agents/`: `solution-architect`, which maps the monorepo and writes architecture notes.
 - `motionrender` / `ove`: Main entry point and composition grammar.
 - `ove-explainer`: Vertical explainer videos from scenes and spoken lines (how-it-works, system design, money basics): the fastest route to a finished video, no AI key needed.
 - `ove-agent`: Autonomous video director: brief to a finished React or JSON video, with a visual self-check loop.
@@ -110,6 +110,7 @@ For Claude Code or Anthropic agent environments, MotionRender includes 16 skills
 - `ove-make-reel`: Quick vertical or square social videos from ready-made blocks and themes.
 - `ove-react-video`: High-end React videos with spring physics, bento cards and glowing orbs.
 - `ove-code-video`: Videos written as TypeScript, JavaScript or React when JSON cannot express the logic.
+- `motion-design`: Motion principles for video, from [LottieFiles/motion-design-skill](https://github.com/LottieFiles/motion-design-skill) (MIT): personality archetypes, easing and duration tables, choreography, a quality checklist, with a note on using it in frames. Read it before choosing timing and easing.
 - `ove-motion-graphics`: Kinetic typography, bento grids, code walk-throughs and audio waveforms.
 - `ove-effects`: Motion effects over footage: glass cards, kinetic titles, tracked labels, grain and grading.
 - `ove-voiceover-captions`: Voiceover and word-timed captions, with scenes cut to the speech.

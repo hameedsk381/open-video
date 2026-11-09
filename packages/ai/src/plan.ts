@@ -70,6 +70,7 @@ The design is YOURS to decide. There is no house style: choose the fonts, palett
 ${describeStyleFamilies(options.brief)}${options.brand ? `
 ${brandLine(options.brand)}` : ''}
 - Texture: a grid for engineered/technical, dots for editorial/print, scanlines for games/broadcast, paper for warm/organic, none for clean graphic fields.
+- Motion craft (from the motion-design skill): pick ONE personality for the whole video (playful, premium, corporate or energetic) and keep its easing and duration; entrances decelerate (ease-out) and exits accelerate (ease-in) and run about 30% shorter; never linear easing for movement across the frame; one hero motion per beat, staggers under half a second in total, and no more than a third of the elements moving at once; give each beat a primary motion plus a quieter secondary one and slow ambient life, not opacity alone.
 - Motion and transition: one entrance style and one transition style for the whole video. Match the energy: pop for playful, slide for product, blur for premium, rise for editorial, fade for calm. Density 0.8-1.2 scales spacing.
 - This look applies to JSON videos directly and to React videos as their design tokens.
 

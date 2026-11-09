@@ -17,6 +17,7 @@ An explainer is a short video that teaches **one idea**, one scene at a time, dr
 7. **Final**: `mr make explainer.json --final` writes `out.mp4`. The single steps (`mr explainer validate`, `mr explainer compile`, `mr still composition.json --frame 90`, `mr review`, `mr render`) are there when you want one thing only.
 
 ## Writing the script
+- Motion and pacing: the `motion-design` skill has the personality archetypes, easing and duration tables and a choreography checklist; pick one personality for the video and let it choose `design.motion`, `design.transition` and how long each scene breathes.
 - Start with a `title` scene and end with a `closing`. In between, pick the kind that shows the idea best, and use each kind at most twice. `stat`, `chart` and `timeline` are for true numbers and events only.
 - **Write `say` as speech**: short sentences, one idea, no headings, no lists. A scene lasts as long as its line (plus a pause), so a 20-word line is about 7 seconds. A scene without `say` is silent and as short as its picture needs.
 - **Say what is on screen, and add what is not.** The caption repeats the point in a few words; the spoken line carries the explanation.
