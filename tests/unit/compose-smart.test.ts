@@ -1,31 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { composeSmart } from '../../packages/cli/src/templates';
-import { buildRegistry, composeSmart as composeWithSource, createProvider, type AiProvider, type ChatMessage, type Registry, type TemplateChoice } from '@ove/ai';
+import { composeSmart } from '../../packages/cli/src/compose-source';
+import { buildRegistry, composeSmart as composeWithSource, createProvider, type AiProvider, type ChatMessage, type Registry } from '@ove/ai';
 import { loadComposition } from '@ove/schema';
 
-// A filled template still has to face the renderer: the review is stubbed here so the assertion is about what the router
-// does with its verdict, not about the pixels of a fixture composition.
-vi.mock('@ove/core', async importOriginal => {
-  const core = await importOriginal<Record<string, unknown>>();
-  return {
-    ...core,
-    reviewComposition: vi.fn(async () => ({
-      issues: [
-        { severity: 'error', message: 'the quote is cut short', frame: 30, layer: 'quote' },
-        { severity: 'warning', message: '2 text colours (#ffffff, #a78bfa): use a heading colour, a body colour and one or two accents' },
-      ],
-      sheet: Buffer.alloc(0), sheetFrames: [], sampledFrames: 4,
-    })),
-  };
-});
-
-// The smart composer routes a brief: the planner's answer picks the template or the full-composition path (with the beats
-// as the motion plan), and a refused or failed plan falls back to the routing that always worked.
-const registry: Registry = buildRegistry({
-  templates: [{ id: 'intro-card', name: 'Intro card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2, themed: true,
-    variables: [{ name: 'title', type: 'string' }, { name: 'accent', type: 'color' }] }],
-  themes: [{ id: 'midnight', name: 'Midnight', description: 'Dark blues' }],
-});
+// The smart composer routes a brief: the planner's answer picks the JSON or React path (with the beats as the motion plan), and a
+// refused or failed plan falls back to writing a composition straight away.
+const registry: Registry = buildRegistry({});
 const scripted = (...replies: unknown[]): AiProvider & { seen: ChatMessage[][] } => { const seen: ChatMessage[][] = []; let at = 0;
   return { id: 'fake', model: 'fake-1', baseUrl: 'fake://', seen, chat: async messages => { seen.push(structuredClone(messages)); const reply = replies[Math.min(at++, replies.length - 1)]; return typeof reply === 'string' ? reply : JSON.stringify(reply); } }; };
 const composition = { version: '1.0', scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: 'Hello', x: 40, y: 40, fontSize: 64 }] }] };
@@ -37,7 +17,7 @@ describe('composeSmart routing', () => {
     const progress: string[] = [];
     const provider = scripted(plan, composition);
     const result = await composeSmart(provider, { ...base, maxAttempts: 3, content: false, onProgress: message => progress.push(message) }, { registry });
-    expect(result.template).toBeUndefined();
+    expect(result.route).toBe('json');
     expect(provider.seen).toHaveLength(2);
     expect(String(provider.seen[0]![0]!.content)).toContain('creative director');
     const composeText = provider.seen[1]!.map(message => message.content).join('\n');
@@ -45,26 +25,25 @@ describe('composeSmart routing', () => {
     expect(composeText).toContain('the headline springs in');
   });
 
-  it('follows the planner to a template, and falls back to writing when no template suits', async () => {
-    const progress: string[] = [];
-    const provider = scripted({ path: 'template', template: 'intro-card', theme: 'midnight', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] }, { template: 'none' }, composition);
-    const result = await composeSmart(provider, { ...base, maxAttempts: 3, content: false, onProgress: message => progress.push(message) }, { registry });
-    expect(result.composition.scenes[0].layers[0].content).toBe('Hello');
-    expect(String(provider.seen[1]![0]!.content)).toContain('template');
-    expect(progress).toContain('No template suits this brief; writing a full composition.');
+  it('never offers the planner a template route', async () => {
+    const provider = scripted(plan, composition);
+    await composeSmart(provider, { ...base, maxAttempts: 3, content: false }, { registry });
+    const planner = String(provider.seen[0]![0]!.content);
+    expect(planner).toContain('Reply with "path" set to one of: json.');
+    expect(planner.toLowerCase()).not.toContain('template');
   });
 
-  it('skips the planner with --no-plan and keeps the template-first fallback', async () => {
-    const provider = scripted({ template: 'none' }, composition);
+  it('skips the planner with --no-plan and writes a composition straight away', async () => {
+    const provider = scripted(composition);
     const result = await composeSmart(provider, { ...base, maxAttempts: 3, content: false }, { noPlan: true, registry });
     expect(result.composition.scenes[0].layers[0].content).toBe('Hello');
-    expect(String(provider.seen[0]![0]!.content)).toContain('template');
+    expect(provider.seen).toHaveLength(1);
     expect(String(provider.seen[0]![0]!.content)).not.toContain('production planner');
   });
 
-  it('falls back to the built-in routing when the planner cannot be trusted', async () => {
+  it('falls back to writing a composition when the planner cannot be trusted', async () => {
     const progress: string[] = [];
-    const provider = scripted('garbage', { template: 'none' }, composition);
+    const provider = scripted('garbage', composition);
     const result = await composeSmart(provider, { ...base, maxAttempts: 3, content: false, onProgress: message => progress.push(message) }, { registry });
     expect(result.composition.scenes[0].layers[0].content).toBe('Hello');
     expect(progress.some(message => message.startsWith('No usable plan'))).toBe(true);
@@ -90,40 +69,25 @@ describe('composeSmart routing', () => {
     const script = { audience: 'builders', promise: 'ship faster', cta: 'try it', sources: [], beats: [
       { id: 'hook', name: 'Hook', seconds: 2, narration: 'A quick product intro.', onScreen: 'Hello', data: [], sourceIds: [] },
     ] };
-    const provider = scripted({ template: 'none' }, composition);
+    const provider = scripted(composition);
     const result = await composeSmart(provider, { ...base, content: script, maxAttempts: 2 }, { noPlan: true, registry });
-    expect(provider.seen).toHaveLength(2);
+    expect(provider.seen).toHaveLength(1);
     expect(result.composition.content?.beats[0]?.id).toBe('hook');
   });
 
   it('runs the whole route with the offline mock provider and no planner', async () => {
     const provider = createProvider({ provider: 'mock' });
     const result = await composeSmart(provider, { ...base, maxAttempts: 2 }, { noPlan: true });
-    // The mock fills a real template end to end: a script it wrote, a template reply, a schema-checked composition.
     expect(result.composition.version).toBe('1.0');
     expect(result.composition.content?.beats.length).toBeGreaterThan(0);
-    expect(result.template).toBeTruthy();
-  });
-
-  it('retimes a filled template to the brief\'s duration and saves it as a plain composition', async () => {
-    const provider = createProvider({ provider: 'mock' });
-    const result = await composeSmart(provider, { ...base, durationSeconds: 4, maxAttempts: 2 }, { noPlan: true });
-    // The template the mock fills is longer than 4 s, so the resolved composition is stretched/trimmed to exactly 4 s.
-    expect(result.composition.durationFrames).toBe(120);
-    // Retimed timing is bespoke: no editable template source is returned, and the change is announced.
-    expect(result.source).toBeUndefined();
-    expect(result.composition.content?.beats.length).toBeGreaterThan(0);
-    expect(result.warnings.some(warning => warning.includes('Retimed'))).toBe(true);
+    expect(result.route).toBe('json');
     expect(() => loadComposition(structuredClone(result.composition))).not.toThrow();
   });
 });
 
-// A brief no template or block layout carries can be written as React code — but only by a host that will run that code
-// itself. The router asks the planner for React only when the source offers a builder, and a failed build falls back to a
-// written composition instead of losing the job.
+// A brief no block layout carries can be written as React code, but only by a host that will run that code itself. The router asks the
+// planner for React only when the source offers a builder, and a failed build falls back to a written composition instead of losing the job.
 describe('composeSmart with React authoring', () => {
-  const choice: TemplateChoice = { id: 'square-card', name: 'Square card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2,
-    variables: [], composition: { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60, scenes: [{ id: 's', name: 'S', layers: [] }] } };
   const reactPlan = { path: 'react', idea: 'Liquid chrome type', look: { motion: 'blur' }, beats: [{ name: 'Hook', onScreen: 'chrome letters form', seconds: 2 }] };
   const builtByReact = loadComposition({ version: '1.0', id: 'react-video', name: 'React video', width: 1080, height: 1080, fps: 30, durationFrames: 60,
     scenes: [{ id: 'main', name: 'Main', durationFrames: 60, layers: [{ id: 'react', type: 'react', src: 'video.bundle.js', width: 1080, height: 1080, durationInFrames: 60 }] }] });
@@ -134,21 +98,21 @@ describe('composeSmart with React authoring', () => {
     let received: { idea?: string } = {};
     const result = await composeWithSource(provider,
       { ...base, maxAttempts: 2, content: false, baseDir: '/tmp/project', onProgress: message => progress.push(message) },
-      { templates: async () => [choice], react: async plan => { received = plan; return { composition: builtByReact, attempts: 2, issues: [], warnings: ['the component was repaired once'] }; } },
+      { react: async plan => { received = plan; return { composition: builtByReact, attempts: 2, issues: [], warnings: ['the component was repaired once'] }; } },
       { registry });
     expect(result.route).toBe('react');
     expect(received.idea).toBe('Liquid chrome type');
-    // One planner call and two code attempts: the count covers the whole route, like the template path does.
+    // One planner call and two code attempts: the count covers the whole route.
     expect(result.attempts).toBe(3);
     expect(result.warnings).toEqual(['the component was repaired once']);
-    expect(String(provider.seen[0]![0]!.content)).toContain('template | json | react');
+    expect(String(provider.seen[0]![0]!.content)).toContain('json | react');
     expect(progress).toContain('Writing this video as React motion code…');
   });
 
   it('does not offer the planner a React route the host cannot run', async () => {
     const provider = scripted(plan, composition);
-    await composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, { templates: async () => [choice] }, { registry });
-    expect(String(provider.seen[0]![0]!.content)).toContain('Reply with "path" set to one of: template | json.');
+    await composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, {}, { registry });
+    expect(String(provider.seen[0]![0]!.content)).toContain('Reply with "path" set to one of: json.');
   });
 
   it('falls back to a written composition when React authoring fails', async () => {
@@ -156,7 +120,7 @@ describe('composeSmart with React authoring', () => {
     const provider = scripted(reactPlan, composition);
     const result = await composeWithSource(provider,
       { ...base, maxAttempts: 2, content: false, onProgress: message => progress.push(message) },
-      { templates: async () => [choice], react: async () => { throw new Error('delayRender() was not released within 28 seconds'); } },
+      { react: async () => { throw new Error('delayRender() was not released within 28 seconds'); } },
       { registry });
     expect(result.route).toBe('json');
     expect(result.composition.scenes[0].layers[0].content).toBe('Hello');
@@ -170,7 +134,7 @@ describe('composeSmart with React authoring', () => {
     const provider = scripted(reactPlan);
     let sawContent = false;
     const result = await composeWithSource(provider, { ...base, content: script, maxAttempts: 2, baseDir: '/tmp/project' },
-      { templates: async () => [choice], react: async (_plan, options) => { sawContent = options.content !== false && options.content?.beats[0]?.id === 'hook'; return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } },
+      { react: async (_plan, options) => { sawContent = options.content !== false && options.content?.beats[0]?.id === 'hook'; return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } },
       { registry });
     expect(sawContent).toBe(true);
     expect(result.composition.content?.beats[0]?.id).toBe('hook');
@@ -179,16 +143,14 @@ describe('composeSmart with React authoring', () => {
   });
 });
 
-// The routing lives in @ove/ai with the host's catalogues injected, so a job queue, an MCP server or a deployed worker
-// gets the same decisions without importing the command line — and a template's files either travel or are reported.
-// A weak planner answers "json" for almost everything, so a host that can write React makes designed videos in React unless asked not to.
+// The routing lives in @ove/ai with the host's capabilities injected, so a job queue, an MCP server or a deployed worker gets the same
+// decisions without importing the command line. A weak planner answers "json" for almost everything, so a host that can write React
+// makes designed videos in React unless asked not to.
 describe('composeSmart route default', () => {
   const builtByReact = loadComposition({ version: '1.0', id: 'react-video', name: 'React video', width: 1080, height: 1080, fps: 30, durationFrames: 60,
     scenes: [{ id: 'main', name: 'Main', durationFrames: 60, layers: [{ id: 'react', type: 'react', src: 'video.bundle.js', width: 1080, height: 1080, durationInFrames: 60 }] }] });
-  const choice: TemplateChoice = { id: 'square-card', name: 'Square card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2,
-    variables: [{ name: 'title', type: 'string' }], composition: { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60, scenes: [{ id: 's', name: 'S', layers: [] }] } };
   const square = { ...base, width: 1080, height: 1080, maxAttempts: 2, content: false as const };
-  const withReact = (calls: string[]) => ({ templates: async () => [choice], react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } });
+  const withReact = (calls: string[]) => ({ react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } });
   const jsonPlan = { path: 'json', idea: 'Say hello', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] };
 
   it('writes a video the planner gave to json as React, and says why', async () => {
@@ -217,21 +179,6 @@ describe('composeSmart route default', () => {
     vi.unstubAllEnvs();
   });
 
-  it('does not take a video away from a template the planner chose', async () => {
-    const card: TemplateChoice = { id: 'intro-card', name: 'Intro card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2, themed: true,
-      variables: [{ name: 'title', type: 'string', default: 'x' }, { name: 'accent', type: 'color', default: '#ffffff' }],
-      composition: { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60,
-        variables: { title: { type: 'string', default: 'x' }, accent: { type: 'color', default: '#ffffff' } },
-        scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: '{{title}}', x: 40, y: 40, fontSize: 64, color: '{{accent}}' }] }] } };
-    const templatePlan = { path: 'template', template: 'intro-card', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] };
-    const calls: string[] = [];
-    const progress: string[] = [];
-    const filled = await composeWithSource(scripted(templatePlan, { template: 'intro-card', values: { title: 'Hello', accent: '#ff0000' } }), { ...square, onProgress: message => progress.push(message) },
-      { templates: async () => [card], react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } }, { registry });
-    expect(progress.filter(message => /failed|skipped/i.test(message)), 'the template route did not run cleanly').toEqual([]);
-    expect(filled.route).toBe('template'); expect(calls).toEqual([]);
-  });
-
   it('does not take a video away from an explicit full composition', async () => {
     const calls: string[] = [];
     const full = await composeWithSource(scripted(composition), square, withReact(calls), { full: true, registry });
@@ -239,79 +186,13 @@ describe('composeSmart route default', () => {
   });
 
   it('does not offer React to a host that cannot run code', async () => {
-    const noCode = await composeWithSource(scripted(jsonPlan, composition), square, { templates: async () => [choice] }, { registry });
+    const noCode = await composeWithSource(scripted(jsonPlan, composition), square, {}, { registry });
     expect(noCode.route).toBe('json');
-  });
-});
-
-describe('composeSmart with a host-supplied catalogue', () => {
-  const card = { version: '1.0', id: 'card', name: 'Card', width: 1080, height: 1080, fps: 30, durationFrames: 60,
-    variables: { title: { type: 'string', default: 'Hello there' } },
-    scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: '{{title}}', x: 40, y: 40, fontSize: 64 }] }] };
-  const choice: TemplateChoice = { id: 'square-card', name: 'Square card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 2,
-    variables: [{ name: 'title', type: 'string', default: 'Hello there' }], composition: card };
-  const filled = { template: 'square-card', values: { title: 'Morning Brew' } };
-  const wideCard = { ...card, id: 'wide-card', name: 'Wide card', width: 1920, height: 1080 };
-  const wideChoice: TemplateChoice = { id: 'wide-card', name: 'Wide card', description: 'A wide title card', width: 1920, height: 1080, durationSeconds: 2,
-    variables: [{ name: 'title', type: 'string', default: 'Hello there' }], composition: wideCard };
-  const wideFilled = { template: 'wide-card', values: { title: 'Morning Brew' } };
-
-  it('fills from the injected templates and copies the template\'s own files next to the project', async () => {
-    const copied: [string, string][] = [];
-    const provider = scripted(filled);
-    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, content: false, baseDir: '/tmp/project' },
-      { templates: async () => [choice], copyAssets: async (id, dir) => { copied.push([id, dir]); } }, { noPlan: true });
-    expect(result.template).toBe('square-card');
-    expect(copied).toEqual([['square-card', '/tmp/project']]);
-    expect(result.warnings).toEqual([]);
-  });
-
-  it('reports files that could not travel instead of shipping a video with holes in it', async () => {
-    const provider = scripted(filled);
-    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, content: false, baseDir: '/tmp/project' },
-      { templates: async () => [choice], copyAssets: async () => { throw new Error('EACCES: permission denied, open bg.png'); } }, { noPlan: true });
-    expect(result.template).toBe('square-card');
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('could not be copied to /tmp/project');
-    expect(result.warnings[0]).toContain('permission denied');
-  });
-
-  it('reviews a filled template and returns its faults instead of a clean run', async () => {
-    const provider = scripted(filled);
-    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, content: false, review: true }, { templates: async () => [choice] }, { noPlan: true });
-    expect(result.template).toBe('square-card');
-    expect(result.issues.map(issue => issue.severity)).toEqual(['error', 'warning']);
-    expect(result.issues[0]!.message).toBe('the quote is cut short');
-    // The warning is also in the notes, which is all a surface that ignores `issues` reads.
-    expect(result.warnings).toContain('2 text colours (#ffffff, #a78bfa): use a heading colour, a body colour and one or two accents');
-  });
-
-  it('fills an explicitly chosen template at its own canvas instead of filtering it out', async () => {
-    const provider = scripted(wideFilled);
-    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, { templates: async () => [choice, wideChoice] }, { noPlan: true, template: 'wide-card' });
-    expect(result.template).toBe('wide-card');
-    expect(result.composition.width).toBe(1920);
-    expect(result.composition.height).toBe(1080);
-  });
-
-  it('does not let the model decline an explicitly chosen template', async () => {
-    const provider = scripted({ template: 'none' }, wideFilled);
-    const result = await composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, { templates: async () => [choice, wideChoice] }, { noPlan: true, template: 'wide-card' });
-    expect(result.template).toBe('wide-card');
-    expect(provider.seen).toHaveLength(2);
-  });
-
-  it('does not substitute another template when the named one does not exist', async () => {
-    const provider = scripted(filled);
-    await expect(composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, { templates: async () => [choice] }, { noPlan: true, template: 'nope' }))
-      .rejects.toThrow('There is no template "nope". Available templates: square-card.');
   });
 
   it('does not invent a planner when the host has no capability list', async () => {
-    const provider = scripted(filled, composition);
-    const progress: string[] = [];
-    await composeWithSource(provider, { ...base, maxAttempts: 2, content: false, onProgress: message => progress.push(message) }, { templates: async () => [] }, {});
+    const provider = scripted(composition);
+    await composeWithSource(provider, { ...base, maxAttempts: 2, content: false }, {}, {});
     expect(provider.seen.some(messages => String(messages[0]!.content).includes('production planner'))).toBe(false);
-    expect(progress).toContain('No template suits this brief; writing a full composition.');
   });
 });

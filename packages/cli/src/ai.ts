@@ -3,10 +3,10 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { mergeNarration, ensureBaseline, listRevisions, restoreRevision, saveRevision, type RevisionMeta } from '@ove/ai';
-import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, narrateSmart, planBatch, providerCapabilities,
+import { captionAudio, composeVideo, compositionRelative, createProvider, describeProvider, editVideo, fieldsFromRows, generateImage, narrate, planBatch, providerCapabilities,
   refineVideo, renderBatch, shortsFrom, writeCompositionProject, type BatchSettings, type ComposeOptions, type ProviderConfig } from '@ove/ai';
 import { describeError, loadComposition, renderMedia, type Composition } from '@ove/core';
-import { composeSmart } from './templates';
+import { composeSmart } from './compose-source';
 import { readScript } from './script';
 import { convertFileToReact } from './react-compose';
 
@@ -20,10 +20,10 @@ const usage = `Usage:
       [--source notes.md|data.csv]...   files the script may quote; the brief itself is always a source
       [--content script.json]           use a written script instead of generating one (checked against its sources)
       [--no-research]                   do not read public pages the model names for supporting facts
-      [--template id] [--theme id] [--typography style] [--motion-pacing snappy|dynamic|smooth] [--audio-mood mood] [--sfx]
+      [--typography style] [--motion-pacing snappy|dynamic|smooth] [--audio-mood mood] [--sfx]
       [--narration] [--voice-tone tone] [--cta "headline|link"] [--review] [--strict] [--render] [--force] [--dry-run] [--asset id=path] [--fields name[:type],...]
-      [--no-plan]   skip the planner: template-first routing, then a straight composition
-      [--no-react]  never write the video as React code (the planner may, for briefs no template or block layout can serve)
+      [--no-plan]   skip the planner: write a straight composition
+      [--no-react]  never write the video as React code (the planner may, for briefs no block layout can serve)
       [--strict]    refuse an answer that only works because we repaired it (invented animation properties, unusable
                     keyframes); by default those repairs are made and listed as notes
   ove ai refine <composition.json> --instruction "..." [--review] [--dry-run]
@@ -169,8 +169,6 @@ async function composeCommand(argv: string[]): Promise<number> {
   const canvasOptions = canvas(argv);
   const narration = flag(argv, '--narration');
   const full = flag(argv, '--full');
-  const template = option(argv, '--template');
-  const theme = option(argv, '--theme');
 
   const directions: string[] = [];
   const typography = option(argv, '--typography');
@@ -206,7 +204,7 @@ async function composeCommand(argv: string[]): Promise<number> {
     includeSchema: flag(argv, '--schema'), signal: undefined, onProgress: message => console.log(message) };
   let result;
   try {
-    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan'), theme, template }, !flag(argv, '--no-react'));
+    result = await composeSmart(provider, options, { full, noPlan: flag(argv, '--no-plan') }, !flag(argv, '--no-react'));
   } catch (error) {
     throw new Error(`Composition generation failed.\n${describeError(error)}`);
   }
@@ -215,7 +213,7 @@ async function composeCommand(argv: string[]): Promise<number> {
   if (narration) {
     const voice = option(argv, '--voice');
     const language = option(argv, '--language') ?? option(argv, '--lang');
-    const produced = await narrateSmart(provider, result, { brief, outDir: resolve(dir, 'assets'), durationSeconds: canvasOptions.durationSeconds,
+    const produced = await narrate(provider, { brief, outDir: resolve(dir, 'assets'), durationSeconds: canvasOptions.durationSeconds,
       composition, compositionPath: resolve(dir, 'composition.json'), tailSeconds: numberOption(argv, '--tail', 0.8),
       voice, language,
       onProgress: message => console.log(message) });
@@ -228,11 +226,10 @@ async function composeCommand(argv: string[]): Promise<number> {
     return 0;
   }
   await ensureBaseline(resolve(dir, 'composition.json'));
-  // A template video is saved as the template (still editable by variable and theme), with its narration carried across.
-  const source = (result as any).source ? (narration ? mergeNarration((result as any).source, composition) : (result as any).source) : undefined;
+    const source = (result as any).source ? (narration ? mergeNarration((result as any).source, composition) : (result as any).source) : undefined;
   // The React route has already put video.tsx and its bundle in the folder, which the check at the top found empty (or --force allowed).
   const files = await writeCompositionProject(dir, composition, { force: flag(argv, '--force') || result.route === 'react', source });
-  // Every video is a React video: a composition the catalogue, a template or the scene-by-scene route produced is drawn by the shared
+  // Every video is a React video: a composition the block catalogue or the scene-by-scene route produced is drawn by the shared
   // CompositionView, so the saved file is one `react` layer like a model-written one. What the view cannot draw yet keeps its JSON layers,
   // and the note says why. `--json-layers` keeps the layers on purpose (what the hosted worker renders, or hand-editing the JSON).
   if (result.route !== 'react' && !flag(argv, '--json-layers')) {
@@ -242,7 +239,7 @@ async function composeCommand(argv: string[]): Promise<number> {
       else { result.route = 'react' as typeof result.route; composition = loadComposition(JSON.parse(await readFile(files.composition, 'utf8'))); }
     } catch (error) { result.warnings.push(`Kept as JSON layers, because converting to React failed: ${describeError(error)}`); }
   }
-  await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: provider.id, model: provider.model, template: (result as any).template, attempts: result.attempts });
+  await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), provider: provider.id, model: provider.model, attempts: result.attempts });
   console.log(`\nChecked and wrote ${files.composition} (${composition.durationFrames} frames, ${composition.scenes.length} scenes, ${result.attempts} attempt${result.attempts === 1 ? '' : 's'})`);
   if (result.route === 'react') console.log(`  Written as a React component (${resolve(dir, 'video.tsx')}); rendering it runs that code.`);
   for (const warning of result.warnings) console.log(`  note: ${warning}`);
@@ -477,14 +474,14 @@ function doctorCommand(argv: string[]): number {
 
 /** `ove ai capabilities`: the registry of everything the AI may use to make a video. */
 async function capabilitiesCommand(argv: string[]): Promise<number> {
-  const { cliRegistry } = await import('./templates');
+  const { cliRegistry } = await import('./compose-source');
   const registry = await cliRegistry();
   if (flag(argv, '--json')) { console.log(JSON.stringify(registry, null, 2)); return 0; }
   const counts = registry.counts();
   console.log(`Capability registry v${registry.version}: ${Object.values(counts).reduce((total, n) => total + n, 0)} capabilities (${Object.entries(counts).map(([kind, n]) => `${kind} ${n}`).join(', ')})`);
   const kindOf = (kind: string) => registry.capabilities.filter(capability => capability.kind === kind);
-  for (const kind of ['template', 'theme', 'block', 'component', 'effect', 'sound'] as const) {
-    console.log(`\n${kind === 'template' ? 'template (ready-made layouts: chosen only when the scenes and look match the brief)' : kind}:`);
+  for (const kind of ['block', 'component', 'effect', 'sound'] as const) {
+    console.log(`\n${kind}:`);
     for (const capability of kindOf(kind)) {
       console.log(`  ${capability.id}${capability.fit ? `  (${capability.fit})` : ''}${capability.paths.length && !capability.paths.every(path => path === 'json') ? `  [${capability.paths.join(', ')}]` : ''}`);
       if (capability.description) console.log(`    ${capability.description}`);

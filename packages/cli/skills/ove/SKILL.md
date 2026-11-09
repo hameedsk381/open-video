@@ -11,17 +11,16 @@ An OVE video is one JSON file, `composition.json`. You never write rendering cod
 
 ## Choose the route first
 
-Before composing anything, decide *how* this video gets made, in one step: run `ove ai capabilities` (machine-readable with `--json`) and pick the route that fits the brief. A template is used only when its scenes and look already match the video; otherwise write a full composition, or React code when the brief needs motion graphics no layout carries.
+Before composing anything, decide *how* this video gets made, in one step: run `ove ai capabilities` (machine-readable with `--json`) and pick the route that fits the brief. Write a full composition, or React code when the brief needs motion graphics no layout carries.
 
-- **Template route** — a registered template (reel, product spotlight, quote card, flash sale…) already matches the brief's structure and look. Fastest, cheapest and most consistent: `ove ai compose` fills its text variables from the brief, or `ove init --template <name>` starts an editable project. A `--duration` different from the template's own stretches or trims the resolved composition to fit (scene timing scales proportionally; the result is saved as a plain composition, since the timing is then bespoke), so a length difference is not a reason to leave this route.
-- **JSON route** — when no template matches the brief's structure and look: `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name. This route carries structured, typographic and data-led videos well.
+- **JSON route** — `ove ai compose --brief "…"` writes a full composition, or you write `composition.json` by hand from the fields below. Length, layout and motion are all yours; the registry lists every block, effect and sound you can name. This route carries structured, typographic and data-led videos well.
 - **React route** — when the brief needs spring physics, interlocking layouts, 3D, canvas or generated visuals that no block layout carries: `ove ai compose` on your machine can have the planner write the component and build it, or you load `ove-react-video` (or `ove-code-video` for scene logic as code) and use a `type: "react"` layer inside an otherwise ordinary composition. Hosted workers never write React code from a prompt.
 - **Batch or narration** — many rows of fields → `ove-batch-videos`; voiceover or captions → `ove-voiceover-captions`.
 - **Raw footage** — a recorded clip to clean up (talking head, demo, vlog) → `ove ai edit` (below): transcribe, cut silences and fillers, caption, and write an edited project. A long recording to split up (podcast, stream, webinar) → `ove ai shorts` (below): one transcription, the strongest runs scored and written as separate vertical reel projects. No brief needed; the clip is the input.
 
-If the brief also carries template fields (`--fields metric,value`), it goes to the JSON route: templates take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`template`, `json` or, where the host can run the code, `react`) before generating, chooses a template only when its scenes and look already match the brief, writes the video when none does, and falls back to templates when planning fails. `--no-plan` opts out; `--no-react` keeps it off the React route.
+If the brief also carries batch fields (`--fields metric,value`), it goes to the JSON route: React videos take neither batch fields nor data-driven lists. The chosen route is a real routing contract, not a suggestion — the AI planner makes the same decision (`json` or, where the host can run the code, `react`) before generating. `--no-plan` opts out; `--no-react` keeps it off the React route.
 
-The registry the planner reads is the same list you just saw: `ove ai capabilities --json` is the machine-readable menu of every template, theme, block, component, effect and sound, one entry per capability with its kind and name. Third-party agents and skills should compose *on* OVE — read that registry, write a `composition.json`, and use the validate → still → review loop here — rather than re-implementing rendering. Whatever generates the JSON (planner, model, or you), it stays outside the render path: the renderer only ever reads a validated schema-compliant composition.
+The registry the planner reads is the same list you just saw: `ove ai capabilities --json` is the machine-readable menu of every block, component, effect and sound, one entry per capability with its kind and name. Third-party agents and skills should compose *on* OVE — read that registry, write a `composition.json`, and use the validate → still → review loop here — rather than re-implementing rendering. Whatever generates the JSON (planner, model, or you), it stays outside the render path: the renderer only ever reads a validated schema-compliant composition.
 
 ## Loop
 
@@ -271,7 +270,7 @@ ove ai shorts ./raw/podcast.mp4 --out shorts --count 5 --min 15 --max 60
 - Transparency: `"export": { "transparent": true }` or `--transparent` leaves the background see-through, for overlays and lower thirds; only webm, mov and png keep it. Otherwise the canvas is filled with the composition's `background`: a colour (default `#101827`) or a gradient, in composition pixels.
 - Fonts: the default `fontFamily` is Inter, which is built in: every weight from 100 to 900, italics, Latin, Greek, Cyrillic and Vietnamese, the same on every machine, with no asset needed. Large sizes automatically use its tighter display shapes. Other scripts (Arabic, CJK, Devanagari…) and emoji fall back to system fonts. `fontFamily` can also name an installed font, a list like `"Inter, Arial, sans-serif"`, or a font file declared as an asset: `{ "id": "brand-bold", "type": "font", "src": "./fonts/Brand-Bold.woff2", "family": "Brand", "weight": 700 }`. Declare one asset per file (weight and style), all with the same `family`, and text picks the closest one by `fontWeight`/`fontStyle`; without an italic file, italics are slanted artificially. WOFF2, WOFF, TTF and OTF work. Check a still: a misspelt family silently falls back to the default font.
 
-## Variables (templates)
+## Variables
 
 Declare inputs in a top-level `variables` object and use them as `{{name}}` in any string:
 
@@ -335,7 +334,7 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 
 `ove add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
 
-`ove init --template starter` (also `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
+`ove init <dir>` starts from a small starter video; `ove add` brings in blocks. The AI can also write a whole video from a brief; see `docs/ai.md`.
 
 Before building scenes by hand, check `ove blocks`: a block plus `--set` is faster and consistent. Validate and review as usual afterwards.
 
@@ -387,7 +386,7 @@ Aim for what a motion designer would hand over, not a slide. Before rendering, l
 ## Common mistakes
 
 - Keyframes written in video frames for a layer with a non-zero `startFrame`.
-- Text running off the canvas or out of its box: set `maxWidth` (and for template text `maxLines` + `minFontSize`), then check a still with the longest value you expect.
+- Text running off the canvas or out of its box: set `maxWidth` (and for variable-driven text `maxLines` + `minFontSize`), then check a still with the longest value you expect.
 - Rotating or scaling a shape expecting it to pivot on its centre without setting `originX`/`originY` to `"center"`.
 - Butting scenes end to end and expecting a transition between them: they have to overlap by the transition length.
 - Forgetting `width`/`height` on a `rect`, which then draws nothing.

@@ -80,7 +80,7 @@ Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_U
 
 ### A stronger model for the stages that decide the look
 
-`OVE_AI_MODEL_<TASK>` sends one kind of call to its own model on any provider, so the few calls that decide how a video looks can run on your best model while bulk work stays on a cheap one. Tasks: `DIRECT` (the planner and the creative direction), `COMPOSE` (writing the composition or the React code), `VISION` (any call that carries images, including the art director below), `FAST`, `TEMPLATE`, `HEAL`, `BRAND`, `BATCH`.
+`OVE_AI_MODEL_<TASK>` sends one kind of call to its own model on any provider, so the few calls that decide how a video looks can run on your best model while bulk work stays on a cheap one. Tasks: `DIRECT` (the planner and the creative direction), `COMPOSE` (writing the composition or the React code), `VISION` (any call that carries images, including the art director below), `FAST`, `HEAL`, `BRAND`, `BATCH`.
 
 ```sh
 export OVE_AI_MODEL=openai/gpt-oss-120b        # the everyday model
@@ -100,19 +100,19 @@ The planner and the creative direction are shown ten style families, each with r
 
 Nothing forces a kinetic headline or a camera move any more. In scene-by-scene composing the style contract chooses `motion` (`none` sets type still) and `camera` (`none` holds the frame, `push` adds a slow zoom); in plan mode the only craft checks are 3 scenes of unequal length and that something moves.
 
-When the planner may choose React (the local studio and CLI), it is told React is the default for a video that should look designed rather than assembled. `json` is for plainly structured pieces and `template` for a strong match.
+When the planner may choose React (the local studio and CLI), it is told React is the default for a video that should look designed rather than assembled. `json` is for plainly structured pieces that blocks express fully.
 
 ### A brand in the brief
 
-A compose job accepts `brand`: `{ name, style, colors: { primary, secondary, accent, background, text }, fonts: { heading, body } }`, which is what `/api/brand/scrape` returns. Colours must be hex and text is cut short; a logo path or URL is never kept. The planner is told the brand is fixed, and the brand's colours and fonts replace the planner's field by field on the template, JSON and React routes (the planner still decides texture, motion, transition, layout and density). A brand font the renderer does not ship is dropped, because renders are offline and it would draw as a fallback.
+A compose job accepts `brand`: `{ name, style, colors: { primary, secondary, accent, background, text }, fonts: { heading, body } }`, which is what `/api/brand/scrape` returns. Colours must be hex and text is cut short; a logo path or URL is never kept. The planner is told the brand is fixed, and the brand's colours and fonts replace the planner's field by field on the JSON and React routes (the planner still decides texture, motion, transition, layout and density). A brand font the renderer does not ship is dropped, because renders are offline and it would draw as a fallback.
 
 ### Which route makes a video
 
-The planner chooses between a template, a JSON composition and React code. A weak planner answers "json" for nearly everything, and the scene-by-scene JSON route can only place text, rectangles, circles and pictures, so each video came out as a few text cards. Where the host can run React (the local studio and CLI, never a hosted worker), a video the planner did not give to a template is now written as React, and a failed build still falls back to a composition. `OVE_AI_ROUTE=planner` honours the planner's "json"; `OVE_AI_ROUTE=json` never writes React; a template, `--full` or a brief with clips and sounds keep their own routes.
+The planner chooses between a JSON composition and React code. A weak planner answers "json" for nearly everything, and the scene-by-scene JSON route can only place text, rectangles, circles and pictures, so each video came out as a few text cards. Where the host can run React (the local studio and CLI, never a hosted worker), a video is written as React, and a failed build still falls back to a composition. `OVE_AI_ROUTE=planner` honours the planner's "json"; `OVE_AI_ROUTE=json` never writes React; `--full` or a brief with clips and sounds keep their own routes.
 
 ### Every video is React
 
-Whichever route made it, `ove ai compose` saves a React video: one `react` layer, plus audio layers for any sound. A template, a scene-by-scene composition or a catalogue block is drawn by `CompositionView` (`@ove/react`), a shared component that reads the composition as data; the generated `video.tsx` holds that data and nothing a model wrote. It reuses the JSON renderer's own text layout, easing, animation and camera code, so the two agree to within anti-aliasing. A composition that uses something the view cannot draw yet (video, Lottie, shader or code layers, captions, gradient text, split rich text, colour grading, mattes and masks, path trimming) stays as JSON layers, and the compose note says which feature. Pass `--json-layers` to keep JSON layers regardless; the hosted worker renders JSON layers only.
+Whichever route made it, `ove ai compose` saves a React video: one `react` layer, plus audio layers for any sound. A scene-by-scene composition or a catalogue block is drawn by `CompositionView` (`@ove/react`), a shared component that reads the composition as data; the generated `video.tsx` holds that data and nothing a model wrote. It reuses the JSON renderer's own text layout, easing, animation and camera code, so the two agree to within anti-aliasing. A composition that uses something the view cannot draw yet (video, Lottie, shader or code layers, captions, gradient text, split rich text, colour grading, mattes and masks, path trimming) stays as JSON layers, and the compose note says which feature. Pass `--json-layers` to keep JSON layers regardless; the hosted worker renders JSON layers only.
 
 ### What the video says
 
@@ -121,7 +121,7 @@ The renderer's review finds broken layout; it cannot know what the brief asked f
 - A line the brief names ("end on the line: Ride more.", or text quoted after "tagline", "headline" and similar words) has to be said, within one scene. If it is missing, the biggest text layer of the last scene becomes that line.
 - A text layer that only names a part of the video ("Hook", "Problem Proof", "Call to Action", "Scene 2", or one of the plan's own beat names) is replaced with its beat's line when the plan lines up with the scenes one for one, and dropped when another text layer can speak.
 
-Every repair is listed in the result's warnings, and `--strict` refuses a repaired answer. Template results get the same checks as warnings only. A video drawn as React cannot be read this way and is not checked.
+Every repair is listed in the result's warnings, and `--strict` refuses a repaired answer. A video drawn as React cannot be read this way and is not checked.
 
 ### The art director (React videos)
 
@@ -131,7 +131,7 @@ The pass needs a model that reads images. A provider that cannot is skipped with
 
 ## Content first: the script and the data behind it
 
-Every `ove ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, template fill, scene writer, narration and captions all derive from that script instead of inventing copy on the way.
+Every `ove ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, scene writer, narration and captions all derive from that script instead of inventing copy on the way.
 
 Grounding is checked, not assumed:
 
@@ -147,27 +147,22 @@ ove script reel/composition.json --output script.md             # read it (or sc
 ove script reel/composition.json --set revised.json             # put a revised script back (validated)
 ```
 
-With `--narration`, a scripted video speaks its own beats: one line per scene when each scene names its beat (`"beat": "hook"`, which template fills set when scenes and beats line up), otherwise one script over the whole video. MCP exposes the same: `motionrender_create_video` takes `sources`, `research` and `script`, and `motionrender_script` exports or imports the block.
+With `--narration`, a scripted video speaks its own beats: one script over the whole video. MCP exposes the same: `motionrender_create_video` takes `sources`, `research` and `script`, and `motionrender_script` exports or imports the block.
 
-## Templates when they fit, a written video when they don't
+## A written video
 
-When a ready-made template matches the video (the same aspect ratio, the same narrative shape), `ove ai compose` asks the model only for the values of its variables: a few hundred tokens instead of a whole composition. The layout, motion and timing come from the template, so that route is faster, cheaper and more consistent. It writes the video instead when no template has the right shape or narrative, the model says none suits the brief, template mode fails, or you supplied `--asset` or `--fields`, and it writes React code when the brief needs motion graphics no template or block can express (see the planner section below). A `--duration` that differs from the template's own no longer leaves the template route: the resolved composition is retimed to the requested length (every scene's duration, layer timing, animation keyframes, split entrances, camera moves, transitions and audio fades scale by the same factor, and scene starts are recomputed the way the loader lays them out). Because the timing is then bespoke, the project is saved as a plain composition rather than an editable template. In Studio, tick *Write every layer from scratch* for the old behaviour.
-
-With `--narration`, a template video is cut to its content script: the beats' narration is spoken one line per scene where the template has a scene per beat (otherwise the model writes one line per scene from what it shows), each line is spoken, and every scene is as long as its line, so what is said and what is on screen change together. Word-timed captions come from transcribing the result, and the export gets a -16 LUFS loudness target. Other videos get one script over the whole video. Pictures you pass with `--asset` (images only) are offered to templates with picture slots: the phone screen, the hero image, the story panel.
-
-Every shipped template (`starter`, `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`) takes a **theme** too: the model chooses one of `midnight`, `paper`, `neon`, `espresso` to suit the brief, and the colours follow. See the Blocks and themes section of the README.
+When the planner does not choose React, `ove ai compose` writes a full composition: layout, motion and timing are all the model's, built from the blocks, effects and moves in the registry. The planner and the script come first, so every beat's copy and look are decided before any layer is written.
 
 When a full composition has problems, the model is asked for a patch instead of the whole composition again: `{"fixes": [{"path": "scenes[1].layers[0]", "value": {…}}, {"layer": "title", "set": {…}}, {"path": "scenes[0].layers[3]", "remove": true}]}`. A complete composition is still accepted as the reply.
 
 ## The planner decides the route first
 
-Before either path runs, `compose` asks the model for a **plan**: which of the three production routes suits the brief — fill a template, write a JSON composition, or write React code — with the video's beats and art direction. The route follows what the brief needs, not a default: a template is chosen only when its scenes and look already match the video (a length difference does not disqualify it, since `--duration` retimes the fill), JSON for structured, typographic, data- or product-led videos the blocks can express, and React when the brief asks for 3D, WebGL or canvas work, particles, custom illustration or SVG, real camera moves or other craft no block layout carries. The planner is told never to force a near-miss template. Its answer is checked against the **capability registry**, so the model can only point at templates, themes, components, effects, sounds and **motion moves** that actually exist and fit the canvas; anything invented comes back with the exact problem and is corrected. The moves are the named vocabulary of motion (`ken-burns`, `word-cascade`, `rise-in`, `pop-in`, `blur-in`, `slide-in`, `pulse`, `wipe-reveal`, `parallax`, `camera-shake`, …): the planner names them in a beat's `motion` field, and the composition prompt carries a one-line recipe for each, so a named move always meets the knowledge of how to build it. With a valid plan:
+Before any video is written, `compose` asks the model for a **plan**: which of the two production routes suits the brief, a JSON composition or React code, with the video's beats and art direction. The route follows what the brief needs, not a default.
 
-- route **template** → that template id and theme are filled (the old template mode, now aimed by the planner);
 - route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
 - route **react** → the agent loop (below) writes `video.tsx`, builds it and returns the composition it produced. Only a host that runs generated code itself offers this route: `ove ai compose` on your machine and the local studio do; the hosted workers do not, because the brief would then choose the JavaScript the operator's machine runs. A written script fixes the component's beats, and a failed build falls back to a JSON composition rather than losing the job.
 
-If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to the routing that always worked (template first, then a full composition). Pass `--no-plan` to skip planning entirely.
+If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to writing a full composition. Pass `--no-plan` to skip planning entirely.
 
 ### Scene-by-scene composing (`OVE_COMPOSE_STRATEGY=scenes`)
 
@@ -178,9 +173,9 @@ ove ai capabilities            # list every registered capability the AI may use
 ove ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
 ```
 
-The registry (registry v2, about 140 capabilities in a starter install) is built from the templates, themes and blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
+The registry (registry v2, about 140 capabilities in a starter install) is built from the blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
 
-That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, fill a template, write the whole composition or author React code, retime a template to the requested length, and move a template's own pictures and sounds next to the project. It takes the catalogues, the file copy and (optionally) the React builder from the host (`TemplateSource`), so every host routes a brief the same way without depending on the command line's template folder; a host that supplies no builder never has React offered to its planner. A copy or build that fails is reported in `warnings`, never swallowed.
+That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, write the whole composition or author React code. It takes the capability list and (optionally) the React builder from the host (`ComposeSource`), so every host routes a brief the same way without depending on the command line; a host that supplies no builder never has React offered to its planner. A build that fails is reported in `warnings`, never swallowed.
 
 ## `ove agent`: the planner routes into React code
 
@@ -210,7 +205,7 @@ ove agent "Introduce the company" --url acme.io --provider mock
 
 ## History: every AI change is kept
 
-Each `compose`, `refine`, `narrate`, `transcribe` and `image` (when it changes a composition) keeps the result as a numbered revision in `history/composition/` beside the file (`0001.json`, `index.json`), with what produced it (brief or instruction, provider, model, template, attempts) and a short note of what changed. The first AI change keeps the file as it was as revision 1, so a hand-made video is never lost.
+Each `compose`, `refine`, `narrate`, `transcribe` and `image` (when it changes a composition) keeps the result as a numbered revision in `history/composition/` beside the file (`0001.json`, `index.json`), with what produced it (brief or instruction, provider, model, attempts) and a short note of what changed. The first AI change keeps the file as it was as revision 1, so a hand-made video is never lost.
 
 ```sh
 ove ai history video/composition.json        # list the revisions
@@ -231,8 +226,8 @@ ove ai studio --provider mock --out demo  # offline, writes into ./demo
 The studio is a React + Vite app (`apps/studio`; `pnpm build:studio` builds it, and without a build a plain fallback page is served). It is built around projects, each a folder under `--out`:
 
 - **Projects**: every video as a card with a thumbnail, size, length and last edit; open, duplicate, rename, delete (a deleted project moves to `.trash` inside `--out`).
-- **New video**: pick a kind, describe it, drop in pictures or footage (saved to the project's `assets` folder and offered to the template and the model), optionally add a voiceover with captions.
-- **Editor**: a live preview (the browser Player, so it matches renders closely) with play, scrub and scene jumps. *Edit* changes the text: a video made from a template keeps its variables and components, so each text and colour is a field; a finished video lists every text layer. *Ask AI* applies a natural-language change (an AI change turns a template video into a finished one). *Look* applies a theme or adds a block from the library. *History* restores any saved version. *Export* renders the MP4, runs the problem check, or makes a thumbnail.
+- **New video**: pick a kind, describe it, drop in pictures or footage (saved to the project's `assets` folder and offered to the model), optionally add a voiceover with captions.
+- **Editor**: a live preview (the browser Player, so it matches renders closely) with play, scrub and scene jumps. *Edit* changes the text: a video that keeps variables and components makes each text and colour a field; a finished video lists every text layer. *Ask AI* applies a natural-language change. *Look* applies a theme or adds a block from the library. *History* restores any saved version. *Export* renders the MP4, runs the problem check, or makes a thumbnail.
 - **Library** (blocks and themes) and **Settings** (output folder, provider status).
 
 A job bar shows live progress over server-sent events. Every job calls the same `@ove/ai` and `@ove/core` functions as the CLI, so nothing about the output or its determinism changes. The preview does not run code layers (`allowCode` is off in the Studio). A compose that finished with repairs, or that the design review still faults, does not redirect into the player: the page stops and lists what was changed and what is still wrong, with a button to open the video anyway.
@@ -291,7 +286,7 @@ ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudnes
 - `--schema` appends the exact JSON Schema to the prompt. More tokens, fewer format mistakes on small models.
 - `--dry-run` prints the composition without writing; `--render` renders to `<dir>/out.mp4` (with code permission when
   the video was written as React); `--json` prints a machine-readable summary; `--no-plan` skips the planner
-  (template-first routing, then a straight composition); `--no-react` keeps the planner off the React route.
+  (write a straight composition); `--no-react` keeps the planner off the React route.
 
 What the loop does:
 

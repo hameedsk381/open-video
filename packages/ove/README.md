@@ -1,6 +1,6 @@
 # motionrender
 
-A JSON-first, frame-deterministic motion graphics video engine. A video is one JSON composition: layers, animation, transitions, video and audio, text, drawing and templates with variables, lists and components. MotionRender renders it in headless Chromium and encodes it with FFmpeg to MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or a folder of PNG frames.
+A JSON-first, frame-deterministic motion graphics video engine. A video is one JSON composition: layers, animation, transitions, video and audio, text, drawing and variables, lists and components. MotionRender renders it in headless Chromium and encodes it with FFmpeg to MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or a folder of PNG frames.
 
 ## Requirements
 

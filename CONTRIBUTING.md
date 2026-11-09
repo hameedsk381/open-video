@@ -16,7 +16,7 @@ pnpm ove doctor        # checks Node, FFmpeg encoders and the browser
 |---|---|
 | `packages/schema`, `timeline`, `animation`, `graphics`, `assets`, `ffmpeg` | The composition format and the pieces that draw and time it |
 | `packages/renderer`, `core`, `player` | Turning a composition into frames, video, audio, and the browser Player |
-| `packages/ai` | Briefs to videos: planning, direction, templates, critique, providers |
+| `packages/ai` | Briefs to videos: planning, direction, critique, providers |
 | `packages/contracts`, `storage`, `jobs` | Request shapes, projects on disk, queued jobs |
 | `services/api`, `services/worker` | The hosted HTTP API and the job worker |
 | `packages/cli` | The `mr` command and the local studio server |

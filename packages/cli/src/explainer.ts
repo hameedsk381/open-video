@@ -95,7 +95,7 @@ export async function runExplainer(argv: string[]): Promise<void> {
     provider: { provider: option(argv, '--provider'), model: option(argv, '--model'), baseUrl: option(argv, '--base-url') }, log: message => console.log(`  ${message}`),
   });
   for (const note of built.notes) console.log(`  ${note}`);
-  console.log(`Wrote ${built.output}\nNext: mr still ${relative(process.cwd(), built.output)} --frame 90 · mr render ${relative(process.cwd(), built.output)} --output out.mp4`);
+  console.log(`Wrote ${built.output}\nNext: mr make ${relative(process.cwd(), file ?? built.output)}`);
 }
 
 export type BuildExplainerOptions = {

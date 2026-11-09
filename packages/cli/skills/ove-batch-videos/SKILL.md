@@ -5,7 +5,7 @@ description: Make many MotionRender videos from one template and a list of rows 
 
 # One template, many videos
 
-The main `ove` skill has the full "Variables (templates)" section.
+The main `ove` skill has the full "Variables" section.
 
 ## Steps
 

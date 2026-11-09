@@ -112,14 +112,6 @@
                     "type": "number",
                     "description": "Duration in seconds (e.g. 6, 10, 15)"
                   },
-                  "template": {
-                    "type": "string",
-                    "description": "Optional archetype template ID (e.g. social-reel, product-card, launch-wide)"
-                  },
-                  "theme": {
-                    "type": "string",
-                    "description": "Visual theme ID: neon, midnight, slate, warm, editorial, terminal, sunset"
-                  },
                   "typography": {
                     "type": "string",
                     "enum": ["sans", "serif", "mono", "display"],
@@ -276,8 +268,8 @@
     "/api/library": {
       "get": {
         "operationId": "getLibrary",
-        "summary": "List available templates, themes, and audio assets",
-        "description": "Returns the list of built-in templates, archetypes, and color themes.",
+        "summary": "List the scene blocks and themes",
+        "description": "Returns the built-in scene blocks and colour themes.",
         "responses": {
           "200": {
             "description": "MotionRender library catalogue",
@@ -286,7 +278,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "templates": {
+                    "blocks": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -294,8 +286,7 @@
                           "id": { "type": "string" },
                           "name": { "type": "string" },
                           "description": { "type": "string" },
-                          "width": { "type": "number" },
-                          "height": { "type": "number" }
+                          "category": { "type": "string" }
                         }
                       }
                     },

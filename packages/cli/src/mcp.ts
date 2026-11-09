@@ -6,7 +6,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, type ComposeOptions } from '@ove/ai';
 import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, compileProduction } from '@ove/core';
-import { composeSmart, templateChoices } from './templates';
+import { composeSmart } from './compose-source';
 import { listThemes, listBlocks } from './blocks';
 import { readScript, scriptMarkdown } from './script';
 import { readProduction, summaryText } from './production';
@@ -24,9 +24,7 @@ const TOOLS = [
         outputDir: { type: 'string', description: 'Folder where composition.json and project files will be created' },
         kind: { type: 'string', enum: ['reel', 'promo', 'product', 'project'], description: 'Video archetype: reel (9:16 vertical), promo (16:9 widescreen), product (1:1 square), or project (16:9 story)' },
         duration: { type: 'number', description: 'Target duration in seconds (e.g. 6, 10, 15)' },
-        theme: { type: 'string', description: 'Visual color theme: neon, midnight, slate, warm, editorial, terminal, sunset' },
-        template: { type: 'string', description: 'Optional template ID to base video on (e.g. hook-reel, product-spotlight, quote-card)' },
-        full: { type: 'boolean', description: 'Set true to design completely from scratch rather than matching a template' },
+        full: { type: 'boolean', description: 'Set true to write a full JSON composition and skip the planner' },
         review: { type: 'boolean', description: 'Run the renderer design review before answering, and feed its errors back to the model (slower; the default of false leaves the composition unchecked)' },
         strict: { type: 'boolean', description: 'Refuse an answer that only became usable because it was repaired (invented animation property, unusable keyframe value) instead of quietly accepting it' },
         sources: { type: 'array', description: 'Material the script may quote: pasted notes, a dataset, a report. The prompt itself is always source "brief".', items: { type: 'object', properties: { title: { type: 'string' }, url: { type: 'string' }, text: { type: 'string' } }, required: ['text'] } },
@@ -194,8 +192,8 @@ const TOOLS = [
     }
   },
   {
-    name: 'motionrender_list_templates',
-    description: 'List all available video templates, themes, blocks, and archetypes built into MotionRender.',
+    name: 'motionrender_list_blocks',
+    description: 'List the scene blocks and colour themes built into MotionRender.',
     inputSchema: {
       type: 'object',
       properties: {}
@@ -346,8 +344,6 @@ async function handleToolCall(name: string, args: Record<string, any>) {
 
       const result = await composeSmart(provider, options, {
         full: Boolean(args.full),
-        theme: args.theme,
-        template: args.template
       });
 
       const compPath = resolve(folderName, 'composition.json');
@@ -374,7 +370,7 @@ async function handleToolCall(name: string, args: Record<string, any>) {
 - Resolution: ${result.composition.width}x${result.composition.height} (${kind})
 - Scenes: ${result.composition.scenes.length} scenes
 ${result.composition.content ? `- Script: ${result.composition.content.beats.length} beats, ${result.composition.content.sources.length} source${result.composition.content.sources.length === 1 ? '' : 's'} (read it with motionrender_script)` : '- Script: none'}
-${result.template ? `- Template archetype: ${result.template}` : '- Custom generated composition'}
+- Route: ${result.route ?? 'json'}
 ${checked}${notes}
 
 Next actions you can take:
@@ -559,13 +555,11 @@ Next actions you can take:
       };
     }
 
-    case 'motionrender_list_templates': {
-      const templates = await templateChoices();
+    case 'motionrender_list_blocks': {
       const themes = await listThemes();
       const blocks = await listBlocks();
 
       const summary = {
-        templates: templates.map(t => ({ id: t.id, name: t.name, description: t.description, width: t.width, height: t.height })),
         themes: themes.map(th => ({ id: th.id, name: th.name, variables: (th as any).variables })),
         sceneBlocksCount: blocks.length
       };

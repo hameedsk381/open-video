@@ -35,7 +35,7 @@ describe('Studio projects', () => {
     id = (json(await post('/api/project/blank', { name: 'Spring Sale', aspect: '1:1' })) as { id: string }).id;
     expect(id).toBe('spring-sale');
     const library = await get('/api/library');
-    expect(library.blocks.length).toBeGreaterThan(10); expect(library.themes.length).toBeGreaterThan(2); expect(library.templates.length).toBeGreaterThan(5);
+    expect(library.blocks.length).toBeGreaterThan(10); expect(library.themes.length).toBeGreaterThan(2); expect(library.templates).toBeUndefined();
     const scene = library.blocks.find((block: any) => block.kind === 'scene');
     const added = json(await post('/api/add-block', { id, block: scene.id }));
     expect(added.where).toMatch(/^scene /);

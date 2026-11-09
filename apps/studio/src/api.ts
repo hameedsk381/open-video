@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type { Asset, Block, BlockSlot, CompileProductionResult, Detail, Job, Library, Production, ProductionIssue, ProductionShot, ProductionState, ProductionSummaryState, Project, Revision, RevisionRaw, SaveProductionResult, StockResult, StockSearch, StockStatus, Scene, Status, TemplateSummary, TextLayer, Theme, Variable } from '@ove/contracts';
+export type { Asset, Block, BlockSlot, CompileProductionResult, Detail, Job, Library, Production, ProductionIssue, ProductionShot, ProductionState, ProductionSummaryState, Project, Revision, RevisionRaw, SaveProductionResult, StockResult, StockSearch, StockStatus, Scene, Status, TextLayer, Theme, Variable } from '@ove/contracts';
 import type { Job } from '@ove/contracts';
 
 /** A failed request, with the server's body: plan saves carry field-level issues and conflicts there. */
@@ -78,7 +78,7 @@ export function cleanUserStatus(raw?: string): string {
   if (/retim/i.test(clean)) return 'Smoothing the pacing and transitions…';
   if (/visual system|contract|palette|brand/i.test(clean)) return 'Choosing colours and type…';
   if (/designing.*scene|storyboard|beat|plan/i.test(clean)) return 'Laying out the scenes…';
-  if (/template|compose|layer|scene/i.test(clean)) return 'Designing the scenes…';
+  if (/compose|layer|scene/i.test(clean)) return 'Designing the scenes…';
   if (/review|check|inspect/i.test(clean)) return 'Checking the design…';
   if (/heal|re-design|polish/i.test(clean)) return 'Polishing the motion…';
   if (/render/i.test(clean)) {

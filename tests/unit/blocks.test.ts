@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { loadComposition } from '@ove/schema';
-import { fillTemplate, type ThemeChoice } from '@ove/ai';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readTheme, themeDefaults, themeTokens } from '../../packages/cli/src/blocks';
-import { listTemplates, templateChoices } from '../../packages/cli/src/templates';
+import { starterDir } from '../../packages/cli/src/init';
 
 // Blocks are reusable scenes and overlays sized from the canvas; themes are the colours they read. Every block must work in every
-// theme and on every shape of video, and a template made of blocks must be a valid composition on its own.
+// theme and on every shape of video, and the starter project must be a valid composition on its own.
 const sizes: [number, number][] = [[1920, 1080], [1080, 1920], [1080, 1080]];
 
 describe('blocks and themes', () => {
@@ -79,15 +80,9 @@ describe('blocks and themes', () => {
   });
 });
 
-describe('templates made of blocks', () => {
-  it('are valid, cover the video shapes, and take a theme', async () => {
-    const infos = await listTemplates(), ids = infos.map(info => info.id);
-    for (const id of ['starter', 'hook-reel', 'kinetic-type', 'product-spotlight', 'logo-sting', 'stats-showcase', 'quote-card', 'event-promo', 'tutorial-steps', 'sale-flash']) expect(ids).toContain(id);
-    const choices = await templateChoices(), themed = choices.filter(choice => choice.themed);
-    expect(themed.map(choice => choice.id).sort()).toEqual(['event-promo', 'hook-reel', 'kinetic-type', 'logo-sting', 'product-spotlight', 'quote-card', 'sale-flash', 'starter', 'stats-showcase', 'tutorial-steps']);
-    const neon = await readTheme('neon') as ThemeChoice, launch = themed.find(choice => choice.id === 'starter')!;
-    const composition = fillTemplate(launch, { title: 'Hello there' }, neon);
-    expect(JSON.stringify(composition)).toContain('Hello there'); expect(JSON.stringify(composition)).toContain('#ff3cac');
+describe('the starter project', () => {
+  it('is a valid composition', async () => {
+    const raw = JSON.parse(await readFile(join(starterDir, 'composition.json'), 'utf8'));
+    expect(loadComposition(raw).scenes.length).toBeGreaterThan(0);
   });
 });
-

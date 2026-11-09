@@ -198,7 +198,7 @@ A generic media library is not on this list. Generation is always tied to an ent
 model, prompt, hash and `rights: unknown`; an upload records its hash and time in `assets/.manifest.json` (dropped from the listing if the
 file's size no longer matches, because the hash would then be a false statement). `validate` (CLI, MCP, and `production validate`) prints the
 notes and never fails on them. Not yet covered: narration audio from the text-to-speech step (it is registered by a pure function that has no
-provider or file to hash; it needs the same treatment where the audio file is written), template-library assets, and a way to record rights from
+provider or file to hash; it needs the same treatment where the audio file is written), block-library assets, and a way to record rights from
 the studio. Rights stay `unknown` for generated media because what a provider's terms allow is not something this code can know.
 
 **Slice 2 is built.** `referenceAssets` on characters, environments, props and a shot's generation record take either a bare asset id

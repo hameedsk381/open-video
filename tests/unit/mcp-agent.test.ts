@@ -50,7 +50,7 @@ describe('the MCP server for agents that write the video themselves', () => {
 
     expect(replies.get(1).result.capabilities).toMatchObject({ tools: {}, resources: {} });
     const names = replies.get(2).result.tools.map((item: any) => item.name);
-    for (const name of ['motionrender_schema', 'motionrender_explainer_kinds', 'motionrender_explainer_validate', 'motionrender_explainer_compile', 'motionrender_facts', 'motionrender_environment', 'motionrender_init', 'motionrender_render_still']) expect(names, name).toContain(name);
+    for (const name of ['motionrender_schema', 'motionrender_explainer_kinds', 'motionrender_explainer_validate', 'motionrender_make_video', 'motionrender_explainer_compile', 'motionrender_facts', 'motionrender_environment', 'motionrender_init', 'motionrender_render_still']) expect(names, name).toContain(name);
     expect(new Set(names).size).toBe(names.length);
 
     expect(Object.keys(JSON.parse(text(replies.get(3))).properties)).toEqual(expect.arrayContaining(['topic', 'scenes']));

@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, dur, type Block, type Library as Lib, type Project, type TemplateSummary, type Theme } from '../api';
+import { api, dur, type Block, type Library as Lib, type Project, type Theme } from '../api';
 import { discoverPath, editorPath, go } from '../router';
-import { Badge, Button, Notice, Page, PlusIcon, SearchIcon, Skeleton, useUi, WandIcon } from '../ui';
+import { Badge, Button, Notice, Page, PlusIcon, SearchIcon, Skeleton, useUi } from '../ui';
 
-type Tab = 'templates' | 'blocks' | 'themes';
+type Tab = 'blocks' | 'themes';
 
-const hue = (name: string) => [...name].reduce((total, char) => (total * 31 + char.charCodeAt(0)) % 360, 7);
-const tile = (name: string) => {
-  const base = hue(name);
-  return { background: `linear-gradient(140deg, hsl(${base} 42% 15%), hsl(${(base + 46) % 360} 52% 27%))` };
-};
 const matches = (query: string, ...values: (string | undefined)[]) =>
   !query.trim() || values.some(value => value?.toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -18,7 +13,7 @@ export function Assets() {
   const [lib, setLib] = useState<Lib | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<Tab>('templates');
+  const [tab, setTab] = useState<Tab>('blocks');
   const [query, setQuery] = useState('');
   const [target, setTarget] = useState<Record<string, string>>({});
 
@@ -42,10 +37,6 @@ export function Assets() {
     );
   };
 
-  const templates = useMemo(
-    () => (lib?.templates ?? []).filter(template => matches(query, template.name, template.description, template.tags?.join(' '))),
-    [lib, query]
-  );
   const blocks = useMemo(
     () => (lib?.blocks ?? []).filter(block => matches(query, block.name, block.description, block.category, block.kind)),
     [lib, query]
@@ -55,18 +46,18 @@ export function Assets() {
     [lib, query]
   );
   const categories = [...new Set(blocks.map(block => block.category))];
-  const counts = { templates: lib?.templates.length ?? 0, blocks: lib?.blocks.length ?? 0, themes: lib?.themes.length ?? 0 };
+  const counts = { blocks: lib?.blocks.length ?? 0, themes: lib?.themes.length ?? 0 };
 
   return (
     <Page
       title="Assets"
-      subtitle="The templates, scene blocks and themes this studio can build with."
+      subtitle="The scene blocks and themes this studio can build with."
     >
       {error ? <Notice tone="error" title="Could not load the asset library">{error}</Notice> : null}
 
       <div className="asset-toolbar">
         <div className="segmented">
-          {([['templates', 'Templates', counts.templates], ['blocks', 'Scenes', counts.blocks], ['themes', 'Themes', counts.themes]] as const).map(([id, label, count]) => (
+          {([['blocks', 'Scenes', counts.blocks], ['themes', 'Themes', counts.themes]] as const).map(([id, label, count]) => (
             <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
               {label}<span className="seg-count">{count}</span>
             </button>
@@ -88,18 +79,6 @@ export function Assets() {
         <div className="asset-grid">
           {[1, 2, 3, 4, 5, 6].map(n => <Skeleton key={n} height={190} radius={12} />)}
         </div>
-      ) : null}
-
-      {lib && tab === 'templates' ? (
-        templates.length ? (
-          <div className="asset-grid">
-            {templates.map(template => (
-              <TemplateCard key={template.id} template={template} />
-            ))}
-          </div>
-        ) : (
-          <p className="empty-note">No templates match “{query}”.</p>
-        )
       ) : null}
 
       {lib && tab === 'blocks' ? (
@@ -141,35 +120,6 @@ export function Assets() {
   );
 }
 
-function TemplateCard({ template }: { template: TemplateSummary }) {
-  const aspect = template.width && template.height
-    ? (template.width > template.height ? 'Landscape' : template.width < template.height ? 'Vertical' : 'Square')
-    : undefined;
-
-  return (
-    <article className="asset-card">
-      <div className="asset-preview" style={tile(template.name)}>
-        <span>{template.name}</span>
-        <div className="asset-preview-badges">
-          {aspect ? <Badge tone="neutral">{aspect}</Badge> : null}
-          {template.durationSeconds ? <Badge tone="neutral">{Math.round(template.durationSeconds)}s</Badge> : null}
-        </div>
-      </div>
-      <div className="asset-body">
-        <b>{template.name}</b>
-        <p>{template.description}</p>
-        {template.tags?.length ? (
-          <div className="asset-tags">{template.tags.slice(0, 4).map(tag => <span key={tag}>#{tag}</span>)}</div>
-        ) : null}
-      </div>
-      <div className="asset-actions">
-        <Button size="sm" variant="secondary" icon={<WandIcon size={12} />} onClick={() => go(`#/new?template=${encodeURIComponent(template.id)}`)}>
-          Use template
-        </Button>
-      </div>
-    </article>
-  );
-}
 
 function BlockCard({ block, projects, target, onTarget, onAdd }: {
   block: Block;

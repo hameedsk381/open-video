@@ -7,7 +7,7 @@ Usage:
   motionrender <command> [options] (aliases: mr, ove)
 
 Commands:
-  mr init <dir> [--template id] [--force] [--no-skill]
+  mr init <dir> [--force] [--no-skill]
   mr schema [--explainer] [--output composition.schema.json]   the JSON Schema of a composition, or of an explainer script
   mr doctor                      check Node, FFmpeg encoders and the browser
   mr cache size|clean [--older-than 30d]   show or free the cache of decoded video, media measurements and sound effects
@@ -33,6 +33,7 @@ Commands:
   mr script <composition.json> --set script.json   replace the script in a video (validated against its sources)
   mr production validate <production.json> [--json]   check a production manifest: cast, references, shots and script links
   mr production compile <production.json> [--output composition.json]   compile the shot list into a renderable composition
+  mr make <explainer.json|composition.json> [--draft|--final] [--no-voice] [--output file.mp4] [--json]   check, build, review and render in one go (the quickest loop for an agent)
   mr explainer write "<what to explain>" [--scenes N] [--language L]   the AI writes the explainer script
   mr explainer kinds [--json] | looks [--json] | example [--output explainer.json]   what each scene kind shows, with a valid example (no AI needed to write a script)
   mr explainer validate|compile <explainer.json> [--output composition.json] [--no-voice] [--voice <name>]   an explainer script (scenes + spoken lines) into a video
@@ -134,7 +135,7 @@ Press Ctrl+C to stop.`);
     const stop=() => { worker.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
   else if (command === 'browser') { if (file !== 'install') throw new Error('Usage: ove browser install'); console.log('Downloading Playwright Chromium…'); await ensureChromium(); }
   else if (command === 'schema') { const json=JSON.stringify(argv.includes('--explainer') ? explainerJsonSchema : compositionJsonSchema,null,2)+'\n'; const output=option('--output'); if (output) { await writeFile(resolve(output),json); console.log(`Wrote ${resolve(output)}`); } else process.stdout.write(json); }
-  else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const template=option('--template'); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill'),template}); console.log(`Created ${resolve(file)}${template ? ` from template "${template}"` : ''}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
+  else if (command === 'init') { if (!file || file.startsWith('--')) throw new Error(usage); const files=await initProject(file,{force:flag('--force'),skill:!flag('--no-skill')}); console.log(`Created ${resolve(file)}\n${files.map(f=>`  ${f}`).join('\n')}\n\nNext:\n  ove still ${file}/composition.json --frame 45 --output still.png\n  ove render ${file}/composition.json --output ${file}/out.mp4 --var title="Hi there"`); }
   else if (command === 'dev') { if (!file || file.startsWith('--')) throw new Error(usage); const port=option('--port') === undefined ? undefined : Number(option('--port')); if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536)) throw new Error('--port must be a port number');
     const allowHosts=argv.flatMap((arg, i) => arg === '--allow-host' && argv[i+1] ? [argv[i+1]!] : []); const dev=await startDevServer(file, { port, values: await suppliedValues(), allowHosts, allowCode: flag('--allow-code'), aspect: option('--aspect') }); console.log(`Previewing ${resolve(file)}\n  ${dev.url}\nSaving the file reloads the preview. Press Ctrl+C to stop.`);
     const stop=() => { dev.close().finally(() => process.exit(0)); }; process.once('SIGINT', stop); process.once('SIGTERM', stop); }
@@ -172,6 +173,7 @@ Press Ctrl+C to stop.`);
   else if (command === 'production') await (await import('./production')).runProduction(argv);
   else if (command === 'facts') await (await import('./facts')).runFacts(argv);
   else if (command === 'explainer') await (await import('./explainer')).runExplainer(argv);
+  else if (command === 'make') await (await import('./make-command')).runMake(argv);
   else { if (!command || !file) throw new Error(usage); const raw=await readJson(file); const baseDir=dirname(resolve(file));
     if (command === 'render' && option('--batch')) await renderBatch(raw, baseDir);
     else { const values=await suppliedValues(), targetAspect=option('--aspect');

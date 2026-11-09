@@ -1,11 +1,9 @@
-import { readdir } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { filterCommands } from '../../apps/studio/src/commands';
-import { designBrief, designForTemplate, designName, designs, missingFields } from '../../apps/studio/src/designs';
+import { designBrief, designById, designName, designs, missingFields } from '../../apps/studio/src/designs';
 import { parse } from '../../apps/studio/src/router';
-import { templatesDir } from '../../packages/cli/src/templates';
 
-const shipped = (await readdir(templatesDir, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name);
+
 
 describe('studio shell routes', () => {
   it('serves Discover at both aliases and Home at the root', () => {
@@ -16,7 +14,7 @@ describe('studio shell routes', () => {
   });
 
   it('carries the prompt typed on the Home composer into Create', () => {
-    expect(parse('#/new?prompt=Launch%20film')).toEqual({ name: 'new', template: undefined, kind: undefined, prompt: 'Launch film' });
+    expect(parse('#/new?prompt=Launch%20film')).toEqual({ name: 'new', design: undefined, kind: undefined, prompt: 'Launch film' });
   });
 
   it('keeps editor and production-plan paths stable', () => {
@@ -26,16 +24,16 @@ describe('studio shell routes', () => {
 });
 
 describe('Create gallery designs', () => {
-  it('names a distinct shipped template for every design', () => {
+  it('has a distinct id for every design and opens one by id', () => {
     expect(designs.map(design => design.title)).toEqual(expect.arrayContaining(['Instagram reel', 'Sale announcement', 'New product', 'Event invite']));
-    expect(new Set(designs.map(design => design.template)).size).toBe(designs.length);
-    for (const design of designs) expect(shipped, `${design.id} uses an unshipped template`).toContain(design.template);
-    expect(designForTemplate('sale-flash')?.id).toBe('sale-announcement');
-    expect(designForTemplate('starter')).toBeUndefined();
+    expect(new Set(designs.map(design => design.id)).size).toBe(designs.length);
+    expect(designById('sale-announcement')?.title).toBe('Sale announcement');
+    expect(designById('nope')).toBeUndefined();
+    expect(parse('#/new?design=sale-announcement')).toMatchObject({ name: 'new', design: 'sale-announcement' });
   });
 
   it('turns the details into a brief with the customer words and no blanks', () => {
-    const design = designForTemplate('sale-flash')!;
+    const design = designById('sale-announcement')!;
     const values = { business: 'Ember & Oak', offer: '30% off every candle', perks: 'Free shipping\nGift wrapping', ends: 'Sunday 15 June', code: 'WARM30', website: 'emberandoak.com' };
     const brief = designBrief(design, values, '  Mention the new seasonal scents.  ');
     expect(brief).toContain('A sale announcement for Ember & Oak.');
@@ -47,7 +45,7 @@ describe('Create gallery designs', () => {
   });
 
   it('says which required details are still empty', () => {
-    const design = designForTemplate('sale-flash')!;
+    const design = designById('sale-announcement')!;
     expect(missingFields(design, { business: 'Ember & Oak' })).toEqual(['The offer']);
     expect(missingFields(design, { business: 'Ember & Oak', offer: '30% off' })).toEqual([]);
   });

@@ -1,5 +1,4 @@
-// The designs on the Create page: what a small business is making, not which template is filled. Each design names
-// the shipped template behind it and the few details only the customer knows, and turns those into a brief.
+// The designs on the Create page: what a small business is making. Each design names the few details only the customer knows, and turns those into a brief.
 
 export type DesignField = {
   key: string;
@@ -14,7 +13,6 @@ export type Design = {
   id: string;
   title: string;
   summary: string;
-  template: string;
   kind: 'reel' | 'product' | 'promo';
   aspect: '9:16' | '1:1' | '4:5' | '16:9';
   length: string;
@@ -33,7 +31,6 @@ export const designs: Design[] = [
     id: 'social-reel',
     title: 'Instagram reel',
     summary: 'A short vertical video for a product, a tip or a quick story.',
-    template: 'hook-reel',
     kind: 'reel',
     aspect: '9:16',
     length: '17s',
@@ -60,7 +57,6 @@ export const designs: Design[] = [
     id: 'sale-announcement',
     title: 'Sale announcement',
     summary: 'A punchy offer with perks, a deadline and a promo code.',
-    template: 'sale-flash',
     kind: 'reel',
     aspect: '9:16',
     length: '9s',
@@ -91,7 +87,6 @@ export const designs: Design[] = [
     id: 'new-product',
     title: 'New product',
     summary: 'A square launch video with the promise, three features and the price.',
-    template: 'product-spotlight',
     kind: 'product',
     aspect: '1:1',
     length: '12s',
@@ -120,7 +115,6 @@ export const designs: Design[] = [
     id: 'event-invite',
     title: 'Event invite',
     summary: 'A portrait invitation with the date, place and what is happening.',
-    template: 'event-promo',
     kind: 'promo',
     aspect: '4:5',
     length: '9s',
@@ -151,7 +145,6 @@ export const designs: Design[] = [
     id: 'quote-card',
     title: 'Quote card',
     summary: 'Words worth sharing, set on a designed square card.',
-    template: 'quote-card',
     kind: 'product',
     aspect: '1:1',
     length: '7s',
@@ -177,7 +170,6 @@ export const designs: Design[] = [
     id: 'stats-story',
     title: 'Stats story',
     summary: 'Three big numbers that make your point in seconds.',
-    template: 'stats-showcase',
     kind: 'promo',
     aspect: '16:9',
     length: '11s',
@@ -202,7 +194,6 @@ export const designs: Design[] = [
     id: 'how-to',
     title: 'How-to video',
     summary: 'A four-step tutorial with a progress rail and a result.',
-    template: 'tutorial-steps',
     kind: 'promo',
     aspect: '16:9',
     length: '26s',
@@ -229,7 +220,6 @@ export const designs: Design[] = [
     id: 'logo-sting',
     title: 'Logo sting',
     summary: 'A four-second brand intro with your name and tagline.',
-    template: 'logo-sting',
     kind: 'promo',
     aspect: '16:9',
     length: '4s',
@@ -252,7 +242,6 @@ export const designs: Design[] = [
     id: 'kinetic-words',
     title: 'Kinetic words',
     summary: 'Four huge words and a closing line. Pure type, no pictures.',
-    template: 'kinetic-type',
     kind: 'reel',
     aspect: '9:16',
     length: '9s',
@@ -277,7 +266,6 @@ export const designs: Design[] = [
 ];
 
 export const designById = (id: string) => designs.find(design => design.id === id);
-export const designForTemplate = (template?: string) => template ? designs.find(design => design.template === template) : undefined;
 
 /** The brief a design's details add up to: the opening line, one line per filled field, then the optional note. */
 export const designBrief = (design: Design, values: Record<string, string>, extra = '') => design.brief(values, extra.trim());

@@ -11,7 +11,7 @@ still.png
 package-lock.json
 packages/ove/dist
 packages/ove/studio
-packages/ove/templates
+packages/ove/starter
 packages/ove/skills
 packages/cli/studio
 **/*.mp4

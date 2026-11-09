@@ -100,7 +100,7 @@ export function Making({ id, job }: { id: string; job: string }) {
   // Determine stage based on messages count & content
   const stage = messages.some(m => /retim|review|audio|render|finish/i.test(m))
     ? 4
-    : messages.some(m => /template|compose|layer|scene|kinetic/i.test(m))
+    : messages.some(m => /compose|layer|scene|kinetic/i.test(m))
       ? 3
       : messages.some(m => /plan|beat|story|narrat/i.test(m))
         ? 2

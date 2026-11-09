@@ -26,9 +26,7 @@
     "dev:desktop": "pnpm --filter @ove/desktop dev",
     "build:package": "pnpm build:studio && tsx scripts/build-package.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "eval:ai": "tsx scripts/eval-briefs.ts",
-    "check:templates": "tsx scripts/check-templates.ts",
-    "build:templates": "tsx scripts/build-templates.mjs"
+    "eval:ai": "tsx scripts/eval-briefs.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",

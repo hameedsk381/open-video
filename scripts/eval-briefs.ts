@@ -2,7 +2,7 @@
 // routing, quality and time-to-video are measured rather than guessed. The checks mirror the standardized test style
 // of curated agent-skill benchmarks: playable file, correct duration and resolution, all copy readable, picture
 // moves, plus the engine's own review findings. React-agent evaluation needs a provider that writes valid React
-// code, so it is out of scope here; the mock provider exercises the template and JSON routes end to end.
+// code, so it is out of scope here; the mock provider exercises the JSON route end to end.
 //
 //   pnpm eval:ai                          # offline: --provider mock, compose + review, no MP4
 //   pnpm eval:ai -- --render              # also render each MP4 and probe its duration
@@ -17,16 +17,16 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createProvider, writeCompositionProject, type AiProvider, type Registry } from '@ove/ai';
 import { loadComposition, renderMedia, reviewComposition, ffprobePath, type Composition } from '@ove/core';
-import { composeSmart } from '../packages/cli/src/templates';
+import { composeSmart } from '../packages/cli/src/compose-source';
 
-// The fixed brief set: one per scene style, spread over the routes the planner can choose (the fields brief forces
-// the JSON route, since templates take neither batch fields nor data-driven variables). Each entry fixes the canvas,
+// The fixed brief set: one per scene style, spread over the routes the planner can choose (the fields brief needs
+// batch fields and data-driven variables). Each entry fixes the canvas,
 // length and wording, so runs compare like for like.
 export type Brief = {
   id: string; label: string;
   width: number; height: number; fps?: number; durationSeconds: number; kind: string;
   brief: string;
-  /** Template fields, named as the CLI's --fields option does: `name` or `name:type`. */
+  /** Batch fields, named as the CLI's --fields option does: `name` or `name:type`. */
   fields?: string[];
 };
 
@@ -48,7 +48,7 @@ export const briefs: Brief[] = [
 /** What one brief produced: small fields only, so the report stays readable; the composition is written to disk, not kept. */
 export type RunRecord = {
   id: string; label: string;
-  route?: 'template' | 'json'; template?: string;
+  route?: 'react' | 'json';
   frames?: number; width?: number; height?: number;
   attempts?: number;
   composeSeconds?: number; renderSeconds?: number;
@@ -92,8 +92,7 @@ export async function runBrief(provider: AiProvider, brief: Brief, options: RunB
       onProgress: message => (options.onProgress ?? console.log)(`  ${brief.id}: ${message}`),
     }, options.smartMode ?? {});
     if (!composed) throw new Error('no composition was produced');
-    run.route = composed.template ? 'template' : 'json';
-    run.template = composed.template;
+    run.route = composed.route ?? 'json';
     run.attempts = composed.attempts;
     composition = loadComposition(composed.composition);
     run.frames = composition.durationFrames;
@@ -130,14 +129,10 @@ export function scoreRun(run: RunRecord, brief: Brief): Score {
   const checks: Record<string, Check> = {};
   const check = (name: string, pass: boolean | undefined, detail: string) => { checks[name] = { pass: !!pass, detail }; };
   const time = (value: number | undefined) => value === undefined ? '—' : `${value.toFixed(1)} s`;
-  check('composed', !run.error, run.error ?? `${run.route}${run.template ? ` (${run.template})` : ''}, ${run.attempts} attempt${run.attempts === 1 ? '' : 's'}, ${time(run.composeSeconds)}`);
+  check('composed', !run.error, run.error ?? `${run.route}, ${run.attempts} attempt${run.attempts === 1 ? '' : 's'}, ${time(run.composeSeconds)}`);
   const durationSeconds = run.fileSeconds ?? (run.frames !== undefined ? seconds(run.frames, 30) : undefined);
-  // Templates have fixed, engine-owned lengths: a provider filling a template cannot change its duration, and the
-  // planner is biased to keep the template route even when the length differs, so the mismatch is informational there
-  // (the delta stays in the detail). The JSON route, where length is writable, is held to the brief.
-  const templateRoute = run.route === 'template' && run.fileSeconds === undefined;
-  check('duration', templateRoute ? durationSeconds !== undefined : durationSeconds !== undefined && Math.abs(durationSeconds - brief.durationSeconds) <= 0.5,
-    `${durationSeconds === undefined ? 'unknown' : durationSeconds} s vs ${brief.durationSeconds} s wanted${templateRoute ? ' (template route: length is the template\'s)' : run.fileSeconds ? ' (probed)' : ''}`);
+  check('duration', durationSeconds !== undefined && Math.abs(durationSeconds - brief.durationSeconds) <= 0.5,
+    `${durationSeconds === undefined ? 'unknown' : durationSeconds} s vs ${brief.durationSeconds} s wanted${run.fileSeconds ? ' (probed)' : ''}`);
   check('resolution', run.width === brief.width && run.height === brief.height, run.width === undefined ? 'no composition' : `${run.width}x${run.height}`);
   const textProblem = (run.reviewMessages ?? []).some(message => /off the frame|too brief|cut off|too small|overlapping|unreadable/.test(message));
   check('copy readable', run.reviewErrors === 0 && !textProblem, run.reviewErrors === undefined ? 'review did not run' : `${run.reviewErrors} error${run.reviewErrors === 1 ? '' : 's'}${run.reviewWarnings?.length ? `, warnings: ${run.reviewWarnings.join(', ')}` : ', clean'}`);
@@ -149,7 +144,7 @@ export function scoreRun(run: RunRecord, brief: Brief): Score {
 /** The markdown row for one result. */
 export function reportRow(run: RunRecord, score: Score): string {
   const passed = run.error ? '✗' : score.passed ? '✓' : '✗';
-  return `| ${run.id} (${run.label}) | ${passed} | ${run.route ?? '—'}${run.template ? ` (${run.template})` : ''} | ${run.attempts ?? '—'} | ${run.composeSeconds?.toFixed(1) ?? '—'} s | ${run.renderSeconds?.toFixed(1) ?? '—'} s | ${run.reviewErrors ?? '—'} | ${run.reviewWarnings?.join(', ') || '—'} | ${score.failed.join(', ') || '—'} |`;
+  return `| ${run.id} (${run.label}) | ${passed} | ${run.route ?? '—'} | ${run.attempts ?? '—'} | ${run.composeSeconds?.toFixed(1) ?? '—'} s | ${run.renderSeconds?.toFixed(1) ?? '—'} s | ${run.reviewErrors ?? '—'} | ${run.reviewWarnings?.join(', ') || '—'} | ${score.failed.join(', ') || '—'} |`;
 }
 
 const main = async (): Promise<void> => {

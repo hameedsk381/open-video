@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAiConnection } from './AiConnection';
-import { api, upload, useHostMode, type Job, type Library, type Revision, type TemplateSummary } from '../api';
+import { api, upload, useHostMode, type Job, type Revision } from '../api';
 import { BRAND_KIT_EVENT, brandForCompose, kitIsSet, loadBrandKit, logoFile, type BrandKit } from '../brandKit';
-import { designBrief, designById, designForTemplate, designName, designs, missingFields } from '../designs';
+import { designBrief, designById, designName, designs, missingFields } from '../designs';
 import { go } from '../router';
 import { ArrowLeftIcon, Badge, Button, Field, FilmIcon, GlobeIcon, Notice, Page, PaletteIcon, SparklesIcon, VolumeIcon, WandIcon } from '../ui';
 
@@ -20,7 +20,17 @@ const examples = [
   'High-impact SaaS product update announcing realtime collaboration and AI workflows',
 ];
 
-export function Create({ initialTemplate, initialKind, initialPrompt, initialFrom }: { initialTemplate?: string; initialKind?: string; initialPrompt?: string; initialFrom?: string } = {}) {
+/** Colour directions offered in Step 2; the choice is sent to the writer as part of the brief. */
+const themePresets = [
+  { id: '', name: 'Auto', desc: 'Designed from brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
+  { id: 'midnight', name: 'Midnight', desc: 'Tech & Modern B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
+  { id: 'neon', name: 'Neon', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
+  { id: 'espresso', name: 'Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
+  { id: 'paper', name: 'Paper', desc: 'Editorial Minimal', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
+  { id: 'signal', name: 'Signal', desc: 'High Impact Alert', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
+];
+
+export function Create({ initialDesign, initialKind, initialPrompt, initialFrom }: { initialDesign?: string; initialKind?: string; initialPrompt?: string; initialFrom?: string } = {}) {
   const hostMode = useHostMode();
   // On the hosted service the AI is the person's own: with none connected, sending a brief would only fail later.
   const connection = useAiConnection(hostMode === 'hosted');
@@ -29,7 +39,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const [mode, setMode] = useState<'autopilot' | 'guided' | 'pro'>(() => {
     try { const saved = localStorage.getItem('ove-create-mode'); return saved === 'guided' || saved === 'pro' ? saved : 'autopilot'; } catch { return 'autopilot'; }
   });
-  const [templateOpen, setTemplateOpen] = useState(Boolean(initialTemplate));
   useEffect(() => { try { localStorage.setItem('ove-create-mode', mode); } catch {} }, [mode]);
 
   // Progressive 2-Step Creation Stepper (Step 1: Brief & Canvas, Step 2: Style, Voice & Brand)
@@ -46,17 +55,12 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const [full, setFull] = useState(false);
   const [theme, setTheme] = useState('');
 
-  // Templates & Archetypes
-  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>(initialTemplate || '');
-  const [templateFilter, setTemplateFilter] = useState<'all' | 'match'>('match');
-
-  // Designs: the gallery of outcomes. Choosing one fills its template and asks only for the details only the customer knows.
-  const [designId, setDesignId] = useState<string>(() => designForTemplate(initialTemplate)?.id || '');
+  // Designs: the gallery of outcomes. Choosing one asks only for the details only the customer knows.
+  const [designId, setDesignId] = useState<string>(() => designById(initialDesign ?? '')?.id || '');
   const [designValues, setDesignValues] = useState<Record<string, string>>({});
   const [designExtra, setDesignExtra] = useState('');
   const [designError, setDesignError] = useState('');
-  const [showComposer, setShowComposer] = useState(() => Boolean(initialPrompt) || (Boolean(initialTemplate) && !designForTemplate(initialTemplate)));
+  const [showComposer, setShowComposer] = useState(() => Boolean(initialPrompt));
 
   // Creative Styling Customizations
   const [typography, setTypography] = useState('sans');
@@ -126,29 +130,25 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     return () => { window.removeEventListener(BRAND_KIT_EVENT, refresh); window.removeEventListener('storage', refresh); };
   }, []);
 
-  // The page stays mounted while the hash changes. A link into Create (a prompt, a template from Discover) must reset
+  // The page stays mounted while the hash changes. A link into Create (a prompt, a design from Discover) must reset
   // what is on screen, and a plain "#/new" must open the gallery again.
   useEffect(() => {
-    const linked = designForTemplate(initialTemplate);
+    const linked = designById(initialDesign ?? '');
     setDesignId(linked?.id || '');
     setDesignValues({});
     setDesignExtra('');
     setDesignError('');
-    setShowComposer(Boolean(initialPrompt) || Boolean(initialFrom) || (Boolean(initialTemplate) && !linked));
+    setShowComposer(Boolean(initialPrompt) || Boolean(initialFrom));
     setStep(1);
     if (initialPrompt) setBrief(initialPrompt);
     if (linked) {
       setKind(linked.kind);
       setAspect(linked.aspect);
-      setSelectedTemplate(linked.template);
-      setFull(false);
-    } else if (initialTemplate) {
-      setSelectedTemplate(initialTemplate);
       setFull(false);
     }
-  }, [initialTemplate, initialPrompt, initialFrom]);
+  }, [initialDesign, initialPrompt, initialFrom]);
 
-  // A finished project can be asked for "another like this": the brief and template that made it open in the composer,
+  // A finished project can be asked for "another like this": the brief that made it open in the composer,
   // ready to change before making a new one. A project without a composed revision opens the gallery instead.
   useEffect(() => {
     if (!initialFrom) { setFromName(''); return; }
@@ -168,28 +168,11 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
       const made = [...history.revisions].reverse().find(revision => revision.kind === 'compose');
       if (made) {
         setBrief(made.brief || made.label);
-        setSelectedTemplate(made.template ?? '');
       }
-      setTemplateOpen(false);
       setFull(false);
     }, () => { if (live) setFromName(''); });
     return () => { live = false; };
   }, [initialFrom]);
-
-  useEffect(() => {
-    api<Library>('/api/library').then(l => {
-      if (l?.templates) {
-        setTemplates(l.templates);
-        if (initialTemplate) {
-          const match = l.templates.find(t => t.id === initialTemplate);
-          if (match && match.width && match.height) {
-            if (match.width > match.height && kind === 'reel') setKind('promo');
-            else if (match.width === match.height && kind !== 'product') setKind('product');
-          }
-        }
-      }
-    }).catch(() => {});
-  }, [initialTemplate]);
 
   const addFiles = (list: FileList | null) => {
     if (list) setFiles(current => [...current, ...Array.from(list)]);
@@ -217,8 +200,8 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     }
   };
 
-  // A design fills in what the composer would have been typed: its brief, template, format and a name from its details.
-  const submit = async (starter?: { brief: string; kind: string; template?: string; aspect?: string; name?: string; duration?: string }) => {
+  // A design fills in what the composer would have been typed: its brief, format and a name from its details.
+  const submit = async (starter?: { brief: string; kind: string; aspect?: string; name?: string; duration?: string }) => {
     setError('');
     if (needsConnection) {
       setError('Connect your AI model in Settings first.');
@@ -230,7 +213,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
       return;
     }
     const chosenKind = starter?.kind ?? kind;
-    const chosenTemplate = starter?.template ?? selectedTemplate;
     const chosenAspect = starter?.aspect ?? aspect;
     const chosenDuration = starter?.duration ?? duration;
     setBusy(true);
@@ -261,7 +243,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
         ...(starter && mode === 'autopilot' ? {} : { typography, motionPacing, audioMood, sfx, voiceTone, captionsStyle }),
       };
 
-      if (chosenTemplate) body.template = chosenTemplate;
       if (activeKit) {
         body.brand = brandForCompose(activeKit);
         if (logo) body.brandLogo = 'brand-logo';
@@ -281,7 +262,10 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
           accent2: brandAccent,
         };
       } else if (theme) {
-        body.theme = theme;
+        const chosenTheme = themePresets.find(preset => preset.id === theme);
+        if (chosenTheme) body.brief = `${compositeBrief}
+
+Colour direction: ${chosenTheme.name} (${chosenTheme.desc}); palette ${chosenTheme.colors.join(', ')}.`;
       }
 
       // Model & Custom Gateway Config. On a hosted service only a model choice is sent — the gateway
@@ -320,7 +304,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
     setError('');
     setKind(chosen.kind);
     setAspect(chosen.aspect);
-    setSelectedTemplate(chosen.template);
     setFull(false);
     setBrief('');
     setShowComposer(false);
@@ -330,8 +313,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
   const startFromScratch = () => {
     setDesignId('');
     setDesignError('');
-    setSelectedTemplate('');
-    setTemplateOpen(false);
     setShowComposer(true);
     setStep(1);
   };
@@ -345,23 +326,12 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
       return;
     }
     setDesignError('');
-    // The design's own length, not the format's default: without this the template would be stretched to the kind's length.
-    const native = templates.find(template => template.id === chosen.template)?.durationSeconds;
-    const duration = native ? String(Math.round(native * 10) / 10) : chosen.length.replace(/[^\d.]/g, '');
-    await submit({ brief: designBrief(chosen, designValues, designExtra), kind: chosen.kind, template: chosen.template, aspect: chosen.aspect, name: designName(chosen, designValues), duration });
+    // The design's own length, not the format's default.
+    const duration = chosen.length.replace(/[^\d.]/g, '');
+    await submit({ brief: designBrief(chosen, designValues, designExtra), kind: chosen.kind, aspect: chosen.aspect, name: designName(chosen, designValues), duration });
   };
 
-  // Filter templates matching current format
-  const matchingTemplates = templates.filter(t => {
-    if (templateFilter === 'all') return true;
-    if (!t.width || !t.height) return true;
-    if (kind === 'reel') return t.height > t.width;
-    if (kind === 'product') return t.height === t.width;
-    return t.width > t.height;
-  });
-
   const design = designId ? designById(designId) : undefined;
-  const templateName = templates.find(template => template.id === selectedTemplate)?.name;
   const ratio = aspect || (kind === 'product' ? '1:1' : kind === 'reel' ? '9:16' : '16:9');
   const length = design ? design.length : duration ? `${duration}s` : 'Auto length';
 
@@ -661,7 +631,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
                 <span>{voice ? 'Voiceover' : 'No narration'}</span>
                 <span>{review ? 'Design review' : 'No review'}</span>
                 {activeKit ? <span>Brand · {activeKit.name || 'your kit'}</span> : null}
-                {templateName ? <span>Template · {templateName}</span> : null}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Button variant="secondary" size="md" loading={busy} onClick={() => void submit()} title="Compile immediately with default style">
@@ -674,57 +643,11 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
             </div>
           </div>
 
-          {selectedTemplate ? (
-            <div className="create-selected">
-              <span>Starting from <b>{templateName ?? selectedTemplate}</b></span>
-              <button type="button" onClick={() => setSelectedTemplate('')}>Use auto layout</button>
-            </div>
-          ) : null}
-
-          {/* Collapsible Template Archetype Explorer */}
           <div className="create-row">
-            <button type="button" className="create-more" onClick={() => setTemplateOpen(open => !open)}>
-              <FilmIcon size={14} /> {templateOpen ? 'Hide templates' : 'Start from a template'}
-            </button>
             <span className="create-hint">
               Step 1 sets the narrative & canvas. Step 2 customizes voiceover, brand tokens & music.
             </span>
           </div>
-
-          {templateOpen ? (
-            <section className="create-section">
-              <div className="create-section-head">
-                <div>
-                  <h2>Template</h2>
-                  <p>Pick a ready-made layout, or leave Auto for a design built around your description.</p>
-                </div>
-                <div className="segmented">
-                  <button className={templateFilter === 'match' ? 'on' : ''} onClick={() => setTemplateFilter('match')}>Matching format</button>
-                  <button className={templateFilter === 'all' ? 'on' : ''} onClick={() => setTemplateFilter('all')}>All</button>
-                </div>
-              </div>
-              <div className="create-template-grid">
-                <button type="button" className={`create-template ${selectedTemplate === '' ? 'on' : ''}`} onClick={() => setSelectedTemplate('')}>
-                  <span className="create-template-head"><b>Auto</b><Badge tone="blue">Adaptive</Badge></span>
-                  <small>Layout, type and camera moves designed from your brief.</small>
-                </button>
-                {matchingTemplates.map(template => {
-                  const templateAspect = template.width && template.height
-                    ? (template.width > template.height ? '16:9' : template.width < template.height ? '9:16' : '1:1')
-                    : '';
-                  return (
-                    <button key={template.id} type="button" className={`create-template ${selectedTemplate === template.id ? 'on' : ''}`} onClick={() => setSelectedTemplate(template.id)}>
-                      <span className="create-template-head">
-                        <b>{template.name}</b>
-                        <span>{templateAspect ? <Badge tone="blue">{templateAspect}</Badge> : null}{template.durationSeconds ? <Badge tone="purple">{Math.round(template.durationSeconds)}s</Badge> : null}</span>
-                      </span>
-                      <small>{template.description}</small>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
         </>
       ) : null}
 
@@ -762,7 +685,6 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <Badge tone="blue">{ratio} Format</Badge>
               <Badge tone="purple">{length}</Badge>
-              {templateName ? <Badge tone="neutral">{templateName}</Badge> : <Badge tone="neutral">Auto Layout</Badge>}
             </div>
           </div>
 
@@ -815,14 +737,7 @@ export function Create({ initialTemplate, initialKind, initialPrompt, initialFro
 
             <Field label="Art-directed themes">
               <div className="create-themes">
-                {[
-                  { id: '', name: 'Auto', desc: 'Designed from brief', colors: ['#8b7cff', '#ec4899', '#5cc8d7'] },
-                  { id: 'midnight', name: 'Midnight', desc: 'Tech & Modern B2B', colors: ['#0b0f19', '#38bdf8', '#818cf8'] },
-                  { id: 'neon', name: 'Neon', desc: 'Social & Viral', colors: ['#0a0710', '#ff3cac', '#c6ff3c'] },
-                  { id: 'espresso', name: 'Espresso', desc: 'Craft & Food', colors: ['#120c08', '#f59e0b', '#fcd34d'] },
-                  { id: 'paper', name: 'Paper', desc: 'Editorial Minimal', colors: ['#f8f6f0', '#2563eb', '#18181b'] },
-                  { id: 'signal', name: 'Signal', desc: 'High Impact Alert', colors: ['#0a0a0a', '#ef4444', '#ffffff'] },
-                ].map(preset => (
+                {themePresets.map(preset => (
                   <button
                     key={preset.id || 'auto'}
                     type="button"

@@ -121,20 +121,7 @@ export const blockSchema = z.object({ id: z.string(), name: z.string(), descript
 export type Block = z.infer<typeof blockSchema>;
 export const themeSchema = z.object({ id: z.string(), name: z.string(), description: z.string(), variables: z.record(z.string(), z.union([z.string(), z.number()])) });
 export type Theme = z.infer<typeof themeSchema>;
-export const templateSummarySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  tags: z.array(z.string()).optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  fps: z.number().optional(),
-  durationFrames: z.number().optional(),
-  durationSeconds: z.number().optional(),
-  previewFrame: z.number().optional(),
-}).passthrough();
-export type TemplateSummary = z.infer<typeof templateSummarySchema>;
-export const librarySchema = z.object({ blocks: z.array(blockSchema), themes: z.array(themeSchema), templates: z.array(templateSummarySchema), fonts: z.array(z.string()).optional() });
+export const librarySchema = z.object({ blocks: z.array(blockSchema), themes: z.array(themeSchema), fonts: z.array(z.string()).optional() });
 export type Library = z.infer<typeof librarySchema>;
 
 /* Jobs and status */

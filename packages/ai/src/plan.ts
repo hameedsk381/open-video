@@ -1,4 +1,4 @@
-// The composition planner: decides HOW a brief should be produced (fill a template, write a JSON composition, or React
+// The composition planner: decides HOW a brief should be produced (write a JSON composition, or React
 // code) and what the video's beats are, before anything is generated. It reads the capability registry and its answer is
 // validated back against that registry, so it can only point at capabilities that exist and fit the canvas. It returns
 // undefined when planning cannot be trusted, and the caller falls back to the previous always-working routing.
@@ -7,13 +7,11 @@ import { extractJson } from './json';
 import type { MotionBeat } from './prompt';
 import { brandLine } from './brand-look';
 import type { BrandPack } from './agent';
-import { describeCapabilities, sameShape, type GenerationPath, type Registry } from './registry';
+import { describeCapabilities, type GenerationPath, type Registry } from './registry';
 import { describeStyleFamilies, fontGuide, fontIds, layoutStyles, motionPresets, textureTypes, transitionStyles, type DesignLook, type VideoContent } from '@ove/schema';
 
 export type BuildPlan = {
   path: GenerationPath;
-  template?: string;
-  theme?: string;
   idea?: string;
   /** The art direction the video must follow: fonts, palette, texture, motion, transition, layout and density. */
   look?: DesignLook;
@@ -33,7 +31,7 @@ export type PlanOptions = {
   content?: VideoContent;
   /** Which routes the caller will actually act on (default: all; react additionally needs allowReact). */
   paths?: GenerationPath[];
-  /** Full JSON compositions and React code can use sounds and clips; templates cannot. */
+  /** Sounds and clips the user supplied. */
   assets?: { id: string; type: string; src: string }[];
   allowReact?: boolean;
   /** Send the short capability list: for providers with a small request limit. Chosen automatically for Groq and after a "too large" answer. */
@@ -45,15 +43,13 @@ export type PlanOptions = {
   onProgress?: (message: string) => void;
 };
 
-const paths: GenerationPath[] = ['template', 'json', 'react'];
+const paths: GenerationPath[] = ['json', 'react'];
 const allowedPaths = (options: PlanOptions) => (options.paths ?? paths).filter(path => path !== 'react' || options.allowReact);
 
 const systemText = (options: PlanOptions, compact: boolean) => `You are the creative director for MotionRender. Decide how the brief below should be produced, and the art direction it deserves, before anything is generated.
 Reply with ONE JSON object and nothing else:
 {
-  "path": "template" | "json" | "react",
-  "template": "<template id>",            // only with "template": the one template whose scenes and look already match the brief
-  "theme": "<theme id>",                  // optional, only with a template that takes a theme
+  "path": "json" | "react",
   "idea": "<what the video says, in one line>",
   "look": {
     "fonts": { "display": "<family>", "body": "<family>" },
@@ -75,26 +71,12 @@ ${describeStyleFamilies(options.brief)}${options.brand ? `
 ${brandLine(options.brand)}` : ''}
 - Texture: a grid for engineered/technical, dots for editorial/print, scanlines for games/broadcast, paper for warm/organic, none for clean graphic fields.
 - Motion and transition: one entrance style and one transition style for the whole video. Match the energy: pop for playful, slide for product, blur for premium, rise for editorial, fade for calm. Density 0.8-1.2 scales spacing.
-- This look applies to JSON videos directly and refines the chosen theme for a template.
+- This look applies to JSON videos directly and to React videos as their design tokens.
 
 Choose the route the brief actually needs, not the most convenient one:
-- "template": only when a listed template already matches the brief's narrative structure AND the look above. A template is chosen because you would make that same video anyway, not because it shares the topic.
 - "json": a tailored composition built from the blocks, effects and moves listed below. Use it for structured, typographic, data-, product- or brand-led videos whose scenes you can describe with those capabilities.
 - "react" (only when listed as an allowed path): hand-written React motion graphics — 3D, WebGL or canvas work, particles or simulations, custom illustration or SVG, real camera moves, UI that looks alive, type set as an image, unusual transitions, and any composition the blocks would only approximate.${allowedPaths(options).includes('react') ? `
-React is the default for a video that should look designed rather than assembled: brand films, product stories, launches, explainers with a point of view, anything whose look and motion should be specific to this subject. It is the route that can make a video unlike the last one. Choose "json" instead only for plainly structured pieces (a list, a table of figures, a caption-led clip) that blocks express fully, and "template" only on a strong match.` : ''}
-If no template matches both the structure and the look, write the video ("json" or "react"); never force a near-miss template.
-When a template is the right route, pick the one that specifically fits the brief's narrative style:
-- Testimonials, customer stories, quotes, metrics, or personal founder stories: choose "quote-card" or "stats-showcase".
-- Multi-feature tours, app UI cards, feature lists, and product showcases: choose "product-spotlight" or "starter".
-- Quick tips, 3-step processes, how-to guides, and numbered reels: choose "hook-reel" or "tutorial-steps".
-- Company keynotes, presentations, and product launch films: choose "starter" or "stats-showcase".
-
-Themes are named presets of the same look (palette, type, texture, motion). For a template that takes a theme, name the closest theme AND still give the look you actually want; the look refines the theme:
-- "midnight": modern tech, SaaS, B2B, cloud, finance (deep slate navy, sky blue).
-- "neon": gaming, nightlife, social apps, crypto, cutting-edge AI (dark violet, hot magenta, electric lime).
-- "espresso": artisan craft, food & beverage, coffee, lifestyle, podcasts, warmth (dark espresso, amber gold).
-- "paper": clean editorial, education, publishing, thought leadership (clean light aesthetic, deep ink).
-- "signal": high-impact, fitness, sports, breaking news, urgency (bold monochrome with alert red).
+React is the default for a video that should look designed rather than assembled: brand films, product stories, launches, explainers with a point of view, anything whose look and motion should be specific to this subject. It is the route that can make a video unlike the last one. Choose "json" instead only for plainly structured pieces (a list, a table of figures, a caption-led clip) that blocks express fully.` : ''}
 Every beat needs a concrete picture, not a mood. In "motion", name the move — use a motion move from the capability list below (such as "word-cascade" or "ken-burns") and say what carries into the next beat.
 ${options.content ? `A content script is already written. Its beats are fixed (do not rewrite their copy, numbers or order):
 ${JSON.stringify(options.content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds })))}
@@ -180,15 +162,6 @@ export function readBuildPlan(reply: unknown, options: PlanOptions): { plan?: Bu
   if (typeof raw.path !== 'string' || !allowed.includes(raw.path)) {
     return { problems: [`"path" must be one of: ${allowed.join(', ')}`] };
   }
-  if (typeof raw.template === 'string' && raw.path !== 'template') problems.push(`"template" only makes sense with path "template"`);
-  if (raw.path === 'template') {
-    const template = typeof raw.template === 'string' ? options.registry.find('template', raw.template) : undefined;
-    if (!template || !sameShape(template, options) ) problems.push(`"template" must be a listed template that fits the ${options.width}x${options.height} canvas`);
-    if (typeof raw.theme === 'string' && raw.theme) {
-      if (!template?.takesTheme) problems.push(`"theme" only applies to a template that takes a theme`);
-      else if (!options.registry.find('theme', raw.theme)) problems.push(`"theme" must be a listed theme, not "${raw.theme}"`);
-    }
-  }
   const { beats, problems: beatProblems } = beatsOf(options.content
     ? { beats: options.content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })) }
     : raw, options.durationSeconds);
@@ -199,8 +172,6 @@ export function readBuildPlan(reply: unknown, options: PlanOptions): { plan?: Bu
     problems: [],
     plan: {
       path: raw.path as GenerationPath,
-      template: raw.path === 'template' ? String(raw.template) : undefined,
-      theme: raw.path === 'template' && typeof raw.theme === 'string' && raw.theme ? raw.theme : undefined,
       idea: typeof raw.idea === 'string' && raw.idea.trim() ? raw.idea.trim().slice(0, 200) : undefined,
       look: readLook(raw.look),
       beats, reasons,

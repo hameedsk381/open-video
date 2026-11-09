@@ -18,11 +18,10 @@ export interface Quotas {
   beforeUpload(who: Principal, bytes: number): Promise<void>;
 }
 
-/** What the studio shows in its library: scene blocks, themes, templates. They ship with the command line, so the caller supplies them. */
+/** What the studio shows in its library: scene blocks and themes. They ship with the command line, so the caller supplies them. */
 export type ApiLibrary = {
   listBlocks(): Promise<any[]>;
   listThemes(): Promise<any[]>;
-  listTemplates(): Promise<{ id: string; name: string; description: string; tags?: string[]; width?: number; height?: number; fps?: number; durationFrames?: number; durationSeconds?: number; previewFrame?: number }[]>;
   readBlock(id: string): Promise<any>;
   readTheme(id: string): Promise<any>;
   addBlock(raw: any, block: any, options: { at?: number; frames?: number; scene?: string; set?: Record<string, unknown> }): { composition: any; placed: string; where: string; files: string[] };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { brandLine, brandLook, bundledFamily, buildRegistry, drawableBrand, mergeLook, readBrand, type AiProvider, type ChatMessage } from '@ove/ai';
-import { composeSmart } from '../../packages/cli/src/templates';
+import { composeSmart } from '../../packages/cli/src/compose-source';
 
 // A brand is fixed: its colours and fonts replace the planner's on every route, and only values that can be drawn survive.
 // It arrives from a person and is written into prompts, so what is kept has to be checked first.
@@ -62,7 +62,7 @@ describe('brandLook', () => {
 });
 
 describe('a brand in the router', () => {
-  const registry = buildRegistry({ templates: [] });
+  const registry = buildRegistry({});
   const composition = { version: '1.0', scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: 'Hello', x: 40, y: 40, fontSize: 64 }] }] };
   const base = { brief: 'a coffee roaster promo', width: 1080, height: 1080, fps: 30, durationSeconds: 2, content: false as const, maxAttempts: 2 };
   const scripted = (...replies: unknown[]) => { const seen: ChatMessage[][] = []; let at = 0;

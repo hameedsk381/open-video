@@ -23,17 +23,14 @@ MotionRender (\`motionrender\`, short \`mr\`) turns JSON into frame-exact video.
 ## Pick the route
 1. **Explainer** (a vertical video that teaches one idea, scene by scene, with spoken lines): write an \`explainer.json\`. Run \`mr explainer kinds\` for the scene kinds and an example of each, and \`mr schema --explainer\` for every field. This is the fastest route to something good.
    **Choose the look for the subject, not the default:** \`mr explainer looks\` lists 13 whole designs (colours, type, motion, texture, corners, weight). Do not use the same look for every video, and do not leave it at navy unless the subject is finance or technology. \`design\` in the script changes parts of a look.
-2. **Composition** (anything else: reels, promos, product videos, kinetic type): write a \`composition.json\` against \`mr schema\`. Start from \`mr init <dir> --template <id>\` (\`mr blocks\` lists ready-made scenes) rather than from nothing.
+2. **Composition** (anything else: reels, promos, product videos, kinetic type): write a \`composition.json\` against \`mr schema\`. Start from \`mr init <dir>\` and add ready-made scenes with \`mr add\` (\`mr blocks\` lists them) rather than from nothing.
 3. **Code** (logic JSON cannot say: generated layouts, data-driven scenes): see the \`ove-code-video\` and \`ove-react-video\` skills.
 
-## The loop (do not skip the looking)
+## The loop (two calls, not eight)
 1. Write the script or composition.
-2. \`mr explainer validate explainer.json\` or \`mr validate composition.json\`: fix what it lists, all at once.
-3. \`mr explainer compile explainer.json\` (add \`--no-voice\` for a quick silent build) to get \`composition.json\`.
-4. \`mr still composition.json --frame 90 --output still.png\` and **open the picture**. Check a few frames, not one.
-5. \`mr review composition.json --output review.png\`: automated design, type, safe-zone and loudness checks. Fix errors; read warnings.
-6. \`mr render composition.json --output out.mp4\`.
-Never say a video is done before you have looked at a still of it.
+2. \`mr make explainer.json\` (or \`composition.json\`; MCP: \`motionrender_make_video\`). One call validates it, builds \`composition.json\`, runs the design review and draws ONE contact sheet of the whole video (\`review.png\`), and lists every problem with where it is. **Open the contact sheet**, fix what it lists, run it again. Add \`--no-voice\` while iterating: it is silent and faster.
+3. When the sheet is right, \`mr make explainer.json --draft\` renders a quick half-size MP4 to check how it moves (about twice as fast as the final), then \`mr make explainer.json --final\` writes \`out.mp4\`. Nothing is rendered over review errors.
+Never say a video is done before you have looked at the contact sheet. The single steps still exist when you want one thing only: \`mr explainer validate\`, \`mr explainer compile\`, \`mr still composition.json --frame 90\`, \`mr review\`, \`mr render\`.
 
 ## Facts, pictures, voices
 - Numbers must be real, never from memory. Look them up (no key needed): \`mr facts country India,Brazil internet_users\`, \`mr facts wikipedia "Load balancing"\`, \`mr facts exchange USD INR\` (\`mr facts indicators\` lists the figures; add \`--json\`), or the \`motionrender_facts\` tool. Every fact has a source and date: put it in the scene's note or caption and in the script's \`sources\`. If a lookup fails, say so and leave the number out; do not guess.
@@ -41,7 +38,7 @@ Never say a video is done before you have looked at a still of it.
 - Voices: the free Edge voices, which need internet but no key: \`en-IN-NeerjaNeural\`, \`en-US-AriaNeural\`, \`hi-IN-SwaraNeural\`, \`te-IN-ShrutiNeural\` (set \`voice\` in the script; \`voiceRate\` speeds it up or slows it down, +12 suits a promo). \`--no-voice\` builds silently.
 
 ## Tools (MCP)
-The same things are available as MCP tools: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\` (or \`mr facts\`), \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.
+The same things are available as MCP tools. Start with \`motionrender_make_video\` (check, build, review and one contact sheet in a single call, optional draft or final render). The single steps: \`motionrender_schema\`, \`motionrender_explainer_kinds\`, \`motionrender_explainer_validate\`, \`motionrender_explainer_compile\`, \`motionrender_facts\` (or \`mr facts\`), \`motionrender_validate\`, \`motionrender_render_still\`, \`motionrender_review_video\`, \`motionrender_render_video\`, \`motionrender_environment\` (run it first if a render fails). Configure them with \`mr mcp --config <claude-code|codex|cursor|claude-desktop>\`.
 
 ## Good to know
 - 9:16 is the default. Keep text out of the top 8%, bottom 18% and right 11% (platform buttons cover them); \`mr review\` flags it.

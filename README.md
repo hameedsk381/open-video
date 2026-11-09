@@ -88,7 +88,7 @@ pnpm ove render video.json --output out.mp4 --workers http://10.0.0.5:4400,http:
 
 The coordinator sends chunks of frames to free workers, retries a failed chunk on another worker, joins the segments without re-encoding and mixes the soundtrack once over the whole video. Workers listen on 127.0.0.1 unless given `--host`, and every request needs the token. They read media from the paths in the composition (made absolute by the coordinator), so they need the same files at the same paths (a shared drive) unless the composition uses URLs. Use font assets rather than installed fonts so every machine draws text the same way. mp4, webm and mov can be rendered this way.
 
-## Templates: one composition, many videos
+## Variables: one composition, many videos
 
 The starter declares `title`, `tagline` and `accent` variables, used in the composition as `{{title}}` and so on. Change them per render, or render one video per row of a JSON file:
 
@@ -99,7 +99,7 @@ pnpm ove render my-video/composition.json --batch rows.json --output "out/{{titl
 
 `rows.json` is an array like `[{ "title": "Welcome,\nPriya", "accent": "#16a34a" }, ...]`. Values are checked against their declared types before anything renders, and characters that cannot appear in file names are replaced in batch output paths.
 
-Templates can also take lists and build layers from them: `{{ }}` holds expressions (`{{160 + index * 320}}`, `{{item.price > 50 ? "#dc2626" : "#111827"}}`), `repeat` outputs layers or scenes once per list item, `if` keeps a layer only when a condition holds, and `components` define a set of layers once to place anywhere with `{ "use": "card", "with": { … } }`. The agent skill ([packages/cli/skills/ove/SKILL.md](packages/cli/skills/ove/SKILL.md)) has the full syntax with examples.
+Compositions can also take lists and build layers from them: `{{ }}` holds expressions (`{{160 + index * 320}}`, `{{item.price > 50 ? "#dc2626" : "#111827"}}`), `repeat` outputs layers or scenes once per list item, `if` keeps a layer only when a condition holds, and `components` define a set of layers once to place anywhere with `{ "use": "card", "with": { … } }`. The agent skill ([packages/cli/skills/ove/SKILL.md](packages/cli/skills/ove/SKILL.md)) has the full syntax with examples.
 
 ## Making a video with a coding agent
 
@@ -118,17 +118,16 @@ pnpm ove ai batch products.json --brief "A clean product card" --output "out/{{i
 pnpm ove ai image "a soft teal background, no text" --out assets/bg.png --composition video.json --id bg
 pnpm ove ai narrate --brief "Why deterministic rendering matters" --composition video.json
 pnpm ove ai transcribe assets/voice.wav --composition video.json --start 1.2
-pnpm ove ai capabilities               # every template, theme, block, component, effect and sound the AI may use
+pnpm ove ai capabilities               # every block, component, effect, transition and sound the AI may use
 pnpm ove agent "A viral launch reel for an open-source vector database"   # routes to JSON or React code, then produces the video
 pnpm ove ai doctor
 ```
 
-A **planner** decides the route before anything is generated. A template is filled only when its scenes and look already
-match the brief — speed and consistency when it fits; otherwise the video is written as a plain composition (bespoke
+A **planner** decides the route before anything is generated: the video is written as a plain composition (bespoke
 scenes, structured and typographic videos) or as React code (high-end motion graphics no block layout carries) on a
 machine that will run that code. The planner's answer is checked against the **capability registry** so the model can
-only point at capabilities that exist and fit the canvas. `--no-plan` keeps the same template-first routing without
-asking the model; `--no-react` keeps it off the React route.
+only point at capabilities that exist and fit the canvas. `--no-plan` skips the planner and writes a composition without
+asking the model for a route; `--no-react` keeps it off the React route.
 
 The model's JSON is validated with the same schema as a hand-written composition; errors go back to the model until
 it is valid, and `--review` can add the renderer's design checks as feedback. `--provider mock` runs the whole
@@ -203,7 +202,7 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 
 `ove add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
 
-`ove init --template starter` (also `hook-reel`, `kinetic-type`, `product-spotlight`, `logo-sting`, `stats-showcase`, `quote-card`, `event-promo`, `tutorial-steps`, `sale-flash`) starts from a whole video built from blocks. The AI picks among them and a theme too; see `docs/ai.md`.
+`ove init <dir>` starts from a small starter video; `ove add` brings in blocks. The AI can also write a whole video from a brief; see `docs/ai.md`.
 
 ## Commands
 
@@ -219,19 +218,20 @@ ove theme espresso reel/composition.json     # switch every block's colours at o
 | `ove validate <composition.json>` | Check a composition and report errors |
 | `ove inspect <composition.json>` | Print duration, scenes, variables and assets |
 | `ove still <composition.json> [--frame n] [--output file.png]` | Render one frame to PNG |
+| `ove make <explainer.json or composition.json> [--draft|--final] [--no-voice]` | The whole loop in one call: validate, build, design review and one contact sheet of the whole video; add `--draft` for a quick half-size MP4 or `--final` for the finished one. The quickest way for a coding agent to make a video (MCP: `motionrender_make_video`) |
 | `ove review <composition.json> [--output review.png] [--json]` | Contact sheet plus design checks: text cut off, off the frame, too small, overlapping or not on screen long enough to read; text under a platform's UI (safe zones, with letterboxing for 4:5 and square canvases); competing headlines; inconsistent type sizes and colours; frozen stretches; uniform scene lengths; mixed transitions; caption pace; sounds cut off mid-phrase; loudness. Exits with an error when it finds errors |
 | `ove render <composition.json> [--output file.mp4] [--loudness -14] [--no-motion-blur] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--crf n | --bitrate 8M] [--scale 0.5] [--concurrency n] [--preset name]` | Render the video. `--crf`/`--bitrate` (and `--audio-bitrate`) set quality (default crf 20 for H.264); `--scale 0.5` makes a quick half-size draft. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
 | `ove render <composition.json> --batch rows.json --output "dir/{{var}}.mp4"` | Render one video per row of variable values |
 | `ove ai doctor` | Show the AI provider, model and capabilities |
-| `ove ai capabilities` | List the capability registry: every template, theme, block, React component, effect and sound the AI may use |
-| `ove ai compose <dir> --brief "…"` | Plan the route (template, JSON composition or React), generate, validate and repair (optional `--no-plan`, narration and render) |
+| `ove ai capabilities` | List the capability registry: every block, React component, effect, transition and sound the AI may use |
+| `ove ai compose <dir> --brief "…"` | Plan the route (JSON composition or React), generate, validate and repair (optional `--no-plan`, narration and render) |
 | `ove ai refine <composition.json> --instruction "…"` | Refine an existing composition using natural language instructions while preserving the rest |
 | `ove ai narrate <script\|--brief>` | Write/speak a voiceover and add word-timed captions to a video |
 | `ove ai transcribe <audio>` | Write captions for existing audio (and optionally add them to a video) |
 | `ove ai edit <clip> --out dir` | Turn a raw clip into an edited reel: transcribe, cut silences and filler words, word-timed captions |
 | `ove ai shorts <long.mp4> --out dir --count 5` | Split a long recording into the best-scored vertical shorts, each a full project |
 | `ove ai image "<prompt>" --out file.png` | Generate a picture and optionally register it as an asset |
-| `ove ai batch <rows.json> --brief "…" --output "dir/{{id}}.mp4"` | Generate one template, then render one video per row |
+| `ove ai batch <rows.json> --brief "…" --output "dir/{{id}}.mp4"` | Generate one composition with variables, then render one video per row |
 | `ove ai studio [--port 3100] [--out ai-videos]` | Local web app for the AI commands: projects, create, live editor, history, export; writes only inside `--out` |
 
 Each command checks its options and stops with a suggestion on a typo; `--name=value` works as well as `--name value`. `validate`, `inspect`, `still`, `review`, `render` and `dev` all accept `--var name=value` (repeatable) and `--vars values.json`.

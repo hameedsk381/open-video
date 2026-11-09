@@ -6,7 +6,7 @@ describe('command-line options', () => {
     expect(checkArgs(['render', 'v.json', '--loudness', '-14'])).toContain('-14'); expect(checkArgs(['browser', 'install'])).toEqual(['browser', 'install']);
     expect(checkArgs(['ai', 'refine', 'v.json', '--instruction', 'make it bigger'])).toContain('--instruction'); expect(checkArgs(['ai', 'transcribe', 'voice.wav', '--composition', 'v.json', '--start', '2.5'])).toContain('--start');
     expect(checkArgs(['ai', 'studio', '--port', '3100', '--out', 'demo'])).toEqual(['ai', 'studio', '--port', '3100', '--out', 'demo']);
-    expect(checkArgs(['ai', 'compose', 'out', '--brief', 'A launch', '--template', 'testimonial', '--theme', 'espresso', '--typography', 'editorial', '--cta', 'Start|https://x.test', '--sfx', '--review'])).toContain('--theme');
+    expect(checkArgs(['ai', 'compose', 'out', '--brief', 'A launch', '--typography', 'editorial', '--cta', 'Start|https://x.test', '--sfx', '--review'])).toContain('--typography');
     expect(checkArgs(['ai', 'edit', 'clip.mp4', '--out', 'reel', '--max-silence', '0.4', '--keep-fillers', '--width', '1080'])).toContain('--keep-fillers');
     expect(checkArgs(['ai', 'shorts', 'long.mp4', '--out', 'shorts', '--count', '2', '--min', '10', '--max', '40', '--no-cut'])).toContain('--no-cut');
     expect(checkArgs(['review', 'v.json', '--show-safe-zones'])).toContain('--show-safe-zones'); });
@@ -17,7 +17,7 @@ describe('command-line options', () => {
     expect(() => checkArgs(['render', 'a.json', 'b.json'])).toThrow('Unexpected argument "b.json" for ove render'); });
   it('keeps --frames working for review alongside --sheet-frames', () => { expect(checkArgs(['review', 'v.json', '--frames', '12'])).toContain('--frames'); expect(checkArgs(['review', 'v.json', '--sheet-frames', '12'])).toContain('--sheet-frames'); });
   it('recognises help anywhere and covers every command', () => { expect(wantsHelp(['render', '--help'])).toBe(true); expect(wantsHelp(['-h'])).toBe(true); expect(wantsHelp(['help'])).toBe(true); expect(wantsHelp(['render', 'v.json'])).toBe(false);
-    expect(Object.keys(commandSpecs).sort()).toEqual(['add', 'agent', 'ai', 'blocks', 'browser', 'build', 'cache', 'captions', 'dev', 'doctor', 'explainer', 'facts', 'figma', 'init', 'inspect', 'job-worker', 'mcp', 'production', 'render', 'review', 'schema', 'script', 'serve', 'setup', 'still', 'theme', 'thumbnail', 'track', 'validate', 'worker']); });
+    expect(Object.keys(commandSpecs).sort()).toEqual(['add', 'agent', 'ai', 'blocks', 'browser', 'build', 'cache', 'captions', 'dev', 'doctor', 'explainer', 'facts', 'figma', 'init', 'inspect', 'job-worker', 'make', 'mcp', 'production', 'render', 'review', 'schema', 'script', 'serve', 'setup', 'still', 'theme', 'thumbnail', 'track', 'validate', 'worker']); });
   it('recognises version flags and command', () => {
     expect(wantsVersion(['--version'])).toBe(true);
     expect(wantsVersion(['-v'])).toBe(true);

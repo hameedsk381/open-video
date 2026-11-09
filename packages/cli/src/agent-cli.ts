@@ -4,7 +4,7 @@ import { loadComposition, renderMedia, renderStill } from '@ove/core';
 import { composeVideo, createProvider, planBuild, runVideoAgent, writeCompositionProject, type VideoFormat } from '@ove/ai';
 import { buildReact } from './build';
 import { reactCritiqueFrames, reactVisualCheck } from './react-video';
-import { cliRegistry } from './templates';
+import { cliRegistry } from './compose-source';
 
 const option = (argv: string[], name: string): string | undefined => {
   const at = argv.indexOf(name);

@@ -11,7 +11,7 @@ Needs an AI provider for speech and transcription (`ove ai doctor` shows what is
 
 - Generate and add the voiceover: `ove ai narrate --brief "what the video says" --composition video.json`.
 - Use your own script: `ove ai narrate script.txt --composition video.json --voice <name>`.
-- For a video made by `ove ai compose --narration` from a template, each scene gets one spoken line and is as long as its line, so words and pictures change together. Other videos get one script over the whole video.
+- A video made by `ove ai compose --narration` gets one script over the whole video.
 - The video gets a loudness target of -16 LUFS unless `export.loudness` is already set.
 
 ## Caption existing audio

@@ -91,7 +91,7 @@ export async function writeSceneLines(provider: AiProvider, brief: string, scene
 
 /**
  * Speaks one line per scene and resizes the scenes to fit, then adds the narration scene (audio and captions). The composition
- * must have its scenes laid out one after another with their transitions (as the template videos are).
+ * must have its scenes laid out one after another with their transitions (as a composition built scene by scene is).
  */
 export async function narrateScenes(provider: AiProvider, composition: Composition, options: VoiceoverOptions): Promise<VoiceoverResult> {
   if (!provider.speak) throw new Error(`The ${provider.id} provider cannot make speech`);

@@ -3,14 +3,14 @@ import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
 describe('mcp server (Model Context Protocol)', () => {
-  it('executes JSON-RPC handshake, tool listing, inspection and template catalogue', async () => {
+  it('executes JSON-RPC handshake, tool listing, inspection and block catalogue', async () => {
     const file = resolve('examples/typography/composition.json');
     const requests = [
       { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} },
       { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
       { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'motionrender_validate', arguments: { file } } },
       { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'motionrender_inspect', arguments: { file } } },
-      { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'motionrender_list_templates', arguments: {} } },
+      { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'motionrender_list_blocks', arguments: {} } },
     ];
 
     const responses: any[] = await new Promise((resolvePromise, reject) => {
@@ -63,7 +63,8 @@ describe('mcp server (Model Context Protocol)', () => {
     expect(names).toContain('motionrender_review_video');
     expect(names).toContain('motionrender_validate');
     expect(names).toContain('motionrender_inspect');
-    expect(names).toContain('motionrender_list_templates');
+    expect(names).toContain('motionrender_list_blocks');
+    expect(names).not.toContain('motionrender_list_templates');
     expect(names).toContain('motionrender_refine_video');
     expect(names).toContain('motionrender_adapt_aspect');
     expect(names).toContain('motionrender_batch_render');
@@ -83,11 +84,12 @@ describe('mcp server (Model Context Protocol)', () => {
     expect(inspectJson.id).toBe('future-promo');
     expect(inspectJson.scenes).toHaveLength(1);
 
-    // 5. list templates
+    // 5. list blocks
     const tmplResp = byId.get(5);
     expect(tmplResp?.result?.isError).toBe(false);
     const tmplJson = JSON.parse(tmplResp?.result?.content[0]?.text);
-    expect(tmplJson.templates.some((t: any) => t.id === 'hook-reel')).toBe(true);
+    expect(tmplJson.templates).toBeUndefined();
+    expect(tmplJson.sceneBlocksCount).toBeGreaterThan(10);
     expect(tmplJson.themes.some((th: any) => th.id === 'neon')).toBe(true);
   }, 20000);
 });

@@ -1,7 +1,7 @@
 // MCP tools and resources for agents that write videos themselves (Claude Code, Codex, Cursor and any other): the agent is the model, so none of
 // these needs an AI provider key. It reads the schema and the scene kinds, writes the script, and these tools check it, look up real facts,
 // build it and report what is wrong. The AI-writer tools in mcp.ts remain for clients that want the engine to do the writing.
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { z } from 'zod';
@@ -9,9 +9,10 @@ import { compositionJsonSchema, explainerJsonSchema, explainerKindDocs, explaine
 import { checkFfmpeg, describeBrowser } from '@ove/core';
 import { gatherFacts, lookupSchema } from '@ove/ai';
 import { buildExplainer } from './explainer';
+import { makeReport, makeVideo, type MakeRender } from './make';
 import { initProject, skillsRoot } from './init';
 
-type ToolResult = { content: { type: 'text'; text: string }[]; isError: boolean };
+type ToolResult = { content: ({ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string })[]; isError: boolean };
 const reply = (text: string, isError = false): ToolResult => ({ content: [{ type: 'text', text }], isError });
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
@@ -21,6 +22,11 @@ const scriptInput = {
 };
 
 export const AGENT_TOOLS = [
+  {
+    name: 'motionrender_make_video',
+    description: 'THE QUICK PATH: check, build and review a video in ONE call, and optionally render it. Give an explainer script or a composition (a file, or the script inline with outputDir). It validates, builds composition.json, runs the design review and returns every problem at once with its path, plus ONE contact-sheet image of the whole video, so no separate validate, compile, still or review calls are needed. Fix what it lists and call it again. render: "draft" makes a quick half-size MP4 to check the motion, "final" the full-quality video; leave it out while you are still fixing problems. Nothing is rendered over review errors.',
+    inputSchema: { type: 'object', properties: { ...scriptInput, outputDir: { type: 'string', description: 'Where explainer.json and the results go (required with an inline script)' }, render: { type: 'string', enum: ['none', 'draft', 'final'], description: 'Render after the checks (default none)' }, voice: { type: 'boolean', description: 'Record the explainer lines with the free Edge voice (default true; false is faster and silent)' }, voiceName: { type: 'string' }, output: { type: 'string', description: 'The MP4 path (default draft.mp4 or out.mp4 beside the file)' }, allowCode: { type: 'boolean', description: 'Run react, code and p5 layers (only for files you trust)' } } },
+  },
   {
     name: 'motionrender_schema',
     description: 'The JSON Schema for a MotionRender composition or an explainer script. Read it before writing either by hand; it lists every field, default and limit.',
@@ -54,7 +60,7 @@ export const AGENT_TOOLS = [
   {
     name: 'motionrender_init',
     description: 'Start a project folder: a starter composition.json, its JSON Schema, and the agent instructions and skills for Claude Code, Codex and Cursor. Fails if the folder is not empty unless force is true.',
-    inputSchema: { type: 'object', properties: { dir: { type: 'string', description: 'Folder to create' }, template: { type: 'string', description: 'Optional template id (see motionrender_list_templates)' }, force: { type: 'boolean' } }, required: ['dir'] },
+    inputSchema: { type: 'object', properties: { dir: { type: 'string', description: 'Folder to create' }, force: { type: 'boolean' } }, required: ['dir'] },
   },
 ];
 
@@ -71,6 +77,24 @@ export async function handleAgentTool(name: string, args: Record<string, any>): 
   switch (name) {
     case 'motionrender_schema':
       return reply(json(args.kind === 'explainer' ? explainerJsonSchema : compositionJsonSchema));
+
+    case 'motionrender_make_video': {
+      let file = args.file ? resolve(String(args.file)) : undefined;
+      if (!file) {
+        if (args.script === undefined) throw new Error('Give a file, or a script with outputDir');
+        if (!args.outputDir) throw new Error('outputDir is required when the script is given inline');
+        const dir = resolve(String(args.outputDir));
+        await mkdir(dir, { recursive: true });
+        file = join(dir, 'explainer.json');
+        await writeFile(file, `${JSON.stringify(args.script, null, 2)}
+`);
+      }
+      const render: MakeRender | undefined = args.render === 'draft' || args.render === 'final' ? args.render : undefined;
+      const result = await makeVideo({ file, render, output: args.output, voice: args.voice !== false, voiceName: args.voiceName, allowCode: args.allowCode === true });
+      const content: ToolResult['content'] = [{ type: 'text', text: makeReport(result) }];
+      if (result.review) { const sheet = await readFile(result.review.sheet); if (sheet.length <= 1_500_000) content.push({ type: 'image', data: sheet.toString('base64'), mimeType: 'image/png' }); }
+      return { content, isError: !result.ok };
+    }
 
     case 'motionrender_explainer_kinds':
       return reply(json(explainerKindDocs));
@@ -114,7 +138,7 @@ export async function handleAgentTool(name: string, args: Record<string, any>): 
     case 'motionrender_init': {
       const dir = resolve(String(args.dir || ''));
       if (!args.dir) throw new Error('dir is required');
-      const files = await initProject(dir, { template: args.template, force: args.force === true });
+      const files = await initProject(dir, { force: args.force === true });
       return reply(`Created ${dir} (${files.length} files). Start with composition.json, or write explainer.json (motionrender_explainer_kinds). Instructions for agents are in AGENTS.md and the skills are in .claude/skills and .agent/skills.`);
     }
 

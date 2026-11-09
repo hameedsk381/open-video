@@ -110,7 +110,7 @@ export function projectRoutes(): Route[] {
     } },
     { method: 'GET', path: '/api/library', handle: async c => {
       const { library } = c.deps;
-      c.json(200, { blocks: (await library.listBlocks()).map(({ layers, ...block }) => block), themes: await library.listThemes(), templates: await library.listTemplates(), fonts: fontIds });
+      c.json(200, { blocks: (await library.listBlocks()).map(({ layers, ...block }) => block), themes: await library.listThemes(), fonts: fontIds });
     } },
     { method: 'POST', path: '/api/upload', handle: async c => {
       const id = await existsUpload(c, c.url.searchParams.get('project')), name = textOf(c.url.searchParams.get('name'), 'name');

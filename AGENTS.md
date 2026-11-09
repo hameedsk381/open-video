@@ -74,13 +74,13 @@ Add to `.cursor/mcp.json`:
 
 | Tool Name | Parameters | Description |
 |---|---|---|
-| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `theme?`, `template?`, `full?`, `review?`, `strict?`, `sources?`, `research?`, `script?` | Generates a complete video composition from a natural language brief. It writes the content script first and stores it in `composition.json`; `sources` is material the script may quote, `script` is a written content block to use instead, and research is on unless `research: false`. `review: true` runs the renderer design check and reports unresolved errors (`isError`); without it the composition is unchecked. `strict: true` refuses an answer that only worked because invented animation properties or unusable keyframes were repaired; by default those repairs are made and listed under Notes. |
+| `motionrender_create_video` | `prompt`, `outputDir?`, `kind?`, `duration?`, `full?`, `review?`, `strict?`, `sources?`, `research?`, `script?` | Generates a complete video composition from a natural language brief. It writes the content script first and stores it in `composition.json`; `sources` is material the script may quote, `script` is a written content block to use instead, and research is on unless `research: false`. `review: true` runs the renderer design check and reports unresolved errors (`isError`); without it the composition is unchecked. `strict: true` refuses an answer that only worked because invented animation properties or unusable keyframes were repaired; by default those repairs are made and listed under Notes. |
 | `motionrender_render_video` | `file`, `output?`, `format?`, `scale?` | Renders a `composition.json` to MP4, WebM, or PNG sequence. |
 | `motionrender_render_still` | `file`, `frame?`, `output?` | Renders a single frame still as a PNG image for visual inspection. |
 | `motionrender_review_video` | `file`, `output?`, `showSafeZones?` | Automated design, type scale, safe-zone, and contrast checks with contact sheet. |
 | `motionrender_validate` | `file` | Validates `composition.json` against schema and returns errors. |
 | `motionrender_inspect` | `file` | Returns structured summary of duration, scenes, layers, and assets. |
-| `motionrender_list_templates` | *(none)* | Lists available templates, themes, and scene blocks. |
+| `motionrender_list_blocks` | *(none)* | Lists the scene blocks and colour themes. |
 | `motionrender_refine_video` | `file`, `instruction`, `review?` | Applies natural language edits to an existing `composition.json`. |
 | `motionrender_script` | `file`, `script?`, `output?`, `format?` | Reads the video's content script (spoken lines, on-screen copy, figures and their sources) or, when `script` is given, validates and imports a replacement. Claims must cite quotes that appear in the cited source. |
 | `motionrender_production_validate` | `file` | Validates a `production.json` manifest: brief, script, cast, locations, shot list, and every asset reference, reporting all broken references at once. |
@@ -91,10 +91,11 @@ Add to `.cursor/mcp.json`:
 | `motionrender_schema` | `kind?` | The JSON Schema of a `composition` or an `explainer` script. Read it before writing either by hand. |
 | `motionrender_explainer_kinds` | *(none)* | Every explainer scene kind with what it shows, when to use it and a valid example. |
 | `motionrender_explainer_validate` | `file` or `script` | Checks an explainer script and lists every problem with its path. |
+| `motionrender_make_video` | `file` or `script`+`outputDir`, `render?` (`draft`/`final`), `voice?`, `output?`, `allowCode?` | **The quick path.** Validates, builds, runs the design review and returns every problem at once plus one contact-sheet image of the whole video; optionally renders a quick half-size draft or the final MP4. Nothing is rendered over review errors. Use this instead of separate validate, compile, still, review and render calls. |
 | `motionrender_explainer_compile` | `file` or `script`, `outputDir?`, `voice?`, `voiceName?` | Builds an explainer script into `composition.json`; each scene lasts as long as its spoken line. Silent unless `voice: true`. |
 | `motionrender_facts` | `lookups` | Real, sourced facts for a script from Wikipedia, the World Bank and exchange rates, with no key. |
 | `motionrender_environment` | *(none)* | Checks Node, FFmpeg and the browser, and says what is missing. Run it first if a render fails. |
-| `motionrender_init` | `dir`, `template?`, `force?` | Starts a project folder with a starter composition and the agent instructions and skills. |
+| `motionrender_init` | `dir`, `force?` | Starts a project folder with a starter composition and the agent instructions and skills. |
 | `motionrender_import_figma` | `input`, `token?`, `outputTheme?`, `outputComp?` | Imports design tokens (colours, type, radii) and scene layers from a Figma file or exported tokens JSON. |
 
 ---
@@ -112,7 +113,7 @@ For Claude Code or Anthropic agent environments, MotionRender includes 16 skills
 - `ove-motion-graphics`: Kinetic typography, bento grids, code walk-throughs and audio waveforms.
 - `ove-effects`: Motion effects over footage: glass cards, kinetic titles, tracked labels, grain and grading.
 - `ove-voiceover-captions`: Voiceover and word-timed captions, with scenes cut to the speech.
-- `ove-batch-videos`: Many personalised or localised videos from one template and a list of rows.
+- `ove-batch-videos`: Many personalised or localised videos from one composition with variables and a list of rows.
 - `ove-broll-loop`: Seamless looping B-roll timed to a voiceover.
 - `ove-paper-collage`: Editorial halftone paper-collage B-roll and stop-motion cutouts.
 - `ove-papercut`: Layered papercraft explainers and paper-diorama videos.
@@ -161,13 +162,11 @@ Real numbers: `mr facts country India internet_users` (or `wikipedia`, `exchange
        ↓
 Write explainer.json   (`mr schema --explainer` lists every field)
        ↓
-`mr explainer validate explainer.json`   (every problem at once, with paths)
+`mr make explainer.json --no-voice`   (ONE call: validates, builds, reviews and draws one contact sheet of the whole video; every problem at once)
        ↓
-`mr explainer compile explainer.json`    (add --no-voice for a quick silent build)
+Open review.png, fix what it lists, run make again
        ↓
-`mr still composition.json --frame 90`   (look at several scenes, not one)
-       ↓
-`mr review composition.json` → `mr render composition.json --output out.mp4`
+`mr make explainer.json --draft` (quick half-size MP4 to check the motion) → `mr make explainer.json --final` (out.mp4)
 ```
 
 ## 6. In a sandbox, with nothing installed

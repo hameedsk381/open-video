@@ -73,9 +73,9 @@ describe('AI studio server', () => {
     expect(json(escape).error).toMatch(/inside/);
   });
 
-  it('fills a matching template unless every layer is asked for', async () => {
-    const filled = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'from-template' }));
-    expect(filled.frames).toBe(600); expect(filled.scenes).toBe(4);
+  it('composes without asking for every layer, and still writes the video when asked', async () => {
+    const planned = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'planned' }));
+    expect(planned.frames).toBeGreaterThan(0); expect(planned.scenes).toBeGreaterThan(0);
     const written = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', duration: 0.5, fps: 10, full: true, folder: 'full-layers' }));
     expect(written.frames).toBe(5);
   });

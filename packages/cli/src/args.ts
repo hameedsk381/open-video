@@ -5,7 +5,7 @@ type Spec = { values?: string[]; flags?: string[]; positionals?: number };
 const variables = ['--var', '--vars'];
 const renderValues = ['--output', '--format', '--codec', '--frames', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--workers', '--chunk-size', '--token', '--batch', '--aspect'];
 export const commandSpecs: Record<string, Spec> = {
-  init: { values: ['--template'], flags: ['--force', '--no-skill'], positionals: 1 },
+  init: { values: [], flags: ['--force', '--no-skill'], positionals: 1 },
   schema: { values: ['--output'], flags: ['--explainer'] },
   doctor: {},
   cache: { values: ['--older-than'], positionals: 1 },
@@ -30,11 +30,12 @@ export const commandSpecs: Record<string, Spec> = {
   captions: { values: ['--output', ...variables], positionals: 1 },
   script: { values: ['--output', '--set'], flags: ['--json'], positionals: 1 },
   production: { values: ['--output'], flags: ['--json'], positionals: 2 },
+  make: { values: ['--output', '--sheet', '--voice', '--every'], flags: ['--draft', '--final', '--no-voice', '--allow-code', '--json'], positionals: 1 },
   explainer: { values: ['--output', '--voice', '--provider', '--model', '--base-url', '--scenes', '--language', '--media'], flags: ['--no-voice', '--images', '--research', '--json'], positionals: 2 },
   still: { values: ['--frame', '--output', '--aspect', ...variables], flags: ['--transparent', '--allow-code'], positionals: 1 },
   review: { values: ['--output', '--every', '--sheet-frames', '--frames', '--aspect', ...variables], flags: ['--json', '--allow-code', '--show-safe-zones'], positionals: 1 },
   render: { values: [...renderValues, ...variables], flags: ['--transparent', '--no-motion-blur', '--allow-code'], positionals: 1 },
-  ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--lang', '--size', '--composition', '--id', '--start', '--output', '--template', '--theme', '--typography', '--motion-pacing', '--pacing', '--audio-mood', '--mood', '--voice-tone', '--cta', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--source', '--content', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format', '--max-silence', '--width', '--height', '--count', '--min', '--max'],
+  ai: { values: ['--public-port', '--host', '--allow-host', '--instruction', '--prompt', '--provider', '--model', '--base-url', '--brief', '--kind', '--aspect', '--duration', '--fps', '--out', '--voice', '--language', '--lang', '--size', '--composition', '--id', '--start', '--output', '--template', '--typography', '--motion-pacing', '--pacing', '--audio-mood', '--mood', '--voice-tone', '--cta', '--out-dir', '--fields', '--max-attempts', '--tail', '--asset', '--source', '--content', '--limit', '--port', '--crf', '--bitrate', '--audio-bitrate', '--scale', '--loudness', '--concurrency', '--preset', '--codec', '--format', '--max-silence', '--width', '--height', '--count', '--min', '--max'],
     flags: ['--force', '--dry-run', '--json', '--review', '--strict', '--full', '--narration', '--render', '--schema', '--no-captions', '--no-plan', '--no-react', '--transparent', '--no-motion-blur', '--sfx', '--keep-fillers', '--no-cut', '--research', '--no-research'], positionals: 3 },
 };
 // Edit distance, for "did you mean".

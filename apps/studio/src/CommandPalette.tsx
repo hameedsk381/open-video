@@ -8,7 +8,7 @@ const baseCommands = (): Command[] => [
   { id: 'new', label: 'Create a new video', hint: 'Prompt', group: 'Create', run: () => go('#/new') },
   { id: 'home', label: 'Go to Home', hint: 'Dashboard', group: 'Navigate', run: () => go('#/') },
   { id: 'projects', label: 'Open Projects', hint: 'All videos', group: 'Navigate', run: () => go('#/projects') },
-  { id: 'library', label: 'Open Assets', hint: 'Templates, themes and blocks', group: 'Navigate', run: () => go('#/library') },
+  { id: 'library', label: 'Open Assets', hint: 'Scene blocks and themes', group: 'Navigate', run: () => go('#/library') },
   { id: 'discover', label: 'Browse Discover', hint: 'Example briefs', group: 'Navigate', run: () => go('#/discover') },
   { id: 'settings', label: 'Open Settings', hint: 'Account and advanced options', group: 'Preferences', run: () => go('#/settings') },
   { id: 'theme', label: 'Switch theme', hint: 'Dark, light or auto', group: 'Preferences', run: () => window.dispatchEvent(new Event('ove-cycle-theme')) },

@@ -50,8 +50,6 @@ describe('a request the provider calls too large', () => {
 describe('planning for a provider with a small request limit', () => {
   const beat = { name: 'Hook', onScreen: 'the headline springs in', seconds: 6 };
   const big = buildRegistry({
-    templates: Array.from({ length: 12 }, (_, i) => ({ id: `tpl-${i}`, name: `Template ${i}`, description: 'A ready-made layout for a product story with a long description that keeps going and going and going and going and going', width: 1080, height: 1080, durationSeconds: 6, variables: [{ name: 'title', type: 'string' }, { name: 'subtitle', type: 'string' }] })),
-    themes: [{ id: 'midnight', name: 'Midnight', description: 'Dark blues' }],
     blocks: Array.from({ length: 20 }, (_, i) => ({ id: `block-${i}`, name: `Block ${i}`, description: 'A scene block', category: 'scene', kind: 'scene' as const, durationFrames: 90 })),
   });
   const options: PlanOptions = { brief: 'a product intro', width: 1080, height: 1080, fps: 30, durationSeconds: 6, registry: big };
@@ -62,9 +60,9 @@ describe('planning for a provider with a small request limit', () => {
   it('sends names and one short line each, with no blocks, sounds or parameter lists', async () => {
     const full = scripted(), short = scripted();
     await planBuild(full, options); await planBuild(short, { ...options, compact: true });
-    expect(systemOf(full)).toContain('block-3'); expect(systemOf(full)).toContain('values: title (string)');
+    expect(systemOf(full)).toContain('block-3'); expect(systemOf(full)).toContain('Sounds:');
     expect(systemOf(short)).not.toContain('block-3'); expect(systemOf(short)).not.toContain('values:'); expect(systemOf(short)).not.toContain('Sounds:'); expect(systemOf(full)).toContain('Sounds:');
-    expect(systemOf(short)).toContain('tpl-3'); expect(systemOf(short)).toContain('midnight');
+    expect(systemOf(short)).toContain('GlassCard');
     expect(systemOf(short).length).toBeLessThan(systemOf(full).length * 0.75);
   });
 

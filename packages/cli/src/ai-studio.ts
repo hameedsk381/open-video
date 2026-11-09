@@ -1,10 +1,10 @@
 // `ove ai studio`: the studio on your own machine. It wires the API (services/api) to a folder of projects, an in-process job queue, the AI
-// provider from your environment, and the pieces that ship with this command (blocks, themes, templates, the Player, the built web app).
+// provider from your environment, and the pieces that ship with this command (blocks, themes, the Player, the built web app).
 // Hosted use wires the same API to accounts, a durable queue and render workers instead (see ./serve.ts).
 import { mkdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createProvider, narrateSmart, providerCapabilities, type AiProvider } from '@ove/ai';
+import { createProvider, narrate, providerCapabilities, type AiProvider } from '@ove/ai';
 import { describeError, sfxFile } from '@ove/core';
 import { builtinFontFaces } from '@ove/graphics';
 import { builtinFontDir } from '@ove/graphics/fonts';
@@ -16,7 +16,7 @@ import { FsProjectStore, LOCAL_PRINCIPAL, StockSettingsStore, within, type Princ
 import { aiStudioPage } from './ai-studio-page';
 import { addBlock, applyTheme, emptyComposition, listBlocks, listThemes, readBlock, readBlockFile, readTheme, themeTokens } from './blocks';
 import { playerScript } from './dev';
-import { composeSmart, listTemplates } from './templates';
+import { composeSmart } from './compose-source';
 import { makeThumbnail } from './thumbnail';
 
 export type AiStudioOptions = {
@@ -39,10 +39,9 @@ export type AiStudioServer = { url: string; close(): Promise<void> };
 // The request helpers live in @ove/jobs and the path rule in @ove/storage; they are re-exported because tests and callers import them from here.
 export { canvasFor, folderName, within };
 
-/** What ships with this command and the API shows: blocks, themes, templates. */
+/** What ships with this command and the API shows: blocks and themes. */
 export const studioLibrary: ApiLibrary = {
   listBlocks, listThemes, readBlock, readTheme, addBlock, blockFile: readBlockFile, applyTheme, emptyComposition, themeTokens,
-  listTemplates: async () => (await listTemplates()).map(t => ({ id: t.id, name: t.name, description: t.description, tags: t.tags, width: t.width, height: t.height, fps: t.fps, durationFrames: t.durationFrames, durationSeconds: t.durationSeconds, previewFrame: t.previewFrame })),
 };
 /** The Player and what it loads beside itself (the same files `ove dev` serves). */
 export const studioPlayer: PlayerFiles = {
@@ -60,7 +59,7 @@ export const studioApp = { dir: fileURLToPath(new URL('../studio', import.meta.u
 export function jobEnvFor(store: FsProjectStore, requireProvider: (who: Principal) => AiProvider, providerInfo: (who: Principal) => { provider?: string; model?: string }, local: boolean) {
   return (who: Principal): JobEnv => ({
     who, paths: createFsPaths(store, who, () => providerInfo(who), { confine: !local }), provider: () => requireProvider(who), providerInfo: () => providerInfo(who), assets: id => store.assets(who, id),
-    capabilities: { composeSmart, narrateSmart, makeThumbnail },
+    capabilities: { composeSmart, narrate, makeThumbnail },
     ...(local ? { local: { inputFile: localInputFile } } : {}),
   });
 }

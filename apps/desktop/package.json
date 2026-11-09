@@ -34,7 +34,7 @@
         "filter": [
           "dist/**",
           "studio/**",
-          "templates/**",
+          "starter/**",
           "blocks/**",
           "themes/**",
           "skills/**",

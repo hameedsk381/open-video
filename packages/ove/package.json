@@ -32,7 +32,7 @@
   },
   "files": [
     "dist",
-    "templates",
+    "starter",
     "blocks",
     "themes",
     "studio",
@@ -58,8 +58,7 @@
     "ffmpeg",
     "json",
     "animation",
-    "canvas",
-    "template"
+    "canvas"
   ],
   "peerDependencies": {
     "@types/node": ">=22",

@@ -17,7 +17,7 @@ const makeEnv = (local: boolean) => (who: Principal): JobEnv => {
   const provider = createProvider({ provider: 'mock' });
   return {
     who, paths: createFsPaths(store, who), provider: () => provider, providerInfo: () => ({ provider: provider.id, model: provider.model }), assets: id => store.assets(who, id),
-    capabilities: { composeSmart: async () => { throw new Error('not used here'); }, narrateSmart: async () => { throw new Error('not used here'); }, makeThumbnail: async () => ({ png: Buffer.from('png-bytes'), frame: 3, width: 100, height: 100 }) },
+    capabilities: { composeSmart: async () => { throw new Error('not used here'); }, narrate: async () => { throw new Error('not used here'); }, makeThumbnail: async () => ({ png: Buffer.from('png-bytes'), frame: 3, width: 100, height: 100 }) },
     ...(local ? { local: { inputFile: localInputFile } } : {}),
   };
 };

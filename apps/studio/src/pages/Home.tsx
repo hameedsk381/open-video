@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { modKeyLabel } from '../platform';
-import { ago, api, cleanUserStatus, dur, useJobs, type Job, type Library, type Project, type TemplateSummary } from '../api';
+import { ago, api, cleanUserStatus, dur, useJobs, type Job, type Project } from '../api';
 import { discoverPath, editorPath, go } from '../router';
+import { designById, type Design } from '../designs';
 import {
   Badge,
   Button,
@@ -23,20 +24,16 @@ const examples = [
   '30-second product story for a ceramic mug brand, warm and tactile',
 ];
 
-const presetOrder = ['hook-reel', 'product-spotlight', 'stats-showcase', 'logo-sting', 'tutorial-steps', 'quote-card'];
+const presetOrder = ['social-reel', 'new-product', 'stats-story', 'logo-sting', 'how-to', 'quote-card'];
 const presetIcons: Record<string, typeof FilmIcon> = {
-  'hook-reel': FilmIcon,
-  'product-spotlight': ImagesIcon,
-  'stats-showcase': LayersIcon,
+  'social-reel': FilmIcon,
+  'new-product': ImagesIcon,
+  'stats-story': LayersIcon,
   'logo-sting': SparklesIcon,
-  'tutorial-steps': LayersIcon,
+  'how-to': LayersIcon,
   'quote-card': TypeIcon,
 };
-const presetMeta = (template: TemplateSummary) => {
-  const ratio = template.width && template.height ? (template.width === template.height ? '1:1' : template.width > template.height ? '16:9' : '9:16') : '';
-  const seconds = template.durationSeconds ? `${Math.round(template.durationSeconds)}s` : '';
-  return [ratio, seconds].filter(Boolean).join(' · ') || 'Template';
-};
+const presetMeta = (design: Design) => `${design.aspect} · ${design.length}`;
 
 const jobLabels: Record<string, string> = {
   compose: 'Writing the video',
@@ -61,22 +58,18 @@ const jobTone = (job: Job) => (job.status === 'done' ? 'green' : job.status === 
 export function Home({ email }: { email?: string }) {
   const { toast } = useUi();
   const [projects, setProjects] = useState<Project[] | null>(null);
-  const [library, setLibrary] = useState<Library | null>(null);
   const [prompt, setPrompt] = useState('');
   const jobs = useJobs();
 
   useEffect(() => {
     api<{ projects: Project[] }>('/api/projects').then(result => setProjects(result.projects), error => toast(error.message, 'error'));
-    api<Library>('/api/library').then(setLibrary, () => {});
   }, []);
 
   const ordered = Object.values(jobs).sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
   const active = ordered.filter(job => job.status === 'running' || job.status === 'queued');
   const recent = [...active, ...ordered.filter(job => job.status === 'done' || job.status === 'error')].slice(0, 5);
   const name = email?.split('@')[0];
-  const allTemplates = library?.templates ?? [];
-  const curated = presetOrder.map(id => allTemplates.find(template => template.id === id)).filter((template): template is TemplateSummary => !!template);
-  const presets = curated.length >= 4 ? curated : allTemplates.slice(0, 6);
+  const presets = presetOrder.map(id => designById(id)).filter((design): design is Design => !!design);
 
   const start = () => {
     const brief = prompt.trim();
@@ -123,20 +116,20 @@ export function Home({ email }: { email?: string }) {
           <div className="home-presets">
             <span className="home-presets-label">Or start from a preset</span>
             <div className="home-preset-grid">
-              {presets.map(template => {
-                const Icon = presetIcons[template.id] ?? FilmIcon;
+              {presets.map(design => {
+                const Icon = presetIcons[design.id] ?? FilmIcon;
                 return (
                   <button
-                    key={template.id}
+                    key={design.id}
                     type="button"
                     className="home-preset"
-                    title={template.description}
-                    onClick={() => go(`#/new?template=${encodeURIComponent(template.id)}`)}
+                    title={design.summary}
+                    onClick={() => go(`#/new?design=${encodeURIComponent(design.id)}`)}
                   >
                     <span className="home-preset-icon"><Icon size={14} /></span>
                     <span className="home-preset-copy">
-                      <b>{template.name}</b>
-                      <small>{presetMeta(template)}</small>
+                      <b>{design.title}</b>
+                      <small>{presetMeta(design)}</small>
                     </span>
                   </button>
                 );

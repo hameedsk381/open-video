@@ -11,8 +11,8 @@ AI runs before rendering; the video is still deterministic. Check the provider w
 
 `ove ai compose <dir> --brief "..." --kind reel|product|promo|project [--narration] [--asset id=path.png] [--render]`
 
-- By default the model picks a ready-made template of the right shape (and a theme) and writes only its text, which is fast and consistent. It writes a whole composition instead when no template fits, or when you pass `--full`, `--duration`, `--fields`, or non-image `--asset` files.
-- `--asset` pictures are offered to templates with picture slots; the model may use only ids you supply.
+- A planner decides first: a JSON composition built from blocks, effects and moves, or (on your own machine) React code. `--no-plan` skips it. The model writes a whole composition when you pass `--full`, `--fields` or footage and sound assets.
+- `--asset` pictures and clips are offered to the model; it may use only ids you supply.
 - `--review` adds the renderer's design checks as feedback; use it for finished work, not drafts.
 
 ## Refine

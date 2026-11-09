@@ -3,12 +3,12 @@
 //   dist/cli.js     the `ove` command
 //   dist/index.d.ts type declarations, emitted by tsc and re-pointed from @ove/* workspace names to relative files
 //   dist/player.js  the browser Player (motionrender/player), minified, with its own declarations
-//   templates/, skills/  copied next to dist so `ove init` finds them the same way it does in the workspace
+//   starter/, skills/  copied next to dist so `ove init` finds them the same way it does in the workspace
 // playwright and zod stay external: they are the package's dependencies. Run with tsx (pnpm build:package) since it imports TypeScript.
 import { bundlePlayer } from '../packages/player/src/bundle.ts';
 import { build } from 'esbuild'; import { execFileSync } from 'node:child_process'; import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'; import { dirname, join, relative, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)), '..'), out=join(root, 'packages', 'ove'), dist=join(out, 'dist');
-await rm(dist, { recursive: true, force: true }); await rm(join(out, 'templates'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'studio'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
+await rm(dist, { recursive: true, force: true }); await rm(join(out, 'starter'), { recursive: true, force: true }); await rm(join(out, 'blocks'), { recursive: true, force: true }); await rm(join(out, 'studio'), { recursive: true, force: true }); await rm(join(out, 'themes'), { recursive: true, force: true }); await rm(join(out, 'skills'), { recursive: true, force: true });
 // esbuild is external too: the CLI only reaches it to bundle the Player when running from source, never from this package, which ships player.js.
 const nodeBanner = "import { createRequire as __createRequire } from 'node:module'; var require = __createRequire(import.meta.url);";
 const common={ bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: nodeBanner }, external: ['playwright', 'zod', 'pg', 'bullmq', 'esbuild'], logLevel: 'warning', legalComments: 'none' };
@@ -48,6 +48,6 @@ const { lottiePlayerPath, roughLibraryPath, matterLibraryPath, p5LibraryPath, bu
 const { sfxFile } = await import('../packages/core/src/audio.ts'); const { sfxNames } = await import('../packages/schema/src/index.ts'); await mkdir(join(dist, 'sfx'), { recursive: true });
 for (const name of sfxNames) await cp(await sfxFile(name), join(dist, 'sfx', `${name}.wav`));
 await cp(join(root, 'packages/cli/studio'), join(out, 'studio'), { recursive: true }); // the AI Studio web app (pnpm build:studio)
-await cp(join(root, 'packages/cli/templates'), join(out, 'templates'), { recursive: true }); await cp(join(root, 'packages/cli/blocks'), join(out, 'blocks'), { recursive: true }); await cp(join(root, 'packages/cli/themes'), join(out, 'themes'), { recursive: true }); await cp(join(root, 'packages/cli/skills'), join(out, 'skills'), { recursive: true });
+await cp(join(root, 'packages/cli/starter'), join(out, 'starter'), { recursive: true }); await cp(join(root, 'packages/cli/blocks'), join(out, 'blocks'), { recursive: true }); await cp(join(root, 'packages/cli/themes'), join(out, 'themes'), { recursive: true }); await cp(join(root, 'packages/cli/skills'), join(out, 'skills'), { recursive: true });
 await cp(join(root, 'LICENSE'), join(out, 'LICENSE')); // packages/ove/README.md is the package's own README, kept in the repository
-console.log(`Built ${relative(root, out)}: dist/index.js, dist/cli.js, dist/player.js, declarations, templates/, skills/`);
+console.log(`Built ${relative(root, out)}: dist/index.js, dist/cli.js, dist/player.js, declarations, starter/, skills/`);

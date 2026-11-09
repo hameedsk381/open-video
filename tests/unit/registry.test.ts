@@ -1,37 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { buildRegistry, describeCapabilities, movesGlossary, registryVersion, sameShape } from '@ove/ai';
+import { buildRegistry, describeCapabilities, movesGlossary, registryVersion } from '@ove/ai';
 
 // The capability registry: pure metadata assembled from caller catalogues plus the built-in effects, sounds and React
 // kit. It must reject duplicate and malformed ids, and let the planner look capabilities back up by kind and id.
-const squareTemplate = {
-  id: 'intro-card', name: 'Intro card', description: 'A square title card',
-  width: 1080, height: 1080, durationSeconds: 6, themed: true,
-  variables: [{ name: 'title', type: 'string', description: 'The headline' }, { name: 'accent', type: 'color' }],
-};
+const titleBar = { id: 'title-bar', name: 'Title bar', description: 'A lower third', category: 'titles', kind: 'overlay' as const, durationFrames: 90 };
 
 describe('buildRegistry', () => {
-  const registry = buildRegistry({
-    templates: [squareTemplate],
-    themes: [{ id: 'midnight', name: 'Midnight', description: 'Dark blues' }],
-    blocks: [{ id: 'title-bar', name: 'Title bar', description: 'A lower third', category: 'titles', kind: 'overlay', durationFrames: 90 }],
-  });
+  const registry = buildRegistry({ blocks: [titleBar] });
 
   it('keeps caller entries and the built-in kit apart by kind', () => {
-    expect(registry.counts()).toMatchObject({ template: 1, theme: 1, block: 1 });
+    expect(registry.counts()).toMatchObject({ block: 1 });
     expect(registry.counts().sound).toBe(11);
     expect(registry.find('component', 'GlassCard')).toBeDefined();
-    expect(registry.find('template', 'GlassCard')).toBeUndefined();
+    expect(registry.find('block', 'GlassCard')).toBeUndefined();
     expect(registry.version).toBe(registryVersion);
   });
 
-  it('gives templates their shape facts so the planner can match a canvas', () => {
-    const template = registry.find('template', 'intro-card')!;
-    expect(template.width).toBe(1080); expect(template.height).toBe(1080);
-    expect(template.takesTheme).toBe(true);
-    expect(template.params).toHaveLength(2);
-    expect(template.params[0]).toMatchObject({ name: 'title', type: 'string', description: 'The headline' });
-    expect(template.fit).toContain('1080x1080');
-    expect(template.paths).toEqual(['template', 'json']);
+  it('describes a block with its length and paths', () => {
+    const block = registry.find('block', 'title-bar')!;
+    expect(block.paths).toEqual(['json']);
+    expect(block.fit).toContain('overlay');
+    expect(block.durationSeconds).toBe(3);
   });
 
   it('lists built-in sounds and transitions with their stable ids', () => {
@@ -62,31 +51,20 @@ describe('buildRegistry', () => {
   });
 
   it('refuses duplicate and malformed ids at build time, not at plan time', () => {
-    expect(() => buildRegistry({ templates: [squareTemplate, squareTemplate] })).toThrow(/share the id "intro-card"/);
-    expect(() => buildRegistry({ templates: [{ ...squareTemplate, id: '9bad id' }] })).toThrow(/Capability ids use letters/);
-    expect(() => buildRegistry({ templates: [{ ...squareTemplate, id: '9bad id' }, squareTemplate] })).toThrow(/Capability ids use letters/);
-  });
-});
-
-describe('sameShape', () => {
-  it('accepts the same aspect within 2% and everything else not', () => {
-    expect(sameShape({ width: 1080, height: 1080 }, { width: 1080, height: 1080 })).toBe(true);
-    expect(sameShape({ width: 1078, height: 1085 }, { width: 1080, height: 1080 })).toBe(true);
-    expect(sameShape({ width: 1920, height: 1080 }, { width: 1080, height: 1080 })).toBe(false);
-    expect(sameShape({}, { width: 1080, height: 1080 })).toBe(false);
+    expect(() => buildRegistry({ blocks: [titleBar, titleBar] })).toThrow(/share the id "title-bar"/);
+    expect(() => buildRegistry({ blocks: [{ ...titleBar, id: '9bad id' }] })).toThrow(/Capability ids use letters/);
+    expect(() => buildRegistry({ blocks: [{ ...titleBar, id: '9bad id' }, titleBar] })).toThrow(/Capability ids use letters/);
   });
 });
 
 describe('describeCapabilities', () => {
-  const registry = buildRegistry({ templates: [squareTemplate, { ...squareTemplate, id: 'wide-intro', width: 1920, height: 1080 }] });
+  const registry = buildRegistry({ blocks: [titleBar] });
 
-  it('marks templates of another aspect so the planner does not pick them for this canvas', () => {
+  it('lists blocks under their own heading with their fit', () => {
     const text = describeCapabilities(registry, { width: 1080, height: 1080 });
-    expect(text).toContain('Templates (ready-made layouts: choose one only when its scenes and look match the brief)');
-    expect(text).toContain('  - intro-card: A square title card (1080x1080');
-    expect(text).toContain('  - wide-intro: A square title card (1920x1080');
-    expect(text).toContain('[other aspect]');
-    expect(text.indexOf('- intro-card')).toBeLessThan(text.indexOf('[other aspect]'));
+    expect(text).toContain('Blocks:');
+    expect(text).toContain('  - title-bar: A lower third (overlay');
+    expect(text).not.toContain('Templates');
   });
 
   it('explains the React kit as reference when react is not allowed', () => {

@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignLook } from '@ove/schema';
 import {
-  buildRegistry, composeFromTemplate, fillTemplateSource, parseContract, planSystemPrompt, readBuildPlan,
-  systemPrompt, userPrompt, type AiProvider, type ChatMessage, type PlanOptions, type TemplateChoice,
+  buildRegistry, parseContract, planSystemPrompt, readBuildPlan,
+  systemPrompt, userPrompt, type PlanOptions,
 } from '@ove/ai';
 
-// The model decides the design: the planner's look is validated, refined onto a template's theme variables, and carried
+// The model decides the design: the planner's look is validated and carried
 // into every prompt. These tests hold that contract so no fixed house style creeps back in.
-const registry = buildRegistry({
-  templates: [{ id: 'intro-card', name: 'Intro card', description: 'A square title card', width: 1080, height: 1080, durationSeconds: 6, themed: true,
-    variables: [{ name: 'title', type: 'string' }, { name: 'bg', type: 'color' }] }],
-  themes: [{ id: 'midnight', name: 'Midnight', description: 'Dark blues' }],
-});
+const registry = buildRegistry({});
 const planOptions: PlanOptions = { brief: 'a craft coffee launch', width: 1080, height: 1080, fps: 30, durationSeconds: 6, registry };
 const beat = { name: 'Hook', onScreen: 'the bag on a wooden counter', seconds: 6 };
 
@@ -59,50 +55,6 @@ describe('planner art direction', () => {
     expect(prompt).not.toContain('dark gradient');
     expect(userPrompt('a launch', { width: 1080, height: 1920, fps: 30, durationSeconds: 10 })).toContain('choose an art direction');
     expect(systemPrompt()).not.toContain('The background should be a dark gradient');
-  });
-});
-
-const themed: TemplateChoice = {
-  themed: true, id: 'craft-card', name: 'Craft card', description: 'A craft backdrop', width: 1080, height: 1080, durationSeconds: 2,
-  variables: [
-    { name: 'title', type: 'string', default: 'Hello' },
-    { name: 'bg', type: 'color', default: '#000000' },
-    { name: 'fontDisplay', type: 'string', default: 'Inter' },
-    { name: 'texture', type: 'string', default: 'none' },
-    { name: 'layout', type: 'string', default: 'left' },
-  ],
-  composition: {
-    version: '1.0', id: 'craft-card', name: 'Craft card', width: 1080, height: 1080, fps: 30, durationFrames: 60,
-    variables: {
-      title: { type: 'string', default: 'Hello' }, bg: { type: 'color', default: '#000000' },
-      fontDisplay: { type: 'string', default: 'Inter' }, texture: { type: 'string', default: 'none' }, layout: { type: 'string', default: 'left' },
-    },
-    scenes: [{ id: 's', name: 'S', startFrame: 0, durationFrames: 60, layers: [{ id: 't', type: 'text', content: '{{title}}', x: 40, y: 40, fontSize: 64, fontFamily: '{{fontDisplay}}' }] }],
-  },
-};
-
-describe('look on templates', () => {
-  it('lays the look over the theme and leaves tokens the template does not declare alone', () => {
-    const source = fillTemplateSource(themed, {}, { id: 'espresso', name: 'Espresso', description: '', variables: { bg: '#1a120b', fontDisplay: 'Fraunces', texture: 'paper', layout: 'left', motion: 'rise' } }, [], {
-      fonts: { display: 'Source Sans 3' }, palette: { bg: '#f4efe6' }, layout: 'editorial',
-    });
-    expect(source.variables.bg.default).toBe('#f4efe6');
-    expect(source.variables.fontDisplay.default).toBe('Source Sans 3');
-    expect(source.variables.texture.default).toBe('paper');
-    expect(source.variables.layout.default).toBe('editorial');
-    expect(source.variables.motion).toBeUndefined();
-  });
-
-  it('checks layout variants against the arrangements the block accepts and normalises their case', async () => {
-    const variant: TemplateChoice = {
-      ...themed, id: 'variant-card', variables: [...themed.variables, { name: 'heroVariant', type: 'string', default: 'left' }],
-      composition: { ...themed.composition, variables: { ...(themed.composition.variables as Record<string, unknown>), heroVariant: { type: 'string', default: 'left' } } },
-    };
-    const seen: ChatMessage[][] = [];
-    const provider: AiProvider = { id: 'fake', model: 'fake-1', baseUrl: 'fake://', chat: async messages => { seen.push(structuredClone(messages)); return JSON.stringify({ template: 'variant-card', values: { title: 'Coffee', heroVariant: seen.length === 1 ? 'split' : 'Center' } }); } };
-    const result = (await composeFromTemplate(provider, [variant], { brief: 'a coffee promo', width: 1080, height: 1080, maxAttempts: 2 }))!;
-    expect(result.values.heroVariant).toBe('center');
-    expect(String(seen[1]!.at(-1)!.content)).toContain('"heroVariant" must be one of left, center, band');
   });
 });
 

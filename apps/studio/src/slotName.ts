@@ -1,4 +1,4 @@
-// A readable name for an editable text layer. Layer ids come from templates and the AI ("steps-kicker", "cta-title"); people should read
+// A readable name for an editable text layer. Layer ids come from blocks and the AI ("steps-kicker", "cta-title"); people should read
 // "Eyebrow" and "Call to action headline". A leading word that repeats the scene's own name is dropped.
 const names: Record<string, string> = {
   kicker: 'eyebrow', eyebrow: 'eyebrow', title: 'headline', headline: 'headline', heading: 'headline', subtitle: 'subheading', subhead: 'subheading',

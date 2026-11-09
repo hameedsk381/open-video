@@ -146,7 +146,6 @@ describe('createProvider routing', () => {
 
 describe('FreeLLMAPI task-aware routing', () => {
   it('infers the task from the messages', () => {
-    expect(inferChatTask([{ role: 'user', content: 'You fill in ready-made video templates for our catalog' }])).toBe('template');
     expect(inferChatTask([{ role: 'user', content: 'The video compiled but the design review found these issues' }])).toBe('heal');
     expect(inferChatTask([{ role: 'user', content: 'You are the production planner for MotionRender.' }])).toBe('fast');
     expect(inferChatTask([{ role: 'user', content: 'Extract a clean BrandPack JSON from this scraped website data' }])).toBe('brand');

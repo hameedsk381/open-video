@@ -6,9 +6,9 @@ artifacts/
 .env
 .env.*
 
-# Build output of `pnpm build:package` (the template, skill and licence are copied in from their sources)
+# Build output of `pnpm build:package` (the starter, skill and licence are copied in from their sources)
 packages/ove/dist/
-packages/ove/templates/
+packages/ove/starter/
 packages/ove/blocks/
 packages/ove/themes/
 packages/ove/studio/

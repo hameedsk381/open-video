@@ -1,11 +1,10 @@
 // The capability registry: one catalogue of everything the AI may use to make a video, so the planner can choose from
-// real capabilities instead of inventing unsupported ones. It is built from the actual catalogues (templates, themes,
-// blocks) plus the schema's built-in effects and sounds and the React component kit. Nothing here calls a model; the
+// real capabilities instead of inventing unsupported ones. It is built from the actual catalogues (blocks) plus the schema's built-in effects and sounds and the React component kit. Nothing here calls a model; the
 // planner in plan.ts reads the text form and its answer is checked back against this registry.
 import { sfxNames } from '@ove/schema';
 
-export type GenerationPath = 'template' | 'json' | 'react';
-export type CapabilityKind = 'template' | 'theme' | 'block' | 'component' | 'effect' | 'sound' | 'move';
+export type GenerationPath = 'json' | 'react';
+export type CapabilityKind = 'block' | 'component' | 'effect' | 'sound' | 'move';
 
 export type Param = { name: string; type: string; description?: string };
 
@@ -17,16 +16,14 @@ export type Capability = {
   /** Which generation paths can use this capability. */
   paths: GenerationPath[];
   version: string;
-  /** What the user (or the model filling a template) must supply. */
+  /** What the caller must supply. */
   params: Param[];
-  /** Compatibility text, such as an aspect ratio, the wanted length, or "takes a theme". */
+  /** Compatibility text, such as an aspect ratio, the wanted length, or "overlay". */
   fit?: string;
   example?: string;
-  // Shape facts only templates carry, so the planner can match a brief to a canvas without parsing `fit`.
   width?: number;
   height?: number;
   durationSeconds?: number;
-  takesTheme?: boolean;
 };
 
 export type Registry = {
@@ -37,13 +34,9 @@ export type Registry = {
   counts(): Record<CapabilityKind, number>;
 };
 
-/** Entries the calling package knows: its own template, theme and block catalogues. Metadata only; no source JSON. */
-export type TemplateEntry = { id: string; name: string; description: string; width: number; height: number; durationSeconds: number; themed?: boolean; variables: { name: string; type: string; description?: string }[] };
-export type ThemeEntry = { id: string; name: string; description: string };
+/** Entries the calling package knows: its own block catalogue. Metadata only; no source JSON. */
 export type BlockEntry = { id: string; name: string; description: string; category: string; kind: 'scene' | 'overlay'; durationFrames: number };
 export type RegistryInput = {
-  templates?: TemplateEntry[];
-  themes?: ThemeEntry[];
   blocks?: BlockEntry[];
 };
 
@@ -182,18 +175,6 @@ export function buildRegistry(input: RegistryInput = {}): Registry {
     if (capabilities.some(own => own.kind === capability.kind && own.id === capability.id)) throw new Error(`Two ${capability.kind} capabilities share the id "${capability.id}"`);
     capabilities.push(capability);
   };
-  for (const template of input.templates ?? []) {
-    push({
-      id: template.id, kind: 'template', name: template.name, description: template.description,
-      paths: ['template', 'json'], version: registryVersion,
-      params: template.variables.map(variable => ({ name: variable.name, type: variable.type, description: variable.description })),
-      fit: `${template.width}x${template.height}, about ${Math.round(template.durationSeconds)} s${template.themed ? ', takes a theme' : ''}`,
-      width: template.width, height: template.height, durationSeconds: template.durationSeconds, takesTheme: !!template.themed,
-    });
-  }
-  for (const theme of input.themes ?? []) {
-    push({ id: theme.id, kind: 'theme', name: theme.name, description: theme.description, paths: ['template'], version: registryVersion, params: [] });
-  }
   for (const block of input.blocks ?? []) {
     push({
       id: block.id, kind: 'block', name: block.name, description: block.description,
@@ -214,33 +195,24 @@ export function buildRegistry(input: RegistryInput = {}): Registry {
     capabilities,
     select,
     find: (kind, id) => capabilities.find(capability => capability.kind === kind && capability.id === id),
-    counts: () => ({ template: select('template').length, theme: select('theme').length, block: select('block').length, component: select('component').length, effect: select('effect').length, sound: select('sound').length, move: select('move').length }),
+    counts: () => ({ block: select('block').length, component: select('component').length, effect: select('effect').length, sound: select('sound').length, move: select('move').length }),
   };
 }
 
-/** The same aspect ratio, within 2%: a 1080x1080 template fits a 1078x1085 canvas. */
-export function sameShape(a: { width?: number; height?: number }, b: { width: number; height: number }): boolean {
-  if (!a.width || !a.height) return false;
-  return Math.abs(a.width / a.height - b.width / b.height) < 0.02;
-}
-
-const kindTag: Record<CapabilityKind, string> = { template: 'Templates', theme: 'Themes', block: 'Blocks', component: 'React components', effect: 'Effects', sound: 'Sounds', move: 'Motion moves' };
+const kindTag: Record<CapabilityKind, string> = { block: 'Blocks', component: 'React components', effect: 'Effects', sound: 'Sounds', move: 'Motion moves' };
 
 /** The registry as compact text for the planner prompt, grouped by kind. */
-export function describeCapabilities(registry: Registry, fit: { width: number; height: number; allowReact?: boolean; /** Names and one short line each; no parameters, blocks or sounds. For providers with a small request limit. */ compact?: boolean }): string {
+export function describeCapabilities(registry: Registry, fit: { width?: number; height?: number; allowReact?: boolean; /** Names and one short line each; no parameters, blocks or sounds. For providers with a small request limit. */ compact?: boolean }): string {
   const lines: string[] = [];
   for (const [kind, tag] of Object.entries(kindTag) as [CapabilityKind, string][]) {
     const items = registry.select(kind);
     if (!items.length || (fit.compact && (kind === 'block' || kind === 'sound'))) continue;
-    lines.push(kind === 'template' ? 'Templates (ready-made layouts: choose one only when its scenes and look match the brief):' : `${tag}:`);
+    lines.push(`${tag}:`);
     for (const capability of items) {
-      const shape = kind === 'template'
-        ? ` (${capability.fit})`
-        : capability.fit ? ` (${capability.fit})` : '';
-      const usable = sameShape(capability, fit) ? '' : kind === 'template' ? ' [other aspect]' : '';
+      const shape = capability.fit ? ` (${capability.fit})` : '';
       const params = !fit.compact && capability.params.length ? `\n    values: ${capability.params.map(param => `${param.name} (${param.type})`).join(', ')}` : '';
       const paths = capability.paths.length && !capability.paths.every(path => path === 'json') ? ` [paths: ${capability.paths.join(', ')}]` : '';
-      lines.push(`  - ${capability.id}: ${fit.compact ? capability.description.slice(0, 90) : capability.description}${shape}${paths}${usable}${params}`);
+      lines.push(`  - ${capability.id}: ${fit.compact ? capability.description.slice(0, 90) : capability.description}${shape}${paths}${params}`);
     }
   }
   if (!fit.allowReact && lines.some(line => line.startsWith('React'))) {

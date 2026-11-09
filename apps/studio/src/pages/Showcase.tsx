@@ -19,7 +19,6 @@ export type ShowcaseItem = {
   aspect: '9:16' | '16:9' | '1:1';
   duration: string;
   theme: string;
-  templateId?: string;
   prompt: string;
   summary: string;
   previewGradient: string;
@@ -34,7 +33,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '12s',
     theme: 'midnight',
-    templateId: 'product-spotlight',
     prompt: 'Make an ultra-clean 12-second SaaS UI animation demonstrating shape morphing across three states: idle state with glowing status indicator, active state where cards expand fluidly with spring physics, and success celebration with kinetic particle pop. Use sleek dark glassmorphism, crisp Inter typography, and subframe motion blur.',
     summary: 'Fluid state transitions with spring physics, glass cards, and status pill transitions.',
     previewGradient: 'linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #0f172a 100%)',
@@ -47,7 +45,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '9:16',
     duration: '15s',
     theme: 'neon',
-    templateId: 'kinetic-type',
     prompt: 'A bold, high-energy 15-second kinetic typography reel. Start with rapid rhythmic cuts on single impactful words, transition into an elastic word cascade, dynamic highlighter swipe on the punchline, and finish with an extruded neon title reveal. Strict 9:16 vertical safe-zones with Edge Neural TTS speech timing.',
     summary: 'Rhythmic typography cascade with word-level kinetic emphasis and social safe-zone alignment.',
     previewGradient: 'linear-gradient(135deg, #18181b 0%, #09090b 50%, #27272a 100%)',
@@ -60,7 +57,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '10s',
     theme: 'midnight',
-    templateId: 'starter',
     prompt: 'Create a cinematic 10-second product film featuring an isometric bento grid floating in 3D space with subtle camera push and depth of field. Each glass tile reveals a core feature with frosted glass refraction, glowing border outline, and soft ambient drop shadows.',
     summary: 'Isometric bento layout with depth-of-field camera push and frosted glass reflections.',
     previewGradient: 'linear-gradient(135deg, #030712 0%, #111827 50%, #1f2937 100%)',
@@ -73,7 +69,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '9:16',
     duration: '15s',
     theme: 'neon',
-    templateId: 'hook-reel',
     prompt: 'Generate an irresistible 15-second vertical video designed for TikTok and Instagram Reels. Top third features an attention-grabbing hook badge with animated siren glow, middle has dynamic animated cards, and bottom displays synchronized word-by-word highlighted captions timed exactly to the voiceover.',
     summary: 'High-retention vertical layout with animated headline hook and synced word captions.',
     previewGradient: 'linear-gradient(135deg, #09090b 0%, #1c1917 50%, #292524 100%)',
@@ -86,7 +81,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '10s',
     theme: 'neon',
-    templateId: 'stats-showcase',
     prompt: 'Create a polished product feature video showcasing real-time analytics. Numbers rapidly count up with spring easing from 0 to 4.2M users, accompanied by an animated glowing SVG sparkline that draws across the canvas, followed by badge status pills turning green.',
     summary: 'Spring-eased number counter animations with live animated trendline graph.',
     previewGradient: 'linear-gradient(135deg, #052e16 0%, #064e3b 50%, #022c22 100%)',
@@ -99,7 +93,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '9:16',
     duration: '12s',
     theme: 'midnight',
-    templateId: 'hook-reel',
     prompt: 'A sleek 3D smartphone mockup that tilts toward the camera. The screen displays an interactive mobile app onboarding sequence that scrolls smoothly through 3 cards with subtle parallax, ending with a dynamic download call-to-action card.',
     summary: 'Parallax device mockup with smooth screen interaction and CTA card entrance.',
     previewGradient: 'linear-gradient(135deg, #0a0a0a 0%, #171717 50%, #262626 100%)',
@@ -112,7 +105,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '8s',
     theme: 'signal',
-    templateId: 'stats-showcase',
     prompt: 'A bold data comparison video split down the center. Left column reveals "10x Faster Deployment" with an animated circular progress ring; right column shows "+320% Revenue" with rising bar charts and celebration particles. Crisp monospace data labels.',
     summary: 'Split-screen data comparison with synchronized progress rings and bar meters.',
     previewGradient: 'linear-gradient(135deg, #1e1b4b 0%, #31104b 50%, #0f172a 100%)',
@@ -125,7 +117,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '6s',
     theme: 'midnight',
-    templateId: 'logo-sting',
     prompt: 'A 6-second broadcast-grade logo intro on deep obsidian black. An ethereal spotlight sweeps across an embossed metallic logo with light leaks and chromatic aberration, followed by a crisp brand tagline fading in with letter-spacing drift and an impact bass hit.',
     summary: 'Spotlight sweep, chromatic aberration, light leak reflections, and typography fade.',
     previewGradient: 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%)',
@@ -138,7 +129,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '1:1',
     duration: '8s',
     theme: 'paper',
-    templateId: 'quote-card',
     prompt: 'Create an editorial 1:1 square animated quote video. Large serif typography renders with typewriter reveal, followed by a warm yellow marker highlighter stroke wiping across the primary concept, ending with an elegant author signature card.',
     summary: 'Editorial typography styling with marker highlighter wipe and author attribution.',
     previewGradient: 'linear-gradient(135deg, #1c1917 0%, #292524 50%, #0c0a09 100%)',
@@ -151,7 +141,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '1:1',
     duration: '10s',
     theme: 'slate',
-    templateId: 'product-spotlight',
     prompt: 'A clean 10-second square product video for a modern hardware device. Smooth slow-motion scale-in of the product photograph with drop shadow, animated badge chips showing technical specs (e.g. "Titanium Build", "48h Battery"), and animated price tag.',
     summary: 'Subtle product zoom, specs pills entry, and dynamic CTA price banner.',
     previewGradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
@@ -164,7 +153,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '12s',
     theme: 'midnight',
-    templateId: 'tutorial-steps',
     prompt: 'A timeline progression animation tracking quarterly product milestones. A glowing neon cursor travels across an SVG path, activating step cards one by one with subtle scale pulse and checkmark reveals. Clean date tags and dark mode palette.',
     summary: 'Quarterly releases as milestones along an animated path.',
     previewGradient: 'linear-gradient(135deg, #030712 0%, #0f172a 50%, #111827 100%)',
@@ -177,7 +165,6 @@ export const SHOWCASE_ITEMS: ShowcaseItem[] = [
     aspect: '16:9',
     duration: '14s',
     theme: 'espresso',
-    templateId: 'starter',
     prompt: 'A high-impact 14-second conference keynote opening video. Cinematic Ken Burns zoom across architectural backdrop imagery, overlaid with huge condensed headline typography, dual-color gradients, and rhythmic camera shake impacts on beat drops.',
     summary: 'Cinematic keynote sequence with Ken Burns camera moves and high-contrast typography.',
     previewGradient: 'linear-gradient(135deg, #1c1917 0%, #451a03 50%, #0c0a09 100%)',
@@ -250,7 +237,6 @@ export function Showcase() {
   const useThisBrief = (item: ShowcaseItem, e?: React.SyntheticEvent) => {
     e?.stopPropagation();
     const params = new URLSearchParams();
-    if (item.templateId) params.set('template', item.templateId);
     params.set('prompt', item.prompt);
     go(`#/new?${params.toString()}`);
   };

@@ -26,7 +26,7 @@ export function cleanProgressMessage(message: string): string {
   if (/retim/i.test(clean)) return 'Optimizing rhythm, transitions and scene timing…';
   if (/visual system|contract|palette|brand/i.test(clean)) return 'Establishing brand colors and typographic hierarchy…';
   if (/designing.*scene|storyboard|beat|plan/i.test(clean)) return 'Structuring scene layouts and narrative beats…';
-  if (/template|compose|layer|scene/i.test(clean)) return 'Composing kinetic typography and motion layers…';
+  if (/compose|layer|scene/i.test(clean)) return 'Composing kinetic typography and motion layers…';
   if (/review|check|inspect/i.test(clean)) return 'Reviewing visual hierarchy and animation quality…';
   if (/heal|re-design|polish/i.test(clean)) return 'Applying fine polish to animation curves and easing…';
   if (/render/i.test(clean)) {
@@ -66,7 +66,6 @@ export function createHandlers(env: JobEnv) {
     return { kind: 'compose', run: async progress => {
       const ai = resolveProvider(input);
       const pictures = (await env.assets(paths.idOf(dir))).map(asset => ({ id: assetIdFromPath(asset.name), type: asset.kind, src: './' + asset.path }));
-      const template = typeof input.template === 'string' && input.template.trim() ? input.template.trim() : undefined;
       const full = boolOf(input.full);
 
       // Enrich creative direction from user customization
@@ -110,9 +109,8 @@ export function createHandlers(env: JobEnv) {
         brand, includeSchema: boolOf(input.schema), plan: full, maxAttempts: integerIn(input.maxAttempts, 3, 'maxAttempts', 1, 10),
         onProgress: message => progress(cleanProgressMessage(message)),
       };
-      const theme = typeof input.theme === 'string' && input.theme.trim() ? input.theme.trim() : undefined;
       // React authoring is offered only where the code runs on the user's own machine; hosted jobs stay on data routes.
-      const result = await capabilities.composeSmart(ai, options, { full, theme, template }, Boolean(env.local));
+      const result = await capabilities.composeSmart(ai, options, { full }, Boolean(env.local));
       let composition = result.composition;
 
       if (input.customColors && typeof input.customColors === 'object') {
@@ -133,7 +131,7 @@ export function createHandlers(env: JobEnv) {
       if (options.narration) {
         const voice = typeof input.voice === 'string' && input.voice.trim() ? input.voice.trim() : undefined;
         const language = typeof input.language === 'string' && input.language.trim() ? input.language.trim() : undefined;
-        const produced = await capabilities.narrateSmart(ai, result, {
+        const produced = await capabilities.narrate(ai, {
           brief, outDir: resolve(dir, 'assets'), durationSeconds: canvas.durationSeconds, composition,
           compositionPath: resolve(dir, 'composition.json'), tailSeconds: 0.8, onProgress: message => progress(cleanProgressMessage(message)),
           voice, language,
@@ -153,9 +151,7 @@ export function createHandlers(env: JobEnv) {
       if (logo) addBrandLogo(composition as any, source as any, logo.src);
       if (brand?.contact) addBrandContact(composition as any, source as any, brand.contact);
       const files = await writeCompositionProject(dir, composition, { force: true, source });
-      // A template's own pictures and sounds travel with it inside composeSmart, which owns the template catalogue;
-      // if they could not, it says so in `result.warnings` and that is reported below like any other note.
-      await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), brief: brief.slice(0, 4000), provider: ai.id, model: ai.model, template: result.template, attempts: result.attempts });
+      await saveRevision(files.composition, { kind: 'compose', label: brief.slice(0, 160), brief: brief.slice(0, 4000), provider: ai.id, model: ai.model, attempts: result.attempts });
       return {
         dir, ...resultFile(files.composition), frames: composition.durationFrames, seconds: composition.durationFrames / composition.fps,
         scenes: composition.scenes.length, attempts: result.attempts, warnings: result.warnings, reviewed: Boolean(options.review),

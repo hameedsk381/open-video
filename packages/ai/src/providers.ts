@@ -15,7 +15,7 @@ import { createGroq } from '@ai-sdk/groq';
 export type ChatRole = 'system' | 'user' | 'assistant';
 export type ChatMessage = { role: ChatRole; content: string | any[] };
 /** `direct` is the creative stages (planner, direction): few calls, and the ones whose taste decides how the video looks. */
-export type ChatTask = 'compose' | 'direct' | 'template' | 'heal' | 'brand' | 'batch' | 'vision' | 'fast';
+export type ChatTask = 'compose' | 'direct' | 'heal' | 'brand' | 'batch' | 'vision' | 'fast';
 export type ChatOptions = {
   json?: boolean;
   temperature?: number;
@@ -225,7 +225,6 @@ export const TASK_MODEL_PREFERENCES: Record<ChatTask, string[]> = {
   // 'auto' is the proven fallback.
   compose: ['qwen3.8-27b', 'auto'],
   direct: ['qwen3.8-27b', 'auto'],
-  template: ['qwen3.8-27b', 'mistral-small-3.2-24b', 'auto'],
   heal: ['qwen3.8-27b', 'auto'],
   vision: ['llama-3.2-90b-vision', 'qwen2.5-vl-72b', 'llama-3.2-11b-vision-instruct', 'auto'],
   brand: ['qwen3.8-27b', 'auto'],
@@ -271,9 +270,6 @@ export function inferChatTask(messages: ChatMessage[], options?: ChatOptions): C
   const fullText = messages.map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n');
   if (/design review found these issues|visual review|fix ONLY these design problems|repair message/i.test(fullText)) {
     return 'heal';
-  }
-  if (/fill in ready-made video templates|fill a template|candidates\.find/i.test(fullText)) {
-    return 'template';
   }
   if (/production planner|Decide how the brief|planBuild|plan motion-graphics|Plan a .*motion-graphics video/i.test(fullText)) {
     return 'fast';
@@ -620,13 +616,6 @@ export class MockProvider implements AiProvider {
           { name: 'payoff', takeaway: 'remember this', onScreen: 'Hold the idea', seconds: c, motion: 'logo hold; slow zoom' },
         ],
       });
-    }
-    if (prompt.includes('You fill in ready-made video templates')) {
-      // Picks the first template listed and writes sample text for each of its text variables, as a real model would.
-      const first = /^- ([a-z0-9][a-z0-9-]*): [^\n]*\n((?:    - [^\n]*\n?)*)/m.exec(prompt);
-      if (!first) return JSON.stringify({ template: 'none' });
-      const values = Object.fromEntries([...first[2]!.matchAll(/^    - (\w+) \(string\)/gm)].filter(match => !/^(image|photo|picture)\d*$/i.test(match[1]!)).map(match => [match[1], 'Mock text']));
-      return JSON.stringify({ template: first[1], values });
     }
     const number = (name: string, fallback: number) => numberFromPrompt(prompt, name, fallback);
     const width = number('WIDTH', 1080), height = number('HEIGHT', 1920), fps = number('FPS', 30), duration = number('DURATION_FRAMES', fps * 5);

@@ -278,7 +278,7 @@ export function App() {
       ) : route.name === 'showcase' ? (
         <Showcase />
       ) : route.name === 'new' ? (
-        <Create initialTemplate={route.template} initialKind={route.kind} initialPrompt={route.prompt} initialFrom={route.from} />
+        <Create initialDesign={route.design} initialKind={route.kind} initialPrompt={route.prompt} initialFrom={route.from} />
       ) : route.name === 'making' ? (
         <Making id={route.id} job={route.job} />
       ) : route.name === 'production' ? (
