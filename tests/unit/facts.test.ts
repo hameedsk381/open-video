@@ -94,6 +94,41 @@ describe('a lookup that fails', () => {
   });
 });
 
+describe('a slow answer', () => {
+  const rate = { base: 'USD', date: '2026-11-06', rates: { INR: 93.92 } };
+
+  it('is raced by a second request after a short wait, and the first to answer wins', async () => {
+    const signals: AbortSignal[] = [];
+    const slowThenFast = (async (_url: string, init?: RequestInit) => {
+      signals.push(init!.signal as AbortSignal);
+      if (signals.length === 1) return new Promise<Response>((_ok, fail) => (init!.signal as AbortSignal).addEventListener('abort', () => fail(new DOMException('aborted', 'AbortError'))));
+      return json(rate);
+    }) as unknown as typeof fetch;
+    const { facts, notes } = await gatherFacts([{ type: 'exchange', base: 'USD', quotes: ['INR'] }], { fetch: slowThenFast, hedgeMs: 20 });
+    expect(notes).toEqual([]);
+    expect(facts).toHaveLength(1);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]!.aborted).toBe(true); // the slow one was cancelled once the other answered
+  });
+
+  it('is not raced when the first answer is a plain failure', async () => {
+    let calls = 0;
+    const missing = (async () => { calls++; return new Response('no', { status: 404 }); }) as unknown as typeof fetch;
+    const { notes } = await gatherFacts([{ type: 'exchange', base: 'USD', quotes: ['INR'] }], { fetch: missing, hedgeMs: 20 });
+    await new Promise(done => setTimeout(done, 60));
+    expect(notes[0]).toMatch(/404/);
+    expect(calls).toBe(1);
+  });
+
+  it('does not start a second request when the first answers in time', async () => {
+    let calls = 0;
+    const quick = (async () => { calls++; return json(rate); }) as unknown as typeof fetch;
+    await gatherFacts([{ type: 'exchange', base: 'USD', quotes: ['INR'] }], { fetch: quick, hedgeMs: 50 });
+    await new Promise(done => setTimeout(done, 120));
+    expect(calls).toBe(1);
+  });
+});
+
 describe('planning the lookups', () => {
   const asks = (reply: string) => ({ id: 'fake', model: 'fake', chat: async () => reply }) as unknown as AiProvider;
 

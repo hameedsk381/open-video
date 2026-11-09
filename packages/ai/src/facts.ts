@@ -33,26 +33,55 @@ export type Lookup = z.infer<typeof lookupSchema>;
 
 const HOSTS = new Set(['en.wikipedia.org', 'api.worldbank.org', 'api.frankfurter.dev']);
 const AGENT = 'MotionRender/1.0 (https://motionrender.io; explainer fact lookup)';
-// The World Bank answers in anything from a fifth of a second to several seconds, so a request gets 20 s and one more try.
-const MAX_BYTES = 1_500_000, TIMEOUT_MS = 20_000;
+// The World Bank answers in anything from a fifth of a second to ten seconds or more: a slow request is raced by a second one after 5 s, and the whole lookup gets 25 s.
+const MAX_BYTES = 1_500_000, TIMEOUT_MS = 25_000, HEDGE_MS = 5_000;
 
-export type FactsOptions = { fetch?: typeof fetch; signal?: AbortSignal; now?: () => Date };
+export type FactsOptions = { fetch?: typeof fetch; signal?: AbortSignal; now?: () => Date; /** After how long a slow request is raced by an identical one (default 5000 ms). */ hedgeMs?: number };
 
-async function getJson(url: string, options: FactsOptions, attempt = 1): Promise<unknown> {
+const isTimeout = (error: unknown) => (error as Error)?.name === 'TimeoutError';
+
+/** One request: size-limited, no redirects, and one retry after a server error. */
+async function once(url: string, options: FactsOptions, signal: AbortSignal, attempt = 1): Promise<unknown> {
+  const host = new URL(url).hostname;
+  const response = await (options.fetch ?? fetch)(url, { signal, redirect: 'error', headers: { 'user-agent': AGENT, accept: 'application/json' } });
+  if (response.status >= 500 && attempt < 2) return once(url, options, signal, attempt + 1);
+  if (!response.ok) throw new Error(`${host} answered ${response.status}`);
+  const body = await response.text();
+  if (body.length > MAX_BYTES) throw new Error(`${host} sent more than ${MAX_BYTES} bytes`);
+  return JSON.parse(body);
+}
+
+/**
+ * Runs a request and, if it is slow to answer, races an identical second one: the first to succeed wins and the other is cancelled. The World Bank
+ * sometimes takes ten seconds for a question it answers in a third of a second the next time, and an agent should not wait on that. A request that
+ * fails outright (not found, refused) fails at once; only a slow or timed-out one is raced.
+ */
+function hedged<T>(start: (signal: AbortSignal) => Promise<T>, afterMs: number, overall: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const stops: AbortController[] = [];
+    let live = 0, finished = false, timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (settle: () => void) => { finished = true; clearTimeout(timer); for (const stop of stops) stop.abort(); settle(); };
+    const launch = () => {
+      if (finished) return;
+      const stop = new AbortController();
+      stops.push(stop); live++;
+      start(AbortSignal.any([overall, stop.signal])).then(value => { if (!finished) finish(() => resolve(value)); }, error => {
+        live--;
+        if (finished) return;
+        const canRace = stops.length < 2 && isTimeout(error) && !overall.aborted;
+        if (live === 0 && !canRace) finish(() => reject(error));
+      });
+    };
+    launch();
+    timer = setTimeout(launch, afterMs);
+  });
+}
+
+async function getJson(url: string, options: FactsOptions): Promise<unknown> {
   const host = new URL(url).hostname;
   if (!HOSTS.has(host)) throw new Error(`${host} is not a source this lookup may use`);
-  const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS);
-  try {
-    const response = await (options.fetch ?? fetch)(url, { signal, redirect: 'error', headers: { 'user-agent': AGENT, accept: 'application/json' } });
-    if (response.status >= 500 && attempt < 2) return getJson(url, options, attempt + 1);
-    if (!response.ok) throw new Error(`${host} answered ${response.status}`);
-    const body = await response.text();
-    if (body.length > MAX_BYTES) throw new Error(`${host} sent more than ${MAX_BYTES} bytes`);
-    return JSON.parse(body);
-  } catch (error) {
-    if (attempt < 2 && !options.signal?.aborted && (error as Error).name === 'TimeoutError') return getJson(url, options, attempt + 1);
-    throw error;
-  }
+  const overall = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS);
+  return hedged(signal => once(url, options, signal), options.hedgeMs ?? HEDGE_MS, overall);
 }
 
 const compact = (value: number): string => {
