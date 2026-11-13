@@ -1,4 +1,4 @@
-import { addBlockRequest, idRequest, newProjectRequest, parseRequest, renameRequest, assetDeleteRequest, assetUseRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { addBlockRequest, idRequest, layerPatchRequest, newProjectRequest, parseRequest, renameRequest, assetDeleteRequest, assetUseRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
 import { measureMedia, loadComposition } from '@ove/core';
@@ -250,6 +250,21 @@ export function projectRoutes(): Route[] {
       }
       await writeRaw(c, id, composition, { kind: 'edit', label: moves.length > 1 ? `Moved ${moves.length} layers into the safe zone` : 'Snapped to safe zone' });
       c.json(200, { ok: true, moved: moves.length });
+    } },
+    { method: 'POST', path: '/api/layer/patch', handle: async c => {
+      const request = parseRequest(layerPatchRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
+      setAtPath(composition, request.path, layer => {
+        for (const [key, val] of Object.entries(request.patch)) {
+          if (['id', 'type', 'children'].includes(key)) continue;
+          if (val === undefined) {
+            delete layer[key];
+          } else {
+            layer[key] = val;
+          }
+        }
+      });
+      await writeRaw(c, id, composition, { kind: 'edit', label: 'Updated layer properties' });
+      c.json(200, { ok: true });
     } },
     { method: 'POST', path: '/api/add-block', handle: async c => {
       const request = parseRequest(addBlockRequest, await c.body()), id = await exists(c, request.id), { store, library } = c.deps, block = await library.readBlock(request.block);

@@ -36,6 +36,7 @@ export type PlayerViewProps = {
   selectedLayerPath?: string | null;
   onSelectLayerPath?: (path: string | null) => void;
   onSaveLayerText?: (path: string, content: string, variableName?: string) => Promise<void>;
+  onUpdateLayer?: (path: string, patch: Record<string, any>) => Promise<void>;
   onSnapLayers?: (moves: LayerMove[]) => Promise<void>;
   /** Shown at the top of the timeline: which scene is being edited, and adding one. */
   timelineHeader?: ReactNode;
@@ -54,6 +55,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
     selectedLayerPath = null,
     onSelectLayerPath,
     onSaveLayerText,
+    onUpdateLayer,
     onSnapLayers,
     timelineHeader,
   },
@@ -549,6 +551,7 @@ export const PlayerView = forwardRef<PlayerHandle, PlayerViewProps>(function Pla
             selectedPath={selectedLayerPath ?? null}
             onSelectPath={onSelectLayerPath ?? (() => {})}
             onSaveText={onSaveLayerText ?? (async () => {})}
+            onUpdateLayer={onUpdateLayer}
             onSnapLayers={onSnapLayers}
             disabled={playing}
           />

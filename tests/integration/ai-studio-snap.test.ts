@@ -70,6 +70,22 @@ describe('POST /api/layer/snap', () => {
   });
 });
 
+describe('POST /api/layer/patch', () => {
+  it('updates layer visual and motion properties directly on raw composition', async () => {
+    const res = await send('POST', '/api/layer/patch', {
+      id: 'snap',
+      path: 'scenes[0].layers[0]',
+      patch: { fontSize: 72, fontWeight: 700, color: '#6366f1', motion: 'pop' },
+    });
+    expect(res.status).toBe(200);
+    const layer = (await read()).scenes[0].layers[0];
+    expect(layer.fontSize).toBe(72);
+    expect(layer.fontWeight).toBe(700);
+    expect(layer.color).toBe('#6366f1');
+    expect(layer.motion).toBe('pop');
+  });
+});
+
 describe('POST /api/text', () => {
   it('changes one literal line and leaves the template (variables, bound text, defaults) as written', async () => {
     const lit = { id: 'lit', type: 'text', content: 'Literal line', x: 100, y: 300, fontSize: 48 };

@@ -164,6 +164,20 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   }, [detail, load, setNote, toast, track]);
 
+  const updateLayer = useCallback(async (path: string, patch: Record<string, any>) => {
+    if (!detail) return;
+    try {
+      await track(async () => {
+        await api('/api/layer/patch', { id: detail.id, path, patch });
+        setNote('Layer updated');
+        toast('Layer properties saved', 'success');
+        await load(true);
+      });
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }, [detail, load, setNote, toast, track]);
+
   useEffect(() => {
     setDetail(null);
     load(false);
@@ -357,6 +371,7 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           selectedLayerPath={selectedTextPath}
           onSelectLayerPath={setSelectedTextPath}
           onSaveLayerText={saveDirectText}
+          onUpdateLayer={updateLayer}
           onSnapLayers={snapLayers}
           timelineHeader={sceneFocus}
         />

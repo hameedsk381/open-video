@@ -151,6 +151,12 @@ export const variablesRequest = z.object({ id, values: z.record(z.string(), z.un
 export const themeRequest = z.object({ id, theme: z.string().min(1, 'theme is required') });
 /** Move layers by offsets: one `moves` list, or a single path with dx and dy. */
 export const snapRequest = z.object({ id, moves: z.array(z.object({ path: z.string().min(1), dx: z.number().default(0), dy: z.number().default(0), maxWidth: z.number().positive().optional() })).min(1).max(100).optional(), path: z.string().min(1).optional(), dx: z.number().optional(), dy: z.number().optional() }).refine(v => v.moves || v.path, { message: 'moves or path is required' });
+/** Update layer visual/motion properties directly by path. */
+export const layerPatchRequest = z.object({
+  id,
+  path: z.string().min(1, 'path is required'),
+  patch: z.record(z.string(), z.unknown()),
+});
 /* Stock libraries */
 export const stockStatusSchema = z.object({ providers: z.array(z.object({ id: stockProviderSchema, label: z.string(), keyUrl: z.string(), connected: z.boolean(), keyHint: z.string().optional() })) });
 export type StockStatus = z.infer<typeof stockStatusSchema>;

@@ -17,6 +17,8 @@ export type CanvasTextItem = {
   fontFamily: string;
   fontWeight: number;
   textAlign: 'left' | 'center' | 'right';
+  color?: string;
+  motion?: string;
   variableName?: string;
 };
 
