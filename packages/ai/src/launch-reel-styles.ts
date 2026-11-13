@@ -219,6 +219,117 @@ export function getStyleBackground(style: LaunchReelStyle, width: number, height
 }
 
 /**
+ * Creates an interactive simulated cursor with movement, hover, and click ripple.
+ */
+function createSimulatedCursor(width: number, height: number, brandColor: string): Layer {
+  const isVertical = height > width;
+  const startX = width * 0.28;
+  const targetX = width * 0.50;
+  const startY = isVertical ? height * 0.62 : height * 0.68;
+  const targetY = isVertical ? height * 0.46 : height * 0.48;
+
+  return {
+    type: 'group',
+    id: 'simulated-cursor',
+    x: startX,
+    y: startY,
+    width: 36,
+    height: 36,
+    animations: [
+      {
+        property: 'x',
+        keyframes: [
+          { frame: 10, value: startX },
+          { frame: 45, value: targetX, easing: 'glide' },
+          { frame: 75, value: targetX },
+          { frame: 110, value: width * 0.72, easing: 'glide' },
+        ],
+      },
+      {
+        property: 'y',
+        keyframes: [
+          { frame: 10, value: startY },
+          { frame: 45, value: targetY, easing: 'glide' },
+          { frame: 75, value: targetY },
+          { frame: 110, value: height * 0.58, easing: 'glide' },
+        ],
+      },
+      {
+        property: 'scale',
+        keyframes: [
+          { frame: 46, value: 1 },
+          { frame: 50, value: 0.82, easing: 'pop' },
+          { frame: 56, value: 1, easing: 'pop' },
+        ],
+      },
+      {
+        property: 'opacity',
+        keyframes: [
+          { frame: 5, value: 0 },
+          { frame: 15, value: 1, easing: 'pop' },
+          { frame: 115, value: 1 },
+          { frame: 130, value: 0, easing: 'linear' },
+        ],
+      },
+    ],
+    children: [
+      {
+        type: 'path',
+        id: 'cur-arrow',
+        d: 'M0 0 L0 22 L6 16 L11 26 L14 24 L9 15 L16 15 Z',
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeWidth: 2,
+      },
+      {
+        type: 'circle',
+        id: 'cur-ripple',
+        x: -16,
+        y: -16,
+        width: 32,
+        height: 32,
+        fill: 'transparent',
+        stroke: brandColor,
+        strokeWidth: 2.5,
+        animations: [
+          { property: 'opacity', keyframes: [{ frame: 48, value: 0 }, { frame: 50, value: 0.9 }, { frame: 68, value: 0 }] },
+          { property: 'scale', keyframes: [{ frame: 48, value: 0.3 }, { frame: 68, value: 2.4, easing: 'land' }] },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * Creates a specular light sheen sweep across a glass product card.
+ */
+function createLightSheen(cardW: number, cardH: number): Layer {
+  return {
+    type: 'rect',
+    id: 'specular-sheen',
+    x: -cardW * 0.6,
+    y: 0,
+    width: cardW * 0.45,
+    height: cardH,
+    radius: 24,
+    fill: {
+      type: 'linear',
+      from: [0, 0],
+      to: [cardW * 0.45, 0],
+      stops: [
+        { offset: 0, color: 'rgba(255, 255, 255, 0)' },
+        { offset: 0.5, color: 'rgba(255, 255, 255, 0.16)' },
+        { offset: 1, color: 'rgba(255, 255, 255, 0)' },
+      ],
+    },
+    animations: [
+      { property: 'x', keyframes: [{ frame: 15, value: -cardW * 0.5 }, { frame: 60, value: cardW * 1.4, easing: 'land' }] },
+      { property: 'opacity', keyframes: [{ frame: 15, value: 0 }, { frame: 25, value: 1 }, { frame: 60, value: 0 }] },
+    ],
+  };
+}
+
+/**
  * Builds archetype-specific scenes with custom layouts, typography, and motion grammar.
  */
 export function buildArchetypeScenes(ctx: StyleContext): Scene[] {
@@ -315,7 +426,7 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
             },
           ],
         },
-        // Hero headline
+        // Kinetic Split Headline
         {
           type: 'text',
           id: 'k-headline',
@@ -329,12 +440,14 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: '#f8fafc',
           textAlign: 'center',
-          animations: [
-            { property: 'opacity', keyframes: [{ frame: 10, value: 0 }, { frame: 30, value: 1, easing: 'land' }] },
-            { property: 'y', keyframes: [{ frame: 10, value: isVertical ? height * 0.39 : height * 0.35 }, { frame: 30, value: isVertical ? height * 0.35 : height * 0.32, easing: 'land' }] },
-          ],
+          split: {
+            by: 'words',
+            preset: 'rise',
+            stagger: 2,
+            duration: 16,
+          },
         },
-        // Refined subtitle
+        // Kinetic Split Subtitle
         {
           type: 'text',
           id: 'k-sub',
@@ -349,9 +462,12 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
           color: '#94a3b8',
           textAlign: 'center',
           lineHeight: 1.35,
-          animations: [
-            { property: 'opacity', keyframes: [{ frame: 25, value: 0 }, { frame: 45, value: 1, easing: 'land' }] },
-          ],
+          split: {
+            by: 'words',
+            preset: 'blur',
+            stagger: 2,
+            duration: 14,
+          },
         },
       ],
     },
@@ -367,11 +483,12 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
         y: height / 2,
         zoom: 1,
         animations: [
-          { property: 'zoom', keyframes: [{ frame: 0, value: 0.95 }, { frame: 135, value: 1.06, easing: 'drift' }] },
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
         ],
       },
       layers: [
         { id: 'sfx-r-impact', type: 'audio', src: 'sfx:impact', startFrame: 5, volume: 0.3 },
+        { id: 'sfx-cursor-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.28 },
         {
           type: 'circle',
           id: 'k-rev-glow',
@@ -383,7 +500,7 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
           opacity: 0.16,
           blur: 110,
         },
-        // Screenshot Card
+        // Screenshot Card with Specular Sheen
         {
           type: 'group',
           id: 'k-product-card',
@@ -419,8 +536,10 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
               objectFit: 'cover',
               radius: 24,
             },
+            createLightSheen(cardW, cardH),
           ],
         },
+        createSimulatedCursor(width, height, brandColor),
       ],
     },
 
@@ -481,6 +600,12 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
                 fontFamily: 'Inter, system-ui, sans-serif',
                 color: '#f8fafc',
                 maxWidth: fWidth - 140,
+                split: {
+                  by: 'words',
+                  preset: 'rise',
+                  stagger: 1,
+                  duration: 14,
+                },
               },
             ],
           } as Layer;
@@ -528,9 +653,12 @@ function buildKeynoteScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: '#f8fafc',
           textAlign: 'center',
-          animations: [
-            { property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 15, value: 1, easing: 'pop' }] },
-          ],
+          split: {
+            by: 'words',
+            preset: 'pop',
+            stagger: 2,
+            duration: 18,
+          },
         },
         {
           type: 'group',
@@ -700,6 +828,11 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
               fontWeight: 800,
               fontFamily: 'Consolas, monospace',
               color: '#ffffff',
+              split: {
+                by: 'letters',
+                preset: 'typewriter',
+                stagger: 1,
+              },
             },
             {
               type: 'text',
@@ -712,6 +845,12 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
               fontFamily: 'Consolas, monospace',
               color: '#94a3b8',
               maxWidth: termW - 56,
+              split: {
+                by: 'words',
+                preset: 'rise',
+                stagger: 2,
+                duration: 12,
+              },
             },
             // Blinking cursor
             {
@@ -742,11 +881,12 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
         y: height / 2,
         zoom: 1,
         animations: [
-          { property: 'zoom', keyframes: [{ frame: 0, value: 0.95 }, { frame: 135, value: 1.05, easing: 'drift' }] },
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
         ],
       },
       layers: [
         { id: 'sfx-t-whoosh', type: 'audio', src: 'sfx:whoosh', startFrame: 2, volume: 0.35 },
+        { id: 'sfx-t-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.3 },
         // Developer IDE Frame
         {
           type: 'group',
@@ -805,8 +945,10 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
               fontFamily: 'Consolas, monospace',
               color: phosphorGreen,
             },
+            createLightSheen(termW, termH),
           ],
         },
+        createSimulatedCursor(width, height, phosphorGreen),
       ],
     },
 
@@ -867,6 +1009,12 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
                 fontFamily: 'Consolas, monospace',
                 color: '#ffffff',
                 maxWidth: fWidth - 210,
+                split: {
+                  by: 'words',
+                  preset: 'rise',
+                  stagger: 1,
+                  duration: 12,
+                },
               },
             ],
           } as Layer;
@@ -918,6 +1066,11 @@ function buildTerminalScenes(ctx: StyleContext): Scene[] {
               fontWeight: 700,
               fontFamily: 'Consolas, monospace',
               color: phosphorCyan,
+              split: {
+                by: 'letters',
+                preset: 'typewriter',
+                stagger: 1,
+              },
             },
           ],
         },
@@ -1026,7 +1179,7 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
           height: 1,
           fill: '#d6cfc4',
         },
-        // Serif Title
+        // Serif Title with Blur Split
         {
           type: 'text',
           id: 'e-title',
@@ -1040,9 +1193,12 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Georgia, serif',
           color: inkDark,
           textAlign: 'center',
-          animations: [
-            { property: 'opacity', keyframes: [{ frame: 10, value: 0 }, { frame: 30, value: 1, easing: 'land' }] },
-          ],
+          split: {
+            by: 'words',
+            preset: 'blur',
+            stagger: 3,
+            duration: 18,
+          },
         },
         // Italicized Subtitle
         {
@@ -1060,6 +1216,12 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
           color: '#57534e',
           textAlign: 'center',
           lineHeight: 1.35,
+          split: {
+            by: 'words',
+            preset: 'rise',
+            stagger: 2,
+            duration: 14,
+          },
         },
       ],
     },
@@ -1075,11 +1237,12 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
         y: height / 2,
         zoom: 1,
         animations: [
-          { property: 'zoom', keyframes: [{ frame: 0, value: 0.96 }, { frame: 135, value: 1.04, easing: 'drift' }] },
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
         ],
       },
       layers: [
         { id: 'sfx-e-impact', type: 'audio', src: 'sfx:impact', startFrame: 5, volume: 0.25 },
+        { id: 'sfx-e-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.25 },
         // Art-directed plate frame
         {
           type: 'group',
@@ -1122,6 +1285,7 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
               objectFit: 'cover',
               radius: 6,
             },
+            createLightSheen(cardW, cardH),
           ],
         },
         // Plate caption
@@ -1137,6 +1301,7 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
           color: '#78716c',
           letterSpacing: 2,
         },
+        createSimulatedCursor(width, height, terracotta),
       ],
     },
 
@@ -1194,6 +1359,12 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
                 fontFamily: 'Georgia, serif',
                 color: inkDark,
                 maxWidth: fWidth - 130,
+                split: {
+                  by: 'words',
+                  preset: 'rise',
+                  stagger: 1,
+                  duration: 14,
+                },
               },
             ],
           } as Layer;
@@ -1227,6 +1398,12 @@ function buildEditorialScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Georgia, serif',
           color: inkDark,
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'pop',
+            stagger: 2,
+            duration: 18,
+          },
         },
         // Monogram button
         {
@@ -1341,6 +1518,12 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Consolas, monospace',
           color: '#ffffff',
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'fade',
+            stagger: 2,
+            duration: 14,
+          },
         },
         // Subtitle
         {
@@ -1356,6 +1539,12 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Consolas, monospace',
           color: cyanBlueprint,
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'rise',
+            stagger: 2,
+            duration: 14,
+          },
         },
       ],
     },
@@ -1370,9 +1559,13 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
         x: width / 2,
         y: height / 2,
         zoom: 1,
+        animations: [
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
+        ],
       },
       layers: [
         { id: 'sfx-b-impact', type: 'audio', src: 'sfx:impact', startFrame: 5, volume: 0.3 },
+        { id: 'sfx-bp-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.28 },
         {
           type: 'group',
           id: 'bp-frame',
@@ -1404,6 +1597,7 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
               height: bpH - 24,
               objectFit: 'cover',
             },
+            createLightSheen(bpW, bpH),
           ],
         },
         {
@@ -1418,6 +1612,7 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
           color: cyanBlueprint,
           textAlign: 'center',
         },
+        createSimulatedCursor(width, height, cyanBlueprint),
       ],
     },
 
@@ -1474,6 +1669,12 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
                 fontFamily: 'Consolas, monospace',
                 color: '#ffffff',
                 maxWidth: fWidth - 160,
+                split: {
+                  by: 'words',
+                  preset: 'rise',
+                  stagger: 1,
+                  duration: 14,
+                },
               },
             ],
           } as Layer;
@@ -1525,6 +1726,11 @@ function buildBlueprintScenes(ctx: StyleContext): Scene[] {
               fontWeight: 800,
               fontFamily: 'Consolas, monospace',
               color: draftingAmber,
+              split: {
+                by: 'letters',
+                preset: 'typewriter',
+                stagger: 1,
+              },
             },
           ],
         },
@@ -1662,7 +1868,7 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
             },
           ],
         },
-        // Vibrant Title
+        // Vibrant Title with Pop Split
         {
           type: 'text',
           id: 'n-title',
@@ -1677,6 +1883,12 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
           color: '#ffffff',
           textAlign: 'center',
           letterSpacing: 2,
+          split: {
+            by: 'words',
+            preset: 'pop',
+            stagger: 2,
+            duration: 16,
+          },
         },
         // Subtitle
         {
@@ -1692,6 +1904,12 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: neonCyan,
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'rise',
+            stagger: 2,
+            duration: 14,
+          },
         },
       ],
     },
@@ -1706,9 +1924,13 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
         x: width / 2,
         y: height / 2,
         zoom: 1,
+        animations: [
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
+        ],
       },
       layers: [
         { id: 'sfx-n-impact', type: 'audio', src: 'sfx:impact', startFrame: 5, volume: 0.35 },
+        { id: 'sfx-n-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.3 },
         {
           type: 'group',
           id: 'n-card',
@@ -1740,8 +1962,10 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
               objectFit: 'cover',
               radius: 20,
             },
+            createLightSheen(cardW, cardH),
           ],
         },
+        createSimulatedCursor(width, height, neonMagenta),
       ],
     },
 
@@ -1798,6 +2022,12 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
                 fontFamily: 'Inter, system-ui, sans-serif',
                 color: '#ffffff',
                 maxWidth: fWidth - 160,
+                split: {
+                  by: 'words',
+                  preset: 'pop',
+                  stagger: 1,
+                  duration: 14,
+                },
               },
             ],
           } as Layer;
@@ -1832,6 +2062,12 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
           color: '#ffffff',
           textAlign: 'center',
           letterSpacing: 2,
+          split: {
+            by: 'words',
+            preset: 'pop',
+            stagger: 2,
+            duration: 18,
+          },
         },
         {
           type: 'group',
@@ -1847,7 +2083,7 @@ function buildNeonScenes(ctx: StyleContext): Scene[] {
               x: 0,
               y: 0,
               width: isVertical ? 380 : 440,
-              height: isVertical ? 74 : 80,
+              height: 74,
               radius: 37,
               fill: neonMagenta,
             },
@@ -1954,6 +2190,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: '#ffffff',
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'rise',
+            stagger: 2,
+            duration: 16,
+          },
         },
         {
           type: 'text',
@@ -1968,6 +2210,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: '#94a3b8',
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'blur',
+            stagger: 2,
+            duration: 14,
+          },
         },
       ],
     },
@@ -1982,9 +2230,13 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
         x: width / 2,
         y: height / 2,
         zoom: 1,
+        animations: [
+          { property: 'zoom', keyframes: [{ frame: 0, value: 1.08 }, { frame: 135, value: 0.98, easing: 'drift' }] },
+        ],
       },
       layers: [
         { id: 'sfx-bn-impact', type: 'audio', src: 'sfx:impact', startFrame: 5, volume: 0.3 },
+        { id: 'sfx-bn-click', type: 'audio', src: 'sfx:click', startFrame: 50, volume: 0.28 },
         {
           type: 'group',
           id: 'bn-card',
@@ -2016,8 +2268,10 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
               objectFit: 'cover',
               radius: 28,
             },
+            createLightSheen(cardW, cardH),
           ],
         },
+        createSimulatedCursor(width, height, brandColor),
       ],
     },
 
@@ -2072,6 +2326,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
               fontFamily: 'Inter, system-ui, sans-serif',
               color: '#ffffff',
               maxWidth: (isVertical ? 760 : 920) - 64,
+              split: {
+                by: 'words',
+                preset: 'rise',
+                stagger: 1,
+                duration: 14,
+              },
             },
           ],
         },
@@ -2107,6 +2367,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
               fontFamily: 'Inter, system-ui, sans-serif',
               color: '#f8fafc',
               maxWidth: (isVertical ? 760 : 445) - 56,
+              split: {
+                by: 'words',
+                preset: 'rise',
+                stagger: 1,
+                duration: 14,
+              },
             },
           ],
         },
@@ -2142,6 +2408,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
               fontFamily: 'Inter, system-ui, sans-serif',
               color: '#f8fafc',
               maxWidth: (isVertical ? 760 : 445) - 56,
+              split: {
+                by: 'words',
+                preset: 'rise',
+                stagger: 1,
+                duration: 14,
+              },
             },
           ],
         },
@@ -2174,6 +2446,12 @@ function buildBentoScenes(ctx: StyleContext): Scene[] {
           fontFamily: 'Inter, system-ui, sans-serif',
           color: '#ffffff',
           textAlign: 'center',
+          split: {
+            by: 'words',
+            preset: 'pop',
+            stagger: 2,
+            duration: 18,
+          },
         },
         {
           type: 'group',

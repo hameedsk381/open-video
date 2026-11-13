@@ -226,6 +226,18 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
     hasVoice: Boolean(audioTrack),
   });
 
+  // If voiceover was synthesized, attach it into overlay so it plays seamlessly across all scenes
+  const overlayLayers: any[] = [];
+  if (audioAsset) {
+    overlayLayers.push({
+      id: 'vo-speech-layer',
+      type: 'audio',
+      src: audioAsset.id,
+      startFrame: 0,
+      volume: 1.0,
+    });
+  }
+
   const rawComp = {
     version: '1.0',
     id: `${projectSlug}-launch`,
@@ -234,18 +246,26 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
     height,
     fps,
     durationFrames,
+    grain: 0.04, // Film grain to eliminate banding and add cinematic texture
     background: bg,
     export: {
       format: 'mp4',
       codec: 'h264',
       loudness: -14,
-      ...(audioTrack ? { audio: audioTrack } : {}),
+      audio: 'sfx:ambient-pad',
+      audioVolume: 0.16,
+      duck: audioAsset ? {
+        amount: 0.35,
+        attackFrames: 6,
+        releaseFrames: 15,
+      } : undefined,
     },
     assets: [
       { id: 'app-screenshot', type: 'image', src: './assets/screenshot.png' },
       ...(audioAsset ? [audioAsset] : []),
     ],
     scenes,
+    ...(overlayLayers.length > 0 ? { overlay: overlayLayers } : {}),
   };
 
   const composition = compositionSchema.parse(rawComp);
