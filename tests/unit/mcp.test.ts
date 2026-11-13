@@ -70,6 +70,7 @@ describe('mcp server (Model Context Protocol)', () => {
     expect(names).toContain('motionrender_batch_render');
     expect(names).toContain('motionrender_transcribe_audio');
     expect(names).toContain('motionrender_import_figma');
+    expect(names).toContain('motionrender_launch_reel');
     expect(names).toContain('motionrender_script');
 
     // 3. validate

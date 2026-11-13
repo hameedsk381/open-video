@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 try { process.loadEnvFile?.(); } catch { /* .env is optional */ }
-import { explainerJsonSchema } from '@ove/schema'; import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; 
+import { explainerJsonSchema } from '@ove/schema'; import { readFile, writeFile } from 'node:fs/promises'; import { resolve, dirname, join } from 'node:path'; import { prepareComposition, reviewComposition, measureMedia, captionTrack, formatCaptions, compositionJsonSchema, variablesSchema, resolveVariables, interpolate, describeError, outputFormats, renderMedia, renderStill, defaultConcurrency, x264Presets, defaultPreset, checkFfmpeg, describeBrowser, ffprobePath, renderDistributed, httpWorker, cacheUsage, cleanCache, ensureChromium, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, type Composition, type OutputFormat, type X264Preset } from '@ove/core'; import { initProject } from './init'; import { checkArgs, wantsHelp, wantsVersion } from './args'; import { startDevServer } from './dev'; import { startWorker } from './worker'; import { spawnSync } from 'node:child_process'; 
 const usage = `MotionRender: JSON-first, frame-deterministic motion graphics video engine.
 
 Usage:
@@ -18,6 +18,7 @@ Commands:
   mr blocks [--json]             list the ready-made scenes and overlays and the themes
   mr add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
   mr theme [id] [composition.json]   list themes, or switch a composition to one
+  mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]   generate a 15s kinetic launch video from a website or screenshot
   mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
@@ -166,6 +167,33 @@ Press Ctrl+C to stop.`);
       const outComp = resolve(option('--output-comp')!);
       await writeFile(outComp, JSON.stringify(comp, null, 2) + '\n');
       console.log(`Wrote imported Figma composition to ${outComp}`);
+    }
+  }
+  else if (command === 'launch-reel') {
+    if (!file || file.startsWith('--')) throw new Error('Usage: mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]');
+    const { createLaunchReel } = await import('@ove/ai');
+    const result = await createLaunchReel({
+      urlOrImage: file,
+      name: option('--name'),
+      brandColor: option('--brand'),
+      aspect: (option('--aspect') as any) ?? '9:16',
+      voice: flag('--no-voice') ? false : (option('--voice') ?? true),
+      tagline: option('--tagline'),
+      ctaText: option('--cta'),
+      outputDir: option('--output-dir'),
+      onProgress: msg => console.log(msg),
+    });
+    console.log(`Created launch reel composition at ${result.projectDir}/composition.json`);
+    const shouldRender = flag('--render') || flag('--draft') || flag('--final') || option('--out');
+    if (shouldRender) {
+      const out = resolve(option('--out') ?? join(result.projectDir, 'launch.mp4'));
+      console.log(`Rendering launch reel to ${out}...`);
+      await renderMedia(result.composition, {
+        output: out,
+        baseDir: result.projectDir,
+        scale: flag('--draft') ? 0.5 : 1,
+      });
+      console.log(`✓ Rendered launch reel to ${out}`);
     }
   }
   else if (command === 'ai') { if (!file) { const { aiUsage } = await import('./ai'); console.log(aiUsage); } else process.exitCode=await (await import('./ai')).runAi(argv); }

@@ -4,7 +4,7 @@
 import readline from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, type ComposeOptions } from '@ove/ai';
+import { createProvider, refineVideo, writeCompositionProject, planBatch, renderBatch, captionAudio, createLaunchReel, type ComposeOptions } from '@ove/ai';
 import { loadComposition, renderMedia, renderStill, reviewComposition, measureMedia, adaptCompositionAspect, importFigmaTokens, importFigmaFrame, fetchFigmaFile, compileProduction } from '@ove/core';
 import { composeSmart } from './compose-source';
 import { listThemes, listBlocks } from './blocks';
@@ -167,6 +167,24 @@ const TOOLS = [
         outputComp: { type: 'string', description: 'Optional path to write imported composition.json' }
       },
       required: ['input']
+    }
+  },
+  {
+    name: 'motionrender_launch_reel',
+    description: 'Generate an end-to-end 15-second kinetic product launch video from a website URL or screenshot image. Automatically captures hero section, parses brand colors & typography, and synthesizes 4 synchronized narrative beats with voiceover.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        urlOrImage: { type: 'string', description: 'Website URL (e.g. "https://linear.app") or path to local screenshot image' },
+        name: { type: 'string', description: 'Product or company name (optional)' },
+        brandColor: { type: 'string', description: 'Primary brand accent color in hex, e.g. "#6366f1" (optional)' },
+        aspect: { type: 'string', enum: ['9:16', '16:9', '1:1'], description: 'Aspect ratio (default 9:16 vertical reel)' },
+        voice: { type: 'boolean', description: 'Synthesize voiceover narration via Edge-TTS (default true)' },
+        tagline: { type: 'string', description: 'Custom tagline or product description' },
+        ctaText: { type: 'string', description: 'Call-to-action button text, e.g. "Get Started Free"' },
+        outputDir: { type: 'string', description: 'Target directory for composition.json and assets' }
+      },
+      required: ['urlOrImage']
     }
   },
   {
@@ -708,6 +726,33 @@ ${res.outputs.map((out, idx) => `[${idx + 1}] ${out}`).join('\n')}`
           text: `Successfully imported Figma design tokens!
 - Theme saved: ${outTheme} (${Object.keys(theme.variables).length} tokens: ${Object.keys(theme.variables).join(', ')})
 ${outComp ? `- Composition saved: ${outComp}` : ''}`
+        }],
+        isError: false
+      };
+    }
+
+    case 'motionrender_launch_reel': {
+      const urlOrImage = String(args.urlOrImage || '').trim();
+      const result = await createLaunchReel({
+        urlOrImage,
+        name: args.name ? String(args.name) : undefined,
+        brandColor: args.brandColor ? String(args.brandColor) : undefined,
+        aspect: args.aspect as any,
+        voice: args.voice !== false,
+        tagline: args.tagline ? String(args.tagline) : undefined,
+        ctaText: args.ctaText ? String(args.ctaText) : undefined,
+        outputDir: args.outputDir ? String(args.outputDir) : undefined,
+      });
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Successfully generated 15-second Launch Reel!
+- Project folder: ${result.projectDir}
+- Composition: ${result.projectDir}/composition.json
+- Aspect: ${result.composition.width}x${result.composition.height} (${result.composition.scenes.length} narrative scenes)
+- Duration: ${result.composition.durationFrames / result.composition.fps}s (${result.composition.durationFrames} frames)
+- Assets generated: screenshot.png ${result.composition.assets.some(a => a.type === 'audio') ? '+ Edge-TTS voiceover.wav' : ''}`
         }],
         isError: false
       };

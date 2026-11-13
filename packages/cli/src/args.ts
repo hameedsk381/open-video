@@ -18,6 +18,7 @@ export const commandSpecs: Record<string, Spec> = {
   add: { values: ['--set', '--at', '--frames', '--track', '--scene', '--id', '--aspect', '--theme', '--name'], positionals: 2 },
   theme: { flags: ['--json'], positionals: 2 },
   figma: { values: ['--token', '--out', '--output-comp', '--fps', '--duration'], positionals: 1 },
+  'launch-reel': { values: ['--name', '--brand', '--aspect', '--voice', '--tagline', '--cta', '--out', '--output-dir'], flags: ['--no-voice', '--draft', '--final', '--render'], positionals: 1 },
   worker: { values: ['--port', '--host', '--token', '--concurrency'] },
   mcp: { values: ['--config'] },
   setup: { flags: ['--force', '--no-skills', '--local'], positionals: 1 },
