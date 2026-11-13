@@ -178,6 +178,30 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
     }
   }, [detail, load, setNote, toast, track]);
 
+  const currentAspect = useMemo(() => {
+    if (!detail) return '16:9';
+    const w = Number(detail.width) || 1920;
+    const h = Number(detail.height) || 1080;
+    if (Math.abs(w / h - 9 / 16) < 0.05) return '9:16';
+    if (Math.abs(w / h - 1) < 0.05) return '1:1';
+    if (Math.abs(w / h - 4 / 5) < 0.05) return '4:5';
+    return '16:9';
+  }, [detail]);
+
+  const handleSwitchAspect = useCallback(async (aspect: string) => {
+    if (!detail || aspect === currentAspect) return;
+    try {
+      await track(async () => {
+        await api('/api/aspect', { id: detail.id, aspect });
+        setNote(`Adapted to ${aspect}`);
+        toast(`Canvas aspect adapted to ${aspect}`, 'success');
+        await load(true);
+      });
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }, [detail, currentAspect, track, setNote, toast, load]);
+
   useEffect(() => {
     setDetail(null);
     load(false);
@@ -325,6 +349,32 @@ export function Editor({ id, tab }: { id: string; tab: string }) {
           <Button size="sm" variant="secondary" className="collapse" icon={<LayersIcon size={14} />} title="Open the storyboard" aria-label="Storyboard" onClick={() => go(planPath(id))}>
             <span className="lbl">Storyboard</span>
           </Button>
+
+          {/* Instant Aspect Ratio Switcher */}
+          <div className="aspect-switcher" style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 2, border: '1px solid var(--border)' }}>
+            {(['16:9', '9:16', '1:1'] as const).map(asp => (
+              <button
+                key={asp}
+                style={{
+                  height: 24,
+                  padding: '0 8px',
+                  fontSize: 11,
+                  fontWeight: currentAspect === asp ? 700 : 500,
+                  background: currentAspect === asp ? 'var(--surface)' : 'transparent',
+                  color: currentAspect === asp ? 'var(--accent)' : 'var(--muted)',
+                  border: 0,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  boxShadow: currentAspect === asp ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                }}
+                onClick={() => void handleSwitchAspect(asp)}
+                title={`Adapt composition to ${asp} aspect ratio`}
+              >
+                {asp}
+              </button>
+            ))}
+          </div>
+
           <span className="grow" />
           {note ? (
             <span className="saved" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>

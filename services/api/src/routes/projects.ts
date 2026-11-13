@@ -1,7 +1,7 @@
-import { addBlockRequest, idRequest, layerPatchRequest, newProjectRequest, parseRequest, renameRequest, assetDeleteRequest, assetUseRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
+import { adaptAspectRequest, addBlockRequest, idRequest, layerPatchRequest, newProjectRequest, parseRequest, renameRequest, assetDeleteRequest, assetUseRequest, blockPropsRequest, restoreRequest, snapRequest, textRequest, textsRequest, themeRequest, variablesRequest } from '@ove/contracts';
 import { canvasFor, optionalNumber, optionalText, textOf } from '@ove/jobs';
 import { basename } from 'node:path';
-import { measureMedia, loadComposition } from '@ove/core';
+import { adaptCompositionAspect, measureMedia, loadComposition } from '@ove/core';
 import { fontIds, resolveVariables, variablesSchema } from '@ove/schema';
 import { assertSourcesConfined, distillBrandPack, scrapeWebsiteBrand } from '@ove/ai';
 import type { ProjectFile, RevisionMeta } from '@ove/storage';
@@ -265,6 +265,12 @@ export function projectRoutes(): Route[] {
       });
       await writeRaw(c, id, composition, { kind: 'edit', label: 'Updated layer properties' });
       c.json(200, { ok: true });
+    } },
+    { method: 'POST', path: '/api/aspect', handle: async c => {
+      const request = parseRequest(adaptAspectRequest, await c.body()), id = await exists(c, request.id), composition = await c.deps.store.readRaw(c.who, id);
+      const adapted = adaptCompositionAspect(composition, request.aspect);
+      await writeRaw(c, id, adapted, { kind: 'edit', label: `Adapted aspect ratio to ${request.aspect}` });
+      c.json(200, { ok: true, aspect: request.aspect });
     } },
     { method: 'POST', path: '/api/add-block', handle: async c => {
       const request = parseRequest(addBlockRequest, await c.body()), id = await exists(c, request.id), { store, library } = c.deps, block = await library.readBlock(request.block);

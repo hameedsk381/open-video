@@ -15,6 +15,7 @@ import { Settings } from './pages/Library';
 import { ProductionPlan } from './pages/ProductionPlan';
 import { Projects } from './pages/Projects';
 import { Showcase } from './pages/Showcase';
+import { Playground } from './pages/Playground';
 import { AuthPage, TokenPage, type Me } from './pages/Auth';
 import { useRoute, type Route } from './router';
 import {
@@ -85,6 +86,7 @@ function ThemeToggle() {
 const nav = [
   ['home', '#/', 'Home', HomeIcon] as const,
   ['new', '#/new', 'Create', PlusIcon] as const,
+  ['playground', '#/playground', 'Playground', SlidersIcon] as const,
   ['explainer', '#/explainer', 'Explainer', SparklesIcon] as const,
   ['projects', '#/projects', 'Projects', FilmIcon] as const,
   ['library', '#/library', 'Assets', ImagesIcon] as const,
@@ -95,6 +97,7 @@ const nav = [
 const sections: Record<Route['name'], string> = {
   home: 'Home',
   showcase: 'Discover',
+  playground: 'Playground',
   projects: 'Projects',
   library: 'Assets',
   generation: 'Activity',
@@ -277,6 +280,8 @@ export function App() {
         <Home email={session.state === 'in' ? session.user.email : undefined} />
       ) : route.name === 'showcase' ? (
         <Showcase />
+      ) : route.name === 'playground' ? (
+        <Playground />
       ) : route.name === 'new' ? (
         <Create initialDesign={route.design} initialKind={route.kind} initialPrompt={route.prompt} initialFrom={route.from} />
       ) : route.name === 'making' ? (

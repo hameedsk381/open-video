@@ -157,6 +157,11 @@ export const layerPatchRequest = z.object({
   path: z.string().min(1, 'path is required'),
   patch: z.record(z.string(), z.unknown()),
 });
+/** Adapt composition aspect ratio (16:9, 9:16, 1:1, etc.). */
+export const adaptAspectRequest = z.object({
+  id,
+  aspect: z.string().min(1, 'aspect is required'),
+});
 /* Stock libraries */
 export const stockStatusSchema = z.object({ providers: z.array(z.object({ id: stockProviderSchema, label: z.string(), keyUrl: z.string(), connected: z.boolean(), keyHint: z.string().optional() })) });
 export type StockStatus = z.infer<typeof stockStatusSchema>;

@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 
 export type Route =
-  | { name: 'home' | 'showcase' | 'projects' | 'library' | 'settings' | 'generation' | 'explainer' }
+  | { name: 'home' | 'showcase' | 'playground' | 'projects' | 'library' | 'settings' | 'generation' | 'explainer' }
   | { name: 'new'; design?: string; kind?: string; prompt?: string; from?: string }
   | { name: 'notfound'; path: string }
   | { name: 'reset' | 'verify'; token: string }
@@ -19,6 +19,7 @@ export function parse(hash: string): Route {
   const parts = (path ?? '').split('/').filter(Boolean).map(decodeURIComponent);
   if ((parts[0] === 'reset' || parts[0] === 'verify') && parts[1]) return { name: parts[0], token: parts[1] };
   if (parts[0] === 'projects') return { name: 'projects' };
+  if (parts[0] === 'playground') return { name: 'playground' };
   if (parts[0] === 'showcase' || parts[0] === 'discover') return { name: 'showcase' };
   if (parts[0] === 'new') return { name: 'new', design: params.get('design') ?? undefined, kind: params.get('kind') ?? undefined, prompt: params.get('prompt') ?? undefined, from: params.get('from') ?? undefined };
   if (parts[0] === 'library') return { name: 'library' };
@@ -39,5 +40,6 @@ export const go = (path: string) => { location.hash = path; };
 export const editorPath = (id: string, tab?: string) => `#/p/${encodeURIComponent(id)}${tab ? '/' + tab : ''}`;
 export const planPath = (id: string, section = 'brief') => `#/p/${encodeURIComponent(id)}/plan/${section}`;
 export const discoverPath = '#/discover';
+export const playgroundPath = '#/playground';
 export const generationPath = '#/generation';
 
