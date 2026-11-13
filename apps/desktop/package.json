@@ -27,6 +27,26 @@
       "src/**/*",
       "package.json"
     ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.video"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Video"
+    },
     "extraResources": [
       {
         "from": "../../packages/ove",
