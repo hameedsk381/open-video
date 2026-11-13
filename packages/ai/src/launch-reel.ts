@@ -147,8 +147,19 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
 
     const captured = await captureWebsiteScreenshot(fullUrl, screenshotPath, log);
     if (!captured) {
-      const placeholder = createPlaceholderMockup(targetName, brandColor);
-      await writeFile(screenshotPath, placeholder);
+      // Use Chromium to rasterize the SVG mockup into a genuine PNG so all renderers can load it
+      try {
+        const browser = await launchBrowser();
+        const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+        const svg = createPlaceholderMockup(targetName, brandColor).toString('utf8');
+        await page.setContent(svg);
+        const pngBuf = await page.screenshot({ type: 'png' });
+        await browser.close();
+        await writeFile(screenshotPath, pngBuf);
+      } catch {
+        const placeholder = createPlaceholderMockup(targetName, brandColor);
+        await writeFile(screenshotPath, placeholder);
+      }
     }
   } else {
     // Local image input
