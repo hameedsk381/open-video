@@ -12,6 +12,7 @@ import { readScript, scriptMarkdown } from './script';
 import { readProduction, summaryText } from './production';
 import { assetNoteLines, collectAssetNotes } from './asset-notes';
 import { AGENT_TOOLS, handleAgentTool, listResources, readResource } from './mcp-agent-tools';
+import { buildReact } from './build';
 
 const TOOLS = [
   {
@@ -179,6 +180,7 @@ const TOOLS = [
         name: { type: 'string', description: 'Product or company name (optional)' },
         brandColor: { type: 'string', description: 'Primary brand accent color in hex, e.g. "#6366f1" (optional)' },
         style: { type: 'string', enum: ['keynote', 'terminal', 'editorial', 'blueprint', 'neon', 'bento'], description: 'Visual archetype (keynote, terminal, editorial, blueprint, neon, bento). Defaults to auto-detected.' },
+        engine: { type: 'string', enum: ['react', 'json'], description: 'Rendering engine (react for high-end React/TSX components with spring physics, or json for deterministic JSON layers). Defaults to react.' },
         aspect: { type: 'string', enum: ['9:16', '16:9', '1:1'], description: 'Aspect ratio (default 9:16 vertical reel)' },
         voice: { type: 'boolean', description: 'Synthesize voiceover narration via Edge-TTS (default true)' },
         tagline: { type: 'string', description: 'Custom tagline or product description' },
@@ -734,26 +736,30 @@ ${outComp ? `- Composition saved: ${outComp}` : ''}`
 
     case 'motionrender_launch_reel': {
       const urlOrImage = String(args.urlOrImage || '').trim();
+      const engine = args.engine ? (String(args.engine) as any) : 'react';
       const result = await createLaunchReel({
         urlOrImage,
         name: args.name ? String(args.name) : undefined,
         brandColor: args.brandColor ? String(args.brandColor) : undefined,
         style: args.style ? (String(args.style) as any) : undefined,
+        engine,
         aspect: args.aspect as any,
         voice: args.voice !== false,
         tagline: args.tagline ? String(args.tagline) : undefined,
         ctaText: args.ctaText ? String(args.ctaText) : undefined,
         outputDir: args.outputDir ? String(args.outputDir) : undefined,
+        buildHelper: buildReact,
       });
 
       return {
         content: [{
           type: 'text',
           text: `Successfully generated 15-second Launch Reel!
+- Rendering Engine: ${result.engine.toUpperCase()}${result.tsxFile ? ` (${result.tsxFile})` : ''}
 - Visual Archetype: ${result.style.toUpperCase()}
 - Project folder: ${result.projectDir}
 - Composition: ${result.projectDir}/composition.json
-- Aspect: ${result.composition.width}x${result.composition.height} (${result.composition.scenes.length} narrative scenes)
+- Aspect: ${result.composition.width}x${result.composition.height}
 - Duration: ${result.composition.durationFrames / result.composition.fps}s (${result.composition.durationFrames} frames)
 - Assets generated: screenshot.png ${result.composition.assets.some(a => a.type === 'audio') ? '+ Edge-TTS voiceover.wav' : ''}`
         }],

@@ -18,7 +18,7 @@ Commands:
   mr blocks [--json]             list the ready-made scenes and overlays and the themes
   mr add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
   mr theme [id] [composition.json]   list themes, or switch a composition to one
-  mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]   generate a 15s kinetic launch video from a website or screenshot
+  mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--engine react|json] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]   generate a 15s kinetic launch video from a website or screenshot
   mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
@@ -170,18 +170,22 @@ Press Ctrl+C to stop.`);
     }
   }
   else if (command === 'launch-reel') {
-    if (!file || file.startsWith('--')) throw new Error('Usage: mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]');
+    if (!file || file.startsWith('--')) throw new Error('Usage: mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--engine react|json] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]');
     const { createLaunchReel } = await import('@ove/ai');
+    const { buildReact } = await import('./build');
+    const engine = (option('--engine') as any) ?? 'react';
     const result = await createLaunchReel({
       urlOrImage: file,
       name: option('--name'),
       brandColor: option('--brand'),
       style: option('--style') as any,
       aspect: (option('--aspect') as any) ?? '9:16',
+      engine,
       voice: flag('--no-voice') ? false : (option('--voice') ?? true),
       tagline: option('--tagline'),
       ctaText: option('--cta'),
       outputDir: option('--output-dir'),
+      buildHelper: buildReact,
       onProgress: msg => console.log(msg),
     });
     console.log(`Created launch reel composition at ${result.projectDir}/composition.json`);
@@ -192,6 +196,7 @@ Press Ctrl+C to stop.`);
       await renderMedia(result.composition, {
         output: out,
         baseDir: result.projectDir,
+        allowCode: true,
         scale: flag('--draft') ? 0.5 : 1,
       });
       console.log(`✓ Rendered launch reel to ${out}`);

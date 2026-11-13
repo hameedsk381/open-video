@@ -29,6 +29,7 @@ export * from './smart';
 export * from './explainer';
 export * from './explainer-images';
 export * from './launch-reel';
+export * from './launch-reel-react';
 export * from './facts';
 export { extractJson, sanitizeCompositionJson } from './json';
 export { systemPrompt, userPrompt, planSystemPrompt, planUserPrompt, isMotionPlan, refineUserPrompt, refineOutlinePrompt, compositionOutline, refineOutlineChars, ratioName, type PromptOptions, type MotionPlan, type MotionBeat } from './prompt';

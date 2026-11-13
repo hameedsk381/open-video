@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { compositionSchema, type Composition } from '@ove/schema';
 import { launchBrowser } from '@ove/core';
@@ -11,8 +11,10 @@ import {
   buildArchetypeScenes,
   type LaunchReelStyle,
 } from './launch-reel-styles';
+import { generateReactLaunchReelTsx } from './launch-reel-react';
 
 export type LaunchReelAspect = '9:16' | '16:9' | '1:1';
+export type LaunchReelEngine = 'react' | 'json';
 export type { LaunchReelStyle };
 
 export type LaunchReelOptions = {
@@ -21,11 +23,13 @@ export type LaunchReelOptions = {
   brandColor?: string;
   style?: LaunchReelStyle;
   aspect?: LaunchReelAspect;
+  engine?: LaunchReelEngine;
   voice?: boolean | string;
   voiceName?: string;
   tagline?: string;
   ctaText?: string;
   outputDir?: string;
+  buildHelper?: (source: string, output: string) => Promise<void>;
   onProgress?: (message: string) => void;
 };
 
@@ -35,6 +39,8 @@ export type LaunchReelResult = {
   screenshotFile: string;
   metadata: ScrapedWebsite | { name: string; brandColor: string };
   style: LaunchReelStyle;
+  engine: LaunchReelEngine;
+  tsxFile?: string;
 };
 
 const ASPECT_DIMS: Record<LaunchReelAspect, { width: number; height: number }> = {
@@ -210,6 +216,71 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
   const features = extractKeyFeatures(metadata, targetName, activeStyle);
   log(`Extracted key features: "${features.join('", "')}"`);
 
+  const engine: LaunchReelEngine = options.engine ?? (options.buildHelper ? 'react' : 'json');
+  log(`Rendering engine: ${engine.toUpperCase()}`);
+
+  const buildHelper = options.buildHelper;
+
+  const compFile = join(projectDir, 'composition.json');
+
+  if (engine === 'react') {
+    const tsxPath = join(projectDir, 'video.tsx');
+    const tsxSource = generateReactLaunchReelTsx({
+      style: activeStyle,
+      targetName,
+      brandColor,
+      tagline: effectiveTagline,
+      ctaText: cta,
+      displayUrl,
+      features,
+      width,
+      height,
+      aspect,
+      fps,
+      hasVoice: Boolean(audioTrack),
+      voiceAssetId: audioTrack,
+    });
+
+    await writeFile(tsxPath, tsxSource, 'utf8');
+    log(`✓ Generated React/TSX video component at ${tsxPath}`);
+
+    if (!buildHelper) {
+      throw new Error('Building a React launch reel requires buildReact helper (available via MotionRender CLI)');
+    }
+
+    log('Compiling React component to bundle and composition…');
+    await buildHelper(tsxPath, compFile);
+
+    const builtRaw = JSON.parse(await readFile(compFile, 'utf8'));
+    builtRaw.grain = 0.04;
+    if (!builtRaw.export) builtRaw.export = {};
+    builtRaw.export.loudness = -14;
+    builtRaw.export.audio = 'sfx:ambient-pad';
+    builtRaw.export.audioVolume = 0.16;
+    if (audioAsset) {
+      builtRaw.export.duck = {
+        amount: 0.35,
+        attackFrames: 6,
+        releaseFrames: 15,
+      };
+    }
+
+    const composition = compositionSchema.parse(builtRaw);
+    await writeFile(compFile, JSON.stringify(composition, null, 2));
+
+    log(`✓ React launch reel project created at ${projectDir}`);
+
+    return {
+      composition,
+      projectDir,
+      screenshotFile: screenshotPath,
+      metadata,
+      style: activeStyle,
+      engine: 'react',
+      tsxFile: tsxPath,
+    };
+  }
+
   const bg = getStyleBackground(activeStyle, width, height, brandColor);
   const scenes = buildArchetypeScenes({
     style: activeStyle,
@@ -269,7 +340,6 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
   };
 
   const composition = compositionSchema.parse(rawComp);
-  const compFile = join(projectDir, 'composition.json');
   await writeFile(compFile, JSON.stringify(composition, null, 2));
 
   log(`✓ Launch reel project created at ${projectDir}`);
@@ -280,5 +350,6 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
     screenshotFile: screenshotPath,
     metadata,
     style: activeStyle,
+    engine: 'json',
   };
 }
