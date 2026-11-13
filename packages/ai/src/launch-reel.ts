@@ -216,7 +216,7 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
   const features = extractKeyFeatures(metadata, targetName, activeStyle);
   log(`Extracted key features: "${features.join('", "')}"`);
 
-  const engine: LaunchReelEngine = options.engine ?? (options.buildHelper ? 'react' : 'json');
+  const engine: LaunchReelEngine = options.engine ?? 'react';
   log(`Rendering engine: ${engine.toUpperCase()}`);
 
   const buildHelper = options.buildHelper;

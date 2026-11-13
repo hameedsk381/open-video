@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createLaunchReel } from '@ove/ai';
+import { buildReact } from '../../packages/cli/src/build';
 
 describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
   it('generates a valid 15-second launch reel from local screenshot with 4 synchronized beats', async () => {
@@ -17,6 +18,7 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
         urlOrImage: dummyImage,
         name: 'NexusAI',
         brandColor: '#6366f1',
+        engine: 'json',
         aspect: '9:16',
         voice: false,
         tagline: 'Autonomous AI agents for software engineering.',
@@ -78,9 +80,11 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
         aspect: '16:9',
         voice: false,
         outputDir: join(tempDir, 'p169'),
+        buildHelper: buildReact,
       });
       expect(res169.composition.width).toBe(1920);
       expect(res169.composition.height).toBe(1080);
+      expect(res169.engine).toBe('react');
 
       // 1:1
       const res11 = await createLaunchReel({
@@ -88,9 +92,11 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
         aspect: '1:1',
         voice: false,
         outputDir: join(tempDir, 'p11'),
+        buildHelper: buildReact,
       });
       expect(res11.composition.width).toBe(1080);
       expect(res11.composition.height).toBe(1080);
+      expect(res11.engine).toBe('react');
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
@@ -108,9 +114,11 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
         aspect: '9:16',
         voice: false,
         outputDir: join(tempDir, 'project-url'),
+        buildHelper: buildReact,
       });
 
       expect(result.composition).toBeDefined();
+      expect(result.engine).toBe('react');
       expect(result.composition.name).toContain('StartupX Launch Reel');
       const screenshotFile = join(result.projectDir, 'assets', 'screenshot.png');
       const info = await stat(screenshotFile);

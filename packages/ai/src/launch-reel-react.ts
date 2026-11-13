@@ -20,7 +20,7 @@ export type ReactLaunchReelProps = {
 /**
  * Generates a self-contained, broadcast-grade React/TSX video file (video.tsx)
  * utilizing @ove/react components, spring physics, 2.5D transforms, specular light sheen,
- * and archetype-specific visual styling.
+ * and archetype-specific visual styling (keynote, terminal, editorial, blueprint, neon, bento).
  */
 export function generateReactLaunchReelTsx(props: ReactLaunchReelProps): string {
   const {
@@ -82,10 +82,10 @@ const THEME = {
   brandColor: '${brandColor}',
   bg: '${
     style === 'keynote' ? '#07070a' :
-    style === 'terminal' ? '#04070e' :
+    style === 'terminal' ? '#03070d' :
     style === 'editorial' ? '#0c0b0a' :
-    style === 'blueprint' ? '#040d1e' :
-    style === 'neon' ? '#04010a' : '#080c16'
+    style === 'blueprint' ? '#040e21' :
+    style === 'neon' ? '#020006' : '#070b14'
   }',
   font: '${
     style === 'terminal' ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' :
@@ -142,7 +142,7 @@ export const layers = [
 // --- Micro-Components ---
 
 function SimulatedCursor({ frame, fps }: { frame: number; fps: number }) {
-  // Cursor arrives at frame 130, moves toward button, clicks at frame 170
+  // Cursor arrives at frame 120, moves toward button, clicks at frame 170
   const arrive = spring({ frame: frame - 120, fps, damping: 16, stiffness: 80, from: 0, to: 1 });
   const click = spring({ frame: frame - 170, fps, damping: 12, stiffness: 200, from: 0, to: 1 });
   const ripple = spring({ frame: frame - 170, fps, damping: 20, stiffness: 60, from: 0, to: 1 });
@@ -193,7 +193,7 @@ function SimulatedCursor({ frame, fps }: { frame: number; fps: number }) {
 }
 
 function SpecularSheen({ frame }: { frame: number }) {
-  // Specular sheen travels across card between frame 110 and 170
+  // Specular sheen travels across card between frame 110 and 175
   const progress = interpolate(frame, [110, 175], [-120, 220], { clamp: true });
   return (
     <div
@@ -226,9 +226,6 @@ export default function LaunchReel() {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // Subtle continuous camera drift
-  const cameraDrift = Math.sin(frame * 0.012) * 8;
-
   return (
     <AbsoluteFill
       style={{
@@ -248,7 +245,7 @@ export default function LaunchReel() {
         ]}
       />
 
-      {/* Subtle perspective grid for blueprint / terminal / neon archetypes */}
+      {/* Grid texture for Blueprint & Terminal archetypes */}
       {('${style}' === 'blueprint' || '${style}' === 'terminal') && (
         <div
           style={{
@@ -261,6 +258,16 @@ export default function LaunchReel() {
             pointerEvents: 'none',
           }}
         />
+      )}
+
+      {/* Crosshair accents for Blueprint archetype */}
+      {'${style}' === 'blueprint' && (
+        <>
+          <div style={{ position: 'absolute', left: 40, top: 40, color: THEME.brandColor, opacity: 0.4, fontSize: 18 }}>+</div>
+          <div style={{ position: 'absolute', right: 40, top: 40, color: THEME.brandColor, opacity: 0.4, fontSize: 18 }}>+</div>
+          <div style={{ position: 'absolute', left: 40, bottom: 40, color: THEME.brandColor, opacity: 0.4, fontSize: 18 }}>+</div>
+          <div style={{ position: 'absolute', right: 40, bottom: 40, color: THEME.brandColor, opacity: 0.4, fontSize: 18 }}>+</div>
+        </>
       )}
 
       {/* =========================================================================
@@ -283,8 +290,13 @@ export default function LaunchReel() {
                 gap: ${isVertical ? 28 : 24},
               }}
             >
+              {/* Archetype-Specific Badge */}
               <Badge dot dotColor={THEME.brandColor} delay={4}>
-                {('${style}' === 'terminal' ? '$ INIT // ' : '${style}' === 'blueprint' ? 'SYS.SPEC // ' : 'INTRODUCING ')}
+                {('${style}' === 'terminal' ? '$ INIT // ' :
+                  '${style}' === 'blueprint' ? '[SYS-SPEC // REV 2.4] ' :
+                  '${style}' === 'editorial' ? 'VOL. IV · SPECIAL EDITION · ' :
+                  '${style}' === 'neon' ? '⚡ HYPER-ACCELERATED · ' :
+                  'INTRODUCING ')}
                 ${safeName.toUpperCase()}
               </Badge>
 
@@ -292,14 +304,17 @@ export default function LaunchReel() {
                 style={{
                   fontSize: ${isVertical ? 76 : 96},
                   fontWeight: 900,
-                  letterSpacing: '-0.04em',
+                  letterSpacing: '${style === 'editorial' ? '0.02em' : '-0.04em'}',
                   lineHeight: 1.08,
                   margin: 0,
                   maxWidth: ${isVertical ? 960 : 1300},
                   textWrap: 'balance',
+                  fontStyle: '${style === 'editorial' ? 'italic' : 'normal'}',
+                  color: '${style === 'editorial' ? '#f7f3eb' : '#ffffff'}',
+                  filter: '${style === 'neon' ? 'drop-shadow(0 0 35px ' + brandColor + ')' : 'none'}',
                 }}
               >
-                <KineticText text="${safeName}" delay={8} preset="bouncy" />
+                <KineticText text="${safeName}" delay={8} preset="${style === 'editorial' ? 'smooth' : 'bouncy'}" />
               </h1>
 
               <div
@@ -325,9 +340,9 @@ export default function LaunchReel() {
                   gap: 12,
                   marginTop: 20,
                   padding: '10px 22px',
-                  borderRadius: 9999,
+                  borderRadius: '${style === 'terminal' || style === 'blueprint' ? '6px' : '9999px'}',
                   background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '1px solid ' + (THEME.brandColor + '44'),
                   fontSize: ${isVertical ? 22 : 20},
                   color: '#e2e8f0',
                   opacity: interpolate(frame, [28, 48], [0, 1], { clamp: true }),
@@ -380,10 +395,13 @@ export default function LaunchReel() {
                 }}
               >
                 <Badge dot dotColor="#10b981" delay={4}>
-                  LIVE SYSTEM PREVIEW
+                  {('${style}' === 'terminal' ? 'TERMINAL_SESSION // 01' :
+                    '${style}' === 'blueprint' ? 'SCHEMATIC_VIEW // 1440x900' :
+                    '${style}' === 'editorial' ? 'EXHIBIT · ARCHITECTURE' :
+                    'LIVE SYSTEM PREVIEW')}
                 </Badge>
 
-                {/* macOS / Application Device Frame */}
+                {/* Device Frame */}
                 <DeviceFrame
                   title="${safeName} · Core Platform"
                   url="${safeUrl}"
@@ -392,6 +410,7 @@ export default function LaunchReel() {
                     width: '100%',
                     position: 'relative',
                     boxShadow: '0 40px 100px -20px rgba(0,0,0,0.7), 0 0 50px ' + THEME.brandColor + '33',
+                    border: '1px solid ' + ('${style}' === 'neon' ? THEME.brandColor + '88' : 'rgba(255,255,255,0.12)'),
                   }}
                 >
                   <div style={{ position: 'relative', width: '100%', height: ${isVertical ? 880 : 640}, overflow: 'hidden' }}>
@@ -444,9 +463,10 @@ export default function LaunchReel() {
                 style={{
                   fontSize: ${isVertical ? 60 : 72},
                   fontWeight: 800,
-                  letterSpacing: '-0.03em',
+                  letterSpacing: '${style === 'editorial' ? '0.02em' : '-0.03em'}',
                   margin: 0,
                   textAlign: 'center',
+                  fontStyle: '${style === 'editorial' ? 'italic' : 'normal'}',
                 }}
               >
                 <KineticText text="Engineered for Precision" delay={6} preset="snappy" />
@@ -468,7 +488,10 @@ export default function LaunchReel() {
                   title="${safeF1}"
                   subtitle="Optimized pipeline architecture delivering zero-latency results."
                   glowColor={THEME.brandColor + '33'}
-                  style={{ minHeight: ${isVertical ? 220 : 280} }}
+                  style={{
+                    minHeight: ${isVertical ? 220 : 280},
+                    borderRadius: '${style === 'terminal' || style === 'blueprint' ? '8px' : '20px'}',
+                  }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 18, color: '#94a3b8' }}>
@@ -487,7 +510,10 @@ export default function LaunchReel() {
                   title="${safeF2}"
                   subtitle="Sub-millisecond deterministic execution with continuous integrity."
                   glowColor="#6366f133"
-                  style={{ minHeight: ${isVertical ? 220 : 280} }}
+                  style={{
+                    minHeight: ${isVertical ? 220 : 280},
+                    borderRadius: '${style === 'terminal' || style === 'blueprint' ? '8px' : '20px'}',
+                  }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
                     <div style={{ fontSize: ${isVertical ? 48 : 56}, fontWeight: 900, color: '#38bdf8', letterSpacing: '-0.02em' }}>
@@ -503,7 +529,10 @@ export default function LaunchReel() {
                   title="${safeF3}"
                   subtitle="End-to-end cryptographic proofs and automated guardrails."
                   glowColor="#10b98133"
-                  style={{ minHeight: ${isVertical ? 220 : 280} }}
+                  style={{
+                    minHeight: ${isVertical ? 220 : 280},
+                    borderRadius: '${style === 'terminal' || style === 'blueprint' ? '8px' : '20px'}',
+                  }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -548,9 +577,10 @@ export default function LaunchReel() {
                 style={{
                   fontSize: ${isVertical ? 84 : 108},
                   fontWeight: 900,
-                  letterSpacing: '-0.04em',
+                  letterSpacing: '${style === 'editorial' ? '0.02em' : '-0.04em'}',
                   lineHeight: 1.05,
                   margin: 0,
+                  fontStyle: '${style === 'editorial' ? 'italic' : 'normal'}',
                 }}
               >
                 ${safeName}
@@ -576,7 +606,7 @@ export default function LaunchReel() {
                   justifyContent: 'center',
                   gap: 16,
                   padding: '${isVertical ? '24px 64px' : '20px 56px'}',
-                  borderRadius: 9999,
+                  borderRadius: '${style === 'terminal' || style === 'blueprint' ? '8px' : '9999px'}',
                   background: 'linear-gradient(135deg, ' + THEME.brandColor + ' 0%, #6366f1 100%)',
                   color: '#ffffff',
                   fontSize: ${isVertical ? 32 : 30},
