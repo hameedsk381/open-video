@@ -178,6 +178,7 @@ const TOOLS = [
         urlOrImage: { type: 'string', description: 'Website URL (e.g. "https://linear.app") or path to local screenshot image' },
         name: { type: 'string', description: 'Product or company name (optional)' },
         brandColor: { type: 'string', description: 'Primary brand accent color in hex, e.g. "#6366f1" (optional)' },
+        style: { type: 'string', enum: ['keynote', 'terminal', 'editorial', 'blueprint', 'neon', 'bento'], description: 'Visual archetype (keynote, terminal, editorial, blueprint, neon, bento). Defaults to auto-detected.' },
         aspect: { type: 'string', enum: ['9:16', '16:9', '1:1'], description: 'Aspect ratio (default 9:16 vertical reel)' },
         voice: { type: 'boolean', description: 'Synthesize voiceover narration via Edge-TTS (default true)' },
         tagline: { type: 'string', description: 'Custom tagline or product description' },
@@ -737,6 +738,7 @@ ${outComp ? `- Composition saved: ${outComp}` : ''}`
         urlOrImage,
         name: args.name ? String(args.name) : undefined,
         brandColor: args.brandColor ? String(args.brandColor) : undefined,
+        style: args.style ? (String(args.style) as any) : undefined,
         aspect: args.aspect as any,
         voice: args.voice !== false,
         tagline: args.tagline ? String(args.tagline) : undefined,
@@ -748,6 +750,7 @@ ${outComp ? `- Composition saved: ${outComp}` : ''}`
         content: [{
           type: 'text',
           text: `Successfully generated 15-second Launch Reel!
+- Visual Archetype: ${result.style.toUpperCase()}
 - Project folder: ${result.projectDir}
 - Composition: ${result.projectDir}/composition.json
 - Aspect: ${result.composition.width}x${result.composition.height} (${result.composition.scenes.length} narrative scenes)

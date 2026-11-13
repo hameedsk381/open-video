@@ -18,7 +18,7 @@ Commands:
   mr blocks [--json]             list the ready-made scenes and overlays and the themes
   mr add <block> <composition.json> [--set name=value] [--at frame] [--scene id]   copy a block into a video (creates the file if it is new: --aspect 9:16 --theme neon)
   mr theme [id] [composition.json]   list themes, or switch a composition to one
-  mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]   generate a 15s kinetic launch video from a website or screenshot
+  mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]   generate a 15s kinetic launch video from a website or screenshot
   mr serve                       the studio for many people (sign-in, Postgres, Redis); settings come from the environment, see docs/hosting.md
   mr job-worker                  runs queued jobs for mr serve (JOB_LANE=render|ai)
   mr worker [--port 4400] [--host 127.0.0.1] [--token T] [--concurrency n]   render chunks for other machines
@@ -170,12 +170,13 @@ Press Ctrl+C to stop.`);
     }
   }
   else if (command === 'launch-reel') {
-    if (!file || file.startsWith('--')) throw new Error('Usage: mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]');
+    if (!file || file.startsWith('--')) throw new Error('Usage: mr launch-reel <url|image.png> [--name "App"] [--brand "#38bdf8"] [--style keynote|terminal|editorial|blueprint|neon|bento] [--aspect 9:16|16:9|1:1] [--voice] [--out video.mp4]');
     const { createLaunchReel } = await import('@ove/ai');
     const result = await createLaunchReel({
       urlOrImage: file,
       name: option('--name'),
       brandColor: option('--brand'),
+      style: option('--style') as any,
       aspect: (option('--aspect') as any) ?? '9:16',
       voice: flag('--no-voice') ? false : (option('--voice') ?? true),
       tagline: option('--tagline'),

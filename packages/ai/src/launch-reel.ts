@@ -4,13 +4,22 @@ import { compositionSchema, type Composition } from '@ove/schema';
 import { launchBrowser } from '@ove/core';
 import { normalizeUrl, scrapeWebsiteBrand, type ScrapedWebsite } from './brand-scraper';
 import { synthesizeEdgeSpeech } from './edge-tts';
+import {
+  detectArchetype,
+  extractKeyFeatures,
+  getStyleBackground,
+  buildArchetypeScenes,
+  type LaunchReelStyle,
+} from './launch-reel-styles';
 
 export type LaunchReelAspect = '9:16' | '16:9' | '1:1';
+export type { LaunchReelStyle };
 
 export type LaunchReelOptions = {
   urlOrImage: string;
   name?: string;
   brandColor?: string;
+  style?: LaunchReelStyle;
   aspect?: LaunchReelAspect;
   voice?: boolean | string;
   voiceName?: string;
@@ -25,6 +34,7 @@ export type LaunchReelResult = {
   projectDir: string;
   screenshotFile: string;
   metadata: ScrapedWebsite | { name: string; brandColor: string };
+  style: LaunchReelStyle;
 };
 
 const ASPECT_DIMS: Record<LaunchReelAspect, { width: number; height: number }> = {
@@ -193,34 +203,38 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
     }
   }
 
-  // --- 4 Synchronized Narrative Beats ---
-  // Beat 1: Hook / Problem (0 - 105 frames / 3.5s)
-  // Beat 2: Product Reveal (105 - 240 frames / 4.5s)
-  // Beat 3: Features & Highlights (240 - 360 frames / 4.0s)
-  // Beat 4: Call to Action (360 - 450 frames / 3.0s)
+  // --- Style Archetype Selection & Dynamic Feature Extraction ---
+  const activeStyle = detectArchetype(input, metadata, options.style);
+  log(`Selected visual archetype: ${activeStyle.toUpperCase()}`);
 
-  const isVertical = aspect === '9:16';
-  const cardWidth = isVertical ? width * 0.88 : width * 0.7;
-  const cardHeight = isVertical ? height * 0.45 : height * 0.65;
+  const features = extractKeyFeatures(metadata, targetName, activeStyle);
+  log(`Extracted key features: "${features.join('", "')}"`);
+
+  const bg = getStyleBackground(activeStyle, width, height, brandColor);
+  const scenes = buildArchetypeScenes({
+    style: activeStyle,
+    targetName,
+    brandColor,
+    tagline: effectiveTagline,
+    ctaText: cta,
+    displayUrl,
+    features,
+    width,
+    height,
+    aspect,
+    fps,
+    hasVoice: Boolean(audioTrack),
+  });
 
   const rawComp = {
     version: '1.0',
     id: `${projectSlug}-launch`,
-    name: `${targetName} Launch Reel`,
+    name: `${targetName} Launch Reel (${activeStyle})`,
     width,
     height,
     fps,
     durationFrames,
-    background: {
-      type: 'linear',
-      from: [0, 0],
-      to: [width, height],
-      stops: [
-        { offset: 0, color: '#090d16' },
-        { offset: 0.5, color: '#030712' },
-        { offset: 1, color: '#020617' },
-      ],
-    },
+    background: bg,
     export: {
       format: 'mp4',
       codec: 'h264',
@@ -231,438 +245,7 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
       { id: 'app-screenshot', type: 'image', src: './assets/screenshot.png' },
       ...(audioAsset ? [audioAsset] : []),
     ],
-    scenes: [
-      // SCENE 1: THE HOOK (0 - 105 frames)
-      {
-        id: 'scene-hook',
-        name: 'The Hook',
-        startFrame: 0,
-        durationFrames: 105,
-        camera: {
-          x: width / 2,
-          y: height / 2,
-          zoom: 1,
-          animations: [
-            { property: 'zoom', keyframes: [{ frame: 0, value: 0.96 }, { frame: 105, value: 1.04, easing: 'drift' }] },
-          ],
-        },
-        layers: [
-          // Ambient glowing orb
-          {
-            type: 'circle',
-            id: 'hook-glow',
-            x: width / 2 - (width * 0.35),
-            y: height * 0.4 - (width * 0.35),
-            width: width * 0.7,
-            height: width * 0.7,
-            fill: brandColor,
-            opacity: 0.18,
-            blur: 80,
-          },
-          // Badge
-          {
-            type: 'group',
-            id: 'hook-badge',
-            x: width / 2 - (isVertical ? 175 : 220),
-            y: isVertical ? height * 0.25 : height * 0.18,
-            width: isVertical ? 350 : 440,
-            height: isVertical ? 48 : 54,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 15, value: 1, easing: 'pop' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'hook-badge-bg',
-                x: 0,
-                y: 0,
-                width: isVertical ? 350 : 440,
-                height: isVertical ? 48 : 54,
-                radius: 27,
-                fill: 'rgba(255, 255, 255, 0.07)',
-                stroke: 'rgba(255, 255, 255, 0.18)',
-                strokeWidth: 1.5,
-              },
-              {
-                type: 'text',
-                id: 'hook-badge-text',
-                content: `✨ INTRODUCING ${targetName.toUpperCase()}`,
-                x: isVertical ? 24 : 32,
-                y: isVertical ? 14 : 16,
-                fontSize: isVertical ? 20 : 22,
-                fontWeight: 700,
-                color: brandColor,
-                letterSpacing: 1.5,
-              },
-            ],
-          },
-          // Headline
-          {
-            type: 'text',
-            id: 'hook-headline',
-            content: targetName,
-            x: width / 2,
-            y: isVertical ? height * 0.35 : height * 0.32,
-            width: isVertical ? 900 : 1400,
-            maxWidth: isVertical ? 900 : 1400,
-            fontSize: isVertical ? 76 : 96,
-            fontWeight: 800,
-            color: '#f8fafc',
-            textAlign: 'center',
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 10, value: 0 }, { frame: 30, value: 1, easing: 'land' }] },
-              { property: 'y', keyframes: [{ frame: 10, value: isVertical ? height * 0.39 : height * 0.35 }, { frame: 30, value: isVertical ? height * 0.35 : height * 0.32, easing: 'land' }] },
-            ],
-          },
-          // Subtitle
-          {
-            type: 'text',
-            id: 'hook-sub',
-            content: effectiveTagline.length > 55 ? effectiveTagline.slice(0, 55).replace(/\s+\S*$/, '…') : effectiveTagline,
-            x: width / 2,
-            y: isVertical ? height * 0.49 : height * 0.50,
-            width: isVertical ? 840 : 1200,
-            maxWidth: isVertical ? 840 : 1200,
-            fontSize: isVertical ? 28 : 34,
-            fontWeight: 500,
-            color: '#94a3b8',
-            textAlign: 'center',
-            lineHeight: 1.35,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 25, value: 0 }, { frame: 45, value: 1, easing: 'land' }] },
-            ],
-          },
-        ],
-      },
-
-      // SCENE 2: PRODUCT REVEAL (105 - 240 frames)
-      {
-        id: 'scene-reveal',
-        name: 'Product Reveal',
-        startFrame: 105,
-        durationFrames: 135,
-        camera: {
-          x: width / 2,
-          y: height / 2,
-          zoom: 1,
-          animations: [
-            { property: 'zoom', keyframes: [{ frame: 0, value: 0.95 }, { frame: 135, value: 1.08, easing: 'drift' }] },
-          ],
-        },
-        layers: [
-          // Background glow
-          {
-            type: 'circle',
-            id: 'reveal-glow',
-            x: width / 2 - (width * 0.45),
-            y: height / 2 - (width * 0.45),
-            width: width * 0.9,
-            height: width * 0.9,
-            fill: brandColor,
-            opacity: 0.15,
-            blur: 100,
-          },
-          // Main Product Screenshot Card
-          {
-            type: 'group',
-            id: 'product-card',
-            x: (width - cardWidth) / 2,
-            y: (height - cardHeight) / 2,
-            width: cardWidth,
-            height: cardHeight,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 20, value: 1, easing: 'pop' }] },
-              { property: 'scale', keyframes: [{ frame: 0, value: 0.9 }, { frame: 25, value: 1, easing: 'land' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'product-bg',
-                x: 0,
-                y: 0,
-                width: cardWidth,
-                height: cardHeight,
-                radius: 24,
-                fill: 'rgba(15, 23, 42, 0.9)',
-                stroke: 'rgba(255, 255, 255, 0.15)',
-                strokeWidth: 2,
-              },
-              {
-                type: 'image',
-                id: 'product-img',
-                src: 'app-screenshot',
-                x: 0,
-                y: 0,
-                width: cardWidth,
-                height: cardHeight,
-                objectFit: 'cover',
-                radius: 24,
-              },
-            ],
-          },
-          // Floating Badge on Screenshot Card
-          {
-            type: 'group',
-            id: 'reveal-badge',
-            x: (width - cardWidth) / 2 + 24,
-            y: (height - cardHeight) / 2 - 24,
-            width: 260,
-            height: 48,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 20, value: 0 }, { frame: 35, value: 1, easing: 'pop' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'reveal-badge-bg',
-                x: 0,
-                y: 0,
-                width: 260,
-                height: 48,
-                radius: 24,
-                fill: '#0f172a',
-                stroke: brandColor,
-                strokeWidth: 2,
-              },
-              {
-                type: 'text',
-                id: 'reveal-badge-txt',
-                content: '⚡ Next-Gen Architecture',
-                x: 20,
-                y: 14,
-                fontSize: 20,
-                fontWeight: 700,
-                color: '#ffffff',
-              },
-            ],
-          },
-        ],
-      },
-
-      // SCENE 3: FEATURE CALLOUTS (240 - 360 frames)
-      {
-        id: 'scene-features',
-        name: 'Feature Highlights',
-        startFrame: 240,
-        durationFrames: 120,
-        layers: [
-          // Background Screenshot with Blur
-          {
-            type: 'image',
-            id: 'bg-blur-img',
-            src: 'app-screenshot',
-            x: width * 0.1,
-            y: height * 0.15,
-            width: width * 0.8,
-            height: height * 0.7,
-            opacity: 0.25,
-            blur: 16,
-            objectFit: 'cover',
-            radius: 24,
-          },
-          // Highlight Card 1
-          {
-            type: 'group',
-            id: 'feat-1',
-            x: width / 2 - (isVertical ? 380 : 450),
-            y: isVertical ? height * 0.28 : height * 0.25,
-            width: isVertical ? 760 : 900,
-            height: 100,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 15, value: 1, easing: 'pop' }] },
-              { property: 'x', keyframes: [{ frame: 0, value: width / 2 - (isVertical ? 420 : 500) }, { frame: 15, value: width / 2 - (isVertical ? 380 : 450), easing: 'land' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'f1-bg',
-                x: 0,
-                y: 0,
-                width: isVertical ? 760 : 900,
-                height: 100,
-                radius: 20,
-                fill: 'rgba(15, 23, 42, 0.85)',
-                stroke: 'rgba(255, 255, 255, 0.12)',
-                strokeWidth: 1.5,
-              },
-              { type: 'text', id: 'f1-t', content: '01  Ultra-Fast & Deterministic', x: 30, y: 35, fontSize: 26, fontWeight: 700, color: '#f8fafc' },
-              { type: 'circle', id: 'f1-dot', x: isVertical ? 710 : 850, y: 40, width: 20, height: 20, fill: brandColor },
-            ],
-          },
-          // Highlight Card 2
-          {
-            type: 'group',
-            id: 'feat-2',
-            x: width / 2 - (isVertical ? 380 : 450),
-            y: isVertical ? height * 0.44 : height * 0.45,
-            width: isVertical ? 760 : 900,
-            height: 100,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 15, value: 0 }, { frame: 30, value: 1, easing: 'pop' }] },
-              { property: 'x', keyframes: [{ frame: 15, value: width / 2 - (isVertical ? 420 : 500) }, { frame: 30, value: width / 2 - (isVertical ? 380 : 450), easing: 'land' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'f2-bg',
-                x: 0,
-                y: 0,
-                width: isVertical ? 760 : 900,
-                height: 100,
-                radius: 20,
-                fill: 'rgba(15, 23, 42, 0.85)',
-                stroke: 'rgba(255, 255, 255, 0.12)',
-                strokeWidth: 1.5,
-              },
-              { type: 'text', id: 'f2-t', content: '02  Engineered for Autonomous AI Agents', x: 30, y: 35, fontSize: 26, fontWeight: 700, color: '#f8fafc' },
-              { type: 'circle', id: 'f2-dot', x: isVertical ? 710 : 850, y: 40, width: 20, height: 20, fill: '#818cf8' },
-            ],
-          },
-          // Highlight Card 3
-          {
-            type: 'group',
-            id: 'feat-3',
-            x: width / 2 - (isVertical ? 380 : 450),
-            y: isVertical ? height * 0.60 : height * 0.65,
-            width: isVertical ? 760 : 900,
-            height: 100,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 30, value: 0 }, { frame: 45, value: 1, easing: 'pop' }] },
-              { property: 'x', keyframes: [{ frame: 30, value: width / 2 - (isVertical ? 420 : 500) }, { frame: 45, value: width / 2 - (isVertical ? 380 : 450), easing: 'land' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'f3-bg',
-                x: 0,
-                y: 0,
-                width: isVertical ? 760 : 900,
-                height: 100,
-                radius: 20,
-                fill: 'rgba(15, 23, 42, 0.85)',
-                stroke: 'rgba(255, 255, 255, 0.12)',
-                strokeWidth: 1.5,
-              },
-              { type: 'text', id: 'f3-t', content: '03  Self-Hosted & Cloud Scale Ready', x: 30, y: 35, fontSize: 26, fontWeight: 700, color: '#f8fafc' },
-              { type: 'circle', id: 'f3-dot', x: isVertical ? 710 : 850, y: 40, width: 20, height: 20, fill: '#34d399' },
-            ],
-          },
-        ],
-      },
-
-      // SCENE 4: CALL TO ACTION (360 - 450 frames)
-      {
-        id: 'scene-cta',
-        name: 'Call to Action',
-        startFrame: 360,
-        durationFrames: 90,
-        camera: {
-          x: width / 2,
-          y: height / 2,
-          zoom: 1,
-          animations: [
-            { property: 'zoom', keyframes: [{ frame: 0, value: 0.95 }, { frame: 90, value: 1.02, easing: 'drift' }] },
-          ],
-        },
-        layers: [
-          // Radial Accent Glow
-          {
-            type: 'circle',
-            id: 'cta-glow',
-            x: width / 2 - (width * 0.4),
-            y: height * 0.48 - (width * 0.4),
-            width: width * 0.8,
-            height: width * 0.8,
-            fill: brandColor,
-            opacity: 0.22,
-            blur: 90,
-          },
-          // Brand Title
-          {
-            type: 'text',
-            id: 'cta-title',
-            content: targetName,
-            x: width / 2 - 300,
-            y: isVertical ? height * 0.34 : height * 0.30,
-            width: 600,
-            fontSize: isVertical ? 64 : 84,
-            fontWeight: 800,
-            color: '#f8fafc',
-            textAlign: 'center',
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 0, value: 0 }, { frame: 15, value: 1, easing: 'pop' }] },
-            ],
-          },
-          // Subline
-          {
-            type: 'text',
-            id: 'cta-subline',
-            content: 'Ready to elevate your workflow?',
-            x: width / 2 - 300,
-            y: isVertical ? height * 0.44 : height * 0.43,
-            width: 600,
-            fontSize: isVertical ? 26 : 30,
-            fontWeight: 500,
-            color: '#94a3b8',
-            textAlign: 'center',
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 10, value: 0 }, { frame: 25, value: 1, easing: 'land' }] },
-            ],
-          },
-          // Primary CTA Button
-          {
-            type: 'group',
-            id: 'cta-btn',
-            x: width / 2 - (isVertical ? 190 : 220),
-            y: isVertical ? height * 0.54 : height * 0.55,
-            width: isVertical ? 380 : 440,
-            height: isVertical ? 72 : 80,
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 20, value: 0 }, { frame: 35, value: 1, easing: 'pop' }] },
-              { property: 'scale', keyframes: [{ frame: 20, value: 0.85 }, { frame: 35, value: 1, easing: 'land' }] },
-            ],
-            children: [
-              {
-                type: 'rect',
-                id: 'cta-btn-bg',
-                x: 0,
-                y: 0,
-                width: isVertical ? 380 : 440,
-                height: isVertical ? 72 : 80,
-                radius: 36,
-                fill: brandColor,
-              },
-              {
-                type: 'text',
-                id: 'cta-btn-txt',
-                content: `${cta}  →`,
-                x: isVertical ? 75 : 100,
-                y: isVertical ? 24 : 26,
-                fontSize: isVertical ? 22 : 26,
-                fontWeight: 700,
-                color: '#020617',
-              },
-            ],
-          },
-          // Domain URL
-          {
-            type: 'text',
-            id: 'cta-url',
-            content: displayUrl,
-            x: width / 2 - 300,
-            y: isVertical ? height * 0.65 : height * 0.70,
-            width: 600,
-            fontSize: 20,
-            fontWeight: 600,
-            color: '#64748b',
-            textAlign: 'center',
-            animations: [
-              { property: 'opacity', keyframes: [{ frame: 30, value: 0 }, { frame: 45, value: 1, easing: 'land' }] },
-            ],
-          },
-        ],
-      },
-    ],
+    scenes,
   };
 
   const composition = compositionSchema.parse(rawComp);
@@ -676,5 +259,6 @@ export async function createLaunchReel(options: LaunchReelOptions): Promise<Laun
     projectDir,
     screenshotFile: screenshotPath,
     metadata,
+    style: activeStyle,
   };
 }
