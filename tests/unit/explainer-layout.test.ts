@@ -177,3 +177,17 @@ describe('explainer music bed and source cards', () => {
     expect(find('quote-card').y + find('quote-card').height).toBeLessThan(1540);
   });
 });
+
+describe('explainer closing keeps its points below a long title', () => {
+  const closing = { kind: 'closing', title: 'A hash table trades space for speed', points: ['Hash the key to a slot', 'Jump instead of search', 'Handle collisions calmly'], cta: 'Next: how caches use them' };
+  for (const layout of ['card', 'editorial']) {
+    it(`in the ${layout} layout`, () => {
+      const scene = compileExplainer(explainerSchema.parse({ topic: 'T', scenes: [{ ...closing, layout }], design: { layout } }), { audio: [] }).composition as any;
+      const find = (id: string) => scene.scenes[0].layers.find((item: any) => item.id === id);
+      const title = find('close-title'), first = find('close-point-0'), last = find('close-point-2'), cta = find(layout === 'card' ? 'cta-box' : 'cta-url');
+      // Three lines of the title's size must end above the first point, and the call to action must sit below the last one.
+      expect(first.y).toBeGreaterThanOrEqual(title.y + 3 * title.fontSize);
+      expect(cta.y).toBeGreaterThan(last.y);
+    });
+  }
+});
