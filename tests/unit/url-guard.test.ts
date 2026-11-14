@@ -30,6 +30,21 @@ describe('assertPublicHttpUrl', () => {
     await expect(assertPublicHttpUrl('http://[fd00::1]/')).rejects.toThrow(/not reachable/);
   });
 
+  it('judges IPv6 literals by the address they carry, without asking DNS (which answers differently on each platform)', async () => {
+    // IPv4 inside IPv6: mapped (the URL parser writes ::ffff:127.0.0.1 as ::ffff:7f00:1), compatible, NAT64 and 6to4.
+    for (const host of ['[::ffff:7f00:1]', '[::ffff:a00:1]', '[::ffff:c0a8:104]', '[::7f00:1]', '[64:ff9b::7f00:1]', '[64:ff9b::a9fe:101]', '[2002:7f00:1::]', '[2002:a00:1::1]']) {
+      await expect(assertPublicHttpUrl(`http://${host}/`), host).rejects.toThrow(/not reachable/);
+    }
+    // The whole link-local, site-local and multicast ranges, and documentation addresses.
+    for (const host of ['[fe90::1]', '[febf::1]', '[fec0::1]', '[ff02::1]', '[2001:db8::1]']) {
+      await expect(assertPublicHttpUrl(`http://${host}/`), host).rejects.toThrow(/not reachable/);
+    }
+    // A public IPv6 literal, and a public IPv4 inside IPv6, are allowed.
+    for (const host of ['[2606:4700:4700::1111]', '[::ffff:101:101]', '[64:ff9b::101:101]']) {
+      await expect(assertPublicHttpUrl(`http://${host}/`), host).resolves.toBeInstanceOf(URL);
+    }
+  });
+
   it('refuses internal-looking host names before they are resolved', async () => {
     for (const host of ['localhost', 'api.localhost', 'myserver.local', 'db.internal', 'host.lan', 'x.arpa']) {
       await expect(assertPublicHttpUrl(`http://${host}/`), host).rejects.toThrow(/not reachable/);
