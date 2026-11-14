@@ -23,7 +23,7 @@ Each account is its own tenant. Every route, file read and job runs as that acco
 2. Create a **Compose** project and connect this GitHub repository. The `docker-compose.yml` at the repo root is the Dokploy compose file; `infrastructure/dokploy/compose.yml` is the same stack (a test keeps them identical), so either path works.
 3. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `SETTINGS_SECRET`.
 4. In the **Domains** tab, add a domain for the `api` service on port `3100`. Dokploy provisions the TLS certificate.
-   The `api` service also carries Traefik labels that send `${APP_HOST:-motionrender.io}` to port `3100` (set `APP_HOST` to your host). That is enough on its own: if you add the same host in the Domains tab as well, delete one of the two so two routers do not claim the host. The landing page (`site`, port `8080`) needs a different host than the one the `api` serves.
+   The compose file also carries Traefik labels, so no Domains-tab entry is needed: the `site` service (landing page, port `8080`) takes `${SITE_HOST:-motionrender.io}` and the `api` (the app and its login, port `3100`) takes `${APP_HOST:-app.motionrender.io}`. Set `PUBLIC_ORIGIN` to `https://` plus the app host, add a DNS record for both hosts, and do not also add either host in the Domains tab (two routers would claim it).
 5. Set `PUBLIC_ORIGIN` to the `https://` address Dokploy assigned (e.g. `https://studio.yourdomain.com`).
 6. Deploy.
 
