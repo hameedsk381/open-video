@@ -73,9 +73,9 @@ describe('AI studio server', () => {
     expect(json(escape).error).toMatch(/inside/);
   });
 
-  it('composes without asking for every layer, and still writes the video when asked', async () => {
-    const planned = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'planned' }));
-    expect(planned.frames).toBeGreaterThan(0); expect(planned.scenes).toBeGreaterThan(0);
+  it('writes React by default, says so plainly when the provider cannot, and still writes the layers when asked', async () => {
+    // Compose is React-only wherever the host can run code: the offline mock provider cannot write a React build, and there is no quiet fallback to a composition.
+    await expect(finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', folder: 'planned' }))).rejects.toThrow(/React authoring failed/);
     const written = await finished(await post('/api/compose', { brief: 'A launch reel', kind: 'reel', duration: 0.5, fps: 10, full: true, folder: 'full-layers' }));
     expect(written.frames).toBe(5);
   });
