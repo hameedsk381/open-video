@@ -1,6 +1,6 @@
 {
   "name": "motionrender",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "JSON-first, frame-deterministic motion graphics video engine: render compositions to MP4, WebM, ProRes, GIF or PNG frames from Node or the command line.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hameedsk381/motionrender.git" },

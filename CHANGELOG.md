@@ -2,6 +2,27 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## 0.7.0 (2026-11-14)
+
+### Added
+- **Explainer: layout decided by the content.** A `freeform` scene (the script places text, boxes and circles on the 1080×1920 column and times each one) for ideas the stock kinds cannot draw, and a `quote` scene (a source card: who said it, the exact words, an optional stamp). Each scene can set its own `layout` (`card`, `editorial`, or `auto`, which goes editorial when the scene carries a lot of text) and `place`. Scenes are centred between the header and the area reel apps cover, and steps, compare and timeline spacing adapt to how many items they have.
+- **Explainer: captions, chapters and music.** Word-timed captions follow the real voice (the Edge voice reports each word's timing; it is kept beside the recording), a segmented progress bar and a "03 / 09" count show where the viewer is, and a quiet music bed (`music`: `calm`, `pulse` or `none`) sits under the voice and drops while it speaks. The beds are two new built-in sounds, `bed-calm` and `bed-pulse`: 16-second chord loops that join themselves without a click. `captions: false` and `chapters: false` turn the first two off; a silent build has no captions or music. A voiced scene that holds longer than 9 s gets a note suggesting a split.
+- **A treatment step before the scenes.** The explainer writer and the React agent's direction stage weigh three genuinely different shapes for the video and choose one. `mr explainer write --avoid a/explainer.json,b/explainer.json` and `mr agent --avoid reel-a,reel-b` steer a new video away from the structures already made.
+- **README:** an explainer section, "Why MotionRender", agent setup, examples and a comparison with Remotion and HyperFrames.
+
+### Changed
+- **Compose writes React wherever the host can run code.** The planner's "json" answer and `OVE_AI_ROUTE` no longer bring back JSON authoring, and a failed React build is an error, not a quiet fallback to a composition. A composition is still written for hosts that cannot run code (the hosted worker), batch variable fields, non-image assets, and when asked (`--no-react`, `--full`, `--json-layers`). `mr agent` has no JSON route.
+- **Explainer loudness is mastered to −14 LUFS** (it was −16). The writer asks for 8–16 word spoken lines and seven scenes by default (it was 12–22 words and five).
+- **Faster frames.** Each frame goes to the browser page as one JSON string; Playwright was checking and rebuilding every nested object of the argument, about 15 ms of Node time per frame. On a 1080×1920 explainer with 4 pages the per-frame cost fell from 94 ms to 62 ms; output is bit-identical.
+- The README, the npm README and the docs use `mr` for commands; `ove` stays as an older alias.
+- The published package now has repository, homepage, bugs and keywords.
+
+### Fixed
+- **The server-side fetch guard judged IPv6 literals by DNS.** `URL.hostname` keeps the brackets, so `[::1]` went to a lookup that answered differently on each platform. Literals are now classified by the address they carry, including an IPv4 address inside an IPv6 one (mapped, compatible, NAT64, 6to4), and the whole link-local, site-local, multicast and documentation ranges are refused.
+- `mr make` treats a file with a `topic` as an explainer script (the example script carries a `version` and was mistaken for a composition).
+- Launch reel template: copy is sanitised for quotes, braces and angle brackets, the cursor and light sweep run on the beat's own frames (they never played), and invented claims were removed.
+- The studio typecheck (two unused imports) and three integration tests that were stale or racy.
+
 ## 0.6.0 (2026-11-10)
 
 ### Removed
