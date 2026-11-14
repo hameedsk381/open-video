@@ -1,4 +1,4 @@
-# AI-assisted authoring (`ove ai`)
+# AI-assisted authoring (`mr ai`)
 
 OVE itself contains no model and makes no network requests during a render. The AI commands are an authoring layer
 around the engine: they turn a brief into the same `composition.json`, asset files and narration the rest of the
@@ -40,7 +40,7 @@ export OVE_AI_TRANSCRIPTION_MODEL=whisper-1   # transcription; per-provider defa
 export OVE_AI_IMAGE_MODEL=gpt-image-1         # image generation; `auto` on gateways
 
 # No key, no network: a deterministic stand-in for trying the pipeline
-ove ai compose demo --provider mock --brief "a test"
+mr ai compose demo --provider mock --brief "a test"
 ```
 
 | Provider | chat | images | speech | word timings |
@@ -64,7 +64,7 @@ no key, no cost, and it returns word boundaries with the audio, so captions come
   relying on it in a product.
 - **Voices** are Edge's: `en-IN-NeerjaNeural`, `en-US-AriaNeural`, `hi-IN-SwaraNeural`, `te-IN-ShrutiNeural` and many more. Choose one
   with `--voice` or `voice` in an explainer script. `voiceRate` in a script (-40 to +60 percent) makes it faster or slower.
-- **Audio you supply** (`ove ai transcribe`) is transcribed by the provider's transcription model, not by Edge.
+- **Audio you supply** (`mr ai transcribe`) is transcribed by the provider's transcription model, not by Edge.
 
 Earlier versions could also speak through the provider's own endpoint (`OVE_AI_TTS_PROVIDER=native`) or on this machine in eleven
 Indian languages (`indic`). Both were removed; Edge is the only engine.
@@ -76,7 +76,7 @@ With Groq and no model chosen, a rate-limited call moves on to the next Groq cha
 Other environment variables: `OVE_AI_PROVIDER`, `OVE_AI_API_KEY`, `OVE_AI_BASE_URL`, `OVE_AI_MODEL`,
 `OVE_AI_TRANSCRIPTION_MODEL`, `OVE_AI_IMAGE_MODEL`, plus the per-vendor keys above and
 `FREELLMAPI_BASE_URL`, `FREELLMAPI_MODEL`, `GROQ_BASE_URL`, `NVIDIA_BASE_URL`, `LITELLM_BASE_URL`, `OPENROUTER_API_KEY`.
-`ove ai doctor` prints what is configured and what it can do.
+`mr ai doctor` prints what is configured and what it can do.
 
 ### A stronger model for the stages that decide the look
 
@@ -92,7 +92,7 @@ export OVE_AI_MODEL_VISION=<a model that reads images>
 
 A reply that stops because the model ran out of output room is never usable JSON. Models that reason before they answer spend part of the limit thinking, so a cap that suits a plain model cuts them off mid-answer, and every stage that expects JSON then fails. Each call is asked for up to 8,192 tokens (16,384 on Anthropic); when the model reports it was cut off, the call is repeated with twice the room, twice at most, up to 32,768. `OVE_AI_MAX_TOKENS` changes the starting point.
 
-On the FreeLLMAPI gateway the model is read from `FREELLMAPI_MODEL` first and `OVE_AI_MODEL` second, so a `FREELLMAPI_MODEL` in `.env` silently beats `OVE_AI_MODEL`. `ove ai doctor` prints the model that will be used.
+On the FreeLLMAPI gateway the model is read from `FREELLMAPI_MODEL` first and `OVE_AI_MODEL` second, so a `FREELLMAPI_MODEL` in `.env` silently beats `OVE_AI_MODEL`. `mr ai doctor` prints the model that will be used.
 
 ### Looks that differ from one video to the next
 
@@ -112,7 +112,7 @@ The planner chooses between a JSON composition and React code. A weak planner an
 
 ### Every video is React
 
-Whichever route made it, `ove ai compose` saves a React video: one `react` layer, plus audio layers for any sound. A scene-by-scene composition or a catalogue block is drawn by `CompositionView` (`@ove/react`), a shared component that reads the composition as data; the generated `video.tsx` holds that data and nothing a model wrote. It reuses the JSON renderer's own text layout, easing, animation and camera code, so the two agree to within anti-aliasing. A composition that uses something the view cannot draw yet (video, Lottie, shader or code layers, captions, gradient text, split rich text, colour grading, mattes and masks, path trimming) stays as JSON layers, and the compose note says which feature. Pass `--json-layers` to keep JSON layers regardless; the hosted worker renders JSON layers only.
+Whichever route made it, `mr ai compose` saves a React video: one `react` layer, plus audio layers for any sound. A scene-by-scene composition or a catalogue block is drawn by `CompositionView` (`@ove/react`), a shared component that reads the composition as data; the generated `video.tsx` holds that data and nothing a model wrote. It reuses the JSON renderer's own text layout, easing, animation and camera code, so the two agree to within anti-aliasing. A composition that uses something the view cannot draw yet (video, Lottie, shader or code layers, captions, gradient text, split rich text, colour grading, mattes and masks, path trimming) stays as JSON layers, and the compose note says which feature. Pass `--json-layers` to keep JSON layers regardless; the hosted worker renders JSON layers only.
 
 ### What the video says
 
@@ -131,7 +131,7 @@ The pass needs a model that reads images. A provider that cannot is skipped with
 
 ## Content first: the script and the data behind it
 
-Every `ove ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, scene writer, narration and captions all derive from that script instead of inventing copy on the way.
+Every `mr ai compose` now writes the **content** before it designs anything. One editor call returns the block stored as `content` in `composition.json`: who it is for (`audience`), what they get (`promise`), what they should do (`cta`), and the beats that carry the video — each with an `id`, a spoken `narration` line, the `onScreen` copy the viewer reads, the `claim` it makes, the `data` figures it shows, and the `sourceIds` that back them. Then the planner, scene writer, narration and captions all derive from that script instead of inventing copy on the way.
 
 Grounding is checked, not assumed:
 
@@ -141,17 +141,17 @@ Grounding is checked, not assumed:
 - every claim and figure must name a source id, and every source must carry a `quote` copied word for word from it. The engine verifies the quote is a literal substring of the source text. A script that fails comes back with the exact problem ("the quote for src1 is not in that source") and is retried; if no trustworthy script survives the attempts, the video continues **without** a script rather than with an invented one.
 
 ```sh
-ove ai compose reel --brief "Q4 revenue report" --source data/q4.csv --no-research
-ove ai compose reel --brief "..." --content my-script.json      # use a written script
-ove script reel/composition.json --output script.md             # read it (or script.json for JSON)
-ove script reel/composition.json --set revised.json             # put a revised script back (validated)
+mr ai compose reel --brief "Q4 revenue report" --source data/q4.csv --no-research
+mr ai compose reel --brief "..." --content my-script.json      # use a written script
+mr script reel/composition.json --output script.md             # read it (or script.json for JSON)
+mr script reel/composition.json --set revised.json             # put a revised script back (validated)
 ```
 
 With `--narration`, a scripted video speaks its own beats: one script over the whole video. MCP exposes the same: `motionrender_create_video` takes `sources`, `research` and `script`, and `motionrender_script` exports or imports the block.
 
 ## A written video
 
-When the planner does not choose React, `ove ai compose` writes a full composition: layout, motion and timing are all the model's, built from the blocks, effects and moves in the registry. The planner and the script come first, so every beat's copy and look are decided before any layer is written.
+When the planner does not choose React, `mr ai compose` writes a full composition: layout, motion and timing are all the model's, built from the blocks, effects and moves in the registry. The planner and the script come first, so every beat's copy and look are decided before any layer is written.
 
 When a full composition has problems, the model is asked for a patch instead of the whole composition again: `{"fixes": [{"path": "scenes[1].layers[0]", "value": {…}}, {"layer": "title", "set": {…}}, {"path": "scenes[0].layers[3]", "remove": true}]}`. A complete composition is still accepted as the reply.
 
@@ -160,7 +160,7 @@ When a full composition has problems, the model is asked for a patch instead of 
 Before any video is written, `compose` asks the model for a **plan**: which of the two production routes suits the brief, a JSON composition or React code, with the video's beats and art direction. The route follows what the brief needs, not a default.
 
 - route **json** → a full composition is written with the plan's beats as its required motion plan, so planning is never wasted;
-- route **react** → the agent loop (below) writes `video.tsx`, builds it and returns the composition it produced. Only a host that runs generated code itself offers this route: `ove ai compose` on your machine and the local studio do; the hosted workers do not, because the brief would then choose the JavaScript the operator's machine runs. A written script fixes the component's beats, and a failed build falls back to a JSON composition rather than losing the job.
+- route **react** → the agent loop (below) writes `video.tsx`, builds it and returns the composition it produced. Only a host that runs generated code itself offers this route: `mr ai compose` on your machine and the local studio do; the hosted workers do not, because the brief would then choose the JavaScript the operator's machine runs. A written script fixes the component's beats, and a failed build falls back to a JSON composition rather than losing the job.
 
 If the planner cannot be trusted — no valid reply within two attempts, or a non-plan-shaped answer — compose falls back to writing a full composition. Pass `--no-plan` to skip planning entirely.
 
@@ -169,26 +169,26 @@ If the planner cannot be trusted — no valid reply within two attempts, or a no
 On gateways where one big generation call stalls for tens of seconds or drops global constraints ("exactly 2 scenes" comes back as one), the JSON route can be composed as a series of **small calls** instead: one short call agrees the visual system with the plan's beats (palette, fonts, a motion move per beat — the *style contract*), then one small call designs **each scene** against that contract and a summary of where the previous scene ends, and the timing is decided entirely by code — the beats' shares of the requested duration, an exact total, transitions, ids and a house camera push are stitched in deterministically. Each call lands in the provider's fast path, fails on its own (a bad scene costs its retry, not the video), and when the renderer's review finds errors only the scenes that own the failing frames are re-designed with the exact findings. Any failure in the small-call chain falls back to the proven single-call path, so `--provider mock` and offline runs are untouched. Opt in per call with `OVE_COMPOSE_STRATEGY=scenes` (or `strategy: 'scenes'` in the SDK).
 
 ```sh
-ove ai capabilities            # list every registered capability the AI may use
-ove ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
+mr ai capabilities            # list every registered capability the AI may use
+mr ai capabilities --json     # machine-readable, with ids, descriptions, params and paths
 ```
 
 The registry (registry v2, about 140 capabilities in a starter install) is built from the blocks on disk plus the built-in effects, transitions, sound effects, the React component kit and the named motion moves. `@ove/ai` exposes `buildRegistry` / `planBuild` for SDK callers, and the cloud jobs `composeSmart` inherits the same routing.
 
 That routing — `composeSmart` in `packages/ai/src/smart.ts` — is where the brief is turned into a decision: plan first or not, write the whole composition or author React code. It takes the capability list and (optionally) the React builder from the host (`ComposeSource`), so every host routes a brief the same way without depending on the command line; a host that supplies no builder never has React offered to its planner. A build that fails is reported in `warnings`, never swallowed.
 
-## `ove agent`: the planner routes into React code
+## `mr agent`: the planner routes into React code
 
-`ove agent "<brief>"` runs the same planner restricted to the two routes it can act on. A brief that suits a plain composition is produced the way `ove ai compose` does (schema-checked JSON, deterministic render); only a brief that needs bespoke motion graphics goes to the React agent loop (`@ove/react`, esbuild bundle, `type: "react"` layer). `--no-plan` keeps the previous behaviour of always running the React loop.
+`mr agent "<brief>"` runs the same planner restricted to the two routes it can act on. A brief that suits a plain composition is produced the way `mr ai compose` does (schema-checked JSON, deterministic render); only a brief that needs bespoke motion graphics goes to the React agent loop (`@ove/react`, esbuild bundle, `type: "react"` layer). `--no-plan` keeps the previous behaviour of always running the React loop.
 
 ```sh
-ove agent "A viral launch reel for an open-source vector database"
-ove agent "Modern SaaS demo" --landscape --duration 9
+mr agent "A viral launch reel for an open-source vector database"
+mr agent "Modern SaaS demo" --landscape --duration 9
 ```
 
 ### Creative direction
 
-Before any code is written, `ove agent` asks the model to direct the video: a concept, an art direction, a colour palette, a display and body face from the families bundled with the renderer, a motion language, a sound note and the beat structure with seconds. The direction is saved as `direction.json` beside `video.tsx` and becomes the section of the coding prompt the component must realize. When the planner ran, the stage starts from its idea and beats instead of inventing a second art direction.
+Before any code is written, `mr agent` asks the model to direct the video: a concept, an art direction, a colour palette, a display and body face from the families bundled with the renderer, a motion language, a sound note and the beat structure with seconds. The direction is saved as `direction.json` beside `video.tsx` and becomes the section of the coding prompt the component must realize. When the planner ran, the stage starts from its idea and beats instead of inventing a second art direction.
 
 There is deliberately no house style. The prompt no longer mandates glass cards, bento grids, glow or a three-scene hook/value/CTA shape, and it treats the React component kit as optional resources a custom build can ignore. `KineticText`, `NumberTicker`, `Audio` sound effects and the rest stay available, but nothing in the toolkit is required: the model may write its own components, SVG illustrations or canvas effects.
 
@@ -196,11 +196,11 @@ A direction the model cannot produce is not fatal — the agent says why, writes
 
 ### Brand from a URL (`--url`)
 
-`ove agent "<brief>" --url https://acme.io` reads the brand straight off the website before planning. The scraper goes deeper than the homepage markup: it mines the site's own stylesheets for custom properties, colours and `@font-face` rules (tokens the design system is literally written in, ranked by how often they are used), crawls the two highest-signal brand pages (pricing, product, about) to confirm the palette, and classifies the roles from the evidence itself — the dominant dark colour becomes the background, near-white the text, and the most-used saturated mid-tones the primary and accent. Colours seen as CSS variables outrank stray hex in markup, and every extra request is best-effort: a failed stylesheet or page shrinks the evidence, never the result. With a provider the distilled evidence is refined into a `BrandPack`; without one (or on any AI failure) the classified roles and fonts become the pack directly, so `--url` works offline with `--provider mock` too.
+`mr agent "<brief>" --url https://acme.io` reads the brand straight off the website before planning. The scraper goes deeper than the homepage markup: it mines the site's own stylesheets for custom properties, colours and `@font-face` rules (tokens the design system is literally written in, ranked by how often they are used), crawls the two highest-signal brand pages (pricing, product, about) to confirm the palette, and classifies the roles from the evidence itself — the dominant dark colour becomes the background, near-white the text, and the most-used saturated mid-tones the primary and accent. Colours seen as CSS variables outrank stray hex in markup, and every extra request is best-effort: a failed stylesheet or page shrinks the evidence, never the result. With a provider the distilled evidence is refined into a `BrandPack`; without one (or on any AI failure) the classified roles and fonts become the pack directly, so `--url` works offline with `--provider mock` too.
 
 ```sh
-ove agent "Launch reel for this product" --url https://linear.app
-ove agent "Introduce the company" --url acme.io --provider mock
+mr agent "Launch reel for this product" --url https://linear.app
+mr agent "Introduce the company" --url acme.io --provider mock
 ```
 
 ## History: every AI change is kept
@@ -208,19 +208,19 @@ ove agent "Introduce the company" --url acme.io --provider mock
 Each `compose`, `refine`, `narrate`, `transcribe` and `image` (when it changes a composition) keeps the result as a numbered revision in `history/composition/` beside the file (`0001.json`, `index.json`), with what produced it (brief or instruction, provider, model, attempts) and a short note of what changed. The first AI change keeps the file as it was as revision 1, so a hand-made video is never lost.
 
 ```sh
-ove ai history video/composition.json        # list the revisions
-ove ai restore video/composition.json 2      # bring revision 2 back (recorded as a new revision)
+mr ai history video/composition.json        # list the revisions
+mr ai restore video/composition.json 2      # bring revision 2 back (recorded as a new revision)
 ```
 
 The Studio shows the same list in the editor's History tab with a Restore button. Revisions are plain JSON, so they diff and commit like any other file.
 
-## Local studio (`ove ai studio`)
+## Local studio (`mr ai studio`)
 
 The same commands are available as a local web page, for when a form and a preview are easier than remembering flags:
 
 ```sh
-ove ai studio                            # opens http://127.0.0.1:3100/ using GROQ_API_KEY
-ove ai studio --provider mock --out demo  # offline, writes into ./demo
+mr ai studio                            # opens http://127.0.0.1:3100/ using GROQ_API_KEY
+mr ai studio --provider mock --out demo  # offline, writes into ./demo
 ```
 
 The studio is a React + Vite app (`apps/studio`; `pnpm build:studio` builds it, and without a build a plain fallback page is served). It is built around projects, each a folder under `--out`:
@@ -234,8 +234,8 @@ A job bar shows live progress over server-sent events. Every job calls the same 
 
 - `--port 3100` is the first port tried; if it is busy the next free one is used and printed.
 - `--out ai-videos` (default) is the only folder the page can read or write. Folder and output fields are relative to
-  it, and paths that resolve outside it are refused. Generated projects work with `ove dev`, `ove review` and
-  `ove render` unchanged. The two inputs that are files you already have, the audio for Captions and the rows file
+  it, and paths that resolve outside it are refused. Generated projects work with `mr dev`, `mr review` and
+  `mr render` unchanged. The two inputs that are files you already have, the audio for Captions and the rows file
   for Batch, can be anywhere on disk, but only audio or video files (`.wav .mp3 .ogg .m4a .aac .flac .webm .mp4 .mov
   .mkv`) and `.json` are accepted, and the audio is sent to the provider.
 - Compositions can only refer to files they were given. Compose accepts the assets you supplied; Refine keeps what the
@@ -256,12 +256,12 @@ A job bar shows live progress over server-sent events. Every job calls the same 
 ## Prompt to video
 
 ```sh
-ove ai compose reels/spring --brief "Spring sale for a coffee brand: 20% off, warm and calm, ends on the logo" \
+mr ai compose reels/spring --brief "Spring sale for a coffee brand: 20% off, warm and calm, ends on the logo" \
   --kind reel --duration 20
 
-ove still reels/spring/composition.json --frame 45 --output still.png
-ove review reels/spring/composition.json --output review.png
-ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudness -14
+mr still reels/spring/composition.json --frame 45 --output still.png
+mr review reels/spring/composition.json --output review.png
+mr render reels/spring/composition.json --output reels/spring/out.mp4 --loudness -14
 ```
 
 - `--kind` sets a canvas and a starting length: `reel` (1080×1920, 20 s), `product` (1080×1080, 18 s),
@@ -274,7 +274,7 @@ ove render reels/spring/composition.json --output reels/spring/out.mp4 --loudnes
   model to declare and use.
 - `--narration` writes a voiceover from the same brief, synthesises it, adds word-timed captions, and appends a
   full-length narration scene so both play over the whole video (see below).
-- `--review` adds renderer-based design rounds: `ove review` errors are fed back to the model before the file is
+- `--review` adds renderer-based design rounds: `mr review` errors are fed back to the model before the file is
   accepted. Slower, and needs Chromium and FFmpeg. If errors are still standing when the rounds run out, the file is
   written and rendered anyway, the errors are listed, and the command exits 1 — `--json` puts them in `errors`.
 - `--strict` refuses an answer that only became usable because the engine repaired it. Models invent animation
@@ -306,11 +306,11 @@ hand-written composition.
 
 ```sh
 # Write, speak and caption a script, adding both to an existing video
-ove ai narrate --brief "Explain why deterministic video rendering matters" --duration 25 \
+mr ai narrate --brief "Explain why deterministic video rendering matters" --duration 25 \
   --composition video/composition.json
 
 # Use a script you already wrote; voices include hannah (default), austin and troy
-ove ai narrate script.txt --composition video/composition.json --voice hannah --language en
+mr ai narrate script.txt --composition video/composition.json --voice hannah --language en
 ```
 
 The command:
@@ -331,11 +331,11 @@ so you can add them yourself.
 
 ```sh
 # A recorded voiceover, or the sound of an existing clip
-ove ai transcribe assets/voice.wav --composition video/composition.json
-ove ai transcribe assets/voice.wav --composition video/composition.json --start 2.5 --language en
+mr ai transcribe assets/voice.wav --composition video/composition.json
+mr ai transcribe assets/voice.wav --composition video/composition.json --start 2.5 --language en
 ```
 
-`ove ai transcribe` does not generate or change any audio: it transcribes the file, writes
+`mr ai transcribe` does not generate or change any audio: it transcribes the file, writes
 `<name>.captions.json` next to it (or in `--out`) and, with `--composition`, appends a `captions` scene that draws
 the words over the whole video. The scene holds only the captions layer, because the audio already belongs to the
 video. `--start` is the second at which that audio begins in the video, so the caption layer's `startFrame` matches
@@ -344,11 +344,11 @@ it. Like narration, the scene is appended last so it draws over everything, and 
 ### Editing a raw clip into a finished reel
 
 ```sh
-ove ai edit ./raw/take.mp4 --out reel
-ove ai edit ./raw/take.mp4 --out reel --max-silence 0.3 --keep-fillers --no-captions
+mr ai edit ./raw/take.mp4 --out reel
+mr ai edit ./raw/take.mp4 --out reel --max-silence 0.3 --keep-fillers --no-captions
 ```
 
-`ove ai edit` is the talking-head path: the clip's audio is extracted and transcribed with word timings, pauses
+`mr ai edit` is the talking-head path: the clip's audio is extracted and transcribed with word timings, pauses
 longer than `--max-silence` seconds (default 0.5), filler words (um, uh, erm…) and immediate repeats become a cut
 list, and the edited reel is written as an ordinary project — one `video` layer per kept stretch (`trimStart`
 skips the removed source, the clip's own sound plays, hard jump cuts between stretches) plus a word-timed captions
@@ -361,14 +361,14 @@ a provider).
 ### Splitting a long recording into shorts
 
 ```sh
-ove ai shorts ./raw/podcast.mp4 --out shorts --count 5 --min 15 --max 60
+mr ai shorts ./raw/podcast.mp4 --out shorts --count 5 --min 15 --max 60
 ```
 
-`ove ai shorts` transcribes the recording **once**, splits it into sentence runs (punctuation or a pause over
+`mr ai shorts` transcribes the recording **once**, splits it into sentence runs (punctuation or a pause over
 `--max-silence` seconds ends one), and scores every window of whole sentences with a transparent rubric — a clean
 ending (2), a hook in the first sentence (2), speech density (0–1) and a length near the 25–45 s sweet spot
 (0–1). The best `--count` non-overlapping windows are written as `shorts/short-01/`, `short-02/`, … each a full
-project with the same edited-reel shape as `ove ai edit` (silences and fillers tightened, word-timed captions,
+project with the same edited-reel shape as `mr ai edit` (silences and fillers tightened, word-timed captions,
 1080×1920 centre-cropped); `--no-cut` keeps each short one continuous stretch. The summary prints each short's
 time range, score and opening line. The planner is pure (`planShorts`/`shortsCandidatePlan` in `@ove/ai`), so the
 rubric is unit-testable without a provider.
@@ -376,8 +376,8 @@ rubric is unit-testable without a provider.
 ## Images
 
 ```sh
-ove ai image "a soft teal gradient with subtle grain, no text" --out assets/bg.png --size portrait
-ove ai image "minimal line icon of a coffee cup" --out assets/icon.png \
+mr ai image "a soft teal gradient with subtle grain, no text" --out assets/bg.png --size portrait
+mr ai image "minimal line icon of a coffee cup" --out assets/icon.png \
   --composition video/composition.json --id icon
 ```
 
@@ -388,7 +388,7 @@ file is re-validated. The model can then use `"src": "icon"`.
 ## Prompt to batch (product videos)
 
 ```sh
-ove ai batch products.json --brief "A clean product card: name, price, one accent colour" \
+mr ai batch products.json --brief "A clean product card: name, price, one accent colour" \
   --output "out/{{id}}.mp4" --duration 12
 ```
 
@@ -434,13 +434,13 @@ passed to every video.
   There is no `eval`, no arbitrary code execution, and no request to a web URL from a composition.
 - Rendering makes no model calls and is byte-identical for the same JSON on the same machine.
 - Distributed rendering does not send the brief anywhere: AI runs before rendering, on the coordinator.
-- The 86 KB JSON Schema is available with `ove schema`; the AI layer uses the same schema the renderer uses.
+- The 86 KB JSON Schema is available with `mr schema`; the AI layer uses the same schema the renderer uses.
 
 ## Limits
 
-- `groq` covers chat, speech and word timings but has no image generation (Groq lists no image model); `mock` supports offline chat and images only. `ove ai doctor` says what is available before a run.
+- `groq` covers chat, speech and word timings but has no image generation (Groq lists no image model); `mock` supports offline chat and images only. `mr ai doctor` says what is available before a run.
 - Captions need word or segment timings. A provider without transcription produces audio and no captions.
 - The generated composition uses ordinary layers, not Lottie or shaders, unless the brief explicitly asks for
-  them. `ove review` cannot read text inside a React layer, so ordinary text layers are preferred.
+  them. `mr review` cannot read text inside a React layer, so ordinary text layers are preferred.
 - AI is an authoring step, not a runtime feature: the Player and `renderMedia` never call a model.
 - Long-form footage editing remains outside what OVE does, AI-written or not.
