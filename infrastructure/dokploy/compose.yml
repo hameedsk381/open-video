@@ -76,6 +76,21 @@ services:
       WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
     volumes: ["data:/data"]
     networks: [dokploy-network, internal]
+    # Traefik (Dokploy) routes the app's host to the API on port 3100. Without these, a domain added in Dokploy's Domains tab can be sent to port 80, where nothing listens (a 502).
+    # APP_HOST is the host to serve (default motionrender.io). If you also add this host in the Domains tab, remove that entry so two routers do not claim it.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.motionrender-api-web.rule=Host(`${APP_HOST:-motionrender.io}`)"
+      - "traefik.http.routers.motionrender-api-web.entrypoints=web"
+      - "traefik.http.routers.motionrender-api-web.service=motionrender-api-web"
+      - "traefik.http.routers.motionrender-api-web.middlewares=redirect-to-https@file"
+      - "traefik.http.services.motionrender-api-web.loadbalancer.server.port=3100"
+      - "traefik.http.routers.motionrender-api-websecure.rule=Host(`${APP_HOST:-motionrender.io}`)"
+      - "traefik.http.routers.motionrender-api-websecure.entrypoints=websecure"
+      - "traefik.http.routers.motionrender-api-websecure.service=motionrender-api-websecure"
+      - "traefik.http.routers.motionrender-api-websecure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.motionrender-api-websecure.loadbalancer.server.port=3100"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
