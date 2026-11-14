@@ -104,3 +104,47 @@ describe('explainer auto layout', () => {
     expect([editorial(0), editorial(1)]).toEqual([false, true]);
   });
 });
+
+describe('explainer captions and chapter bar', () => {
+  const words = [{ text: 'Hash', start: 0, end: 0.4 }, { text: 'the', start: 0.4, end: 0.6 }, { text: 'key.', start: 0.6, end: 1.1 }, { text: 'Pick', start: 1.2, end: 1.6 }, { text: 'a', start: 1.6, end: 1.7 }, { text: 'slot.', start: 1.7, end: 2.3 }];
+  const spoken = { src: 'assets/voice-1.wav', seconds: 2.5, words };
+  const build = (extra: Record<string, unknown> = {}, audio: any[] = [spoken, spoken]) =>
+    compileExplainer(explainerSchema.parse({ topic: 'T', scenes: [{ ...steps, caption: 'A line.', say: 'x' }, { ...steps, say: 'y' }], ...extra }), { audio }).composition as any;
+
+  it('draws the spoken words as captions timed to the real speech, with the word being said picked out', () => {
+    const captions = layer(build(), 0, 'captions');
+    expect(captions).toMatchObject({ type: 'captions', mode: 'words', highlightColor: '{{accent}}', startFrame: 8, y: 1380 });
+    expect(captions.cues.length).toBeGreaterThan(0);
+    expect(captions.cues.flatMap((cue: any) => cue.words.map((word: any) => word.text))).toEqual(['Hash', 'the', 'key.', 'Pick', 'a', 'slot.']);
+    expect(captions.cues[0].words[0]).toMatchObject({ start: 0, end: 0.4 });
+  });
+
+  it('leaves out the scene\'s own caption line when captions say the words, and keeps it without them', () => {
+    expect(layer(build(), 0, 'caption')).toBeUndefined();
+    expect(layer(build(), 0, 'caption-note')).toMatchObject({ content: 'A line.', fontSize: 30, color: '{{muted}}' });
+    expect(layer(build(), 0, 'caption-note').y).toBeLessThan(layer(build(), 0, 'captions').y);
+    expect(layer(build({ captions: false }), 0, 'caption')).toBeTruthy();
+    expect(layer(build({}, [undefined, undefined]), 0, 'caption')).toBeTruthy();
+  });
+
+  it('has no captions in a silent build, or when the script turns them off', () => {
+    expect(layer(build({}, [undefined, undefined]), 0, 'captions')).toBeUndefined();
+    expect(layer(build({}, [{ src: 'a.wav', seconds: 2 }, { src: 'b.wav', seconds: 2 }]), 0, 'captions')).toBeUndefined();
+    expect(layer(build({ captions: false }), 0, 'captions')).toBeUndefined();
+  });
+
+  it('keeps scene content above the captions', () => {
+    const withCaptions = layer(build(), 0, 'step-0'), without = layer(build({ captions: false }), 0, 'step-0');
+    expect(withCaptions.y).toBeLessThanOrEqual(without.y);
+  });
+
+  it('draws one progress segment per scene and a count, filling the current one', () => {
+    const composition = build();
+    expect([0, 1].map(k => layer(composition, 0, `chapter-${k}`)?.type)).toEqual(['rect', 'rect']);
+    expect(layer(composition, 0, 'chapter-count').content).toBe('01 / 02');
+    expect(layer(composition, 1, 'chapter-count').content).toBe('02 / 02');
+    expect(layer(composition, 1, 'chapter-0').opacity).toBeGreaterThan(layer(composition, 0, 'chapter-0').opacity);
+    expect(layer(composition, 0, 'chapter-fill').animations[0].property).toBe('width');
+    expect(layer(build({ chapters: false }), 0, 'chapter-count')).toBeUndefined();
+  });
+});

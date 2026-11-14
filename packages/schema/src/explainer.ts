@@ -136,6 +136,8 @@ export const explainerSchema = z.object({
   version: z.literal('1.0').default('1.0'),
   series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
   aspect: z.enum(['9:16', '1:1', '4:5', '16:9']).default('9:16').describe('The shape of the video. Scenes are drawn as a 9:16 column; other shapes show that column, scaled to fit, centred on the board'),
+  captions: z.boolean().default(true).describe('Spoken words drawn as captions near the bottom, the word being said highlighted. Needs the voice: a silent build has none.'),
+  chapters: z.boolean().default(true).describe('A segmented progress bar and a "03 / 07" count, so the viewer always knows where they are'),
   sketch: z.boolean().default(false).describe('Draw the whole board by hand: wobbly outlines, redrawn every few frames like a cartoon'),
   look: z.enum(explainerLooks).default('navy').describe(`The whole design of the board. Choose the one that suits the subject, not the default: ${explainerLooks.map(name => `${name} (${explainerLookDefs[name].note})`).join('; ')}`),
   design: z.object({

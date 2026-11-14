@@ -103,7 +103,7 @@ describe('compiling a script', () => {
     expect(scenes[2].layers.find((layer: any) => layer.id === 'voice')).toMatchObject({ type: 'audio', src: 'assets/voice-3.wav' });
     expect(scenes[3].durationFrames).toBe(quick.scenes[3].durationFrames);
     expect(scenes[0].layers.some((layer: any) => layer.id === 'voice')).toBe(false);
-    expect(spoken.notes).toEqual([expect.stringMatching(/Scene 3 \(flow\) runs 14\.\d s/)]);
+    expect(spoken.notes).toEqual([expect.stringMatching(/Scene 3 \(flow\) runs 14\.\d s/), expect.stringMatching(/Scene 3 \(flow\) holds for 14\.\d s: split it into two beats/)]);
   });
 
   it('keeps long scenes busy: more packets flow when a scene runs longer', () => {

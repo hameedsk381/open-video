@@ -132,7 +132,7 @@ export async function buildExplainer(script: Explainer, options: BuildExplainerO
       if (!scene.say) { audio.push(undefined); continue; }
       const name = `voice-${i + 1}.wav`, made = await speakLine(scene.say, voice, join(assets, name), spec.voiceRate);
       log(`scene ${i + 1}: ${made.fresh ? 'recorded' : 'reused'} ${made.seconds.toFixed(1)} s`);
-      audio.push({ src: relative(dir, join(assets, name)).replace(/\\/g, '/'), seconds: made.seconds });
+      audio.push({ src: relative(dir, join(assets, name)).replace(/\\/g, '/'), seconds: made.seconds, words: made.words });
     }
   }
   const { composition, notes } = compileExplainer(spec, { audio });

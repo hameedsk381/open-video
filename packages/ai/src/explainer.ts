@@ -80,7 +80,7 @@ const treatmentGuide = [
 ].join('\n');
 
 export function explainerPrompt(brief: string, options: WriteExplainerOptions = {}): ChatMessage[] {
-  const scenes = options.scenes ?? 5, language = options.language ?? 'English';
+  const scenes = options.scenes ?? 7, language = options.language ?? 'English';
   const system = [
     'You write scripts for short vertical explainer videos: one idea, taught one scene at a time, with a spoken line over each scene.',
     `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","treatment":{...},"look":"...","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
@@ -92,7 +92,7 @@ export function explainerPrompt(brief: string, options: WriteExplainerOptions = 
     'Rules:',
     ...(options.media?.length || options.images ? [] : ['- Do not use a media scene: this video has no pictures or footage.']),
     `- About ${scenes} scenes. Start with a title and end with a closing. Use a kind only when it shows the idea better than another; use each kind at most twice. Use stat, chart and timeline only for numbers and events you know to be true; never invent figures.`,
-    `- Write the spoken lines ("say") and every label in ${language}. Spoken lines are short sentences a person can say in one breath, 12 to 22 words, one idea each, and they must not repeat the on-screen text word for word.`,
+    `- Write the spoken lines ("say") and every label in ${language}. Spoken lines are short sentences a person can say in one breath, 8 to 16 words, one idea each, and they must not repeat the on-screen text word for word. Pace matters: a scene lasts as long as its line, so a line of 16 words is about 6 seconds. Something on screen should change every few seconds; when an idea needs more words, split it into two scenes instead of one long one. The spoken words are also drawn as captions, so do not put the same sentence in a "caption" as well.`,
     '- Labels, ids and the topic are short; the topic and "step" lines are UPPER CASE. Keep every text within a few words, because it is drawn in a box.',
     '- Be concrete and correct. Teach the real mechanism, with the names people use for it. Do not invent numbers or claims.',
   ].join('\n');
@@ -139,14 +139,31 @@ export function wavSeconds(bytes: Uint8Array): number {
   throw new Error('That WAV recording has no readable length');
 }
 
-/** Records a scene's line with the Edge voice to `file`, or reuses the recording made earlier for the same words, voice and speed. */
-export async function speakLine(text: string, voice: string | undefined, file: string, rate?: number): Promise<{ seconds: number; fresh: boolean }> {
-  const stamp = createHash('sha1').update(`edge\n\n${voice ?? ''}\n${rate ? `rate ${rate}\n` : ''}${text}`).digest('hex'), mark = `${file}.txt`;
+/** One spoken word and when it is said, in seconds from the start of the recording. */
+export type SpokenWord = { text: string; start: number; end: number };
+
+const readWords = async (file: string): Promise<SpokenWord[] | undefined> => {
+  try {
+    const list = JSON.parse(await readFile(file, 'utf8'));
+    return Array.isArray(list) && list.every(word => typeof word?.text === 'string' && Number.isFinite(word.start) && Number.isFinite(word.end)) ? list : undefined;
+  } catch { return undefined; }
+};
+
+/**
+ * Records a scene's line with the Edge voice to `file`, or reuses the recording made earlier for the same words, voice and speed. The voice
+ * reports when each word is said; that is kept beside the recording (`file.words.json`) and returned, so captions follow the real speech.
+ * A recording made before word timings were kept is recorded again once.
+ */
+export async function speakLine(text: string, voice: string | undefined, file: string, rate?: number): Promise<{ seconds: number; fresh: boolean; words: SpokenWord[] }> {
+  const stamp = createHash('sha1').update(`edge\n\n${voice ?? ''}\n${rate ? `rate ${rate}\n` : ''}${text}`).digest('hex'), mark = `${file}.txt`, wordsFile = `${file}.words.json`;
   const same = await readFile(mark, 'utf8').then(saved => saved === stamp, () => false);
-  if (same) { const bytes = await readFile(file).catch(() => undefined); if (bytes) return { seconds: wavSeconds(bytes), fresh: false }; }
+  if (same) {
+    const [bytes, words] = await Promise.all([readFile(file).catch(() => undefined), readWords(wordsFile)]);
+    if (bytes && words) return { seconds: wavSeconds(bytes), fresh: false, words };
+  }
   const speech = await synthesizeEdgeSpeech(text, { voice, rate });
   if (!/wav/i.test(speech.extension)) throw new Error(`The voice answered with ${speech.extension} audio; only WAV is read here`);
-  const bytes = Buffer.from(speech.data);
-  await writeFile(file, bytes); await writeFile(mark, stamp);
-  return { seconds: wavSeconds(bytes), fresh: true };
+  const bytes = Buffer.from(speech.data), words = (speech.transcript?.words ?? []).map(word => ({ text: word.text, start: word.start, end: word.end }));
+  await writeFile(file, bytes); await writeFile(wordsFile, JSON.stringify(words)); await writeFile(mark, stamp);
+  return { seconds: wavSeconds(bytes), fresh: true, words };
 }
