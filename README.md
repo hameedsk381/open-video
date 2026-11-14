@@ -1,6 +1,28 @@
 # MotionRender
 
+[![npm](https://img.shields.io/npm/v/motionrender)](https://www.npmjs.com/package/motionrender) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+
 An independent, JSON-first, frame-deterministic motion graphics video engine. A video is one canonical JSON composition: MotionRender validates it, evaluates each frame with Chromium Canvas 2D, and streams the frames into FFmpeg for MP4 (H.264/H.265), WebM (VP9, with transparency), MOV (ProRes), GIF or PNG frames.
+
+## Why MotionRender
+
+- **Frame-exact.** Every frame is a pure function of time, so a render is reproducible. AI runs before rendering, never inside it.
+- **No AI key needed to make a video.** The agent that writes the script is the model: an explainer script (scenes and spoken lines) goes in, a voiced, captioned MP4 comes out. See [Explainer videos](#explainer-videos-no-ai-key-needed).
+- **Three ways to write a video:** a JSON composition, React components (`motionrender/react`), or an explainer script.
+- **A design review that blocks bad output.** Text cut off, too small to read on a phone, or under the captions and the platform's controls is reported before anything renders.
+- **Sourced facts.** `mr facts` looks up figures from Wikipedia, the World Bank and exchange rates (no key), and a script can carry its sources.
+- **Built for agents.** An MCP server, agent skills and a one-command folder setup, below.
+- **MIT licensed.**
+
+### Use it with an agent
+
+```sh
+claude mcp add motionrender -- npx -y motionrender mcp      # Claude Code
+npx -y motionrender mcp --config all                        # print the config for Claude Code, Claude Desktop, Codex and Cursor
+npx -y motionrender setup .                                 # AGENTS.md, CLAUDE.md, MCP config and the skills, in this folder
+```
+
+See [AGENTS.md](AGENTS.md) for the tool list and the production loop.
 
 ## Quickstart
 
@@ -226,6 +248,29 @@ mr theme espresso reel/composition.json     # switch every block's colours at on
 `mr add` writes plain JSON: a component (named after the block, with underscores) under `components` and a placement whose `with` holds the text, so a block is yours to edit afterwards. Scenes are appended and overlap by their fade; overlays go inside a scene (`--scene`, default the last) from `--at`. Expressions can read `canvas.width`, `canvas.height` and `canvas.fps`, which is how blocks resize themselves. Blocks live in `packages/cli/blocks/*.json` and themes in `packages/cli/themes/*.json`. Themes change colours, corner radius and heading weight; fonts stay Inter unless you add font assets.
 
 `mr init <dir>` starts from a small starter video; `mr add` brings in blocks. The AI can also write a whole video from a brief; see `docs/ai.md`.
+
+## Examples
+
+Each folder in [examples/](examples) is a runnable project; render one with `pnpm mr render examples/<name>/composition.json --output out.mp4`.
+
+- `typography`: kinetic type over a music bed. `code-video`: a video written as code. `react-video`: a React component video.
+- `three-video`: a Three.js 3D layer. `expressive`: html, Lottie, shader layers and group layout.
+- `effects-demo`: ten `fx-*` effects over footage (see [Effects over footage](#effects-over-footage)).
+- `url-shortener` and `uber-heatmap`: explainer scripts; build one with `pnpm mr make examples/url-shortener/spec.json --no-voice`.
+
+## How it compares
+
+From each project's own README, November 2026:
+
+| | MotionRender | [Remotion](https://github.com/remotion-dev/remotion) | [HyperFrames](https://github.com/heygen-com/hyperframes) |
+|---|---|---|---|
+| You write | JSON, React components or an explainer script | React components | HTML with timing attributes and GSAP timelines |
+| Licence | MIT | A special licence; a company licence is needed in some cases | Apache-2.0 |
+| Ready-made pieces | 63 blocks and 5 themes | Templates, elements, effects, transitions, captions | About 450 blocks |
+| Cloud rendering | A Docker stack with a queue and workers (a shared disk; no serverless option yet) | Lambda and Vercel Sandbox | An AWS Lambda package and hosted sharing |
+| Agents | MCP server, skills, `mr setup` | Agent Skills | A Claude plugin and skills |
+
+Both are far larger and more established, with tens of thousands of GitHub stars each, and have bigger catalogs and hosted rendering. MotionRender's bet is different: an explainer route that needs no AI key, a design review that stops bad output, and sourced facts, not a bigger catalog.
 
 ## Commands
 
