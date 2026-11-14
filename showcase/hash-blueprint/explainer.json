@@ -1,0 +1,737 @@
+{
+  "version": "1.0",
+  "topic": "HASH TABLES",
+  "series": "HOW THINGS ARE BUILT",
+  "handle": "@motionrender",
+  "look": "blueprint",
+  "aspect": "9:16",
+  "scenes": [
+    {
+      "kind": "title",
+      "layout": "card",
+      "brand": "Hash",
+      "chip": "DATA STRUCTURES",
+      "lines": [
+        "How do you find one item",
+        "among millions",
+        "without searching?"
+      ],
+      "say": "How do you find one item among millions without looking at them all?"
+    },
+    {
+      "kind": "chart",
+      "type": "bars",
+      "items": [
+        {
+          "label": "10 items",
+          "value": 10
+        },
+        {
+          "label": "100 items",
+          "value": 100
+        },
+        {
+          "label": "1,000 items",
+          "value": 1000
+        }
+      ],
+      "highlight": 2,
+      "caption": "Worst-case checks to find one item by scanning. A hash table needs about one.",
+      "say": "Scanning a list means more checks as it grows: up to ten, a hundred, a thousand. A hash table needs about one, however big it gets."
+    },
+    {
+      "kind": "freeform",
+      "step": "KEY → HASH → SLOT",
+      "elements": [
+        {
+          "type": "text",
+          "text": "key  →  hash  →  slot",
+          "x": 540,
+          "y": 330,
+          "size": 54,
+          "align": "center",
+          "font": "display",
+          "color": "accent",
+          "at": 0.03
+        },
+        {
+          "type": "text",
+          "text": "hash(key) mod 7",
+          "x": 540,
+          "y": 412,
+          "size": 36,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.06
+        },
+        {
+          "type": "box",
+          "x": 96,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.1
+        },
+        {
+          "type": "text",
+          "text": "0",
+          "x": 156,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 224,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.11
+        },
+        {
+          "type": "text",
+          "text": "1",
+          "x": 284,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.12000000000000001
+        },
+        {
+          "type": "text",
+          "text": "2",
+          "x": 412,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 480,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.13
+        },
+        {
+          "type": "text",
+          "text": "3",
+          "x": 540,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 608,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.14
+        },
+        {
+          "type": "text",
+          "text": "4",
+          "x": 668,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 736,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "text",
+          "text": "5",
+          "x": 796,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 864,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.16
+        },
+        {
+          "type": "text",
+          "text": "6",
+          "x": 924,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.15000000000000002
+        },
+        {
+          "type": "box",
+          "x": 96,
+          "y": 560,
+          "w": 120,
+          "h": 84,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent",
+          "motion": "pop",
+          "at": 0.14
+        },
+        {
+          "type": "text",
+          "text": "eel",
+          "x": 156,
+          "y": 582,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "at": 0.16
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 156,
+          "y": 690,
+          "size": 80,
+          "align": "center",
+          "font": "mono",
+          "color": "accent2",
+          "at": 0.22000000000000003
+        },
+        {
+          "type": "box",
+          "x": 96,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "accent2",
+          "motion": "pop",
+          "at": 0.30000000000000004
+        },
+        {
+          "type": "text",
+          "text": "eel",
+          "x": 156,
+          "y": 906,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "color": "bg",
+          "weight": 800,
+          "at": 0.32
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 560,
+          "w": 120,
+          "h": 84,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent",
+          "motion": "pop",
+          "at": 0.28
+        },
+        {
+          "type": "text",
+          "text": "cat",
+          "x": 412,
+          "y": 582,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "at": 0.30000000000000004
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 412,
+          "y": 690,
+          "size": 80,
+          "align": "center",
+          "font": "mono",
+          "color": "accent2",
+          "at": 0.36000000000000004
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "accent2",
+          "motion": "pop",
+          "at": 0.44000000000000006
+        },
+        {
+          "type": "text",
+          "text": "cat",
+          "x": 412,
+          "y": 906,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "color": "bg",
+          "weight": 800,
+          "at": 0.46
+        },
+        {
+          "type": "box",
+          "x": 736,
+          "y": 560,
+          "w": 120,
+          "h": 84,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent",
+          "motion": "pop",
+          "at": 0.42
+        },
+        {
+          "type": "text",
+          "text": "dog",
+          "x": 796,
+          "y": 582,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "at": 0.44
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 796,
+          "y": 690,
+          "size": 80,
+          "align": "center",
+          "font": "mono",
+          "color": "accent2",
+          "at": 0.5
+        },
+        {
+          "type": "box",
+          "x": 736,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "accent2",
+          "motion": "pop",
+          "at": 0.58
+        },
+        {
+          "type": "text",
+          "text": "dog",
+          "x": 796,
+          "y": 906,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "color": "bg",
+          "weight": 800,
+          "at": 0.6
+        },
+        {
+          "type": "text",
+          "text": "same key, same slot, every time",
+          "x": 540,
+          "y": 1180,
+          "size": 44,
+          "align": "center",
+          "font": "display",
+          "width": 900,
+          "at": 0.8
+        }
+      ],
+      "say": "Hash each key to a number, take it modulo the table size, and that is its slot. Eel, cat and dog each land in a slot of their own, and the same key always lands in the same one."
+    },
+    {
+      "kind": "freeform",
+      "step": "WHEN TWO KEYS COLLIDE",
+      "elements": [
+        {
+          "type": "text",
+          "text": "two keys, one slot",
+          "x": 540,
+          "y": 330,
+          "size": 54,
+          "align": "center",
+          "font": "display",
+          "color": "accent",
+          "at": 0.03
+        },
+        {
+          "type": "box",
+          "x": 96,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.06
+        },
+        {
+          "type": "text",
+          "text": "0",
+          "x": 156,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 224,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.06999999999999999
+        },
+        {
+          "type": "text",
+          "text": "1",
+          "x": 284,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.08
+        },
+        {
+          "type": "box",
+          "x": 480,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.09
+        },
+        {
+          "type": "text",
+          "text": "3",
+          "x": 540,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 608,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.1
+        },
+        {
+          "type": "text",
+          "text": "4",
+          "x": 668,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 736,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.11
+        },
+        {
+          "type": "text",
+          "text": "5",
+          "x": 796,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 864,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "muted",
+          "motion": "fade",
+          "at": 0.12
+        },
+        {
+          "type": "text",
+          "text": "6",
+          "x": 924,
+          "y": 1030,
+          "size": 30,
+          "align": "center",
+          "font": "mono",
+          "color": "muted",
+          "at": 0.11
+        },
+        {
+          "type": "box",
+          "x": 364,
+          "y": 560,
+          "w": 96,
+          "h": 84,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent",
+          "motion": "pop",
+          "at": 0.14
+        },
+        {
+          "type": "text",
+          "text": "cat",
+          "x": 408,
+          "y": 582,
+          "size": 38,
+          "align": "center",
+          "font": "mono",
+          "at": 0.16
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 368,
+          "y": 690,
+          "size": 80,
+          "align": "center",
+          "font": "mono",
+          "color": "accent2",
+          "at": 0.22
+        },
+        {
+          "type": "box",
+          "x": 456,
+          "y": 560,
+          "w": 96,
+          "h": 84,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "red",
+          "motion": "pop",
+          "at": 0.3
+        },
+        {
+          "type": "text",
+          "text": "rat",
+          "x": 504,
+          "y": 582,
+          "size": 38,
+          "align": "center",
+          "font": "mono",
+          "color": "red",
+          "at": 0.32
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 504,
+          "y": 690,
+          "size": 80,
+          "align": "center",
+          "font": "mono",
+          "color": "red",
+          "at": 0.38
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 860,
+          "w": 120,
+          "h": 140,
+          "radius": 12,
+          "fill": "accent2",
+          "motion": "pop",
+          "at": 0.24
+        },
+        {
+          "type": "text",
+          "text": "cat",
+          "x": 412,
+          "y": 906,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "color": "bg",
+          "weight": 800,
+          "at": 0.26
+        },
+        {
+          "type": "text",
+          "text": "↓",
+          "x": 412,
+          "y": 1004,
+          "size": 34,
+          "align": "center",
+          "font": "mono",
+          "color": "red",
+          "at": 0.5
+        },
+        {
+          "type": "box",
+          "x": 352,
+          "y": 1048,
+          "w": 120,
+          "h": 110,
+          "radius": 12,
+          "fill": "surface",
+          "stroke": "red",
+          "motion": "pop",
+          "at": 0.52
+        },
+        {
+          "type": "text",
+          "text": "rat",
+          "x": 412,
+          "y": 1086,
+          "size": 40,
+          "align": "center",
+          "font": "mono",
+          "color": "red",
+          "at": 0.55
+        },
+        {
+          "type": "text",
+          "text": "chain it",
+          "x": 500,
+          "y": 1086,
+          "size": 36,
+          "font": "mono",
+          "color": "muted",
+          "at": 0.58
+        },
+        {
+          "type": "text",
+          "text": "or probe for the next free slot",
+          "x": 540,
+          "y": 1280,
+          "size": 40,
+          "align": "center",
+          "font": "display",
+          "width": 900,
+          "at": 0.78
+        }
+      ],
+      "say": "Sometimes two keys hash to the same slot. The table can chain them together inside that slot, or probe for the next free slot. Either way, both keys can still be found."
+    },
+    {
+      "kind": "closing",
+      "layout": "card",
+      "title": "A hash table trades space for speed",
+      "points": [
+        "Hash the key to a slot",
+        "Jump instead of search",
+        "Handle collisions calmly"
+      ],
+      "cta": "Next: how caches use them",
+      "say": "A hash table trades a little space for speed: hash the key to a slot, jump instead of search, and handle collisions calmly."
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "version": "1.0",
+  "topic": "THE BLUE SKY",
+  "series": "SMALL QUESTIONS",
+  "handle": "@motionrender",
+  "look": "paper",
+  "aspect": "9:16",
+  "scenes": [
+    {
+      "kind": "title",
+      "layout": "editorial",
+      "brand": "Sky",
+      "chip": "A CHILD'S QUESTION",
+      "lines": [
+        "Why is the sky",
+        "BLUE",
+        "and not violet?"
+      ],
+      "say": "Why is the sky blue, and not violet?"
+    },
+    {
+      "kind": "freeform",
+      "step": "EVERY COLOUR, ONE WAVELENGTH EACH",
+      "elements": [
+        {
+          "type": "text",
+          "text": "Sunlight, split by wavelength",
+          "x": 120,
+          "y": 300,
+          "size": 46,
+          "font": "display",
+          "at": 0.04
+        },
+        {
+          "type": "text",
+          "text": "longer waves",
+          "x": 120,
+          "y": 376,
+          "size": 30,
+          "font": "mono",
+          "color": "muted",
+          "at": 0.08
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 430,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#e63946",
+          "motion": "draw",
+          "at": 0.12
+        },
+        {
+          "type": "text",
+          "text": "700 nm",
+          "x": 720,
+          "y": 462,
+          "size": 40,
+          "font": "mono",
+          "color": "muted",
+          "weight": 500,
+          "at": 0.15
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 555,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#f4a261",
+          "motion": "draw",
+          "at": 0.19
+        },
+        {
+          "type": "text",
+          "text": "600 nm",
+          "x": 720,
+          "y": 587,
+          "size": 40,
+          "font": "mono",
+          "color": "muted",
+          "weight": 500,
+          "at": 0.22
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 680,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#f2d03b",
+          "motion": "draw",
+          "at": 0.26
+        },
+        {
+          "type": "text",
+          "text": "580 nm",
+          "x": 720,
+          "y": 712,
+          "size": 40,
+          "font": "mono",
+          "color": "muted",
+          "weight": 500,
+          "at": 0.29000000000000004
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 805,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#4caf50",
+          "motion": "draw",
+          "at": 0.33
+        },
+        {
+          "type": "text",
+          "text": "550 nm",
+          "x": 720,
+          "y": 837,
+          "size": 40,
+          "font": "mono",
+          "color": "muted",
+          "weight": 500,
+          "at": 0.36
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 930,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#2b7de9",
+          "motion": "draw",
+          "at": 0.4
+        },
+        {
+          "type": "text",
+          "text": "450 nm",
+          "x": 720,
+          "y": 962,
+          "size": 40,
+          "font": "mono",
+          "color": "accent",
+          "weight": 800,
+          "at": 0.43000000000000005
+        },
+        {
+          "type": "box",
+          "x": 120,
+          "y": 1055,
+          "w": 560,
+          "h": 110,
+          "radius": 12,
+          "fill": "#7b3fe4",
+          "motion": "draw",
+          "at": 0.47000000000000003
+        },
+        {
+          "type": "text",
+          "text": "400 nm",
+          "x": 720,
+          "y": 1087,
+          "size": 40,
+          "font": "mono",
+          "color": "muted",
+          "weight": 500,
+          "at": 0.5
+        },
+        {
+          "type": "text",
+          "text": "shorter waves",
+          "x": 120,
+          "y": 1196,
+          "size": 30,
+          "font": "mono",
+          "color": "muted",
+          "at": 0.58
+        },
+        {
+          "type": "text",
+          "text": "the short ones scatter most",
+          "x": 120,
+          "y": 1280,
+          "size": 46,
+          "font": "display",
+          "color": "accent",
+          "width": 800,
+          "at": 0.72
+        }
+      ],
+      "say": "Sunlight is every colour at once, and each colour has its own wavelength, from long red to short violet. Air molecules scatter the short waves far more than the long ones."
+    },
+    {
+      "kind": "chart",
+      "type": "bars",
+      "items": [
+        {
+          "label": "Red",
+          "value": 1
+        },
+        {
+          "label": "Orange",
+          "value": 1.9
+        },
+        {
+          "label": "Green",
+          "value": 2.6
+        },
+        {
+          "label": "Blue",
+          "value": 5.9
+        },
+        {
+          "label": "Violet",
+          "value": 9.4
+        }
+      ],
+      "unit": "×",
+      "highlight": 3,
+      "caption": "Relative to red: scattering ∝ 1/λ⁴, at 700, 600, 550, 450 and 400 nm.",
+      "say": "Measured against red, blue light scatters nearly six times as much, and violet almost nine and a half."
+    },
+    {
+      "kind": "steps",
+      "layout": "auto",
+      "step": "WHY NOT VIOLET?",
+      "items": [
+        {
+          "title": "Violet scatters even more",
+          "detail": "But the sun gives off less of it"
+        },
+        {
+          "title": "The upper air absorbs some",
+          "detail": "Less violet reaches the ground"
+        },
+        {
+          "title": "Our eyes favour blue",
+          "detail": "We are less sensitive to violet"
+        }
+      ],
+      "say": "Violet scatters even more, but the sun gives off less of it, and our eyes favour blue."
+    },
+    {
+      "kind": "timeline",
+      "events": [
+        {
+          "when": "Noon",
+          "title": "Blue sky",
+          "detail": "Short path through the air"
+        },
+        {
+          "when": "Sunset",
+          "title": "Orange and red",
+          "detail": "Long path scatters the blue away"
+        }
+      ],
+      "caption": "The same effect paints sunsets.",
+      "say": "At sunset the light crosses far more air, the blue is scattered away on the journey, and what reaches you is orange and red."
+    },
+    {
+      "kind": "closing",
+      "layout": "auto",
+      "title": "Blue is the colour the air throws around",
+      "points": [
+        "Air scatters short waves most",
+        "Violet is thin and absorbed",
+        "Sunsets are the same story"
+      ],
+      "cta": "Look up today",
+      "say": "So the sky is blue because air scatters short waves the most, violet is thin and absorbed, and sunsets are the same story told from a longer path."
+    }
+  ]
+}

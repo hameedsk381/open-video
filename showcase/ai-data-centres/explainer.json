@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "topic": "AI DATA CENTRES",
+  "series": "THE POWER QUESTION",
+  "handle": "@motionrender",
+  "look": "newsprint",
+  "aspect": "9:16",
+  "treatment": {
+    "candidates": [
+      { "structure": "A stat-and-chart explainer: title, big number, bar chart, closing. Clear, but the same skeleton as most data videos.", "why": "Safe, and it hides the argument inside the numbers." },
+      { "structure": "A bill that keeps growing: one measured quantity shown at three scales (world, one country, the forecast), each drawn as its own picture, ending on the uncertainty.", "why": "The argument is the growth and the doubt, so the pictures should grow and then blur." },
+      { "structure": "A list of objections, one scene each: electricity, water, emissions, local grids.", "why": "Covers more, but water and local-grid figures were not verified, so those scenes would rest on claims I cannot source." }
+    ],
+    "chosen": 1,
+    "logline": "Data-centre power demand is set to double, is concentrated in two countries, and even the forecasts disagree by more than two to one.",
+    "opening": "A title that asks who is counting the power behind every answer, then one big measured number in the first seconds.",
+    "signature": "The forecast range for 2035: a track with three markers (700, 1,200 and 1,700 TWh) and a bar spanning them, drawn freeform so the width of the doubt is what you see.",
+    "ending": "Returns to the opening question: ask where the power comes from."
+  },
+  "scenes": [
+    {
+      "kind": "title",
+      "layout": "auto",
+      "brand": "AI power",
+      "chip": "DATA CENTRES",
+      "lines": ["Every answer you get", "RUNS ON POWER", "Who is counting?"],
+      "say": "Every chatbot answer runs on electricity. Who is counting?"
+    },
+    {
+      "kind": "stat",
+      "value": "415 TWh",
+      "label": "used by data centres in 2024: about 1.5% of the world's electricity",
+      "note": "IEA, Energy and AI, 2025",
+      "tone": "gold",
+      "say": "In 2024, data centres used about four hundred and fifteen terawatt-hours."
+    },
+    {
+      "kind": "freeform",
+      "step": "WORLD · 2024 TO 2030",
+      "elements": [
+        { "type": "text", "text": "Global data-centre electricity", "x": 120, "y": 410, "size": 44, "font": "display", "width": 840, "at": 0.04 },
+        { "type": "text", "text": "TWh a year", "x": 120, "y": 470, "size": 30, "font": "mono", "color": "muted", "at": 0.06 },
+        { "type": "text", "text": "2024", "x": 120, "y": 580, "size": 52, "font": "display", "at": 0.1 },
+        { "type": "text", "text": "415", "x": 960, "y": 572, "size": 60, "font": "display", "align": "right", "color": "accent2", "at": 0.16 },
+        { "type": "box", "x": 120, "y": 658, "w": 369, "h": 96, "radius": 6, "fill": "accent2", "motion": "draw", "at": 0.12 },
+        { "type": "text", "text": "2030 (IEA base case)", "x": 120, "y": 830, "size": 40, "font": "display", "at": 0.34 },
+        { "type": "text", "text": "~945", "x": 960, "y": 818, "size": 60, "font": "display", "align": "right", "color": "accent", "at": 0.48 },
+        { "type": "box", "x": 120, "y": 898, "w": 840, "h": 96, "radius": 6, "fill": "accent", "motion": "draw", "at": 0.38 },
+        { "type": "text", "text": "about double", "x": 540, "y": 1060, "size": 100, "font": "display", "align": "center", "color": "accent", "width": 900, "at": 0.62 }
+      ],
+      "say": "By 2030 the IEA expects that to roughly double."
+    },
+    {
+      "kind": "stat",
+      "value": "< 3%",
+      "label": "of the world's electricity in 2030: small, but growing fast",
+      "note": "IEA base case, 2025",
+      "tone": "muted",
+      "say": "Still just under three percent of the world's electricity, but growing fast."
+    },
+    {
+      "kind": "chart",
+      "type": "bars",
+      "items": [
+        { "label": "2014", "value": 58 },
+        { "label": "2023", "value": 176 },
+        { "label": "2028 low", "value": 325 },
+        { "label": "2028 high", "value": 580 }
+      ],
+      "unit": "TWh",
+      "highlight": 3,
+      "caption": "US data centres, TWh a year. 2028 is a projected range (Berkeley Lab / DOE, 2024).",
+      "say": "In the US, 58 terawatt-hours in 2014 became 176 in 2023, and up to 580 by 2028."
+    },
+    {
+      "kind": "freeform",
+      "step": "WHERE THE GROWTH IS",
+      "elements": [
+        { "type": "text", "text": "Share of global growth in data-centre demand to 2030", "x": 120, "y": 410, "size": 40, "font": "display", "width": 840, "at": 0.03 },
+        { "type": "box", "x": 120, "y": 640, "w": 840, "h": 110, "radius": 8, "fill": "surface", "stroke": "muted", "motion": "fade", "at": 0.08 },
+        { "type": "box", "x": 120, "y": 640, "w": 672, "h": 110, "radius": 8, "fill": "accent", "motion": "draw", "at": 0.2 },
+        { "type": "text", "text": "China + US", "x": 150, "y": 676, "size": 44, "font": "display", "color": "bg", "at": 0.4 },
+        { "type": "text", "text": "rest", "x": 876, "y": 683, "size": 32, "font": "mono", "align": "center", "color": "muted", "at": 0.45 },
+        { "type": "text", "text": "nearly 80%", "x": 540, "y": 830, "size": 150, "font": "display", "align": "center", "color": "accent", "width": 900, "at": 0.55 },
+        { "type": "text", "text": "IEA, Energy and AI, 2025", "x": 540, "y": 1040, "size": 26, "font": "mono", "align": "center", "color": "muted", "at": 0.75 }
+      ],
+      "say": "Nearly eighty percent of that growth is in just two countries: China and the United States."
+    },
+    {
+      "kind": "freeform",
+      "step": "THE FORECAST · 2035",
+      "elements": [
+        { "type": "text", "text": "2035 · IEA scenarios", "x": 540, "y": 440, "size": 54, "font": "display", "align": "center", "color": "accent", "at": 0.03 },
+        { "type": "text", "text": "TWh a year, worldwide", "x": 540, "y": 522, "size": 34, "font": "mono", "align": "center", "color": "muted", "at": 0.06 },
+        { "type": "box", "x": 140, "y": 880, "w": 760, "h": 8, "fill": "muted", "motion": "draw", "at": 0.1 },
+        { "type": "box", "x": 436, "y": 872, "w": 422, "h": 24, "radius": 12, "fill": "accent", "motion": "draw", "at": 0.3 },
+        { "type": "circle", "x": 436, "y": 884, "d": 40, "fill": "accent2", "motion": "pop", "at": 0.4 },
+        { "type": "text", "text": "700", "x": 436, "y": 780, "size": 52, "font": "display", "align": "center", "at": 0.42 },
+        { "type": "text", "text": "low case", "x": 436, "y": 940, "size": 28, "font": "mono", "align": "center", "color": "muted", "at": 0.44 },
+        { "type": "circle", "x": 647, "y": 884, "d": 40, "fill": "accent2", "motion": "pop", "at": 0.5 },
+        { "type": "text", "text": "1,200", "x": 647, "y": 780, "size": 52, "font": "display", "align": "center", "at": 0.52 },
+        { "type": "text", "text": "base case", "x": 647, "y": 940, "size": 28, "font": "mono", "align": "center", "color": "muted", "at": 0.54 },
+        { "type": "circle", "x": 858, "y": 884, "d": 40, "fill": "accent2", "motion": "pop", "at": 0.6 },
+        { "type": "text", "text": "1,700", "x": 858, "y": 780, "size": 52, "font": "display", "align": "center", "at": 0.62 },
+        { "type": "text", "text": "high case", "x": 858, "y": 940, "size": 28, "font": "mono", "align": "center", "color": "muted", "at": 0.64 }
+      ],
+      "say": "For 2035, the IEA's own scenarios run from 700 to 1,700 terawatt-hours."
+    },
+    {
+      "kind": "stat",
+      "value": "2.4×",
+      "label": "the gap between the IEA's low and high 2035 cases",
+      "note": "1,700 ÷ 700 TWh",
+      "tone": "gold",
+      "say": "Planning a grid around a range that wide is closer to guessing."
+    },
+    {
+      "kind": "closing",
+      "layout": "auto",
+      "title": "Ask where the power comes from",
+      "points": ["Demand set to double by 2030", "Nearly 80% of growth: China and the US", "2035 forecasts: 700 to 1,700 TWh"],
+      "cta": "Ask for the numbers",
+      "say": "Before the next data centre is approved, ask where the power comes from."
+    }
+  ]
+}

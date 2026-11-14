@@ -1,0 +1,262 @@
+{
+  "version": "1.0",
+  "topic": "HTTPS",
+  "series": "HOW IT WORKS",
+  "handle": "@motionrender",
+  "look": "terminal",
+  "aspect": "9:16",
+  "scenes": [
+    {
+      "kind": "title",
+      "layout": "auto",
+      "brand": "HTTPS",
+      "chip": "NETWORK BASICS",
+      "lines": [
+        "How does your browser",
+        "KEEP A SECRET",
+        "on a public network?"
+      ],
+      "say": "How does your browser keep a secret on a network anyone can listen to?"
+    },
+    {
+      "kind": "freeform",
+      "step": "THE TLS HANDSHAKE",
+      "elements": [
+        {
+          "type": "box",
+          "x": 90,
+          "y": 320,
+          "w": 230,
+          "h": 100,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent",
+          "motion": "pop",
+          "at": 0.04
+        },
+        {
+          "type": "text",
+          "text": "Browser",
+          "x": 205,
+          "y": 352,
+          "size": 36,
+          "align": "center",
+          "font": "display",
+          "at": 0.06
+        },
+        {
+          "type": "box",
+          "x": 760,
+          "y": 320,
+          "w": 230,
+          "h": 100,
+          "radius": 14,
+          "fill": "surface",
+          "stroke": "accent2",
+          "motion": "pop",
+          "at": 0.06
+        },
+        {
+          "type": "text",
+          "text": "Server",
+          "x": 875,
+          "y": 352,
+          "size": 36,
+          "align": "center",
+          "font": "display",
+          "at": 0.08
+        },
+        {
+          "type": "box",
+          "x": 203,
+          "y": 430,
+          "w": 4,
+          "h": 930,
+          "fill": "muted",
+          "motion": "fade",
+          "at": 0.08
+        },
+        {
+          "type": "box",
+          "x": 871,
+          "y": 430,
+          "w": 4,
+          "h": 930,
+          "fill": "muted",
+          "motion": "fade",
+          "at": 0.08
+        },
+        {
+          "type": "text",
+          "text": "1 · hello + versions  →",
+          "x": 539,
+          "y": 520,
+          "size": 32,
+          "align": "center",
+          "font": "mono",
+          "width": 640,
+          "at": 0.18
+        },
+        {
+          "type": "box",
+          "x": 215,
+          "y": 572,
+          "w": 648,
+          "h": 6,
+          "fill": "accent",
+          "motion": "draw",
+          "at": 0.22
+        },
+        {
+          "type": "text",
+          "text": "←  2 · certificate + key share",
+          "x": 539,
+          "y": 720,
+          "size": 32,
+          "align": "center",
+          "font": "mono",
+          "width": 640,
+          "at": 0.34
+        },
+        {
+          "type": "box",
+          "x": 215,
+          "y": 772,
+          "w": 648,
+          "h": 6,
+          "fill": "accent2",
+          "motion": "draw",
+          "at": 0.38
+        },
+        {
+          "type": "text",
+          "text": "3 · key share  →",
+          "x": 539,
+          "y": 920,
+          "size": 32,
+          "align": "center",
+          "font": "mono",
+          "width": 640,
+          "at": 0.5
+        },
+        {
+          "type": "box",
+          "x": 215,
+          "y": 972,
+          "w": 648,
+          "h": 6,
+          "fill": "accent",
+          "motion": "draw",
+          "at": 0.54
+        },
+        {
+          "type": "circle",
+          "x": 205,
+          "y": 1160,
+          "d": 64,
+          "fill": "accent",
+          "motion": "pop",
+          "at": 0.66
+        },
+        {
+          "type": "circle",
+          "x": 873,
+          "y": 1160,
+          "d": 64,
+          "fill": "accent",
+          "motion": "pop",
+          "at": 0.66
+        },
+        {
+          "type": "text",
+          "text": "same secret key",
+          "x": 539,
+          "y": 1136,
+          "size": 40,
+          "align": "center",
+          "font": "display",
+          "color": "accent",
+          "at": 0.68
+        },
+        {
+          "type": "text",
+          "text": "4 · encrypted data  ↔",
+          "x": 539,
+          "y": 1280,
+          "size": 36,
+          "align": "center",
+          "font": "mono",
+          "color": "accent2",
+          "width": 640,
+          "at": 0.8
+        },
+        {
+          "type": "box",
+          "x": 215,
+          "y": 1334,
+          "w": 648,
+          "h": 14,
+          "fill": "accent2",
+          "motion": "draw",
+          "at": 0.84
+        }
+      ],
+      "say": "Your browser says hello and lists what it supports. The server replies with its certificate and its half of a key exchange. The browser sends its half. Both sides now compute the same secret key, though the key itself never crosses the network. After that, everything is encrypted."
+    },
+    {
+      "kind": "compare",
+      "left": {
+        "title": "Plain HTTP",
+        "points": [
+          "Anyone on the path can read it",
+          "Anyone on the path can change it",
+          "No proof of who answered"
+        ]
+      },
+      "right": {
+        "title": "HTTPS",
+        "points": [
+          "Only the two ends can read it",
+          "Tampering is detected",
+          "The certificate names the site"
+        ]
+      },
+      "caption": "Same request, very different exposure.",
+      "say": "With plain HTTP, anyone on the path can read or change your traffic. With HTTPS only the two ends can read it, tampering is detected, and the certificate names the site."
+    },
+    {
+      "kind": "flow",
+      "step": "WHAT THE NETWORK SEES",
+      "sources": [
+        "Phone",
+        "Laptop",
+        "Cafe",
+        "Router"
+      ],
+      "buffer": "ENCRYPTED LINK",
+      "sink": "WEB SERVER",
+      "note": {
+        "text": "SCRAMBLED IN TRANSIT",
+        "tone": "gold"
+      },
+      "result": {
+        "text": "ONLY THE SERVER READS IT ✓",
+        "tone": "mint"
+      },
+      "caption": "Everything in between only carries ciphertext.",
+      "say": "Everything in between, the Wi-Fi, the router, the whole path, only carries scrambled data that only the server can read."
+    },
+    {
+      "kind": "closing",
+      "layout": "auto",
+      "title": "The lock means a private line",
+      "points": [
+        "The server proves its identity",
+        "Both ends share a secret key",
+        "The path in between sees noise"
+      ],
+      "cta": "Check the lock before you sign in",
+      "say": "The lock in your address bar means the server proved who it is, you share a secret key, and the path in between sees only noise."
+    }
+  ]
+}
