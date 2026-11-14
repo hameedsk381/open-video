@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { loadComposition } from '@ove/core';
-import { unsupportedFeatures, type CompositionData } from '@ove/react';
+import { unsupportedFeatures, type CompositionData, type ExplainerReactData } from '@ove/react';
 import { buildReact } from './build';
 
 export type ReactConversion = { unsupported: string[]; sourcePath?: string; compositionPath?: string };
@@ -13,7 +13,7 @@ export type ReactConversion = { unsupported: string[]; sourcePath?: string; comp
  * Writes `<name>.tsx` beside `compositionPath`'s directory and builds it over `outputPath`. Returns what the view cannot draw yet;
  * when that is not empty nothing is written, so the caller keeps the composition it has.
  */
-export async function convertToReact(raw: unknown, outputPath: string, options: { baseDir?: string; name?: string } = {}): Promise<ReactConversion> {
+export async function convertToReact(raw: unknown, outputPath: string, options: { baseDir?: string; name?: string; /** An explainer's React scenes: the view draws them beside the stock composition. */ explainer?: ExplainerReactData } = {}): Promise<ReactConversion> {
   const composition = loadComposition(raw as any) as any;
   const unsupported = unsupportedFeatures(composition as CompositionData);
   if (unsupported.length) return { unsupported };
@@ -27,16 +27,22 @@ export async function convertToReact(raw: unknown, outputPath: string, options: 
     return [layer.children ? { ...layer, children: strip(layer.children, sceneStart) } : layer];
   });
   const scenes = composition.scenes.map((scene: any) => ({ ...scene, layers: strip(scene.layers, scene.startFrame ?? 0) }));
-  const data = { width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, background: composition.background, scenes };
+  const data: Record<string, unknown> = { width: composition.width, height: composition.height, fps: composition.fps, durationFrames: composition.durationFrames, background: composition.background, scenes, ...(composition.overlay ? { overlay: composition.overlay } : {}) };
+  // A picture a React scene draws has to be declared as an asset, and is then named by its id; a clip is placed by the build from its path.
+  const pictures = (options.explainer?.scenes ?? []).filter(item => item.scene.kind === 'media' && (item.scene as any).src && !/\.(mp4|webm|mov|m4v)(\?.*)?$/i.test((item.scene as any).src));
+  const declared = pictures.map(item => ({ id: `media-${item.index}`, type: 'image', src: (item.scene as any).src }));
+  const explainer = options.explainer ? { ...options.explainer, scenes: options.explainer.scenes.map(item => (pictures.includes(item) ? { ...item, scene: { ...item.scene, assetId: `media-${item.index}` } } : item)) } : undefined;
+  const assets = [...(composition.assets ?? []), ...declared];
   const config = { id: composition.id, name: composition.name, width: composition.width, height: composition.height, fps: composition.fps, durationInFrames: composition.durationFrames,
-    ...(composition.background !== undefined ? { background: composition.background } : {}), ...(composition.export ? { export: composition.export } : {}), ...(composition.assets?.length ? { assets: composition.assets } : {}) };
+    ...(composition.background !== undefined ? { background: composition.background } : {}), ...(composition.export ? { export: composition.export } : {}), ...(assets.length ? { assets } : {}) };
   const source = [
     '// Written by MotionRender: this composition drawn as a React video. Edit the data, or write your own components instead.',
-    "import { CompositionView } from 'motionrender/react';",
+    `import { ${options.explainer ? 'ExplainerView' : 'CompositionView'} } from 'motionrender/react';`,
     `export const config = ${JSON.stringify(config, null, 2)};`,
     `export const layers = ${JSON.stringify(audio, null, 2)};`,
     `const composition = ${JSON.stringify(data)};`,
-    'export default function Video() { return <CompositionView composition={composition as any} />; }',
+    ...(explainer ? [`const react = ${JSON.stringify(explainer)};`, 'export default function Video() { return <ExplainerView composition={composition as any} react={react as any} />; }']
+      : ['export default function Video() { return <CompositionView composition={composition as any} />; }']),
     '',
   ].join('\n');
   await writeFile(sourcePath, source, 'utf8');

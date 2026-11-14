@@ -168,6 +168,7 @@ Write explainer.json   (`mr schema --explainer` lists every field)
 Open review.png, fix what it lists, run make again
        ↓
 `mr make explainer.json --draft` (quick half-size MP4 to check the motion) → `mr make explainer.json --final` (out.mp4)
+(scenes are drawn with React components by default, each kind in several drawings: set a scene's `variant` to pick one, or leave it and the content picks. `--no-react` keeps the stock scenes.)
 ```
 
 ## 6. In a sandbox, with nothing installed

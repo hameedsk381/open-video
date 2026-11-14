@@ -163,7 +163,7 @@ export const __render = (frame, props, cfg) => { let tree = __ce(__getComp(), pr
     const a = run.attrs, base = { startFrame: run.start, endFrame: run.last + 1, src: a.src!, trimStart: Math.round(Number(a.trim) || 0), volume: Number(a.volume), playbackRate: Number(a.rate) || 1, loop: a.loop === '1' };
     if (run.kind === 'audio') { mediaLayers.audio.push({ id: `audio-${++serial}`, type: 'audio', ...base }); continue; }
     const first = run.boxes[0]!, moving = (['x', 'y', 'width', 'height'] as const).filter(key => run.boxes.some(box => box[key] !== first[key]));
-    const layer = { id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, ...first, ...(moving.length ? { animations: moving.map(property => ({ property, keyframes: keyframes(run.boxes.map(box => box[property])) })) } : {}) };
+    const layer = { id: `video-${++serial}`, type: 'video', ...base, muted: a.muted === '1', objectFit: a.fit, ...(Number(a.radius) > 0 ? { radius: Number(a.radius) } : {}), ...first, ...(moving.length ? { animations: moving.map(property => ({ property, keyframes: keyframes(run.boxes.map(box => box[property])) })) } : {}) };
     (a.layer === 'front' ? mediaLayers.videoFront : mediaLayers.video).push(layer);
   }
   // A sound or clip the component names but the project does not hold used to fail minutes later inside ffmpeg. The build

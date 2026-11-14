@@ -12,6 +12,7 @@ const common = {
   step: words(48).optional().describe('The small line under the header, such as "STEP 1 · UPDATES → SERVER". Upper case reads best.'),
   say: words(420).optional().describe('What is said over this scene. The scene lasts as long as the line, so write it as speech: short sentences, one idea.'),
   layout: z.enum([...explainerLayouts, 'auto']).optional().describe('This scene\'s own layout, instead of the video\'s: card (centred, boxed), editorial (flush left, hairline rules; title, stat, steps and closing scenes) or auto (editorial when the scene carries a lot of text, card when it is short and punchy). Mix them on purpose, for example an editorial title and card diagrams.'),
+  variant: z.string().trim().max(24).optional().describe('React build only (mr make --react): which drawing of this scene kind to use, such as split, stacked or versus for compare. Leave it out and the scene\'s own content picks one.'),
   place: z.enum(['center', 'top']).optional().describe('Where the scene sits on the board: center (default, in the space between the header and the bottom of the frame) or top (pinned under the header).'),
 };
 
@@ -111,6 +112,12 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     date: words(20).optional().describe('When it was said or published'),
     stamp: z.object({ text: words(14), tone: tone.default('gold') }).optional().describe('A label stamped on the card corner, such as "CLAIM" or "CHECKED"'),
     caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
+  z.object({ kind: z.literal('code'), ...common,
+    file: words(40).default('main.ts').describe('The file name in the editor bar, such as "cache.ts" or "schema.sql"'),
+    language: words(20).optional().describe('A small label at the right of the bar, such as "typescript" or "sql"'),
+    code: z.string().trim().min(1).max(900).refine(value => value.split('\n').length <= 14, 'At most 14 lines: show the few lines that matter, not a file').describe('The code, as plain text with real line breaks: at most 14 lines and about 40 characters a line, so it reads on a phone.'),
+    highlight: z.array(z.number().int().min(1).max(14)).max(6).default([]).describe('Line numbers (from 1) to pick out one after another as the scene plays, in the order they are talked about'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
   z.object({ kind: z.literal('freeform'), ...common,
     elements: z.array(freeformElementSchema).min(1).max(80).describe('What is on the board, placed by you on a 1080 x 1920 column: text, boxes (also lines and bars: a thin box) and circles. Keep text between y 270 and y 1540 and left of x 960, where reel apps do not cover it.'),
     duration: z.number().min(2).max(30).optional().describe('At least this many seconds, when the picture needs longer than its spoken line'),
@@ -171,4 +178,4 @@ export type ExplainerInput = z.input<typeof explainerSchema>;
 export type ExplainerScene = z.infer<typeof explainerSceneSchema>;
 export type FreeformElement = z.infer<typeof freeformElementSchema>;
 /** The scene kinds, for prompts and menus. */
-export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'quote', 'freeform', 'closing'] as const;
+export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'quote', 'code', 'freeform', 'closing'] as const;

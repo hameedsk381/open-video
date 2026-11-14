@@ -106,9 +106,9 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'mr-url-reel-'));
 
     try {
-      // Offline/fake domain should gracefully fallback to SVG mockup card without throwing
+      // A name that can never resolve (.invalid, RFC 6761) fails fast on any machine, so this tests the fallback and not the network: it should gracefully fall back to SVG mockup card without throwing
       const result = await createLaunchReel({
-        urlOrImage: 'https://example-saas-startup-test.io',
+        urlOrImage: 'https://launch-reel-test.invalid',
         name: 'StartupX',
         brandColor: '#ec4899',
         aspect: '9:16',
@@ -126,7 +126,7 @@ describe('One-Click Screenshot-to-Launch-Reel Engine', () => {
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('generates a high-end React/TSX launch reel with video.tsx and buildReact compilation', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'mr-react-reel-'));

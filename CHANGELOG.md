@@ -2,6 +2,17 @@
 
 All notable changes to MotionRender (formerly Open Video Engine). The published package is `motionrender` (built from `packages/ove`).
 
+## Unreleased
+
+### Added
+- **Explainer scenes in React, the default for `mr make`.** Every scene kind, in every shape (a wide or square video gets the vertical column fitted into the frame, as the stock scenes do), is drawn by React components with up to three drawings each: title (poster, centred), steps (list, ladder, cards, bento), compare (split, stacked, versus), stat (hero, ring, stacked), chart (columns, rows, line), timeline (spine, zigzag), quote (card, pull, typed), flow (funnel, chain), grid (board, spotlight), closing (takeaway, poster), phone (handset, thread), media (frame, split, browser; a picture is declared as an asset, a clip is placed by the build with its rounded corners), plus freeform, hex and pile. A script's scene `variant` picks one, otherwise the scene's own content does (a long point wants stacked, a percentage wants a ring, many bars want rows). Captions, chapters, voice and music are unchanged. `--no-react` keeps the stock scenes; if a stock scene uses something the React view cannot draw, the build falls back to the stock video on its own. `mr make` reports the script's scene count either way. The scenes are built on the React kit (Badge for chips and stamps, ProgressBar for bars, BentoGrid for the bento steps, Typewriter for the typed quote, Waveform on the closing, DeviceFrame for the browser picture): spring physics for every entrance and pop (`springValue`), `NumberTicker` for counting figures, `KineticText` for titles and takeaways, `GlassCard` (in the look's own colours) for cards and `AmbientGlow` behind the calm scenes.
+- **A `code` scene:** a file name, up to 14 lines of code and lines picked out one after another, drawn as an editor card (the React kit's `CodeEditor`, or the code typed out in a bare pane with `variant: typed`) and by the stock scenes too. It is in `mr explainer kinds`, the schema and the writer's guide. With it every component of the React kit is in use.
+- A closing scene whose title wraps onto a second line no longer runs into its call to action (the line estimate was too optimistic for wide bold fonts).
+- `CompositionView` draws captions layers that carry inline cues.
+- React scenes make the sounds their stock versions made, and come in with the look's own transition (fade, zoom, wipe or push) instead of a plain fade.
+- The explainer writer is sent back a script that is mostly one scene kind (3 or more, half of the video or more) or that has two neighbouring scenes of the same kind and drawing; freeform scenes are exempt.
+- The two Dokploy compose files (repo root and `infrastructure/dokploy/compose.yml`) are the same stack again, including the landing page service, and a test keeps them so.
+
 ## 0.7.0 (2026-11-14)
 
 ### Added

@@ -3,7 +3,8 @@
 # In Dokploy: create a Compose project, point it at this repo, set the compose path to
 # infrastructure/dokploy/compose.yml, and fill in the environment variables in the Environment tab.
 #
-# Dokploy's Traefik handles TLS and routing. Set the domain in Dokploy's Domains tab for the `api` service.
+# Dokploy's Traefik handles TLS and routing. In the Domains tab, set the app's subdomain for the `api` service (port 3100) and the main domain for the `site` service (port 8080).
+# The same stack is at the repo root as docker-compose.yml (a test keeps the two in step).
 # The render worker has no network route out — it can reach Redis and the shared data volume and nothing else.
 
 x-hardening: &hardening

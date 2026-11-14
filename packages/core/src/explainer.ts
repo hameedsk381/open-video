@@ -322,7 +322,7 @@ const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
  * few more characters than fit on a line is another line (at most three; past that the type shrinks). Fixed positions let a long title run into the first point.
  */
 const closingFlow = (title: string, titleTop: number, size: number, maxWidth: number, pointCount: number) => {
-  const lines = Math.min(3, Math.max(1, Math.ceil(title.length / Math.floor(maxWidth / (size * 0.55)))));
+  const lines = Math.min(3, Math.max(1, Math.ceil(title.length / Math.floor(maxWidth / (size * 0.62)))));
   const pointsTop = titleTop + lines * size + 40;
   return { pointsTop, ctaTop: pointsTop + pointCount * 100 + 30 };
 };
@@ -398,6 +398,25 @@ const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames 
 /** The scenes that have an editorial layout use it when the design asks for it; every other scene is drawn the same way in every design. */
 const pick = <S extends ExplainerScene['kind']>(card: Kind<S>, editorial: Kind<S>): Kind<S> => (scene, i) => (active.layout === 'editorial' ? editorial(scene, i) : card(scene, i));
 /* ---- quote: a source card, so the evidence is on screen as well as in the voice ---- */
+/* ---- code: an editor card with the lines picked out one after another ---- */
+const code: Kind<'code'> = (s, i) => ({ min: 180 + (s.highlight?.length ?? 0) * 30, layers: frames => {
+  const lines = s.code.split('\n'), size = lines.some(line => line.length > 34) ? 30 : 36, lh = Math.round(size * 1.55), pad = 36, barH = 78;
+  const x = 60, w = 960, y = 330, bodyH = lines.length * lh + pad * 2, layers: Layer[] = [...kicker(i, s.step),
+    rect('code-card', x, y, w, barH + bodyH, { radius: 24, fill: '{{surface}}', stroke: '{{muted}}', strokeWidth: 2, anims: [fade(2, 14)] }),
+    rect('code-bar', x, y, w, barH, { radius: 24, fill: '{{bg}}', anims: [fade(4, 12)] }),
+    ...[RED, ORANGE, GREEN].map((color, k) => circle(`code-dot-${k}`, x + 40 + k * 34, y + barH / 2, 18, { fill: color, anims: [fade(6 + k * 2, 8)] })),
+    label('code-file', s.file, x + w / 2, y + barH / 2 - 14, { size: 26, ls: 2, color: '{{muted}}', align: 'center', anims: [fade(8, 10)] }),
+    ...(s.language ? [label('code-language', s.language.toUpperCase(), x + w - 36, y + barH / 2 - 11, { size: 20, ls: 3, color: '{{muted}}', align: 'right', anims: [fade(8, 10)] })] : [])];
+  const first = at(frames, 0.18), span = Math.max(24, Math.round((frames * 0.62) / Math.max(1, s.highlight.length)));
+  lines.forEach((line, k) => {
+    const top = y + barH + pad + k * lh, picked = s.highlight.indexOf(k + 1), on = first + picked * span;
+    if (picked >= 0) layers.push(rect(`code-pick-${k}`, x + 14, top - 6, w - 28, lh, { radius: 10, fill: GOLD, opacity: 0.18, anims: [fade(on, 10, 0.18)] }), rect(`code-pick-bar-${k}`, x + 14, top - 6, 6, lh, { radius: 3, fill: GOLD, anims: [fade(on, 10)] }));
+    layers.push(label(`code-no-${k}`, String(k + 1), x + 90, top, { size: size - 6, ls: 0, color: '{{muted}}', align: 'right', opacity: 0.7, anims: [fade(10 + k * 3, 8, 0.7)] }),
+      text(`code-line-${k}`, line || ' ', x + 116, top, { size, font: 'JetBrains Mono', weight: 500, color: '{{text}}', maxWidth: w - 150, anims: [rise(top, 10 + k * 3, 14, 14)] }));
+  });
+  return [...layers, ...caption('caption', s.caption, y + barH + bodyH + 50, at(frames, 0.55)), sfx('whoosh', 0, 0.2), ...s.highlight.map((_, k) => sfx('tick', first + k * span, 0.2))];
+} });
+
 const quote: Kind<'quote'> = (s, i) => ({ min: 150, layers: frames => {
   const size = 52, lineH = Math.round(size * 1.25), top = 330, lines = Math.max(1, Math.ceil(s.text.length / 28)), textTop = top + 215, cardH = 215 + lines * lineH + 70;
   const start = at(frames, 0.12), meta = [s.byline, s.date].filter(Boolean).join(' · '), tone = s.stamp ? TONES[s.stamp.tone] : GOLD;
@@ -458,7 +477,7 @@ export function autoLayout(scene: ExplainerScene, fallback: 'card' | 'editorial'
   }
 }
 
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, quote, freeform, closing: pick(closing, closingEditorial) };
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, quote, code, freeform, closing: pick(closing, closingEditorial) };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -471,13 +490,42 @@ const theme = {
 
 /** What was said over one scene: the audio file (relative to the composition) and how long it runs. */
 export type ExplainerAudio = { src: string; seconds: number; /** When each word is said, in seconds from the start of the recording: captions follow it. */ words?: { text: string; start: number; end: number }[] };
-export type ExplainerCompiled = { composition: Record<string, unknown>; notes: string[] };
+/** A scene the React build draws itself (see `reactKinds`): its script data, which composition scene it belongs to, and the look it is drawn in. */
+export type ExplainerReactScene = { sceneId: string; index: number; scene: ExplainerScene; frames: number; captions: boolean };
+export type ExplainerReactLook = { palette: Record<string, string | number>; motion: Active['motion']; cornerScale: number; weightCap: number };
+export type ExplainerCompiled = { composition: Record<string, unknown>; notes: string[]; react?: { scenes: ExplainerReactScene[]; look: ExplainerReactLook } };
+/** The scene kinds that have a React drawing (packages/react/src/explainer-view.ts). */
+export const REACT_KINDS = ['title', 'steps', 'compare', 'stat', 'chart', 'timeline', 'quote', 'flow', 'grid', 'closing', 'freeform', 'phone', 'hex', 'pile', 'media', 'code'] as const;
+const REACT_MIN_FRAMES = 5 * FPS;
+/** The sounds a stock scene of this kind would make, for the same moments, so a React scene is not quieter than the one it replaces. */
+function reactCues(scene: ExplainerScene, frames: number): Layer[] {
+  const whoosh = sfx('whoosh', 0, 0.2), n = (list: unknown[] | undefined, cap: number) => Math.min(cap, list?.length ?? 0);
+  const each = (count: number, first: number, every: number, name = 'pop', volume = 0.22) => Array.from({ length: count }, (_, k) => sfx(name, first + k * every, volume));
+  const s = scene as Record<string, any>;
+  switch (scene.kind) {
+    case 'title': return [whoosh, sfx('thump', 18, 0.35), sfx('pop', 58, 0.25)];
+    case 'stat': return [whoosh, sfx('thump', 18, 0.35)];
+    case 'steps': return [whoosh, ...each(n(s.items, 5), 12, 22)];
+    case 'timeline': return [whoosh, ...each(n(s.events, 6), 12, 26)];
+    case 'compare': return [whoosh, sfx('pop', 12, 0.25), sfx('ding', at(frames, 0.62), 0.25)];
+    case 'chart': return [whoosh, ...each(n(s.items, 4), 10, 14)];
+    case 'flow': return [whoosh, sfx('ding', at(frames, 0.55), 0.25)];
+    case 'grid': return [whoosh, sfx('pop', 50, 0.3), sfx('ding', at(frames, 0.55), 0.25)];
+    case 'pile': return [whoosh, sfx('thump', at(frames, 0.5), 0.25)];
+    case 'hex': return [whoosh, ...each(n(s.lit ?? [0, 1, 2, 3], 4), at(frames, 0.3), 10, 'pop', 0.2)];
+    case 'quote': return [whoosh, sfx('pop', at(frames, 0.2), 0.25), sfx('ding', at(frames, 0.45), 0.25)];
+    case 'phone': return [whoosh, ...(s.messages ?? []).slice(0, 5).map((m: { side?: string }, k: number) => sfx(m.side === 'out' ? 'pop' : 'ding', 14 + k * 22, 0.2))];
+    case 'code': return [whoosh, ...each(n(s.highlight, 6), 40, 40, 'tick', 0.2)];
+    case 'closing': return [whoosh, sfx('thump', 18, 0.35), sfx('ding', at(frames, 0.6), 0.25)];
+    default: return [whoosh];
+  }
+}
 
 /**
  * Compiles an explainer script into a composition. A scene with a spoken line lasts as long as the line (plus a short pause), never
  * shorter than its pictures need; `audio[i]` is the recording of scene i's `say`, if there is one.
  */
-export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] } = {}): ExplainerCompiled {
+export function compileExplainer(spec: Explainer, options: CompileOptions = {}): ExplainerCompiled {
   // The look is a whole design; the script's `design` and `colors` change parts of it.
   const def = explainerLookDefs[spec.look];
   const chosen = { ...def.design, ...Object.fromEntries(Object.entries(spec.design ?? {}).filter(([, value]) => value !== undefined)) } as typeof def.design;
@@ -544,11 +592,28 @@ function centred(layers: Layer[], bottom = BAND.bottom): Layer[] {
   });
 }
 
-function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] }, palette: Record<string, string | number>): ExplainerCompiled {
+type CompileOptions = { audio?: (ExplainerAudio | undefined)[]; /** Scene kinds left for the React build to draw: their pictures are not compiled, everything around them (captions, chapters, voice, music) is. */ reactKinds?: readonly string[] };
+
+function compileWith(spec: Explainer, options: CompileOptions, palette: Record<string, string | number>): ExplainerCompiled {
   const notes: string[] = [];
+  const reactScenes: ExplainerReactScene[] = [];
+  const reactable = options.reactKinds ?? [];
   const [cw, ch] = SIZES[spec.aspect], fit = Math.min(cw / W, ch / H), column = cw !== W || ch !== H;
   const scenes = spec.scenes.map((scene, i) => {
     // A scene may pick its own layout (card or editorial), so a video is not one template from start to end.
+    if (reactable.includes(scene.kind)) {
+      const spoken = options.audio?.[i], frames = Math.max(REACT_MIN_FRAMES, scene.kind === 'freeform' ? Math.round((scene.duration ?? 0) * FPS) : 0, spoken ? Math.ceil((spoken.seconds + 0.6) * FPS) + 8 : 0);
+      const cues = spec.captions && spoken?.words?.length ? groupCaptionWords(spoken.words, 6) : undefined, sentence = (scene as { caption?: string }).caption;
+      const id = `s${i + 1}-${scene.kind}`;
+      if (scene.kind === 'media' && !scene.src) throw new Error('A media scene that is still a prompt has no picture yet: make the pictures first (mr explainer compile does, with an image model)');
+      reactScenes.push({ sceneId: id, index: i, scene, frames, captions: !!cues });
+      return { id, name: `${i + 1}. ${scene.kind} (react)`, durationFrames: frames,
+        ...(column ? { camera: { x: W / 2, y: H / 2, zoom: fit } } : {}),
+        ...(i > 0 ? { transitionIn: { type: '{{transition}}', durationFrames: 14 } } : {}),
+        layers: [...(cues && sentence ? [text('caption-note', sentence, W / 2, CAPTIONS_Y - 96, { size: 30, color: '{{muted}}', align: 'center', maxWidth: 900, maxLines: 2, lh: 1.2, anims: [fade(at(frames, 0.3), 14)] })] : []),
+          ...(spec.chapters ? chapterBar(i, spec.scenes.length, frames) : []), ...(cues ? [captionsLayer(cues)] : []),
+          ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : []), ...reactCues(scene, frames)] };
+    }
     const base = active;
     if (scene.layout) active = { ...active, layout: scene.layout === 'auto' ? autoLayout(scene, active.layout) : scene.layout };
     let draw: Draw;
@@ -589,5 +654,5 @@ function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undef
     texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -14, ...bed },
     ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay: board,
   };
-  return { composition, notes };
+  return { composition, notes, ...(reactScenes.length ? { react: { scenes: reactScenes, look: { palette, motion: active.motion, cornerScale: active.cornerScale, weightCap: active.weightCap } } } : {}) };
 }

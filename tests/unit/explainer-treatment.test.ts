@@ -4,7 +4,7 @@ import { explainerSchema } from '@ove/schema';
 
 // Before it writes a scene, the model weighs three shapes for the video and picks one, because the first shape that comes to mind is the
 // cliché. A batch of videos can also be told which scene sequences are taken, so they do not share one skeleton.
-const scene = (kind: string) => kind === 'title' ? { kind, lines: ['A', 'B'], say: 'x' } : kind === 'closing' ? { kind, title: 'End', say: 'y' } : { kind: 'stat', value: '1', label: 'one', say: 'z' };
+const scene = (kind: string) => kind === 'title' ? { kind, lines: ['A', 'B'], say: 'x' } : kind === 'quote' ? { kind, text: 'Q', source: 'S', say: 'q' } : kind === 'closing' ? { kind, title: 'End', say: 'y' } : { kind: 'stat', value: '1', label: 'one', say: 'z' };
 const script = (...kinds: string[]) => ({ version: '1.0', topic: 'T', scenes: kinds.map(scene) });
 const treatment = { candidates: [{ structure: 'a worked example' }, { structure: 'a before and after' }, { structure: 'a countdown' }], chosen: 1, logline: 'You will know how it works.' };
 const model = (...replies: string[]) => {
@@ -46,16 +46,23 @@ describe('structure that repeats', () => {
     expect(structureProblems(script('title', 'stat', 'closing'))).toEqual([]);
   });
 
+  it('rejects a video that is one kind of scene over and over, and neighbours that look the same', () => {
+    expect(structureProblems(script('title', 'stat', 'quote', 'stat', 'quote', 'stat'))[0]).toMatch(/3 of 6 scenes are "stat"/);
+    expect(structureProblems(script('title', 'stat', 'stat', 'closing'))[0]).toMatch(/scene 2 and 3 are both "stat"/);
+    const varied = { scenes: [{ kind: 'compare' }, { kind: 'compare', variant: 'stacked' }, { kind: 'freeform' }, { kind: 'freeform' }] };
+    expect(structureProblems(varied)).toEqual([]);
+  });
+
   it('tells the model which sequences are taken', () => {
     const system = explainerPrompt('caches', { avoid: [['title', 'compare', 'closing']] })[0]!.content as string;
     expect(system).toContain('title > compare > closing');
   });
 
   it('sends a repeated skeleton back with the reason, and takes the corrected shape', async () => {
-    const { provider, seen } = model(JSON.stringify(script('title', 'stat', 'closing')), JSON.stringify({ ...script('title', 'stat', 'stat', 'closing'), treatment }));
+    const { provider, seen } = model(JSON.stringify(script('title', 'stat', 'closing')), JSON.stringify({ ...script('title', 'stat', 'quote', 'closing'), treatment }));
     const { explainer, attempts } = await writeExplainer(provider, 'caches', { avoid: [['title', 'stat', 'closing']] });
     expect(attempts).toBe(2);
-    expect(sceneKinds(explainer)).toEqual(['title', 'stat', 'stat', 'closing']);
+    expect(sceneKinds(explainer)).toEqual(['title', 'stat', 'quote', 'closing']);
     expect(explainer.treatment?.chosen).toBe(1);
     expect(String(seen[1]!.at(-1)!.content)).toMatch(/title > stat > closing\) is the same as a video that was already made/);
   });

@@ -5,7 +5,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { explainerExample, explainerKindDocs, explainerLookDefs, explainerLooks, explainerSchema, type Explainer } from '@ove/schema';
-import { compileExplainer, type ExplainerAudio } from '@ove/core';
+import { compileExplainer, REACT_KINDS, type ExplainerAudio } from '@ove/core';
+import { convertToReact } from './react-compose';
 import { createProvider, generateExplainerImages, needsImages, researchFacts, sceneKinds, speakLine, wavSeconds, writeExplainer } from '@ove/ai';
 
 const option = (argv: string[], name: string) => { const index = argv.indexOf(name); return index < 0 ? undefined : argv[index + 1]; };
@@ -110,11 +111,12 @@ export type BuildExplainerOptions = {
   /** Record each spoken line (default true). Without it scenes last as long as their pictures need. */ voice?: boolean;
   voiceName?: string;
   /** Which AI provider draws pictures and runs a non-Edge voice; only used when the script needs one. */ provider?: { provider?: string; model?: string; baseUrl?: string };
+  /** Draw the scene kinds that have a React drawing (compare, chart, flow, grid) with React components, so layouts follow the content. Writes explainer-react.tsx beside composition.json. */ react?: boolean;
   log?: (message: string) => void;
 };
 
 /** A checked script into composition.json: draws the pictures that were asked for, records the voice, compiles, writes. Used by the command line and the MCP server. */
-export async function buildExplainer(script: Explainer, options: BuildExplainerOptions): Promise<{ output: string; notes: string[]; scenes: number; spoken: number; pictures: { made: number; reused: number } }> {
+export async function buildExplainer(script: Explainer, options: BuildExplainerOptions): Promise<{ output: string; notes: string[]; scenes: number; spoken: number; pictures: { made: number; reused: number }; react: boolean }> {
   const log = options.log ?? (() => {}), output = resolve(options.output), dir = dirname(output), assets = join(dir, 'assets');
   let spec = script, pictures = { made: 0, reused: 0 };
   if (needsImages(spec)) {
@@ -135,8 +137,21 @@ export async function buildExplainer(script: Explainer, options: BuildExplainerO
       audio.push({ src: relative(dir, join(assets, name)).replace(/\\/g, '/'), seconds: made.seconds, words: made.words });
     }
   }
-  const { composition, notes } = compileExplainer(spec, { audio });
   await mkdir(dir, { recursive: true });
+  let { composition, notes, react } = compileExplainer(spec, { audio, ...(options.react ? { reactKinds: REACT_KINDS } : {}) });
   await writeFile(output, JSON.stringify(composition, null, 2) + '\n');
-  return { output, notes, scenes: spec.scenes.length, spoken, pictures };
+  let reacted = false;
+  if (options.react) {
+    if (!react) notes.push('React: no scene in this script has a React drawing (compare, chart, flow, grid; 9:16 only), so the video is the stock one.');
+    else {
+      const done = await convertToReact(composition, output, { name: 'explainer-react', explainer: react as any });
+      if (done.unsupported.length) {
+        // The stock scenes use something the React view cannot draw: put the pictures back rather than keep scenes that are blank.
+        ({ composition, notes } = compileExplainer(spec, { audio }));
+        await writeFile(output, JSON.stringify(composition, null, 2) + '\n');
+        notes.push(`React: not used, the stock scenes need ${done.unsupported.join(', ')}.`);
+      } else { reacted = true; notes.push(`React: ${react.scenes.length} scene${react.scenes.length === 1 ? '' : 's'} drawn with React components (${[...new Set(react.scenes.map(item => item.scene.kind))].join(', ')}).`); }
+    }
+  }
+  return { output, notes, scenes: spec.scenes.length, spoken, pictures, react: reacted };
 }

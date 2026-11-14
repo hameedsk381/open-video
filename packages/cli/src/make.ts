@@ -16,6 +16,7 @@ export type MakeOptions = {
   /** Contact sheet path (default: review.png beside the input). */ sheet?: string;
   /** Record the explainer's spoken lines (default true). Without it scenes are as long as their pictures need and the video is silent. */ voice?: boolean;
   voiceName?: string;
+  /** Draw the scene kinds that have a React drawing with React components (9:16 explainers). On by default; false keeps the stock scenes. */ react?: boolean;
   /** Run React, code and p5 layers while checking and rendering (only for files you trust). */ allowCode?: boolean;
   /** Check every Nth frame instead of the default spacing (a larger number is faster and less thorough). */ every?: number;
   log?: (message: string) => void;
@@ -50,24 +51,24 @@ export async function makeVideo(options: MakeOptions): Promise<MakeResult> {
   const fail = (problems: string[]): MakeResult => ({ ok: false, kind, problems, notes, timings, next: ['Fix the problems listed and run make again.'] });
 
   // 1. Check and build.
-  let compositionPath = file, composition: Composition, spoken: number | undefined;
+  let compositionPath = file, composition: Composition, spoken: number | undefined, reacted = false, scriptScenes: number | undefined;
   if (kind === 'explainer') {
     const parsed = explainerSchema.safeParse(raw);
     if (!parsed.success) return fail(parsed.error.issues.map(issue => `${issue.path.join('.') || 'script'}: ${issue.message}`));
     log('Building the video…');
     let built;
-    try { built = await buildExplainer(parsed.data as Explainer, { output: join(dir, 'composition.json'), voice: options.voice !== false, voiceName: options.voiceName, log }); }
+    try { built = await buildExplainer(parsed.data as Explainer, { output: join(dir, 'composition.json'), voice: options.voice !== false, voiceName: options.voiceName, react: options.react !== false, log }); }
     catch (error) { return fail([(error as Error).message]); }
-    compositionPath = built.output; spoken = built.spoken; notes.push(...built.notes);
+    compositionPath = built.output; spoken = built.spoken; reacted = built.react; scriptScenes = built.scenes; notes.push(...built.notes);
     composition = loadComposition(await readJson(compositionPath));
   } else {
     try { composition = loadComposition(raw); }
     catch (error) { return fail([(error as Error).message]); }
   }
   timings.build = seconds(started);
-  const baseDir = dirname(compositionPath), allowCode = options.allowCode === true;
+  const baseDir = dirname(compositionPath), allowCode = options.allowCode === true || reacted;   // a React build runs only MotionRender's own view, with the script as data
   if (hasCodeLayers(composition) && !allowCode) return fail(['This composition has react, code or p5 layers, which run JavaScript while checking and rendering. Run make again with allowCode (--allow-code) if you trust the file.']);
-  const summary = { scenes: composition.scenes.filter(scene => scene.id !== 'overlay').length, seconds: Math.round((composition.durationFrames / composition.fps) * 10) / 10, width: composition.width, height: composition.height, fps: composition.fps, ...(spoken === undefined ? {} : { spoken }) };
+  const summary = { scenes: reacted && scriptScenes !== undefined ? scriptScenes : composition.scenes.filter(scene => scene.id !== 'overlay').length, seconds: Math.round((composition.durationFrames / composition.fps) * 10) / 10, width: composition.width, height: composition.height, fps: composition.fps, ...(spoken === undefined ? {} : { spoken }) };
 
   // 2. Review: automated checks and one contact sheet of the whole video.
   started = Date.now();

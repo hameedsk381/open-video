@@ -40,6 +40,7 @@ const GUIDE = `Scene kinds (each scene has a "kind", an optional "step" label in
 - pile: many small things fall into a container and pile up, to show load, volume or overflow. {kind:"pile", title?:"REQUESTS", bucket?:"SERVER", count?:5-120, shape?:"circle"|"rect", tone?:"mixed"|"gold"|"mint"|"red", caption?, say}
 - phone: a phone screen shows a short conversation or notifications, for apps, messages and alerts. {kind:"phone", app:"Chat", messages:[{side:"in"|"out", text}] (1-5), caption?, say}
 - hex: a map of hexagon cells with a few lit, for regions, zones, cells or sharding. {kind:"hex", columns?:3-7, rows?:2-6, lit?:[cell numbers], tags?:["Zone A"] (up to 3), caption?, say}
+- code: a code editor card with a file name and up to 14 short lines, picking lines out one after another. {kind:"code", file?:"cache.ts", language?:"typescript", code:"line one\nline two", highlight?:[1,2], caption?, say}. Keep to the few lines that matter; never invent what the code would print.
 - quote: a source card showing who said something and the exact words, so the evidence is on screen. {kind:"quote", text:"<the exact words of the source>", source:"Who said it", byline?:"the document or role", date?, stamp?:{text:"CLAIM", tone}, caption?, say}. Quote only words a source really said, never invented ones.
 - freeform: a board you lay out yourself when no other kind fits the idea: a sequence between two parties, a row of slots, a custom diagram. {kind:"freeform", elements:[{type:"text", text, x, y, size?, align?:"left"|"center"|"right", color?, font?:"display"|"body"|"mono", at?, motion?} | {type:"box", x, y, w, h, radius?, fill?, stroke?, at?, motion?:"rise"|"fade"|"pop"|"draw"} | {type:"circle", x, y, d, fill?, stroke?, at?}] (1-80, on a 1080 x 1920 column; text between y 270 and 1540, left of x 960; colours accent, accent2, text, muted, surface, bg, red or a hex; at = 0-0.9 of the scene), duration?, caption?, say}. Prefer it over a stock kind when the content has its own shape; use the stock kinds when they fit.
 - closing: the takeaway. {kind:"closing", title, points?:[up to 3], cta?:"Follow for more", say}
@@ -52,6 +53,7 @@ const designGuide = [
   `"design" is optional and changes parts of the look: {"fontDisplay": one of ${explainerDisplayFonts.join(', ')}, "fontBody": one of ${explainerBodyFonts.join(', ')}, "motion": rise|drop|blur|fade, "transition": fade|zoom|wipe|push, "texture": none|grid|dots|scanlines|paper, "corners": sharp|soft|round, "weight": medium|bold|black, "layout": card|editorial}. layout: card is centred in boxed cards; editorial is flush left with no boxes, hairline rules and large numerals, for text-led, serious or print-like subjects. Change only what the subject asks for: a serious subject wants sharp corners and calm motion, a playful one round corners and bounce.`,
   'Motion should match the subject: calm, premium or serious subjects want "fade" or "blur"; clear, business or technical subjects want "rise"; bold, sporty or urgent subjects want "drop". Keep one motion and one transition for the whole video.',
   'Each scene may also set its own "layout" (card or editorial) and "place" (center, the default, or top). Choose scene by scene what the idea needs: a calm editorial title before card diagrams, a stat or closing in the other layout than the steps. Keep the palette, fonts and motion the same across scenes so the video stays one piece.',
+  'Most scene kinds also take a "variant" (a different drawing of the same scene): title poster or centred; steps list, ladder or cards; compare split, stacked or versus; stat hero, ring or stacked; chart columns, rows or line; timeline spine or zigzag; quote card or pull; flow funnel or chain; grid board or spotlight; closing takeaway or poster. Leave it out and the content picks one; set it when you want two neighbouring scenes of the same kind to look different.',
 ].join('\n');
 
 const imageGuide = '- media (drawn): a picture made by an image model fills a frame on the board. {kind:"media", prompt:"<one clear picture described plainly: subject, setting, style; no words, letters or logos>", title?:"large text", caption?, say}. Use at most two, and only where a picture shows the idea better than a diagram.';
@@ -63,11 +65,18 @@ const factsBlock = (facts: Fact[]) => `Facts you may use, each with its source a
 export const sceneKinds = (script: { scenes: { kind: string }[] }): string[] => script.scenes.map(scene => scene.kind);
 
 /** What is wrong with a script's structure, in the words sent back to the model: the same skeleton as a video already made. */
-export function structureProblems(script: { scenes: { kind: string }[] }, avoid: string[][] = []): string[] {
-  const kinds = sceneKinds(script).join(' > ');
-  return avoid.some(other => other.join(' > ') === kinds)
-    ? [`- scenes: the scene sequence (${kinds}) is the same as a video that was already made. Weigh the candidate structures again and choose a different shape: other scene kinds, a freeform scene drawn for this idea, a different order.`]
-    : [];
+export function structureProblems(script: { scenes: { kind: string; variant?: string }[] }, avoid: string[][] = []): string[] {
+  const kinds = sceneKinds(script).join(' > '), problems: string[] = [];
+  if (avoid.some(other => other.join(' > ') === kinds)) problems.push(`- scenes: the scene sequence (${kinds}) is the same as a video that was already made. Weigh the candidate structures again and choose a different shape: other scene kinds, a freeform scene drawn for this idea, a different order.`);
+  // A video that is one kind of scene over and over reads as one template: freeform scenes are drawn for their idea, so they do not count.
+  const counts = new Map<string, number>();
+  for (const scene of script.scenes) if (scene.kind !== 'freeform') counts.set(scene.kind, (counts.get(scene.kind) ?? 0) + 1);
+  for (const [kind, count] of counts) if (count >= 3 && count / script.scenes.length >= 0.5) problems.push(`- scenes: ${count} of ${script.scenes.length} scenes are "${kind}". Use other scene kinds (a freeform scene drawn for this idea is welcome) so the video does not read as one template.`);
+  script.scenes.forEach((scene, i) => {
+    const before = script.scenes[i - 1];
+    if (before && before.kind === scene.kind && scene.kind !== 'freeform' && scene.kind !== 'title' && (before.variant ?? '') === (scene.variant ?? '')) problems.push(`- scenes.${i}: scene ${i} and ${i + 1} are both "${scene.kind}" with the same drawing. Set a different "variant" on one, or put another kind between them.`);
+  });
+  return problems;
 }
 
 /** The step that comes before any scene: weigh three shapes, pick one, say what the video is for. */

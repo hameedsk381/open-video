@@ -72,8 +72,8 @@ const mediaMarker = (kind: 'audio' | 'video', props: MediaProps & Record<string,
 /** Plays a sound (an audio asset id, a file, or sfx:name) for as long as it is shown, counted from when it appears. */
 export function Audio(props: MediaProps): ReactElement { return mediaMarker('audio', props); }
 /** Plays a video clip under the component (or over it with layer="front"). left, top, width and height place it, and may change with the frame (the clip then moves or resizes); the default fills the video. */
-export function Video(props: MediaProps & { muted?: boolean; left?: number; top?: number; width?: number; height?: number; objectFit?: 'cover' | 'contain' | 'fill'; /** 'back' (default) draws the clip under the component, 'front' over it. */ layer?: 'back' | 'front' }): ReactElement {
-  return mediaMarker('video', props, { 'data-left': props.left ?? 0, 'data-top': props.top ?? 0, 'data-width': props.width ?? 0, 'data-height': props.height ?? 0, 'data-fit': props.objectFit ?? 'cover', 'data-layer': props.layer ?? 'back', 'data-muted': props.muted ? 1 : 0 });
+export function Video(props: MediaProps & { /** Corner radius in pixels. */ radius?: number; muted?: boolean; left?: number; top?: number; width?: number; height?: number; objectFit?: 'cover' | 'contain' | 'fill'; /** 'back' (default) draws the clip under the component, 'front' over it. */ layer?: 'back' | 'front' }): ReactElement {
+  return mediaMarker('video', props, { 'data-radius': props.radius ?? 0, 'data-left': props.left ?? 0, 'data-top': props.top ?? 0, 'data-width': props.width ?? 0, 'data-height': props.height ?? 0, 'data-fit': props.objectFit ?? 'cover', 'data-layer': props.layer ?? 'back', 'data-muted': props.muted ? 1 : 0 });
 }
 /** A picture: an asset id declared in config.assets, or a file path. Same as <img>. */
 export function Img(props: ImgHTMLAttributes<HTMLImageElement>): ReactElement { return createElement('img', props); }
@@ -204,3 +204,4 @@ export function Still<T = Record<string, unknown>>(props: Omit<CompositionProps<
 }
 
 export * from './composition';
+export * from './explainer-view';

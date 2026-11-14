@@ -20,7 +20,7 @@ Each account is its own tenant. Every route, file read and job runs as that acco
 ### Dokploy (recommended)
 
 1. Install [Dokploy](https://dokploy.com) on your VPS.
-2. Create a **Compose** project and connect this GitHub repository. The `docker-compose.yml` at the repo root is the Dokploy compose file.
+2. Create a **Compose** project and connect this GitHub repository. The `docker-compose.yml` at the repo root is the Dokploy compose file; `infrastructure/dokploy/compose.yml` is the same stack (a test keeps them identical), so either path works.
 3. In the **Environment** tab, add the variables from `infrastructure/dokploy/.env.example` — at minimum `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `PUBLIC_ORIGIN` and `SETTINGS_SECRET`.
 4. In the **Domains** tab, add a domain for the `api` service on port `3100`. Dokploy provisions the TLS certificate.
 5. Set `PUBLIC_ORIGIN` to the `https://` address Dokploy assigned (e.g. `https://studio.yourdomain.com`).

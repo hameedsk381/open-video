@@ -17,7 +17,9 @@ type Scene = Record<string, any>;
 type Background = string | { type: 'linear' | 'radial'; from?: [number, number]; to?: [number, number]; center?: [number, number]; radius?: number; stops: { offset: number; color: string }[] };
 export type CompositionData = { width: number; height: number; fps: number; durationFrames: number; background?: Background; scenes: Scene[]; [key: string]: unknown };
 
-const supportedTypes = new Set(['rect', 'circle', 'path', 'text', 'image', 'group', 'audio', 'react']);
+const supportedTypes = new Set(['rect', 'circle', 'path', 'text', 'image', 'group', 'audio', 'react', 'captions']);
+/** The frame rate of the composition being drawn: a captions layer reads time in seconds, a layer has only frames. Set by CompositionView at the start of every render. */
+let drawingFps = 30;
 const supportedTransitions = new Set(['fade', 'slide', 'zoom', 'wipe', 'push', 'dip', 'blur']);
 
 /** What in a composition this view cannot draw yet, in words. Empty means the composition converts without losing anything. */
@@ -32,6 +34,7 @@ export function unsupportedFeatures(composition: CompositionData): string[] {
       if (layer.type === 'text' && layer.spans?.length && layer.split) found.add('split rich text');
       if (layer.type === 'path' && ((layer.trimStart ?? 0) > 0 || (layer.trimEnd ?? 1) < 1 || layer.animations?.some((a: any) => a.property === 'd' || a.property === 'trimEnd' || a.property === 'trimStart'))) found.add('path trimming and morphing');
       if (layer.type === 'react') found.add('nested react layers');
+      if (layer.type === 'captions' && !Array.isArray(layer.cues)) found.add('captions read from a file');
       // Gradients fill and outline shapes; on text they would need the glyphs as a clip, which this view does not do yet.
       if (layer.type === 'text' && (typeof layer.color === 'object' && layer.color || typeof layer.stroke === 'object' && layer.stroke || layer.spans?.some((span: any) => typeof span.color === 'object' && span.color))) found.add('gradient text');
       if (layer.animations?.some((a: any) => String(a.property).startsWith('--'))) found.add('shader variables');
@@ -244,6 +247,19 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
   } else if (layer.type === 'path') {
     const fill = svgPaint(valueOf(layer, 'fill', local) ?? 'none'), stroke = strokeProps(layer, local);
     content = createElement('svg', { width: 1, height: 1, style: { overflow: 'visible', display: 'block' } }, createElement('defs', null, ...fill.defs, ...stroke.defs), createElement('path', { d: layer.d, fill: fill.paint, fillRule: layer.fillRule ?? 'nonzero', ...stroke.props }));
+  } else if (layer.type === 'captions') {
+    // Inline cues, as the explainer writes them: the line being said (or just said, for up to 0.3 s), each word coloured by whether it is still to come, being said or said.
+    const cues = (layer.cues ?? []) as { start: number; end: number; text: string; words?: { text: string; start: number; end: number }[] }[];
+    const t = local / drawingFps - num(layer.offset, 0);
+    let cue = cues.find(c => t >= c.start && t < c.end), finished = false;
+    if (!cue) { cue = [...cues].reverse().find(c => c.end <= t && t - c.end < 0.3); finished = !!cue; }
+    if (!cue) return null;
+    const words = cue.words?.length && layer.mode !== 'lines' ? cue.words : cue.text.split(/s+/).filter(Boolean).map(text => ({ text, start: 0, end: 0 }));
+    const current = cue.words?.length && layer.mode !== 'lines' ? (finished ? words.length : words.reduce((at, word, i) => (word.start <= t ? i : at), -1)) : words.length;
+    const boxWidth = num(layer.maxWidth, 900), size = num(layer.fontSize, 54);
+    content = createElement('div', { style: { position: 'absolute', left: 0, top: 0, width: boxWidth, transform: `translateX(${-boxWidth / 2}px)`, textAlign: 'center', fontFamily: fontStack(layer.fontFamily), fontSize: size, fontWeight: layer.fontWeight ?? 700, lineHeight: 1.2 } },
+      words.map((word, i) => createElement('span', { key: i, style: { color: i < current ? layer.color ?? '#ffffff' : i === current ? layer.highlightColor ?? layer.color ?? '#ffffff' : layer.upcomingColor ?? layer.color ?? '#ffffff' } }, (i ? ' ' : '') + word.text)));
+    w = boxWidth; h = size * 1.2;
   } else if (layer.type === 'text') {
     const size = num(valueOf(layer, 'fontSize', local), 48), align = layer.textAlign ?? 'left';
     const textWidth = layer.maxWidth ? num(layer.maxWidth, 0) : undefined;
@@ -289,14 +305,14 @@ function drawLayer(layer: Layer, frame: number, key: string | number, assets: Ma
 }
 
 /** The scene's transition factor at a frame: 0 fully hidden to 1 fully shown, and the transition that is playing. */
-function transitionAt(scene: Scene, local: number): { progress: number; type: string; direction: string; color?: string; entering: boolean } | undefined {
+export function transitionAt(scene: Scene, local: number): { progress: number; type: string; direction: string; color?: string; entering: boolean } | undefined {
   const tin = scene.transitionIn, tout = scene.transitionOut, length = scene.durationFrames;
   if (tin && local < tin.durationFrames) return { progress: ease(local / tin.durationFrames, (tin.easing ?? 'easeInOut') as Easing), type: tin.type, direction: tin.direction ?? 'left', color: tin.color, entering: true };
   if (tout && local >= length - tout.durationFrames) return { progress: 1 - ease((local - (length - tout.durationFrames)) / tout.durationFrames, (tout.easing ?? 'easeInOut') as Easing), type: tout.type, direction: tout.direction ?? 'left', color: tout.color, entering: false };
   return undefined;
 }
 
-function sceneStyle(t: ReturnType<typeof transitionAt>, width: number, height: number): CSSProperties {
+export function sceneStyle(t: ReturnType<typeof transitionAt>, width: number, height: number): CSSProperties {
   const style: CSSProperties = { position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' };
   if (!t) return style;
   const p = t.progress, off = 1 - p, sign = t.entering ? 1 : -1;
@@ -316,6 +332,7 @@ function sceneStyle(t: ReturnType<typeof transitionAt>, width: number, height: n
 
 /** Draws the composition frame by frame. Every value is a pure function of the current frame, like any other video component. */
 export function CompositionView({ composition, assets = {} }: { composition: CompositionData; assets?: Record<string, string> }): ReactElement {
+  drawingFps = num(composition.fps, 30);
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const urls = new Map(Object.entries(assets));
