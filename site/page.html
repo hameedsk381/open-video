@@ -49,6 +49,8 @@
   nav { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; font-size: 15px; }
   nav a { text-decoration: none; color: var(--muted); }
   nav a:hover { color: var(--ink); }
+  nav a.app { color: var(--ink); font-weight: 600; }
+  .btn.app { border-color: var(--ink); }
   nav .gh { color: var(--ink); border: 1.5px solid var(--ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; }
 
   /* hero */
@@ -150,6 +152,7 @@
       <a href="#how">How it works</a>
       <a href="#why">Why</a>
       <a href="#compare">Compared</a>
+      <!--app-nav-->
       <a class="gh" href="https://github.com/hameedsk381/motionrender" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </header>
@@ -163,6 +166,7 @@
         <div class="cta">
           <div class="install"><code><span class="prompt">$</span> npx motionrender init my-video</code><button class="copy" id="copy" type="button">Copy</button></div>
           <a class="btn" href="https://github.com/hameedsk381/motionrender" target="_blank" rel="noopener">View on GitHub</a>
+          <!--app-cta-->
         </div>
         <p class="fine">Needs Node 22+, FFmpeg and a Chromium-based browser. MIT licensed.</p>
       </div>

@@ -79,6 +79,24 @@ VOLUME /work
 ENTRYPOINT []
 CMD ["sleep", "infinity"]
 
+# The landing page (site/): static files behind nginx, run as an unprivileged user. It is a separate image from the app, so it can sit on the
+# main domain while the app is on a subdomain (docs/hosting.md). Build args: APP_URL, the address of the hosted app, adds an "Open the app" link
+# to the page; leave it empty for none.   docker build --target site --build-arg APP_URL=https://app.example.com -t motionrender-site .
+# These stages come before `studio` on purpose: the last stage of this file is the default target.
+FROM node:22-bookworm-slim AS site-build
+ARG APP_URL=
+WORKDIR /site
+COPY site/ ./
+RUN APP_URL="$APP_URL" node build.mjs
+
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS site
+COPY infrastructure/site/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=site-build /site/index.html /usr/share/nginx/html/index.html
+COPY --from=site-build /site/media /usr/share/nginx/html/media
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
+
 FROM chromium AS studio
 USER node
 EXPOSE 3100

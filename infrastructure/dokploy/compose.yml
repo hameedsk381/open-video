@@ -85,6 +85,25 @@ services:
       start_period: 20s
       retries: 3
 
+  # The landing page, for the main domain (the app is on a subdomain, see docs/hosting.md). In Dokploy's Domains tab add the main domain for this
+  # service on port 8080. It makes no calls to the API. The app's address is PUBLIC_ORIGIN, so the page's "Open the app" link needs no setting of its own.
+  site:
+    <<: *hardening
+    build: { context: ../.. , dockerfile: Dockerfile, target: site, args: { APP_URL: "${PUBLIC_ORIGIN}" } }
+    init: true
+    read_only: true
+    tmpfs: ["/tmp"]
+    pids_limit: 64
+    mem_limit: 128m
+    expose: ["8080"]
+    networks: [dokploy-network]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
   worker-render:
     <<: *worker
     environment:
