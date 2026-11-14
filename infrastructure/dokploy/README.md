@@ -9,7 +9,7 @@ MotionRender can be deployed in a few clicks on [Dokploy](https://dokploy.com/) 
 1. In your Dokploy dashboard, create a new project (e.g. `motionrender`).
 2. Click **Add Service** $\rightarrow$ **Compose**.
 3. Set the source type to **Git**:
-   - **Repository URL**: `https://github.com/hameedsk381/open-video.git` (or your repository URL)
+   - **Repository URL**: `https://github.com/hameedsk381/motionrender.git` (or your repository URL)
    - **Branch**: `main`
    - **Compose Path**: `infrastructure/dokploy/compose.yml`
 

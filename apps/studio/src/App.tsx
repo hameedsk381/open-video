@@ -205,7 +205,7 @@ function Sidebar({ route, session, onSignOut }: { route: Route; session: Session
           <SlidersIcon size={15} />
           <span>Settings</span>
         </a>
-        <a href="https://github.com/hameedsk381/open-video#readme" target="_blank" rel="noopener noreferrer" className="side-link" title="Documentation (opens in a new tab)">
+        <a href="https://github.com/hameedsk381/motionrender#readme" target="_blank" rel="noopener noreferrer" className="side-link" title="Documentation (opens in a new tab)">
           <GlobeIcon size={15} />
           <span>Docs</span>
         </a>
