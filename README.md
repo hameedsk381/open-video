@@ -105,6 +105,26 @@ Compositions can also take lists and build layers from them: `{{ }}` holds expre
 
 Run `pnpm mr init my-video`, open `my-video` in your agent, and describe the video you want. The skill tells the agent to edit `composition.json`, run `mr validate`, look at frames with `mr still`, check the whole video with `mr review`, and only then `mr render`. The skill source lives in [packages/cli/skills/ove/SKILL.md](packages/cli/skills/ove/SKILL.md).
 
+## Explainer videos (no AI key needed)
+
+An explainer is a short vertical video that teaches one idea. You, or your agent, write a script of scenes and spoken lines, not coordinates; MotionRender draws it, records the voice, checks the design and renders it. The model that writes the script is the one you are already talking to.
+
+```sh
+pnpm mr explainer kinds               # every scene kind, each with a valid example
+pnpm mr explainer looks               # the 13 whole designs: colours, type, motion, texture, corners, weight
+pnpm mr make explainer.json --no-voice   # validate, build, run the design review, draw one contact sheet of the whole video
+pnpm mr make explainer.json --draft      # a quick half-size MP4 to check the motion
+pnpm mr make explainer.json --final      # the finished, voiced MP4
+```
+
+- **15 scene kinds:** title, flow, grid, steps, compare, stat, chart, timeline, pile, media, phone, hex, `quote`, `freeform` and closing. `quote` is a source card (who said it, their exact words, an optional stamp): write only words a source really said. `freeform` is a board you lay out yourself, with text, boxes and circles placed on the 1080×1920 column and timed to appear, for ideas the other kinds cannot draw.
+- **The design follows the content.** `look` picks a whole design; each scene can set its own `layout` (`card`, `editorial`, or `auto`, which goes editorial when the scene carries a lot of text) and `place`. Scenes are centred between the header and the area reel apps cover, and steps, compare and timeline spacing adapt to how many items they have.
+- **Voice, captions, chapters and music.** Each scene lasts as long as its spoken line (a free Edge voice, which needs an internet connection). The words are drawn as captions timed to the real speech, the word being said highlighted. A segmented progress bar and a "03 / 09" count show where the viewer is. A quiet music bed sits under the voice and drops while it speaks (`music`: `calm`, `pulse` or `none`), and the mix is mastered to −14 LUFS. `captions: false` and `chapters: false` turn the first two off; a silent build has no captions or music.
+- **A treatment before the scenes.** `mr explainer write "…"` (needs an AI provider) asks the model to weigh three genuinely different shapes for the video and choose one, so videos on different topics do not share one skeleton. `--avoid a/explainer.json,b/explainer.json` steers a new video away from the scene sequences already made.
+- **A design review before rendering.** `mr make` reports text cut off or off the frame, text too small to read on a phone, content under the captions or the platform's controls, long holds with little motion, too many type sizes, and captions that go by too fast. A build with errors is not rendered; warnings are listed. A scene that holds longer than 9 s gets a note suggesting a split.
+
+Limits: there are no photos unless you supply them (a `media` scene takes your own files, or an image model's picture), and the voice and the writer need a network connection. See [docs/ai.md](docs/ai.md) for voices and the writer, [docs/agent-sandbox.md](docs/agent-sandbox.md) for running it in a container, and the agent skill [ove-explainer](packages/cli/skills/ove-explainer/SKILL.md).
+
 ## AI-assisted authoring
 
 An optional `mr ai` layer turns a brief into a normal composition and assets. AI runs before rendering, never
@@ -119,15 +139,18 @@ pnpm mr ai image "a soft teal background, no text" --out assets/bg.png --composi
 pnpm mr ai narrate --brief "Why deterministic rendering matters" --composition video.json
 pnpm mr ai transcribe assets/voice.wav --composition video.json --start 1.2
 pnpm mr ai capabilities               # every block, component, effect, transition and sound the AI may use
-pnpm mr agent "A viral launch reel for an open-source vector database"   # routes to JSON or React code, then produces the video
+pnpm mr agent "A viral launch reel for an open-source vector database"   # writes a creative direction, then React code, then produces the video
 pnpm mr ai doctor
 ```
 
-A **planner** decides the route before anything is generated: the video is written as a plain composition (bespoke
-scenes, structured and typographic videos) or as React code (high-end motion graphics no block layout carries) on a
-machine that will run that code. The planner's answer is checked against the **capability registry** so the model can
-only point at capabilities that exist and fit the canvas. `--no-plan` skips the planner and writes a composition without
-asking the model for a route; `--no-react` keeps it off the React route.
+A **planner** works out the beats and the art direction before anything is generated, and its answer is checked against
+the **capability registry** so the model can only point at capabilities that exist and fit the canvas. The video is then
+written as React code on a machine that will run that code, and a failed React build is reported, not quietly replaced
+by a composition. A plain composition is still written when the host cannot run code (the hosted worker), for batch
+variable fields, for non-image assets, and when you ask for it: `--no-react` keeps the React route off, `--full` writes
+every layer, and `--json-layers` keeps the saved file's layers as JSON. `--no-plan` skips the planner. `mr agent`
+first writes a creative direction that weighs three shapes for the video; `--avoid reel-a,reel-b` steers it away from
+the structure of videos you already made.
 
 The model's JSON is validated with the same schema as a hand-written composition; errors go back to the model until
 it is valid, and `--review` can add the renderer's design checks as feedback. `--provider mock` runs the whole
@@ -219,6 +242,7 @@ mr theme espresso reel/composition.json     # switch every block's colours at on
 | `mr inspect <composition.json>` | Print duration, scenes, variables and assets |
 | `mr still <composition.json> [--frame n] [--output file.png]` | Render one frame to PNG |
 | `mr make <explainer.json or composition.json> [--draft|--final] [--no-voice]` | The whole loop in one call: validate, build, design review and one contact sheet of the whole video; add `--draft` for a quick half-size MP4 or `--final` for the finished one. The quickest way for a coding agent to make a video (MCP: `motionrender_make_video`) |
+| `mr explainer kinds\|looks\|example\|validate\|compile\|write` | Explainer scripts: list the scene kinds and the 13 looks, print a whole example, check a script, build it to `composition.json`, or have a model write one (`write` needs an AI provider; `--avoid` steers it away from earlier videos) |
 | `mr review <composition.json> [--output review.png] [--json]` | Contact sheet plus design checks: text cut off, off the frame, too small, overlapping or not on screen long enough to read; text under a platform's UI (safe zones, with letterboxing for 4:5 and square canvases); competing headlines; inconsistent type sizes and colours; frozen stretches; uniform scene lengths; mixed transitions; caption pace; sounds cut off mid-phrase; loudness. Exits with an error when it finds errors |
 | `mr render <composition.json> [--output file.mp4] [--loudness -14] [--no-motion-blur] [--format f] [--codec h264\|h265] [--transparent] [--frames a-b] [--crf n | --bitrate 8M] [--scale 0.5] [--concurrency n] [--preset name]` | Render the video. `--crf`/`--bitrate` (and `--audio-bitrate`) set quality (default crf 20 for H.264); `--scale 0.5` makes a quick half-size draft. The format follows the output extension (`.mp4`, `.webm`, `.mov`, `.gif`, or no extension for a folder of PNG frames) unless `--format` says otherwise. `--transparent` keeps the background see-through (webm, mov, png). `--frames 30-89` renders part of it. Frames are drawn on `n` browser pages at once (default: half the CPU cores, at most 4); `--preset` is the x264/x265 speed/size trade-off (default `veryfast`) |
 | `mr render <composition.json> --batch rows.json --output "dir/{{var}}.mp4"` | Render one video per row of variable values |
