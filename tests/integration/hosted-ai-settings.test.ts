@@ -49,7 +49,7 @@ beforeAll(async () => {
   app = createApp({ mode: 'hosted', store, queue, validate: runner.validate, auth, library: studioLibrary, player: studioPlayer, app: studioApp, makeThumbnail, providerState: () => ({ provider: null, error: null }), aiSettings, allowHosts: [HOST], publicOrigin: ORIGIN });
   ({ server, port } = await app.listen({ host: '127.0.0.1', port: 3601 }));
 });
-afterAll(async () => { server?.close(); server?.closeAllConnections(); if (root) await rm(root, { recursive: true, force: true }); });
+afterAll(async () => { server?.close(); server?.closeAllConnections(); if (root) await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 }); });
 
 describe('each person connects their own AI', () => {
   it('has no AI until one is saved, and says so before queueing work', async () => {

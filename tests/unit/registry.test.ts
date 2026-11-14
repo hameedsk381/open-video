@@ -10,7 +10,7 @@ describe('buildRegistry', () => {
 
   it('keeps caller entries and the built-in kit apart by kind', () => {
     expect(registry.counts()).toMatchObject({ block: 1 });
-    expect(registry.counts().sound).toBe(11);
+    expect(registry.counts().sound).toBe(13);
     expect(registry.find('component', 'GlassCard')).toBeDefined();
     expect(registry.find('block', 'GlassCard')).toBeUndefined();
     expect(registry.version).toBe(registryVersion);

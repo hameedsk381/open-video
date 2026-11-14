@@ -26,7 +26,6 @@ export function generateReactLaunchReelTsx(props: ReactLaunchReelProps): string 
   const {
     style,
     targetName,
-    brandColor,
     tagline,
     ctaText,
     displayUrl,
@@ -43,14 +42,18 @@ export function generateReactLaunchReelTsx(props: ReactLaunchReelProps): string 
   const f2 = features[1] || 'Sub-Millisecond Execution';
   const f3 = features[2] || 'Enterprise Ironclad Security';
 
-  // Sanitize strings for TSX injection
-  const safeName = targetName.replace(/["\\]/g, '');
-  const safeTagline = tagline.replace(/["\\]/g, '');
-  const safeCta = ctaText.replace(/["\\]/g, '');
-  const safeUrl = displayUrl.replace(/["\\]/g, '');
-  const safeF1 = f1.replace(/["\\]/g, '');
-  const safeF2 = f2.replace(/["\\]/g, '');
-  const safeF3 = f3.replace(/["\\]/g, '');
+  // The copy lands in single-quoted strings, double-quoted attributes and JSX text, so anything that can end one of those
+  // (quotes, braces, angle brackets, backslashes, line breaks) is taken out; an apostrophe becomes a typographic one.
+  const safe = (text: string) => text.replace(/'/g, '’').replace(/["\\{}<>`\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const safeName = safe(targetName);
+  const safeTagline = safe(tagline);
+  const safeCta = safe(ctaText);
+  const safeUrl = safe(displayUrl);
+  const safeF1 = safe(f1);
+  const safeF2 = safe(f2);
+  const safeF3 = safe(f3);
+  // The colour is written into the file as code too, so only a plain hex value is accepted.
+  const brandColor = /^#[0-9a-f]{6}$/i.test(props.brandColor) ? props.brandColor : '#6366f1';
 
   const isVertical = aspect === '9:16';
 
@@ -142,12 +145,13 @@ export const layers = [
 // --- Micro-Components ---
 
 function SimulatedCursor({ frame, fps }: { frame: number; fps: number }) {
-  // Cursor arrives at frame 120, moves toward button, clicks at frame 170
-  const arrive = spring({ frame: frame - 120, fps, damping: 16, stiffness: 80, from: 0, to: 1 });
-  const click = spring({ frame: frame - 170, fps, damping: 12, stiffness: 200, from: 0, to: 1 });
-  const ripple = spring({ frame: frame - 170, fps, damping: 20, stiffness: 60, from: 0, to: 1 });
+  // "frame" counts from the start of the product beat (video frame 95). The cursor arrives at 25 and clicks at 75,
+  // which is video frame 170, where the click sound sits.
+  const arrive = spring({ frame: frame - 25, fps, damping: 16, stiffness: 80, from: 0, to: 1 });
+  const click = spring({ frame: frame - 75, fps, damping: 12, stiffness: 200, from: 0, to: 1 });
+  const ripple = spring({ frame: frame - 75, fps, damping: 20, stiffness: 60, from: 0, to: 1 });
 
-  if (frame < 120 || frame > 220) return null;
+  if (frame < 25 || frame > 125) return null;
 
   const cursorX = 380 + (1 - arrive) * 220;
   const cursorY = 460 + (1 - arrive) * 180;
@@ -158,7 +162,7 @@ function SimulatedCursor({ frame, fps }: { frame: number; fps: number }) {
   return (
     <div style={{ position: 'absolute', left: cursorX, top: cursorY, pointerEvents: 'none', zIndex: 100 }}>
       {/* Click ripple wave */}
-      {frame >= 170 && (
+      {frame >= 75 && (
         <div
           style={{
             position: 'absolute',
@@ -193,8 +197,8 @@ function SimulatedCursor({ frame, fps }: { frame: number; fps: number }) {
 }
 
 function SpecularSheen({ frame }: { frame: number }) {
-  // Specular sheen travels across card between frame 110 and 175
-  const progress = interpolate(frame, [110, 175], [-120, 220], { clamp: true });
+  // The sheen crosses the card between frames 15 and 80 of the product beat, before the cursor clicks.
+  const progress = interpolate(frame, [15, 80], [-120, 220], { clamp: true });
   return (
     <div
       style={{
@@ -332,12 +336,11 @@ export default function LaunchReel() {
                 ${safeTagline}
               </div>
 
-              {/* Status Metric Pill */}
+              {/* Destination pill: the real address, not an invented status */}
               <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 12,
                   marginTop: 20,
                   padding: '10px 22px',
                   borderRadius: '${style === 'terminal' || style === 'blueprint' ? '6px' : '9999px'}',
@@ -345,12 +348,11 @@ export default function LaunchReel() {
                   border: '1px solid ' + (THEME.brandColor + '44'),
                   fontSize: ${isVertical ? 22 : 20},
                   color: '#e2e8f0',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                   opacity: interpolate(frame, [28, 48], [0, 1], { clamp: true }),
                 }}
               >
-                <span style={{ color: THEME.brandColor, fontWeight: 700 }}>● PRODUCTION READY</span>
-                <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
-                <span>V2.0 RELEASE</span>
+                ${safeUrl}
               </div>
             </AbsoluteFill>
           );
@@ -469,7 +471,7 @@ export default function LaunchReel() {
                   fontStyle: '${style === 'editorial' ? 'italic' : 'normal'}',
                 }}
               >
-                <KineticText text="Engineered for Precision" delay={6} preset="snappy" />
+                <KineticText text="What it does" delay={6} preset="snappy" />
               </h2>
 
               {/* Bento Grid */}
@@ -486,7 +488,6 @@ export default function LaunchReel() {
                 <BentoCard
                   delay={8}
                   title="${safeF1}"
-                  subtitle="Optimized pipeline architecture delivering zero-latency results."
                   glowColor={THEME.brandColor + '33'}
                   style={{
                     minHeight: ${isVertical ? 220 : 280},
@@ -494,13 +495,10 @@ export default function LaunchReel() {
                   }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 18, color: '#94a3b8' }}>
-                      <span>VELOCITY MULTIPLIER</span>
-                      <span style={{ color: THEME.brandColor, fontWeight: 700 }}>
-                        <NumberTicker value={10} suffix="X" delay={14} preset="bouncy" />
-                      </span>
+                    <div style={{ marginBottom: 8, fontSize: ${isVertical ? 48 : 56}, fontWeight: 900, color: THEME.brandColor, letterSpacing: '-0.02em' }}>
+                      <NumberTicker value={1} prefix="0" delay={14} preset="bouncy" />
                     </div>
-                    <ProgressBar value={0.92} color={THEME.brandColor} delay={16} />
+                    <ProgressBar value={1} color={THEME.brandColor} delay={16} />
                   </div>
                 </BentoCard>
 
@@ -508,7 +506,6 @@ export default function LaunchReel() {
                 <BentoCard
                   delay={13}
                   title="${safeF2}"
-                  subtitle="Sub-millisecond deterministic execution with continuous integrity."
                   glowColor="#6366f133"
                   style={{
                     minHeight: ${isVertical ? 220 : 280},
@@ -516,10 +513,10 @@ export default function LaunchReel() {
                   }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-                    <div style={{ fontSize: ${isVertical ? 48 : 56}, fontWeight: 900, color: '#38bdf8', letterSpacing: '-0.02em' }}>
-                      <NumberTicker value={99.9} decimals={1} suffix="%" delay={18} preset="smooth" />
+                    <div style={{ marginBottom: 8, fontSize: ${isVertical ? 48 : 56}, fontWeight: 900, color: THEME.brandColor, letterSpacing: '-0.02em' }}>
+                      <NumberTicker value={2} prefix="0" delay={18} preset="smooth" />
                     </div>
-                    <span style={{ fontSize: 16, color: '#94a3b8' }}>UPTIME & RELIABILITY</span>
+                    <ProgressBar value={1} color={THEME.brandColor} delay={20} />
                   </div>
                 </BentoCard>
 
@@ -527,7 +524,6 @@ export default function LaunchReel() {
                 <BentoCard
                   delay={18}
                   title="${safeF3}"
-                  subtitle="End-to-end cryptographic proofs and automated guardrails."
                   glowColor="#10b98133"
                   style={{
                     minHeight: ${isVertical ? 220 : 280},
@@ -535,10 +531,10 @@ export default function LaunchReel() {
                   }}
                 >
                   <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 12px #10b981' }} />
-                      <span style={{ fontSize: ${isVertical ? 24 : 26}, fontWeight: 700, color: '#f8fafc' }}>SOC2 TYPE II CERTIFIED</span>
+                    <div style={{ marginBottom: 8, fontSize: ${isVertical ? 48 : 56}, fontWeight: 900, color: THEME.brandColor, letterSpacing: '-0.02em' }}>
+                      <NumberTicker value={3} prefix="0" delay={22} preset="smooth" />
                     </div>
+                    <ProgressBar value={1} color={THEME.brandColor} delay={24} />
                   </div>
                 </BentoCard>
               </BentoGrid>
@@ -570,7 +566,7 @@ export default function LaunchReel() {
               }}
             >
               <Badge dot dotColor={THEME.brandColor} delay={3}>
-                AVAILABLE NOW
+                GET STARTED
               </Badge>
 
               <h1

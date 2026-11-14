@@ -4,7 +4,7 @@ import { initProject } from '../../packages/cli/src/init'; import { startDevServ
 // preflight) or reach it through a domain resolving to 127.0.0.1 (DNS rebinding).
 let root: string, file: string, dev: DevServer, port: number;
 const send = (method: string, path: string, headers: Record<string, string>, body?: string) => new Promise<number>((ok, fail) => { const req = request({ host: '127.0.0.1', port, method, path, headers: { host: `127.0.0.1:${port}`, ...headers } }, res => { res.resume(); res.on('end', () => ok(res.statusCode!)); }); req.on('error', fail); req.end(body); });
-const edit = JSON.stringify({ id: 'tagline', set: { y: 999 } }), own = () => `http://127.0.0.1:${port}`, saved = async () => (await readFile(file, 'utf8')).includes('"y": 999');
+const edit = JSON.stringify({ id: 'subtitle', set: { y: 999 } }), own = () => `http://127.0.0.1:${port}`, saved = async () => (await readFile(file, 'utf8')).includes('"y": 999');
 beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'ove-dev-')); await initProject(join(root, 'p'), { skill: false }); file = join(root, 'p', 'composition.json'); dev = await startDevServer(file, { port: 3480, concurrency: 1 }); port = Number(new URL(dev.url).port); });
 afterAll(async () => { await dev?.close(); if (root) await rm(root, { recursive: true, force: true }); });
 describe('dev server requests', () => {

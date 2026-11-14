@@ -2,7 +2,7 @@
 // diagram on the same dark board, with the same header and footer on every scene, so any topic gets a consistent video. Nothing here
 // runs while rendering: the result is plain composition JSON, frame-exact like any other.
 import type { Explainer, ExplainerScene } from '@ove/schema';
-import { explainerCornerScale, explainerFontMaxWeight, explainerLookDefs, explainerWeightValue } from '@ove/schema';
+import { explainerCornerScale, explainerFontMaxWeight, explainerLookDefs, explainerWeightValue, groupCaptionWords, type CaptionCue } from '@ove/schema';
 
 type Layer = Record<string, any>;
 type Anim = { property: string; keyframes: { frame: number; value: number | string; easing?: string }[] };
@@ -175,27 +175,28 @@ const grid: Kind<'grid'> = (s, i) => ({ min: 240, layers: frames => {
 } });
 
 const steps: Kind<'steps'> = (s, i) => ({ min: 90 + s.items.length * 70, layers: frames => {
-  const n = s.items.length, first = at(frames, 0.1), span = at(frames, 0.62) / n, pitch = 250;
+  // Few steps get taller cards and larger type, so two or three do not sit in the top of the frame.
+  const n = s.items.length, first = at(frames, 0.1), span = at(frames, 0.62) / n, few = n <= 3, pitch = few ? 330 : 250, h = pitch - 50, pad = (h - 200) / 2, titleSize = few ? 62 : 54, detailSize = few ? 38 : 34;
   return [...kicker(i, s.step), ...s.items.flatMap((item, k) => {
-    const start = first + Math.round(k * span), next = k + 1 < n ? first + Math.round((k + 1) * span) : undefined, y = 320 + k * pitch;
+    const start = first + Math.round(k * span), next = k + 1 < n ? first + Math.round((k + 1) * span) : undefined, y = 320 + k * pitch, ty = y + pad + (item.detail ? 38 : 70);
     return [
-      outline(`step-${k}`, 70, y, 940, 200, '{{muted}}', { radius: 18, fill: '{{surface}}', strokeWidth: 2, anims: [[anim('opacity', [start, 0], [start + 12, 1, 'glide']), anim('y', [start, y + 30], [start + 18, y, 'land'])]] }),
-      outline(`step-on-${k}`, 70, y, 940, 200, GOLD, { radius: 18, strokeWidth: 4, opacity: 0, anims: [next === undefined ? anim('opacity', [start, 0], [start + 12, 1]) : anim('opacity', [start, 0], [start + 12, 1], [next, 1], [next + 14, 0])] }),
-      circle(`step-n-${k}`, 150, y + 100, 84, { fill: CLEAR, stroke: MINT, strokeWidth: 4, anims: [fade(start + 4, 10)] }),
-      label(`step-num-${k}`, String(k + 1), 150, y + 78, { size: 44, ls: 0, color: MINT, align: 'center', anims: [fade(start + 4, 10)] }),
-      text(`step-title-${k}`, item.title, 230, y + (item.detail ? 38 : 70), { font: '{{fontDisplay}}', weight: 800, size: 54, maxWidth: 740, maxLines: 1, minSize: 34, anims: [rise(y + (item.detail ? 38 : 70), start + 6, 20, 16)] }),
-      ...(item.detail ? [text(`step-detail-${k}`, item.detail, 230, y + 112, { size: 34, color: '{{muted}}', maxWidth: 740, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
+      outline(`step-${k}`, 70, y, 940, h, '{{muted}}', { radius: 18, fill: '{{surface}}', strokeWidth: 2, anims: [[anim('opacity', [start, 0], [start + 12, 1, 'glide']), anim('y', [start, y + 30], [start + 18, y, 'land'])]] }),
+      outline(`step-on-${k}`, 70, y, 940, h, GOLD, { radius: 18, strokeWidth: 4, opacity: 0, anims: [next === undefined ? anim('opacity', [start, 0], [start + 12, 1]) : anim('opacity', [start, 0], [start + 12, 1], [next, 1], [next + 14, 0])] }),
+      circle(`step-n-${k}`, 150, y + h / 2, 84, { fill: CLEAR, stroke: MINT, strokeWidth: 4, anims: [fade(start + 4, 10)] }),
+      label(`step-num-${k}`, String(k + 1), 150, y + h / 2 - 22, { size: 44, ls: 0, color: MINT, align: 'center', anims: [fade(start + 4, 10)] }),
+      text(`step-title-${k}`, item.title, 230, ty, { font: '{{fontDisplay}}', weight: 800, size: titleSize, maxWidth: 740, maxLines: 1, minSize: 34, anims: [rise(ty, start + 6, 20, 16)] }),
+      ...(item.detail ? [text(`step-detail-${k}`, item.detail, 230, y + pad + 112 + (titleSize - 54), { size: detailSize, color: '{{muted}}', maxWidth: 740, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
       sfx('pop', start + 4, 0.25)];
   }), ...caption('caption', s.caption, 320 + n * pitch + 20, at(frames, 0.78)), sfx('whoosh', 0, 0.2)];
 } });
 
 const compare: Kind<'compare'> = (s, i) => ({ min: 120 + (s.left.points.length + s.right.points.length) * 40, layers: frames => {
-  const rows = Math.max(s.left.points.length, s.right.points.length), first = at(frames, 0.12), span = at(frames, 0.6) / rows;
+  const rows = Math.max(s.left.points.length, s.right.points.length), first = at(frames, 0.12), span = at(frames, 0.6) / rows, rowPitch = rows <= 2 ? 300 : 230;
   const column = (side: 'left' | 'right', data: { title: string; points: string[] }, x: number, color: string, mark: string): Layer[] => [
-    outline(`${side}-card`, x, 300, 450, 170 + rows * 230, color, { radius: 18, fill: '{{surface}}', strokeWidth: 3, anims: [pop(side === 'left' ? 4 : 12, 16, 0.92)] }),
+    outline(`${side}-card`, x, 300, 450, 170 + rows * rowPitch, color, { radius: 18, fill: '{{surface}}', strokeWidth: 3, anims: [pop(side === 'left' ? 4 : 12, 16, 0.92)] }),
     label(`${side}-title`, data.title, x + 225, 340, { size: 30, ls: 5, color, align: 'center', maxWidth: 400, anims: [fade(side === 'left' ? 10 : 18, 10)] }),
     ...data.points.flatMap((point, k) => {
-      const start = first + Math.round(k * span) + (side === 'right' ? 10 : 0), y = 470 + k * 230;
+      const start = first + Math.round(k * span) + (side === 'right' ? 10 : 0), y = 470 + k * rowPitch;
       return [label(`${side}-mark-${k}`, mark, x + 40, y, { size: 44, ls: 0, color, anims: [fade(start, 10)] }),
         text(`${side}-point-${k}`, point, x + 100, y - 4, { size: 44, weight: 700, maxWidth: 320, maxLines: 4, minSize: 30, lh: 1.2, anims: [rise(y - 4, start, 24, 18)] }),
         sfx('pop', start + 2, 0.2)];
@@ -319,10 +320,10 @@ const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
 const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
   ...kicker(i, s.step),
   center('close-title', s.title, 520, { font: '{{fontDisplay}}', weight: 900, size: 130, color: GOLD, maxWidth: 900, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(520, 6, 40, 26)] }),
-  ...s.points.flatMap((point, k) => { const y = 1000 + k * 150, start = at(frames, 0.3) + k * 20; return [
+  ...s.points.flatMap((point, k) => { const y = 900 + k * 110, start = at(frames, 0.3) + k * 20; return [
     label(`close-mark-${k}`, '✓', 90, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
     text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
-  ...tag('cta', s.cta, W / 2, 1450, MINT, at(frames, 0.6), 640),
+  ...tag('cta', s.cta, W / 2, 1260, MINT, at(frames, 0.6), 640),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
 /* ---- the editorial layout: flush left, no boxes, hairline rules and large numerals (title, stat, steps and closing) ---- */
@@ -355,15 +356,15 @@ const statEditorial: Kind<'stat'> = (s, i) => ({ min: 150, layers: () => [
   sfx('whoosh', 0, 0.2), sfx('thump', 18, 0.35)] });
 
 const stepsEditorial: Kind<'steps'> = (s, i) => ({ min: 90 + s.items.length * 70, layers: frames => {
-  const n = s.items.length, first = at(frames, 0.1), span = at(frames, 0.62) / n, pitch = 250;
+  const n = s.items.length, first = at(frames, 0.1), span = at(frames, 0.62) / n, few = n <= 3, pitch = few ? 330 : 250, h = pitch - 50, pad = (h - 200) / 2;
   return [...kicker(i, s.step), ...s.items.flatMap((item, k) => {
-    const start = first + Math.round(k * span), next = k + 1 < n ? first + Math.round((k + 1) * span) : undefined, y = 320 + k * pitch, ty = y + (item.detail ? 36 : 64);
+    const start = first + Math.round(k * span), next = k + 1 < n ? first + Math.round((k + 1) * span) : undefined, y = 320 + k * pitch, ty = y + pad + (item.detail ? 36 : 64);
     return [
-      rect(`step-line-${k}`, LEFT, y + 206, 1, 3, { fill: '{{muted}}', opacity: 0.4, anims: [grow('width', 900, start, 24)] }),
-      rect(`step-on-${k}`, 56, y + 6, 12, 190, { fill: GOLD, opacity: 0, anims: [next === undefined ? anim('opacity', [start, 0], [start + 12, 1]) : anim('opacity', [start, 0], [start + 12, 1], [next, 1], [next + 14, 0])] }),
-      text(`step-num-${k}`, String(k + 1).padStart(2, '0'), LEFT - 6, y + 22, { font: '{{fontDisplay}}', weight: 900, size: 124, color: GOLD, opacity: 0.95, anims: [rise(y + 22, start, 24, 18)] }),
+      rect(`step-line-${k}`, LEFT, y + h + 6, 1, 3, { fill: '{{muted}}', opacity: 0.4, anims: [grow('width', 900, start, 24)] }),
+      rect(`step-on-${k}`, 56, y + 6, 12, h - 10, { fill: GOLD, opacity: 0, anims: [next === undefined ? anim('opacity', [start, 0], [start + 12, 1]) : anim('opacity', [start, 0], [start + 12, 1], [next, 1], [next + 14, 0])] }),
+      text(`step-num-${k}`, String(k + 1).padStart(2, '0'), LEFT - 6, y + pad + 22, { font: '{{fontDisplay}}', weight: 900, size: 124, color: GOLD, opacity: 0.95, anims: [rise(y + pad + 22, start, 24, 18)] }),
       text(`step-title-${k}`, item.title, 300, ty, { font: '{{fontDisplay}}', weight: 800, size: 56, maxWidth: 690, maxLines: 1, minSize: 34, anims: [rise(ty, start + 6, 20, 16)] }),
-      ...(item.detail ? [text(`step-detail-${k}`, item.detail, 300, y + 112, { size: 34, color: '{{muted}}', maxWidth: 690, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
+      ...(item.detail ? [text(`step-detail-${k}`, item.detail, 300, y + pad + 112, { size: 34, color: '{{muted}}', maxWidth: 690, maxLines: 2, minSize: 26, lh: 1.2, anims: [fade(start + 14, 12)] })] : []),
       sfx('pop', start + 4, 0.25)];
   }), ...captionLeft('caption', s.caption, 320 + n * pitch + 20, at(frames, 0.78)), sfx('whoosh', 0, 0.2)];
 } });
@@ -372,16 +373,77 @@ const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames 
   ...kicker(i, s.step),
   rect('close-rule', LEFT, 330, 1, 12, { fill: GOLD, radius: 6, anims: [grow('width', 170, 4, 24)] }),
   text('close-title', s.title, LEFT - 6, 380, { font: '{{fontDisplay}}', weight: 900, size: 150, color: GOLD, maxWidth: 920, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(380, 6, 40, 26)] }),
-  ...s.points.flatMap((point, k) => { const y = 1000 + k * 150, start = at(frames, 0.3) + k * 20; return [
+  ...s.points.flatMap((point, k) => { const y = 900 + k * 110, start = at(frames, 0.3) + k * 20; return [
     label(`close-mark-${k}`, '→', LEFT, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
     text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
-  text('cta-url', s.cta, LEFT - 4, 1430, { font: '{{fontDisplay}}', weight: 900, size: 84, color: MINT, maxWidth: 900, maxLines: 1, minSize: 40, anims: [rise(1430, at(frames, 0.6), 30, 22)] }),
-  rect('cta-bar', LEFT, 1536, 1, 10, { fill: GOLD, radius: 5, anims: [grow('width', 420, at(frames, 0.6) + 8, 26)] }),
+  text('cta-url', s.cta, LEFT - 4, 1235, { font: '{{fontDisplay}}', weight: 900, size: 84, color: MINT, maxWidth: 900, maxLines: 1, minSize: 40, anims: [rise(1235, at(frames, 0.6), 30, 22)] }),
+  rect('cta-bar', LEFT, 1341, 1, 10, { fill: GOLD, radius: 5, anims: [grow('width', 420, at(frames, 0.6) + 8, 26)] }),
   sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
 
 /** The scenes that have an editorial layout use it when the design asks for it; every other scene is drawn the same way in every design. */
 const pick = <S extends ExplainerScene['kind']>(card: Kind<S>, editorial: Kind<S>): Kind<S> => (scene, i) => (active.layout === 'editorial' ? editorial(scene, i) : card(scene, i));
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, closing: pick(closing, closingEditorial) };
+/* ---- quote: a source card, so the evidence is on screen as well as in the voice ---- */
+const quote: Kind<'quote'> = (s, i) => ({ min: 150, layers: frames => {
+  const size = 52, lineH = Math.round(size * 1.25), top = 330, lines = Math.max(1, Math.ceil(s.text.length / 28)), textTop = top + 215, cardH = 215 + lines * lineH + 70;
+  const start = at(frames, 0.12), meta = [s.byline, s.date].filter(Boolean).join(' · '), tone = s.stamp ? TONES[s.stamp.tone] : GOLD;
+  return [...kicker(i, s.step),
+    outline('quote-card', 70, top, 940, cardH, '{{muted}}', { radius: 22, fill: '{{surface}}', strokeWidth: 2, anims: [pop(4, 18, 0.94)] }),
+    circle('quote-avatar', 150, top + 95, 84, { fill: GOLD, anims: [pop(10, 14, 0.5)] }),
+    label('quote-initial', s.source.slice(0, 1).toUpperCase(), 150, top + 73, { size: 44, ls: 0, color: '{{bg}}', align: 'center', anims: [fade(12, 10)] }),
+    text('quote-source', s.source, 215, top + 52, { font: '{{fontDisplay}}', weight: 800, size: 40, maxWidth: 700, maxLines: 1, minSize: 26, anims: [rise(top + 52, 10, 20, 16)] }),
+    ...(meta ? [text('quote-meta', meta, 215, top + 108, { size: 28, color: '{{muted}}', maxWidth: 700, maxLines: 1, minSize: 20, anims: [fade(16, 12)] })] : []),
+    rect('quote-rule', 110, top + 170, 1, 2, { fill: '{{muted}}', opacity: 0.5, anims: [grow('width', 860, 18, 22)] }),
+    rect('quote-bar', 110, textTop, 8, lines * lineH, { radius: 4, fill: GOLD, anims: [anim('height', [start, 1], [start + 26, lines * lineH, 'land'])] }),
+    text('quote-text', s.text, 146, textTop, { font: '{{fontDisplay}}', weight: 700, size, maxWidth: 800, maxLines: lines + 1, minSize: 34, lh: 1.25, anims: [rise(textTop, start, 24, 20)] }),
+    ...(s.stamp ? [
+      outline('quote-stamp', 730, top - 36, 270, 76, tone, { radius: 10, strokeWidth: 4, fill: '{{bg}}', anims: [pop(at(frames, 0.45), 14, 1.5)] }),
+      label('quote-stamp-text', s.stamp.text, 865, top - 20, { size: 30, ls: 5, color: tone, align: 'center', anims: [fade(at(frames, 0.45) + 4, 8)] })] : []),
+    ...caption('caption', s.caption, top + cardH + 50, at(frames, 0.75)), sfx('whoosh', 0, 0.2), sfx('pop', at(frames, 0.45), 0.25)];
+} });
+
+/* ---- freeform: the script places every element, so the content decides the layout ---- */
+const PAINT: Record<string, string> = { accent: GOLD, accent2: MINT, text: '{{text}}', muted: '{{muted}}', surface: '{{surface}}', bg: '{{bg}}', red: RED, none: CLEAR };
+const paintOf = (color: string) => PAINT[color] ?? color;
+const freeform: Kind<'freeform'> = (s, i) => ({ min: Math.max(150, Math.round((s.duration ?? 0) * FPS)), layers: frames => {
+  const arrive = (el: { at: number; motion: string }, y: number, rises: boolean): Beat[] => {
+    const start = at(frames, el.at);
+    if (el.motion === 'none') return [];
+    if (el.motion === 'fade') return [fade(start, 14)];
+    if (el.motion === 'pop') return [pop(start)];
+    return rises ? [rise(y, start, 30, 20)] : [fade(start, 14)];
+  };
+  const layers = s.elements.flatMap((el, k): Layer[] => {
+    const id = `ff-${el.type}-${k}`;
+    if (el.type === 'text') {
+      const font = el.font === 'display' ? '{{fontDisplay}}' : el.font === 'mono' ? 'JetBrains Mono' : '{{fontBody}}';
+      return [text(id, el.text, el.x, el.y, { size: el.size, weight: el.weight, font, color: paintOf(el.color), align: el.align, lh: 1.15, ...(el.width ? { maxWidth: el.width } : {}), anims: arrive(el, el.y, true) })];
+    }
+    if (el.type === 'box') {
+      const grows = el.motion === 'draw', start = at(frames, el.at);
+      return [rect(id, el.x, el.y, el.w, el.h, { radius: el.radius, fill: paintOf(el.fill), ...(el.stroke ? { stroke: paintOf(el.stroke), strokeWidth: el.strokeWidth } : {}),
+        anims: grows ? [fade(start, 6), grow('width', el.w, start, 24)] : arrive(el, el.y, true) })];
+    }
+    return [circle(id, el.x, el.y, el.d, { fill: paintOf(el.fill), ...(el.stroke ? { stroke: paintOf(el.stroke), strokeWidth: el.strokeWidth } : {}), anims: arrive(el, el.y, false) })];
+  });
+  return [...kicker(i, s.step), ...layers, ...caption('caption', s.caption, CAPTION_Y, at(frames, 0.82)), sfx('whoosh', 0, 0.2)];
+} });
+
+/**
+ * "auto" layout: the scene's own words decide. Text-heavy scenes read better flush left with room to breathe (editorial); short, punchy
+ * ones keep their cards. Scenes that are diagrams have no editorial form, so they stay as they are.
+ */
+const wordCount = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' ').split(/\s+/).filter(Boolean).length;
+export function autoLayout(scene: ExplainerScene, fallback: 'card' | 'editorial'): 'card' | 'editorial' {
+  switch (scene.kind) {
+    case 'title': return wordCount(...scene.lines) >= 9 ? 'editorial' : 'card';
+    case 'steps': return wordCount(...scene.items.flatMap(item => [item.title, item.detail])) >= 24 ? 'editorial' : 'card';
+    case 'stat': return wordCount(scene.label, scene.note) >= 10 ? 'editorial' : 'card';
+    case 'closing': return wordCount(scene.title, ...scene.points) >= 14 ? 'editorial' : 'card';
+    default: return fallback;
+  }
+}
+
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, quote, freeform, closing: pick(closing, closingEditorial) };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -393,7 +455,7 @@ const theme = {
 
 
 /** What was said over one scene: the audio file (relative to the composition) and how long it runs. */
-export type ExplainerAudio = { src: string; seconds: number };
+export type ExplainerAudio = { src: string; seconds: number; /** When each word is said, in seconds from the start of the recording: captions follow it. */ words?: { text: string; start: number; end: number }[] };
 export type ExplainerCompiled = { composition: Record<string, unknown>; notes: string[] };
 
 /**
@@ -409,18 +471,93 @@ export function compileExplainer(spec: Explainer, options: { audio?: (ExplainerA
   try { return compileWith(spec, options, palette); } finally { active = NEUTRAL; }
 }
 
+/**
+ * The vertical space a scene's content may use: below the header and its kicker, above the lower band that reel apps cover with their
+ * own buttons. Scenes are drawn from the top; centring them in this band is what keeps the lower half of the frame from sitting empty.
+ */
+const BAND = { top: 270, bottom: 1540 };
+
+/** The top and bottom of what a scene draws (shapes and text; the kicker and sounds are left out), or undefined when nothing could be measured. */
+function contentExtent(layers: Layer[]): { top: number; bottom: number } | undefined {
+  let top = Infinity, bottom = -Infinity;
+  const add = (from: number, to: number) => { top = Math.min(top, from); bottom = Math.max(bottom, to); };
+  for (const layer of layers) {
+    if (typeof layer.id === 'string' && layer.id.startsWith('kicker')) continue;
+    if (layer.type === 'rect' && typeof layer.y === 'number') add(layer.y, layer.y + layer.height);
+    else if (layer.type === 'circle' && typeof layer.y === 'number') add(layer.y - layer.width / 2, layer.y + layer.width / 2);
+    else if (layer.type === 'text' && typeof layer.y === 'number') {
+      const size = layer.fontSize ?? 48, width = layer.maxWidth ?? 940, content = String(layer.content ?? '');
+      const lines = content.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil((line.length * size * 0.55) / width)), 0);
+      add(layer.y, layer.y + Math.min(layer.maxLines ?? lines, lines) * size * (layer.lineHeight ?? 1.2));
+    }
+  }
+  return Number.isFinite(top) ? { top, bottom } : undefined;
+}
+
+/** The spoken words, near the bottom and above the band reel apps cover; the word being said is picked out in the signal colour. */
+const CAPTIONS_Y = 1380;
+const captionsLayer = (cues: CaptionCue[]): Layer => ({
+  id: 'captions', type: 'captions', src: 'spoken', cues, mode: 'words', maxWords: 6, startFrame: 8, x: W / 2, y: CAPTIONS_Y, textAlign: 'center', maxWidth: 920, fontSize: 54,
+  fontFamily: '{{fontDisplay}}', fontWeight: weightFor('{{fontDisplay}}', 800), color: '{{text}}', highlightColor: GOLD, upcomingColor: '{{muted}}', background: 'transparent', padding: 0, dropFillers: false,
+});
+
+/** Where the viewer is: one segment per scene (past ones filled, the current one filling as it plays) and a "03 / 07" count under the header. */
+const CHAPTER_Y = 1556;
+function chapterBar(i: number, n: number, frames: number): Layer[] {
+  const gap = 8, width = Math.max(4, (960 - gap * (n - 1)) / n), x = (k: number) => 60 + k * (width + gap);
+  return [
+    ...Array.from({ length: n }, (_, k) => rect(`chapter-${k}`, x(k), CHAPTER_Y, width, 8, { radius: 4, fill: k < i ? GOLD : '{{muted}}', opacity: k < i ? 0.95 : 0.3 })),
+    rect('chapter-fill', x(i), CHAPTER_Y, 1, 8, { radius: 4, fill: GOLD, anims: [anim('width', [0, 1], [frames, width, 'linear'])] }),
+    label('chapter-count', `${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, W - 120, 218, { size: 22, ls: 4, color: '{{muted}}', align: 'right' }),
+  ];
+}
+
+/** A voiced scene longer than this holds the picture for a long time; the note suggests splitting it into beats. */
+const LONG_SCENE_FRAMES = 9 * FPS;
+
+/** Moves a scene's picture down (or up) so its content sits in the middle of the band: every layer's y and its y keyframes shift together, so layers keep their ids and stay flat. Sounds are untouched. */
+function centred(layers: Layer[], bottom = BAND.bottom): Layer[] {
+  const extent = contentExtent(layers.filter(layer => layer.type !== 'audio'));
+  if (!extent) return layers;
+  const raw = Math.round((BAND.top + bottom) / 2 - (extent.top + extent.bottom) / 2), shift = Math.max(-80, Math.min(420, raw));
+  if (Math.abs(shift) < 24) return layers;
+  return layers.map(layer => {
+    if (layer.type === 'audio' || typeof layer.y !== 'number' || String(layer.id).startsWith('kicker')) return layer;
+    const animations = Array.isArray(layer.animations) ? layer.animations.map((beat: Anim) => beat.property === 'y'
+      ? { ...beat, keyframes: beat.keyframes.map(key => (typeof key.value === 'number' ? { ...key, value: key.value + shift } : key)) } : beat) : undefined;
+    return { ...layer, y: layer.y + shift, ...(animations ? { animations } : {}) };
+  });
+}
+
 function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undefined)[] }, palette: Record<string, string | number>): ExplainerCompiled {
   const notes: string[] = [];
   const [cw, ch] = SIZES[spec.aspect], fit = Math.min(cw / W, ch / H), column = cw !== W || ch !== H;
   const scenes = spec.scenes.map((scene, i) => {
-    const draw = (kinds[scene.kind] as Kind<any>)(scene, i), spoken = options.audio?.[i];
+    // A scene may pick its own layout (card or editorial), so a video is not one template from start to end.
+    const base = active;
+    if (scene.layout) active = { ...active, layout: scene.layout === 'auto' ? autoLayout(scene, active.layout) : scene.layout };
+    let draw: Draw;
+    try { draw = (kinds[scene.kind] as Kind<any>)(scene, i); } finally { active = base; }
+    const spoken = options.audio?.[i];
     const frames = Math.max(draw.min, spoken ? Math.ceil((spoken.seconds + 0.6) * FPS) + 8 : 0);
     if (spoken && frames > draw.min) notes.push(`Scene ${i + 1} (${scene.kind}) runs ${(frames / FPS).toFixed(1)} s to fit its spoken line.`);
+    if (spoken && frames > LONG_SCENE_FRAMES) notes.push(`Scene ${i + 1} (${scene.kind}) holds for ${(frames / FPS).toFixed(1)} s: split it into two beats so something changes every few seconds.`);
+    // Captions follow the real speech, a few words at a time. They take the place of the scene's own caption line, which is kept as a small
+    // muted note above them: it often carries a source ("Berkeley Lab, 2024") that must stay on screen.
+    const cues = spec.captions && spoken?.words?.length ? groupCaptionWords(spoken.words, 6) : undefined;
+    const everything = draw.layers(frames), sentence = cues ? everything.find(layer => layer.id === 'caption') : undefined;
+    const drawn = cues ? everything.filter(layer => layer.id !== 'caption') : everything;
+    const note = sentence ? [text('caption-note', String(sentence.content), W / 2, CAPTIONS_Y - 96, { size: 30, color: '{{muted}}', align: 'center', maxWidth: 900, maxLines: 2, lh: 1.2, anims: [fade(at(frames, 0.3), 14)] })] : [];
+    const picture = scene.place === 'top' || scene.kind === 'pile' || scene.kind === 'media' || scene.kind === 'freeform' ? drawn : centred(drawn, cues ? CAPTIONS_Y - (note.length ? 130 : 40) : BAND.bottom);
     return { id: `s${i + 1}-${scene.kind}`, name: `${i + 1}. ${scene.kind}`, durationFrames: frames,
       ...(column ? { camera: { x: W / 2, y: H / 2, zoom: fit } } : {}),
       ...(i > 0 ? { transitionIn: { type: '{{transition}}', durationFrames: 14 } } : {}),
-      layers: [...draw.layers(frames), ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
+      layers: [...picture, ...note, ...(spec.chapters ? chapterBar(i, spec.scenes.length, frames) : []), ...(cues ? [captionsLayer(cues)] : []),
+        ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
   });
+  // A quiet bed under the voice, lowered while anything speaks or sounds. A silent build has nothing to sit under, so it gets none.
+  const bed = spec.music !== 'none' && (options.audio ?? []).some(Boolean)
+    ? { audio: `sfx:bed-${spec.music}`, audioVolume: 1, duck: { amount: 0.4, attackFrames: 6, releaseFrames: 18 } } : {};
   const overlay: Layer[] = [
     label('header-kind', `${spec.series} ·`, 60, HEADER_Y, { size: 22, ls: 3, color: '{{muted}}' }),
     label('header-topic', '{{topic}}', 60 + (spec.series.length + 3) * 16.2, HEADER_Y, { size: 22, ls: 3, color: GOLD }),
@@ -434,7 +571,7 @@ function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undef
   };
   const composition = {
     version: '1.0', id: spec.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'explainer', name: spec.topic, width: cw, height: ch, fps: FPS, durationFrames: 'auto', background: '{{bg}}',
-    texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -16 },
+    texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -14, ...bed },
     ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay: board,
   };
   return { composition, notes };

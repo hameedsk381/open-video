@@ -189,14 +189,14 @@ export function createHandlers(env: JobEnv) {
       if (needsImages(spec)) spec = (await generateExplainerImages(spec, resolveProvider(input), { dir, onProgress: message => progress(message) })).spec;
       const missing = spec.scenes.flatMap((scene, i) => (scene.kind === 'media' && scene.src !== undefined && !existsSync(resolve(dir, scene.src)) ? [`${scene.src} (scene ${i + 1})`] : []));
       if (missing.length) throw new Error(`The video needs files that are not in the project: ${missing.join(', ')}. Add them in the Media tab first.`);
-      const voiceName = optionalText(input.voiceName) ?? spec.voice, assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number } | undefined)[] = [];
+      const voiceName = optionalText(input.voiceName) ?? spec.voice, assets = resolve(dir, 'assets'), audio: ({ src: string; seconds: number; words?: { text: string; start: number; end: number }[] } | undefined)[] = [];
       if (boolOf(input.voice) && spec.scenes.some(scene => scene.say)) {
         await mkdir(assets, { recursive: true });
         for (const [i, scene] of spec.scenes.entries()) {
           if (!scene.say) { audio.push(undefined); continue; }
           progress(`Recording the voice for scene ${i + 1} of ${spec.scenes.length}…`);
           const file = join(assets, `voice-${i + 1}.wav`), made = await speakLine(scene.say, voiceName, file, spec.voiceRate);
-          audio.push({ src: relativePath(dir, file).replace(/\\/g, '/'), seconds: made.seconds });
+          audio.push({ src: relativePath(dir, file).replace(/\\/g, '/'), seconds: made.seconds, words: made.words });
         }
       }
       progress('Building the scenes…');

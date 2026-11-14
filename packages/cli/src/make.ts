@@ -37,8 +37,8 @@ const hasCodeLayers = (composition: Composition) => composition.scenes.some(scen
 const readJson = async (file: string) => JSON.parse((await readFile(file, 'utf8')).replace(/^﻿/, ''));
 const seconds = (since: number) => Math.round((Date.now() - since) / 100) / 10;
 
-/** A composition has a `version`; an explainer script has a `topic` and scenes with a `kind`. */
-export const kindOfFile = (raw: any): 'explainer' | 'composition' => (raw && typeof raw === 'object' && 'version' in raw ? 'composition' : 'explainer');
+/** An explainer script has a `topic` (the example script from `explainer example` carries a `version` too); a composition has a `version` and no `topic`. */
+export const kindOfFile = (raw: any): 'explainer' | 'composition' => (raw && typeof raw === 'object' && 'version' in raw && !('topic' in raw) ? 'composition' : 'explainer');
 
 /** What the draft render changes: half the size, a fast encode, no motion blur. It is for checking how the video moves, not for sending. */
 export const draftSettings = { scale: 0.5, preset: 'ultrafast' as const, crf: 32, motionBlur: false };

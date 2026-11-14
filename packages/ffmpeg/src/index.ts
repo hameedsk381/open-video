@@ -39,7 +39,26 @@ export function audioMixArgs(mix: AudioMix | undefined, audioCodec: string[] = [
 // Built-in sound effects: each is an FFmpeg input (a formula, or seeded noise) and filters, rendered to a 48 kHz stereo WAV. Tones decay
 // exponentially; pop and thump glide down in pitch, riser glides up and swells; whoosh is band-limited noise swelling and fading.
 const tone = (expr: string, seconds: number) => ['-f','lavfi','-i',`aevalsrc=${expr}:s=48000:d=${seconds}`];
+// Music beds: a four-chord loop that joins itself without a click, to run under a voice. Every note is moved to a whole number of cycles per loop
+// (so the wave is the same at the end as at the start), each chord rises and falls on a raised cosine (the four add up to one at every instant, so the
+// chords cross-fade), and the swell and the pulse repeat a whole number of times per loop. No commas appear in the formula and it is quoted, because
+// FFmpeg reads a comma inside a filter as the end of the filter.
+export const bedSeconds = 16;
+const snap = (hz: number) => (Math.round(hz * bedSeconds) / bedSeconds).toString();
+const bedChords = [[110, 164.81, 246.94, 261.63, 329.63], [87.31, 130.81, 164.81, 220, 261.63], [130.81, 196, 246.94, 329.63], [98, 146.83, 196, 246.94, 293.66]];
+const bedPad = bedChords.map((notes, index) => {
+  const phase = `cos(2*PI*(t-${index * bedSeconds / 4})/${bedSeconds})`, weight = `((${phase}+abs(${phase}))/2)*((${phase}+abs(${phase}))/2)`;
+  const voices = notes.map(hz => `${(0.5 / notes.length).toFixed(3)}*(sin(2*PI*${snap(hz)}*t)+0.5*sin(2*PI*${snap(hz + 0.4)}*t))`).join('+');
+  return `${weight}*(${voices})`;
+}).join('+');
+const bed = (pulse: boolean) => {
+  const swell = `(0.8+0.2*sin(2*PI*t*2/${bedSeconds}))`, beat = '(t-floor(t))';
+  const kick = pulse ? `+0.35*sin(2*PI*52*${beat})*exp(-${beat}*12)` : '';
+  return ['-f', 'lavfi', '-i', `aevalsrc='0.45*(${bedPad})*${swell}${kick}':s=48000:d=${bedSeconds}`];
+};
 export const sfxRecipes: Record<string, string[]> = {
+  'bed-calm': bed(false),
+  'bed-pulse': bed(true),
   click: tone('0.8*sin(2*PI*2400*t)*exp(-t*150)+0.35*sin(2*PI*5200*t)*exp(-t*300)', 0.06),
   tick: tone('0.55*sin(2*PI*3800*t)*exp(-t*260)', 0.04),
   pop: tone('0.9*sin(2*PI*(1000*t-2200*t*t))*exp(-t*28)', 0.18),

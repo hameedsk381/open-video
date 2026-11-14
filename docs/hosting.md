@@ -1,14 +1,14 @@
 # Hosting the studio for many people
 
-`ove ai studio` is for one trusted person on their own machine. For several people, run the hosted stack: an API behind a login, a job queue, and workers that draw frames. This page says what runs, how to start it, and what it does and does not protect you from.
+`mr ai studio` is for one trusted person on their own machine. For several people, run the hosted stack: an API behind a login, a job queue, and workers that draw frames. This page says what runs, how to start it, and what it does and does not protect you from.
 
 ## What runs
 
 | Piece | Command | Job |
 |---|---|---|
-| API | `ove serve` | Accounts and sessions, project and file routes, the web app. Holds no AI key and starts no browser. |
-| Render worker | `ove job-worker` with `JOB_LANE=render` | Draws frames: render, thumbnail, review, batch. Runs people's compositions in Chromium. |
-| AI worker | `ove job-worker` with `JOB_LANE=ai` | Compose, refine, narrate, transcribe, image, import. Calls the AI provider. |
+| API | `mr serve` | Accounts and sessions, project and file routes, the web app. Holds no AI key and starts no browser. |
+| Render worker | `mr job-worker` with `JOB_LANE=render` | Draws frames: render, thumbnail, review, batch. Runs people's compositions in Chromium. |
+| AI worker | `mr job-worker` with `JOB_LANE=ai` | Compose, refine, narrate, transcribe, image, import. Calls the AI provider. |
 | Postgres | | Accounts, sessions, one-time tokens, daily usage counts. |
 | Redis | | The job queue (BullMQ): durable, two lanes. |
 | Shared volume | | Every person's projects and files, under `_tenants/<account id>/`. Mounted by the API and both workers. |

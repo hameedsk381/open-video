@@ -57,6 +57,6 @@ Plays a composition live in any page with sound, drawn by the same code as the r
 
 ## Writing compositions
 
-`ove init` creates a starter project with `composition.schema.json` for editor checks and an agent skill (`.claude/skills/ove/SKILL.md`) that documents the whole format for coding agents and people alike.
+`mr init` creates a starter project with `composition.schema.json` for editor checks and an agent skill (`.claude/skills/ove/SKILL.md`) that documents the whole format for coding agents and people alike.
 
 MIT licensed.
