@@ -104,6 +104,13 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     tags: z.array(words(14)).max(3).default([]).describe('Short names pinned on the first lit cells, such as "Zone A"'),
     seed: z.number().int().default(3).describe('Picks the lit cells when lit is left out'),
     caption: words(90).optional().describe('A line under the map') }),
+  z.object({ kind: z.literal('quote'), ...common,
+    text: words(240).describe('The words quoted, exactly as the source has them. Never write words a source did not say.'),
+    source: words(40).describe('Who or what said it, such as "International Energy Agency"'),
+    byline: words(60).optional().describe('A smaller line under the source: the document, the role or the place'),
+    date: words(20).optional().describe('When it was said or published'),
+    stamp: z.object({ text: words(14), tone: tone.default('gold') }).optional().describe('A label stamped on the card corner, such as "CLAIM" or "CHECKED"'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
   z.object({ kind: z.literal('freeform'), ...common,
     elements: z.array(freeformElementSchema).min(1).max(80).describe('What is on the board, placed by you on a 1080 x 1920 column: text, boxes (also lines and bars: a thin box) and circles. Keep text between y 270 and y 1540 and left of x 960, where reel apps do not cover it.'),
     duration: z.number().min(2).max(30).optional().describe('At least this many seconds, when the picture needs longer than its spoken line'),
@@ -136,6 +143,7 @@ export const explainerSchema = z.object({
   version: z.literal('1.0').default('1.0'),
   series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
   aspect: z.enum(['9:16', '1:1', '4:5', '16:9']).default('9:16').describe('The shape of the video. Scenes are drawn as a 9:16 column; other shapes show that column, scaled to fit, centred on the board'),
+  music: z.enum(['none', 'calm', 'pulse']).default('calm').describe('A quiet music bed under the voice, lowered while it speaks: calm (soft chords) or pulse (the same with a slow heartbeat), or none. Needs the voice: a silent build has no bed.'),
   captions: z.boolean().default(true).describe('Spoken words drawn as captions near the bottom, the word being said highlighted. Needs the voice: a silent build has none.'),
   chapters: z.boolean().default(true).describe('A segmented progress bar and a "03 / 07" count, so the viewer always knows where they are'),
   sketch: z.boolean().default(false).describe('Draw the whole board by hand: wobbly outlines, redrawn every few frames like a cartoon'),
@@ -163,4 +171,4 @@ export type ExplainerInput = z.input<typeof explainerSchema>;
 export type ExplainerScene = z.infer<typeof explainerSceneSchema>;
 export type FreeformElement = z.infer<typeof freeformElementSchema>;
 /** The scene kinds, for prompts and menus. */
-export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'freeform', 'closing'] as const;
+export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'quote', 'freeform', 'closing'] as const;

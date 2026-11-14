@@ -382,6 +382,25 @@ const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames 
 
 /** The scenes that have an editorial layout use it when the design asks for it; every other scene is drawn the same way in every design. */
 const pick = <S extends ExplainerScene['kind']>(card: Kind<S>, editorial: Kind<S>): Kind<S> => (scene, i) => (active.layout === 'editorial' ? editorial(scene, i) : card(scene, i));
+/* ---- quote: a source card, so the evidence is on screen as well as in the voice ---- */
+const quote: Kind<'quote'> = (s, i) => ({ min: 150, layers: frames => {
+  const size = 52, lineH = Math.round(size * 1.25), top = 330, lines = Math.max(1, Math.ceil(s.text.length / 28)), textTop = top + 215, cardH = 215 + lines * lineH + 70;
+  const start = at(frames, 0.12), meta = [s.byline, s.date].filter(Boolean).join(' · '), tone = s.stamp ? TONES[s.stamp.tone] : GOLD;
+  return [...kicker(i, s.step),
+    outline('quote-card', 70, top, 940, cardH, '{{muted}}', { radius: 22, fill: '{{surface}}', strokeWidth: 2, anims: [pop(4, 18, 0.94)] }),
+    circle('quote-avatar', 150, top + 95, 84, { fill: GOLD, anims: [pop(10, 14, 0.5)] }),
+    label('quote-initial', s.source.slice(0, 1).toUpperCase(), 150, top + 73, { size: 44, ls: 0, color: '{{bg}}', align: 'center', anims: [fade(12, 10)] }),
+    text('quote-source', s.source, 215, top + 52, { font: '{{fontDisplay}}', weight: 800, size: 40, maxWidth: 700, maxLines: 1, minSize: 26, anims: [rise(top + 52, 10, 20, 16)] }),
+    ...(meta ? [text('quote-meta', meta, 215, top + 108, { size: 28, color: '{{muted}}', maxWidth: 700, maxLines: 1, minSize: 20, anims: [fade(16, 12)] })] : []),
+    rect('quote-rule', 110, top + 170, 1, 2, { fill: '{{muted}}', opacity: 0.5, anims: [grow('width', 860, 18, 22)] }),
+    rect('quote-bar', 110, textTop, 8, lines * lineH, { radius: 4, fill: GOLD, anims: [anim('height', [start, 1], [start + 26, lines * lineH, 'land'])] }),
+    text('quote-text', s.text, 146, textTop, { font: '{{fontDisplay}}', weight: 700, size, maxWidth: 800, maxLines: lines + 1, minSize: 34, lh: 1.25, anims: [rise(textTop, start, 24, 20)] }),
+    ...(s.stamp ? [
+      outline('quote-stamp', 730, top - 36, 270, 76, tone, { radius: 10, strokeWidth: 4, fill: '{{bg}}', anims: [pop(at(frames, 0.45), 14, 1.5)] }),
+      label('quote-stamp-text', s.stamp.text, 865, top - 20, { size: 30, ls: 5, color: tone, align: 'center', anims: [fade(at(frames, 0.45) + 4, 8)] })] : []),
+    ...caption('caption', s.caption, top + cardH + 50, at(frames, 0.75)), sfx('whoosh', 0, 0.2), sfx('pop', at(frames, 0.45), 0.25)];
+} });
+
 /* ---- freeform: the script places every element, so the content decides the layout ---- */
 const PAINT: Record<string, string> = { accent: GOLD, accent2: MINT, text: '{{text}}', muted: '{{muted}}', surface: '{{surface}}', bg: '{{bg}}', red: RED, none: CLEAR };
 const paintOf = (color: string) => PAINT[color] ?? color;
@@ -424,7 +443,7 @@ export function autoLayout(scene: ExplainerScene, fallback: 'card' | 'editorial'
   }
 }
 
-const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, freeform, closing: pick(closing, closingEditorial) };
+const kinds: { [K in ExplainerScene['kind']]: Kind<K> } = { title: pick(title, titleEditorial), flow, grid, steps: pick(steps, stepsEditorial), compare, stat: pick(stat, statEditorial), chart, timeline, pile, media, phone, hex, quote, freeform, closing: pick(closing, closingEditorial) };
 
 /* ---- the whole video ---- */
 const theme = {
@@ -536,6 +555,9 @@ function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undef
       layers: [...picture, ...note, ...(spec.chapters ? chapterBar(i, spec.scenes.length, frames) : []), ...(cues ? [captionsLayer(cues)] : []),
         ...(spoken ? [{ id: 'voice', type: 'audio', src: spoken.src, startFrame: 8, volume: 1 }] : [])] };
   });
+  // A quiet bed under the voice, lowered while anything speaks or sounds. A silent build has nothing to sit under, so it gets none.
+  const bed = spec.music !== 'none' && (options.audio ?? []).some(Boolean)
+    ? { audio: `sfx:bed-${spec.music}`, audioVolume: 1, duck: { amount: 0.4, attackFrames: 6, releaseFrames: 18 } } : {};
   const overlay: Layer[] = [
     label('header-kind', `${spec.series} ·`, 60, HEADER_Y, { size: 22, ls: 3, color: '{{muted}}' }),
     label('header-topic', '{{topic}}', 60 + (spec.series.length + 3) * 16.2, HEADER_Y, { size: 22, ls: 3, color: GOLD }),
@@ -549,7 +571,7 @@ function compileWith(spec: Explainer, options: { audio?: (ExplainerAudio | undef
   };
   const composition = {
     version: '1.0', id: spec.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'explainer', name: spec.topic, width: cw, height: ch, fps: FPS, durationFrames: 'auto', background: '{{bg}}',
-    texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -16 },
+    texture: { type: '{{texture}}', color: '{{textureColor}}', opacity: '{{textureOpacity}}', scale: 56 }, export: { format: 'mp4', loudness: -14, ...bed },
     ...(spec.sketch ? { sketch: { roughness: 1.3, bowing: 1.2, boil: 6 } } : {}), variables, scenes, overlay: board,
   };
   return { composition, notes };

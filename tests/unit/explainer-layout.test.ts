@@ -148,3 +148,32 @@ describe('explainer captions and chapter bar', () => {
     expect(layer(build({ chapters: false }), 0, 'chapter-count')).toBeUndefined();
   });
 });
+
+describe('explainer music bed and source cards', () => {
+  const words = [{ text: 'Hello', start: 0, end: 0.5 }];
+  const voiced = [{ src: 'assets/voice-1.wav', seconds: 2, words }];
+  const build = (extra: Record<string, unknown> = {}, audio: any[] = voiced) => compileExplainer(explainerSchema.parse({ topic: 'T', scenes: [{ ...steps, say: 'x' }], ...extra }), { audio }).composition as any;
+
+  it('puts a quiet bed under a voiced video and lowers it while anything speaks', () => {
+    const exported = build().export;
+    expect(exported).toMatchObject({ audio: 'sfx:bed-calm', audioVolume: 1, loudness: -14 });
+    expect(exported.duck).toMatchObject({ amount: 0.4 });
+  });
+
+  it('lets the script choose the bed or turn it off, and gives a silent build none', () => {
+    expect(build({ music: 'pulse' }).export.audio).toBe('sfx:bed-pulse');
+    expect(build({ music: 'none' }).export.audio).toBeUndefined();
+    expect(build({}, [undefined]).export.audio).toBeUndefined();
+  });
+
+  it('draws a source card with the source, the words and a stamp, and keeps it in the usable band', () => {
+    const composition = compileExplainer(explainerSchema.parse({ topic: 'T', scenes: [{ kind: 'quote', text: 'Our pilot cut delivery times by a third.', source: 'Example Logistics Ltd', byline: 'Annual report', date: '2026', stamp: { text: 'CLAIM', tone: 'red' }, caption: 'A claim.' }] })).composition as any;
+    const find = (id: string) => composition.scenes[0].layers.find((item: any) => item.id === id);
+    expect(find('quote-source').content).toBe('Example Logistics Ltd');
+    expect(find('quote-meta').content).toBe('Annual report · 2026');
+    expect(find('quote-text').content).toBe('Our pilot cut delivery times by a third.');
+    expect(find('quote-initial').content).toBe('E');
+    expect(find('quote-stamp').stroke).toBe('#ff5d6c');
+    expect(find('quote-card').y + find('quote-card').height).toBeLessThan(1540);
+  });
+});

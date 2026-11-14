@@ -41,7 +41,7 @@ export const spanSchema = z.object({ text: z.string(), color: paint.optional(), 
 const cssFilter = z.string().regex(/^\s*((blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|drop-shadow)\([^()]*(\([^()]*\)[^()]*)*\)\s*)+$/, 'Use CSS filter functions such as "brightness(1.2) saturate(0.5)"');
 export const blendModes = ['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity'] as const;
 // Built-in sound effects, used as an audio layer's src: "sfx:whoosh". Synthesised by FFmpeg from fixed formulas (see @ove/ffmpeg).
-export const sfxNames = ['click','tick','pop','whoosh','thump','ding','riser','shimmer','sparkle','impact','ambient-pad'] as const;
+export const sfxNames = ['click','tick','pop','whoosh','thump','ding','riser','shimmer','sparkle','impact','ambient-pad','bed-calm','bed-pulse'] as const;
 // A source naming a built-in sound rather than a file: never resolved against a folder or made absolute.
 export const isBuiltinSound = (src: string) => src.startsWith('sfx:'); export const builtinSoundName = (src: string) => src.slice(4);
 export const gradeLooks = ['warm', 'cool', 'cinematic', 'teal-orange', 'noir', 'vivid', 'faded'] as const;
