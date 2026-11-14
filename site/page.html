@@ -1,0 +1,345 @@
+<title>MotionRender</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Write a script, get a voiced, captioned video. Frame-exact, reviewed by the engine, and no AI key needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Concept: the page is laid out like the engine's own contact sheet. Timecodes and frame numbers label the pictures because that is how the work is checked.
+     Colour: engineering blue with one signal yellow, used only for the playhead and the primary action. */
+  :root {
+    --bg: #f3f5fa; --surface: #ffffff; --ink: #0b1224; --muted: #4f5b76; --line: #d3d9e6;
+    --blue: #1a44c4; --blue-ink: #ffffff; --signal: #f2c200; --signal-ink: #0b1224;
+    --code-bg: #0b1224; --code-ink: #e6ecfa; --code-dim: #8d9bbd; --code-hit: #ffd23f; --shadow: rgba(11, 18, 36, 0.14);
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --text: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #080e1d; --surface: #0f1830; --ink: #eaf0fc; --muted: #9aa8c6; --line: #24304f;
+      --blue: #86a6ff; --blue-ink: #08112a; --signal: #ffd23f; --signal-ink: #0b1224;
+      --code-bg: #050a16; --code-ink: #e6ecfa; --code-dim: #7d8bad; --code-hit: #ffd23f; --shadow: rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #080e1d; --surface: #0f1830; --ink: #eaf0fc; --muted: #9aa8c6; --line: #24304f;
+    --blue: #86a6ff; --blue-ink: #08112a; --signal: #ffd23f; --signal-ink: #0b1224;
+    --code-bg: #050a16; --code-ink: #e6ecfa; --code-dim: #7d8bad; --code-hit: #ffd23f; --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--text); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 750; letter-spacing: -0.02em; line-height: 1.04; text-wrap: balance; margin: 0; }
+  p { margin: 0; text-wrap: pretty; }
+  code, pre, .mono { font-family: var(--mono); }
+  .label { font: 600 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  /* header */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 22px; flex-wrap: wrap; }
+  .mark { display: inline-flex; align-items: center; gap: 10px; font: 750 20px/1 var(--display); letter-spacing: -0.01em; text-decoration: none; }
+  .mark i { display: inline-grid; grid-template-columns: repeat(3, 6px); gap: 2px; }
+  .mark i b { height: 18px; background: var(--blue); border-radius: 1px; }
+  .mark i b:nth-child(2) { background: var(--signal); height: 24px; align-self: center; }
+  nav { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+  nav a { text-decoration: none; color: var(--muted); }
+  nav a:hover { color: var(--ink); }
+  nav a.app { color: var(--ink); font-weight: 600; }
+  .btn.app { border-color: var(--ink); }
+  nav .gh { color: var(--ink); border: 1.5px solid var(--ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: center; padding-block: clamp(28px, 6vw, 72px) clamp(40px, 6vw, 80px); }
+  .hero h1 { font-size: clamp(2.7rem, 6.4vw, 5.4rem); }
+  .hero h1 em { font-style: normal; background: linear-gradient(transparent 62%, color-mix(in srgb, var(--signal) 80%, transparent) 62% 92%, transparent 92%); }
+  .lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--muted); max-width: 34em; margin-top: 22px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; align-items: stretch; }
+  .install { display: flex; align-items: center; gap: 14px; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; padding: 6px 6px 6px 18px; font: 500 15px/1 var(--mono); min-width: 0; max-width: 100%; }
+  .install code { overflow-x: auto; white-space: nowrap; padding-block: 12px; }
+  .install .prompt { color: var(--code-hit); }
+  button.copy { font: 700 14px/1 var(--text); background: var(--signal); color: var(--signal-ink); border: 0; border-radius: 7px; padding: 12px 16px; cursor: pointer; flex: none; }
+  button.copy:hover { filter: brightness(1.06); }
+  .btn { display: inline-flex; align-items: center; padding: 0 20px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; text-decoration: none; font-weight: 600; min-height: 52px; }
+  .btn:hover { border-color: var(--ink); }
+  .fine { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+  /* the phones: real clips from the engine */
+  .reel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(8px, 1.4vw, 18px); align-items: start; }
+  .phone { margin: 0; }
+  .phone:nth-child(2) { margin-top: 28px; }
+  .phone:nth-child(3) { margin-top: 56px; }
+  .screen { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 14px; background: #000; object-fit: cover; box-shadow: 0 18px 40px -16px var(--shadow), 0 0 0 1px var(--line); }
+  .tc { display: flex; flex-direction: column; gap: 2px; margin-top: 9px; font: 500 11px/1.3 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .tc b { color: var(--ink); font-weight: 600; }
+
+  /* playhead divider between sections */
+  .rule { position: relative; height: 1px; background: var(--line); margin-block: 0; }
+  .rule::after { content: ""; position: absolute; left: var(--at, 12%); top: -7px; width: 2px; height: 15px; background: var(--signal); }
+
+  section { padding-block: clamp(48px, 7vw, 96px); }
+  .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px clamp(24px, 5vw, 72px); align-items: end; margin-bottom: clamp(28px, 4vw, 52px); }
+  .head h2 { font-size: clamp(2rem, 4.2vw, 3.3rem); }
+  .head p { color: var(--muted); font-size: 1.05rem; max-width: 36em; }
+
+  /* gallery as a contact sheet */
+  .sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 22px 14px; }
+  .frame { margin: 0; min-width: 0; }
+  .frame img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+  .frame figcaption { margin-top: 9px; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .frame figcaption .mono { display: block; font-size: 11px; color: var(--ink); margin-bottom: 2px; }
+  .note { margin-top: 26px; font-size: 14px; color: var(--muted); max-width: 52em; }
+
+  /* how it works */
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .step { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .step h3 { font-size: 1.5rem; }
+  .step p { color: var(--muted); font-size: 15.5px; }
+  pre { margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 12px; padding: 18px 20px; font-size: 13px; line-height: 1.65; overflow-x: auto; }
+  .step pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre .k { color: var(--code-dim); } pre .v { color: var(--code-hit); } pre .ok { color: #7ee2a8; }
+  .sheetimg { display: block; width: 100%; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); }
+
+  /* what you get */
+  .points { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 40px 28px; }
+  .point { grid-column: span 2; min-width: 0; border-top: 2px solid var(--ink); padding-top: 16px; }
+  .point.wide { grid-column: span 3; }
+  .point h3 { font-size: 1.35rem; margin-bottom: 10px; }
+  .point p { color: var(--muted); font-size: 15.5px; }
+  .point .proof { margin-top: 12px; font: 500 12.5px/1.5 var(--mono); color: var(--ink); }
+
+  /* compare */
+  .tablewrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  th, td { text-align: left; padding: 15px 18px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font: 600 12px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  td:first-child { font-weight: 600; width: 16%; }
+  td.us, th.us { background: color-mix(in srgb, var(--signal) 14%, transparent); }
+
+  .agent { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 64px); align-items: center; }
+  .agent ul { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; color: var(--muted); }
+  .agent li::before { content: "→ "; color: var(--ink); font-family: var(--mono); }
+
+  footer { padding-block: 44px 64px; display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  footer a { text-underline-offset: 3px; }
+
+  @media (max-width: 920px) {
+    .hero, .head, .agent { grid-template-columns: minmax(0, 1fr); }
+    .steps { grid-template-columns: minmax(0, 1fr); }
+    .points { grid-template-columns: minmax(0, 1fr); }
+    .point, .point.wide { grid-column: auto; }
+    .reel { max-width: 560px; }
+  }
+  @media (max-width: 460px) {
+    .phone:nth-child(2), .phone:nth-child(3) { margin-top: 0; }
+    .reel { gap: 8px; }
+    .install code { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+    nav { gap: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <a class="mark" href="#top" aria-label="MotionRender"><i aria-hidden="true"><b></b><b></b><b></b></i>MotionRender</a>
+    <nav aria-label="Main">
+      <a href="#made">Made with it</a>
+      <a href="#how">How it works</a>
+      <a href="#why">Why</a>
+      <a href="#compare">Compared</a>
+      <!--app-nav-->
+      <a class="gh" href="https://github.com/hameedsk381/motionrender" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div>
+        <p class="label">Frame-exact video engine</p>
+        <h1 style="margin-top:16px">Videos you can <em>write</em>, review and reproduce.</h1>
+        <p class="lede">MotionRender turns a script into a voiced, captioned MP4. The same script gives the same frames every time, and a design review stops text that is cut off, too small or hidden under the captions before anything renders. Nothing needs an AI key.</p>
+        <div class="cta">
+          <div class="install"><code><span class="prompt">$</span> npx motionrender init my-video</code><button class="copy" id="copy" type="button">Copy</button></div>
+          <a class="btn" href="https://github.com/hameedsk381/motionrender" target="_blank" rel="noopener">View on GitHub</a>
+          <!--app-cta-->
+        </div>
+        <p class="fine">Needs Node 22+, FFmpeg and a Chromium-based browser. MIT licensed.</p>
+      </div>
+      <div class="reel" aria-label="Three short clips rendered by MotionRender">
+        <figure class="phone"><video class="screen" muted loop playsinline autoplay preload="metadata" poster="media/clip-sky.jpg" aria-label="A spectrum drawing itself, with captions following the voice"><source src="media/clip-sky.mp4" type="video/mp4"></video><figcaption class="tc"><b>sky-paper</b><span>00:07–00:13</span></figcaption></figure>
+        <figure class="phone"><video class="screen" muted loop playsinline autoplay preload="metadata" poster="media/clip-https.jpg" aria-label="A handshake between a browser and a server, drawn arrow by arrow"><source src="media/clip-https.mp4" type="video/mp4"></video><figcaption class="tc"><b>https-terminal</b><span>00:08–00:14</span></figcaption></figure>
+        <figure class="phone"><video class="screen" muted loop playsinline autoplay preload="metadata" poster="media/clip-hash.jpg" aria-label="Keys hashing into the slots of a table"><source src="media/clip-hash.mp4" type="video/mp4"></video><figcaption class="tc"><b>hash-blueprint</b><span>00:15–00:21</span></figcaption></figure>
+      </div>
+    </div>
+  </main>
+
+  <div class="rule" style="--at: 8%"></div>
+
+  <section id="made">
+    <div class="head">
+      <h2>Every frame here came out of the engine.</h2>
+      <p>Eleven stills from four explainers, each written as a script of scenes and spoken lines, and one source card from a test script, labelled as fictional. The layouts were chosen to fit what each idea needed.</p>
+    </div>
+    <div class="sheet">
+      <figure class="frame"><img src="media/sky-title.jpg" alt="Title card: Why is the sky blue, and not violet?" loading="lazy"><figcaption><span class="mono">sky-paper · 00:04 · title</span>An editorial layout chosen for the opening card.</figcaption></figure>
+      <figure class="frame"><img src="media/sky-spectrum.jpg" alt="Six colour bands from red at 700 nanometres to violet at 400, with blue highlighted" loading="lazy"><figcaption><span class="mono">sky-paper · 00:14 · freeform</span>A board the script laid out itself: bands, wavelengths, a highlight.</figcaption></figure>
+      <figure class="frame"><img src="media/sky-chart.jpg" alt="Bar chart of scattering relative to red light: blue is 5.9 times, violet 9.4 times" loading="lazy"><figcaption><span class="mono">sky-paper · 00:23 · chart</span>Relative scattering, worked out from the 1/λ⁴ law.</figcaption></figure>
+      <figure class="frame"><img src="media/dc-stat.jpg" alt="Big number: 415 terawatt-hours, used by data centres in 2024" loading="lazy"><figcaption><span class="mono">ai-data-centres · 00:10 · stat</span>The source sits on the card: IEA, Energy and AI, 2025.</figcaption></figure>
+      <figure class="frame"><img src="media/dc-world.jpg" alt="Two bars: 2024 at 415 terawatt-hours and the 2030 base case at about 945" loading="lazy"><figcaption><span class="mono">ai-data-centres · 00:15 · freeform</span>2024 against the 2030 base case, bars drawn to scale.</figcaption></figure>
+      <figure class="frame"><img src="media/dc-us.jpg" alt="US data centre electricity: 58, 176, then a projected 325 to 580 terawatt-hours" loading="lazy"><figcaption><span class="mono">ai-data-centres · 00:30 · chart</span>Berkeley Lab / DOE figures, with the projected range named.</figcaption></figure>
+      <figure class="frame"><img src="media/dc-share.jpg" alt="A bar showing China and the US as nearly 80 percent of the growth" loading="lazy"><figcaption><span class="mono">ai-data-centres · 00:38 · freeform</span>One fact, one picture, one source line.</figcaption></figure>
+      <figure class="frame"><img src="media/dc-range.jpg" alt="A track with markers at 700, 1,200 and 1,700 terawatt-hours for 2035" loading="lazy"><figcaption><span class="mono">ai-data-centres · 00:45 · freeform</span>The width of the forecast is the picture.</figcaption></figure>
+      <figure class="frame"><img src="media/https-handshake.jpg" alt="A sequence diagram between a browser and a server with three arrows and a shared secret key" loading="lazy"><figcaption><span class="mono">https-terminal · 00:20 · freeform</span>A sequence between two parties, drawn arrow by arrow.</figcaption></figure>
+      <figure class="frame"><img src="media/hash-slots.jpg" alt="Three keys hashed into the slots of a seven-slot table" loading="lazy"><figcaption><span class="mono">hash-blueprint · 00:25 · freeform</span>Keys hashed into slots of their own.</figcaption></figure>
+      <figure class="frame"><img src="media/hash-collision.jpg" alt="Two keys hashing to one slot, the second chained beneath the first" loading="lazy"><figcaption><span class="mono">hash-blueprint · 00:37 · freeform</span>Two keys, one slot: the second is chained under it.</figcaption></figure>
+      <figure class="frame"><img src="media/quote-card.jpg" alt="A source card with an avatar initial, a source name, a quoted sentence and a CLAIM stamp" loading="lazy"><figcaption><span class="mono">source card · fictional example</span>Who said it and the exact words. This quote is a test, not a real one.</figcaption></figure>
+    </div>
+    <p class="note">The captions follow the real voice, word by word, and the segmented bar at the bottom shows where the viewer is. The data-centre figures come from the IEA and Berkeley Lab; the scripts are examples of what an agent can write, not a claim about the topic.</p>
+  </section>
+
+  <div class="rule" style="--at: 34%"></div>
+
+  <section id="how">
+    <div class="head">
+      <h2>A script in. A checked video out.</h2>
+      <p>You describe scenes and what is said over them, never coordinates or frame numbers. The engine places everything, records the voice and shows you one sheet of the whole video before it renders.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <p class="label">1 · Write</p>
+        <h3>Scenes and spoken lines</h3>
+<pre><span class="k">{</span> <span class="k">"kind":</span> <span class="v">"stat"</span>,
+  <span class="k">"value":</span> <span class="v">"415 TWh"</span>,
+  <span class="k">"label":</span> <span class="v">"used by data centres in 2024"</span>,
+  <span class="k">"note":</span> <span class="v">"IEA, Energy and AI, 2025"</span>,
+  <span class="k">"say":</span> <span class="v">"In 2024, data centres used about
+          four hundred and fifteen terawatt-hours."</span> <span class="k">}</span></pre>
+        <p>Fifteen scene kinds, thirteen looks, and a freeform board for anything else.</p>
+      </div>
+      <div class="step">
+        <p class="label">2 · Make</p>
+        <h3>One command</h3>
+<pre><span class="k">$</span> mr make explainer.json --final
+
+<span class="ok">Built:</span> composition.json (6 scenes, 1080x1920, 6 spoken lines)
+<span class="ok">Review:</span> 0 errors, 4 warnings, 0 notes.
+<span class="ok">Video:</span> sky-paper.mp4 (53.0 s)</pre>
+        <p>It validates, builds, records the voice, reviews the design and renders. An error stops the render.</p>
+      </div>
+      <div class="step">
+        <p class="label">3 · Check</p>
+        <h3>The whole video on one sheet</h3>
+        <img class="sheetimg" src="media/review-sheet.jpg" alt="A contact sheet of every part of a video, as produced by the design review" loading="lazy">
+        <p>The review sheet an agent reads before it renders. This one is from a hash table explainer.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule" style="--at: 60%"></div>
+
+  <section id="why">
+    <div class="head">
+      <h2>Built to be trusted, not just fast.</h2>
+      <p>Most of what makes a generated video good is what gets caught before you see it.</p>
+    </div>
+    <div class="points">
+      <div class="point wide">
+        <h3>A review that says no</h3>
+        <p>When we added captions, the review refused to render two of our own videos: a closing call to action sat under them, and a three-line title ran into its first bullet. Both are fixed in the engine now. It reports text cut off, too small to read on a phone, or under the platform's controls.</p>
+        <p class="proof">review: 1 error · not rendered</p>
+      </div>
+      <div class="point wide">
+        <h3>The same frames every time</h3>
+        <p>Every frame is a pure function of time. We changed how frames travel to the browser, which made rendering about a third faster, and 180 frames before and after were bit-identical.</p>
+        <p class="proof">94 ms → 62 ms per frame · identical output</p>
+      </div>
+      <div class="point">
+        <h3>No AI key needed</h3>
+        <p>The agent that writes the script is the model. The engine draws, voices, checks and renders.</p>
+      </div>
+      <div class="point">
+        <h3>Captions that follow the voice</h3>
+        <p>Timed to the words the voice actually says, with the word being spoken highlighted.</p>
+      </div>
+      <div class="point">
+        <h3>Sourced numbers</h3>
+        <p><code>mr facts</code> looks up Wikipedia, World Bank and exchange-rate figures without a key, and a script carries its sources on screen.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule" style="--at: 82%"></div>
+
+  <section id="compare">
+    <div class="head">
+      <h2>Where it sits next to the others.</h2>
+      <p>Taken from each project's own README, November 2026. Both are far larger and more established, with bigger catalogs and hosted rendering. MotionRender's bet is the explainer route that needs no AI key, a design review that stops bad output, and sourced facts.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th class="us">MotionRender</th><th><a href="https://github.com/remotion-dev/remotion" target="_blank" rel="noopener">Remotion</a></th><th><a href="https://github.com/heygen-com/hyperframes" target="_blank" rel="noopener">HyperFrames</a></th></tr></thead>
+        <tbody>
+          <tr><td>You write</td><td class="us">JSON, React components or an explainer script</td><td>React components</td><td>HTML with timing attributes and GSAP timelines</td></tr>
+          <tr><td>Licence</td><td class="us">MIT</td><td>A special licence; a company licence is needed in some cases</td><td>Apache-2.0</td></tr>
+          <tr><td>Ready-made pieces</td><td class="us">63 blocks, 5 themes</td><td>Templates, elements, effects, transitions, captions</td><td>About 450 blocks</td></tr>
+          <tr><td>Cloud rendering</td><td class="us">A Docker stack with a queue and workers; no serverless option yet</td><td>Lambda and Vercel Sandbox</td><td>An AWS Lambda package and hosted sharing</td></tr>
+          <tr><td>Agents</td><td class="us">MCP server, skills, <code>mr setup</code></td><td>Agent Skills</td><td>A Claude plugin and skills</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="rule" style="--at: 20%"></div>
+
+  <section id="agents">
+    <div class="agent">
+      <div>
+        <p class="label">For agents</p>
+        <h2 style="margin-top:14px;font-size:clamp(2rem,4vw,3rem)">Hand it to your agent.</h2>
+        <ul>
+          <li>An MCP server for Claude Code, Claude Desktop, Codex and Cursor.</li>
+          <li>One command sets a folder up with AGENTS.md, the MCP config and the skills.</li>
+          <li>The agent validates, looks at frames, reads the review sheet, then renders.</li>
+        </ul>
+      </div>
+<pre><span class="k"># Claude Code</span>
+claude mcp add motionrender -- npx -y motionrender mcp
+
+<span class="k"># or set up a whole folder</span>
+npx -y motionrender setup .
+
+<span class="k"># then ask for the video you want</span>
+mr make explainer.json --final</pre>
+    </div>
+  </section>
+
+  <footer>
+    <span>MotionRender is open source under the MIT licence. Early days: expect rough edges.</span>
+    <span><a href="https://github.com/hameedsk381/motionrender" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.npmjs.com/package/motionrender" target="_blank" rel="noopener">npm</a></span>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var button = document.getElementById('copy');
+    var command = 'npx motionrender init my-video';
+    function selectText() {
+      var range = document.createRange(); range.selectNodeContents(button.previousElementSibling || button.parentNode);
+      var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    }
+    button.addEventListener('click', function () {
+      var done = function () { button.textContent = 'Copied'; setTimeout(function () { button.textContent = 'Copy'; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(command).then(done, function () { selectText(); button.textContent = 'Select'; });
+      else { selectText(); button.textContent = 'Select'; }
+    });
+    // Respect reduced motion: keep the first frame of each clip instead of playing it.
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('video').forEach(function (video) { video.removeAttribute('autoplay'); video.pause(); });
+    }
+  })();
+</script>

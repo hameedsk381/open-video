@@ -39,6 +39,19 @@ Without a compose tool, `infrastructure/docker/stack.sh up` starts the same cont
 
 Put a TLS proxy (Caddy or nginx) in front of `127.0.0.1:3100`, and set `PUBLIC_ORIGIN` to its `https://` address. The API checks the `Host` and `Origin` of every request against it. Set `TRUST_PROXY=1` (the default in the compose file) only when a proxy you control sets `X-Forwarded-For`.
 
+## A landing page on the main domain, the app on a subdomain
+
+The landing page (`site/`) and the app are separate services, so each gets its own domain: `yourdomain.com` for the page and `app.yourdomain.com` for the app. They share nothing. The page makes no calls to the API, so there is no cross-origin setup, and the app's sign-in cookie stays on the app's own address. (The app itself cannot sit under a path such as `/app` on the page's domain: it is built for the root of its own address and calls `/api/…` and `/files/…` from there.)
+
+1. **DNS.** Point both names at the server: an `A` record for `yourdomain.com` and one for `app` (or a `CNAME` for `app`), each to the server's IP.
+2. **Environment tab.** Set `PUBLIC_ORIGIN=https://app.yourdomain.com`.
+3. **Domains tab.** Add `app.yourdomain.com` for the `api` service on port `3100`, and `yourdomain.com` for the `site` service on port `8080`. Turn HTTPS on for both.
+4. **Deploy.** The `site` service is built from `site/` on every deploy, with an "Open the app" link to `PUBLIC_ORIGIN`.
+
+To change the page, edit `site/page.html` and run `node site/build.mjs` to preview `site/index.html` (set `APP_URL=https://app.yourdomain.com` to include the app link), then redeploy. The image alone: `docker build --target site --build-arg APP_URL=https://app.yourdomain.com -t motionrender-site .`.
+
+Not covered: redirecting `www` to the main domain, and the domain's email records.
+
 ## Settings
 
 All through environment variables.

@@ -16,3 +16,6 @@ packages/ove/skills
 packages/cli/studio
 **/*.mp4
 **/*.mov
+
+# The landing page ships its three hero clips (site/media); the rule above would drop them from the build context.
+!site/media/*.mp4
