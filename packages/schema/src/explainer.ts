@@ -114,6 +114,24 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     cta: words(40).default('Follow for more').describe('The call to action in the box at the bottom') }),
 ]);
 
+/**
+ * The decision made before any scene is written: which shape the video takes. Three candidates are weighed and one chosen, because the first
+ * structure that comes to mind for a topic is usually the cliché (a title, two cards, a closing). It travels with the script so the choice can be read.
+ */
+export const treatmentSchema = z.object({
+  candidates: z.array(z.object({
+    structure: words(200).describe('One way the video could be shaped, with the scene kinds it would use, such as "a worked example: title, freeform sequence, stat, closing"'),
+    why: words(200).optional().describe('What this shape does well, or why it is not the one'),
+  })).min(2).max(4).describe('Two to four genuinely different shapes: a journey, a before and after, a countdown, a list that turns, a mechanism walked step by step, one worked example'),
+  chosen: z.number().int().min(0).max(3).describe('Which candidate was chosen, counted from 0'),
+  logline: words(240).describe('The video in one sentence: what the viewer knows at the end that they did not at the start'),
+  opening: words(160).optional().describe('What the first seconds show; something happens in the first 3 seconds'),
+  signature: words(200).optional().describe('The one scene people will remember and why it is drawn the way it is (often a freeform scene shaped like the idea)'),
+  ending: words(160).optional().describe('How the video ends, ideally echoing the opening'),
+}).superRefine((treatment, ctx) => {
+  if (treatment.chosen >= treatment.candidates.length) ctx.addIssue({ code: 'custom', path: ['chosen'], message: `chosen is ${treatment.chosen} but there are only ${treatment.candidates.length} candidates (count from 0)` });
+});
+
 export const explainerSchema = z.object({
   version: z.literal('1.0').default('1.0'),
   series: words(24).default('EXPLAINED').describe('The small label before the topic in the header, such as "SYSTEM DESIGN", "HOW IT WORKS" or "MONEY BASICS"'),
@@ -127,6 +145,7 @@ export const explainerSchema = z.object({
     layout: z.enum(explainerLayouts).optional().describe('card: centred, in boxed cards. editorial: flush left, no boxes, hairline rules, large numerals (title, stat, steps and closing scenes)'),
   }).optional().describe('Changes parts of the look: any field left out keeps the look\'s own'),
   colors: z.object({ bg: hex, surface: hex, text: hex, muted: hex, accent: hex, accent2: hex }).partial().optional().describe('Colours that replace the look\'s own, by name'),
+  treatment: treatmentSchema.optional().describe('The shape chosen for this video and the shapes passed over; written before the scenes'),
   topic: words(40).describe('The topic, shown in the header on every scene, such as "UBER LIVE HEATMAP"'),
   handle: words(30).default('@yourhandle').describe('The creator handle, shown in the header'),
   voice: words(40).optional().describe('The Edge voice that speaks, such as en-IN-NeerjaNeural or en-US-AriaNeural'),

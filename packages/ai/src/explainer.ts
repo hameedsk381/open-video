@@ -21,6 +21,8 @@ export type WriteExplainerOptions = {
   facts?: Fact[];
   /** The Edge voice to put in the script, if one is wanted. */
   voice?: string;
+  /** Scene-kind sequences of videos already made (see sceneKinds). A script with the same sequence is sent back, so a batch of videos does not share one skeleton. */
+  avoid?: string[][];
   maxAttempts?: number;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
@@ -56,11 +58,34 @@ const mediaGuide = (files: string[]) => `- media: a picture or video of the proj
 
 const factsBlock = (facts: Fact[]) => `Facts you may use, each with its source and date. State no number, date or claim as fact unless it is here, and name the source in the scene's note (stat) or caption (chart), such as "World Bank, 2025":\n${facts.map((fact, i) => `[${i + 1}] ${fact.text} (${fact.source}${fact.date ? `, ${fact.date}` : ''})`).join('\n')}`;
 
+/** The scene kinds of a script, in order: its structure at a glance. */
+export const sceneKinds = (script: { scenes: { kind: string }[] }): string[] => script.scenes.map(scene => scene.kind);
+
+/** What is wrong with a script's structure, in the words sent back to the model: the same skeleton as a video already made. */
+export function structureProblems(script: { scenes: { kind: string }[] }, avoid: string[][] = []): string[] {
+  const kinds = sceneKinds(script).join(' > ');
+  return avoid.some(other => other.join(' > ') === kinds)
+    ? [`- scenes: the scene sequence (${kinds}) is the same as a video that was already made. Weigh the candidate structures again and choose a different shape: other scene kinds, a freeform scene drawn for this idea, a different order.`]
+    : [];
+}
+
+/** The step that comes before any scene: weigh three shapes, pick one, say what the video is for. */
+const treatmentGuide = [
+  'Treatment first. Before the scenes, write "treatment": {"candidates":[{"structure","why"}, ...] (3, genuinely different), "chosen": index from 0, "logline", "opening", "signature", "ending"}.',
+  '- The candidates are different shapes, not rewordings: for example a worked example, a before and after, a countdown, a list that turns, a mechanism walked step by step, one question answered three ways. Name the scene kinds each would use.',
+  '- The first shape that comes to mind for a topic is usually the cliché (a title, a compare card, steps, a closing). Choose from what this topic needs, and say why.',
+  '- The logline is what the viewer knows at the end that they did not at the start. The opening shows something happening in the first 3 seconds. The ending echoes the opening.',
+  '- "signature" names the one scene people will remember. Where the idea has its own shape (a sequence between parties, a row of slots, a spectrum), draw that scene as freeform instead of forcing a stock kind.',
+  '- The scenes then follow the chosen shape. A scene that does not serve the logline is cut.',
+].join('\n');
+
 export function explainerPrompt(brief: string, options: WriteExplainerOptions = {}): ChatMessage[] {
   const scenes = options.scenes ?? 5, language = options.language ?? 'English';
   const system = [
     'You write scripts for short vertical explainer videos: one idea, taught one scene at a time, with a spoken line over each scene.',
-    `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","look":"...","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
+    `Reply with one JSON object and nothing else: {"version":"1.0","topic":"SHORT UPPER CASE TOPIC","treatment":{...},"look":"...","scenes":[...]}${options.voice ? `, and "voice":"${options.voice}"` : ''}.`,
+    treatmentGuide,
+    ...(options.avoid?.length ? [`Videos already made used these scene sequences; yours must not repeat one:\n${options.avoid.map(kinds => `- ${kinds.join(' > ')}`).join('\n')}`] : []),
     [GUIDE, ...(options.media?.length ? [mediaGuide(options.media)] : []), ...(options.images ? [imageGuide] : [])].join('\n'),
     designGuide,
     ...(options.facts?.length ? [factsBlock(options.facts)] : []),
@@ -87,8 +112,11 @@ export async function writeExplainer(provider: AiProvider, brief: string, option
       // A reply with no look at all would come out in the default one every time: give it the look its topic maps to, so videos still differ.
       if (raw && typeof raw === 'object' && raw.look === undefined) raw.look = lookForTopic(typeof raw.topic === 'string' ? raw.topic : brief);
       const parsed = explainerSchema.safeParse(raw);
-      if (parsed.success) return { explainer: { ...parsed.data, ...(options.voice && !parsed.data.voice ? { voice: options.voice } : {}), ...(options.facts?.length ? { sources: options.facts } : {}) }, attempts: attempt };
-      problems = parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n');
+      if (parsed.success) {
+        const structure = structureProblems(parsed.data, options.avoid);
+        if (!structure.length) return { explainer: { ...parsed.data, ...(options.voice && !parsed.data.voice ? { voice: options.voice } : {}), ...(options.facts?.length ? { sources: options.facts } : {}) }, attempts: attempt };
+        problems = structure.join('\n');
+      } else problems = parsed.error.issues.slice(0, 12).map(issue => `- ${issue.path.join('.') || 'script'}: ${issue.message}`).join('\n');
     } catch (error) {
       problems = `- ${(error as Error).message}`;
     }
