@@ -115,16 +115,12 @@ describe('composeSmart with React authoring', () => {
     expect(String(provider.seen[0]![0]!.content)).toContain('Reply with "path" set to one of: json.');
   });
 
-  it('falls back to a written composition when React authoring fails', async () => {
-    const progress: string[] = [];
+  it('reports a failed React build instead of quietly writing a composition', async () => {
     const provider = scripted(reactPlan, composition);
-    const result = await composeWithSource(provider,
-      { ...base, maxAttempts: 2, content: false, onProgress: message => progress.push(message) },
+    await expect(composeWithSource(provider,
+      { ...base, maxAttempts: 2, content: false },
       { react: async () => { throw new Error('delayRender() was not released within 28 seconds'); } },
-      { registry });
-    expect(result.route).toBe('json');
-    expect(result.composition.scenes[0].layers[0].content).toBe('Hello');
-    expect(progress.some(message => message.startsWith('React authoring failed'))).toBe(true);
+      { registry })).rejects.toThrow(/React authoring failed: delayRender\(\) was not released/);
   });
 
   it('keeps a supplied script in a React composition', async () => {
@@ -153,30 +149,27 @@ describe('composeSmart route default', () => {
   const withReact = (calls: string[]) => ({ react: async () => { calls.push('react'); return { composition: builtByReact, attempts: 1, issues: [], warnings: [] }; } });
   const jsonPlan = { path: 'json', idea: 'Say hello', beats: [{ name: 'Hook', onScreen: 'the headline', seconds: 2 }] };
 
-  it('writes a video the planner gave to json as React, and says why', async () => {
+  it('writes a video the planner gave to json as React', async () => {
     const calls: string[] = [], progress: string[] = [];
     const result = await composeWithSource(scripted(jsonPlan, composition), { ...square, onProgress: message => progress.push(message) }, withReact(calls), { registry });
     expect(calls).toEqual(['react']); expect(result.route).toBe('react');
-    expect(progress).toContain('Writing this video as React motion code (the default for designed videos)…');
+    expect(progress).toContain('Writing this video as React motion code…');
   });
 
-  it('keeps json when the planner is to be believed, or when React is not wanted', async () => {
+  it('ignores OVE_AI_ROUTE: there is no setting that brings back json authoring', async () => {
     for (const setting of ['planner', 'json']) {
       vi.stubEnv('OVE_AI_ROUTE', setting);
       const calls: string[] = [];
       const result = await composeWithSource(scripted(jsonPlan, composition), square, withReact(calls), { registry });
-      expect(calls, setting).toEqual([]); expect(result.route, setting).toBe('json');
+      expect(calls, setting).toEqual(['react']); expect(result.route, setting).toBe('react');
       vi.unstubAllEnvs();
     }
   });
 
-  it('still honours a planner that chose React under OVE_AI_ROUTE=planner, but never under json', async () => {
-    const reactPlan = { path: 'react', idea: 'Chrome', look: {}, beats: [{ name: 'Hook', onScreen: 'chrome', seconds: 2 }] };
-    vi.stubEnv('OVE_AI_ROUTE', 'planner');
-    const calls: string[] = []; expect((await composeWithSource(scripted(reactPlan), square, withReact(calls), { registry })).route).toBe('react');
-    vi.stubEnv('OVE_AI_ROUTE', 'json');
-    expect((await composeWithSource(scripted(reactPlan, composition), square, withReact([]), { registry })).route).toBe('json');
-    vi.unstubAllEnvs();
+  it('writes React even when no plan was made, from the script or the brief', async () => {
+    const calls: string[] = [];
+    const result = await composeWithSource(scripted(composition), square, withReact(calls), { noPlan: true, registry });
+    expect(calls).toEqual(['react']); expect(result.route).toBe('react');
   });
 
   it('does not take a video away from an explicit full composition', async () => {

@@ -11,12 +11,31 @@ const labelSchema = z.object({ text: words(28), tone: tone.default('gold') });
 const common = {
   step: words(48).optional().describe('The small line under the header, such as "STEP 1 · UPDATES → SERVER". Upper case reads best.'),
   say: words(420).optional().describe('What is said over this scene. The scene lasts as long as the line, so write it as speech: short sentences, one idea.'),
+  layout: z.enum([...explainerLayouts, 'auto']).optional().describe('This scene\'s own layout, instead of the video\'s: card (centred, boxed), editorial (flush left, hairline rules; title, stat, steps and closing scenes) or auto (editorial when the scene carries a lot of text, card when it is short and punchy). Mix them on purpose, for example an editorial title and card diagrams.'),
+  place: z.enum(['center', 'top']).optional().describe('Where the scene sits on the board: center (default, in the space between the header and the bottom of the frame) or top (pinned under the header).'),
 };
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A colour is a 6-digit hex such as #0b1c3f');
 import { explainerBodyFonts, explainerCorners, explainerDisplayFonts, explainerLayouts, explainerLookDefs, explainerLooks, explainerMotions, explainerTextures, explainerTransitions, explainerWeights } from './explainer-looks';
 /** The looks an explainer can wear: each is a whole design (colours, type, motion, texture, corners, weight); see explainer-looks. */
 export { explainerLooks };
+
+/** A colour in a freeform scene: one of the look's own (so the scene follows the look), or a hex. */
+const paint = z.string().regex(/^(accent|accent2|text|muted|surface|bg|red|none|#[0-9a-fA-F]{6})$/, 'A colour is accent, accent2, text, muted, surface, bg, red, none or a 6-digit hex');
+const appear = {
+  at: z.number().min(0).max(0.9).default(0.1).describe('When it appears, as a fraction of the scene: 0 at the start, 0.5 halfway'),
+  motion: z.enum(['rise', 'fade', 'pop', 'draw', 'none']).default('rise').describe('How it arrives: rise, fade, pop (scale in), draw (a box grows from its left edge) or none'),
+};
+const px = z.number().min(-200).max(1280), py = z.number().min(0).max(1920);
+export const freeformElementSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), text: words(160), x: px, y: py, size: z.number().min(18).max(420).default(48), weight: z.number().int().min(300).max(900).default(600),
+    color: paint.default('text'), align: z.enum(['left', 'center', 'right']).default('left').describe('left: x is the left edge. center: x is the middle. right: x is the right edge.'),
+    font: z.enum(['display', 'body', 'mono']).default('body'), width: z.number().min(60).max(1040).optional().describe('Wrap the text at this width'), ...appear }),
+  z.object({ type: z.literal('box'), x: px, y: py, w: z.number().min(1).max(1280), h: z.number().min(1).max(1920), radius: z.number().min(0).max(300).default(0),
+    fill: paint.default('surface'), stroke: paint.optional(), strokeWidth: z.number().min(1).max(24).default(3), ...appear }),
+  z.object({ type: z.literal('circle'), x: px.describe('The middle'), y: py.describe('The middle'), d: z.number().min(2).max(1200).describe('The diameter'),
+    fill: paint.default('accent'), stroke: paint.optional(), strokeWidth: z.number().min(1).max(24).default(3), ...appear }),
+]);
 
 export const explainerSceneSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('title'), ...common,
@@ -85,6 +104,10 @@ export const explainerSceneSchema = z.discriminatedUnion('kind', [
     tags: z.array(words(14)).max(3).default([]).describe('Short names pinned on the first lit cells, such as "Zone A"'),
     seed: z.number().int().default(3).describe('Picks the lit cells when lit is left out'),
     caption: words(90).optional().describe('A line under the map') }),
+  z.object({ kind: z.literal('freeform'), ...common,
+    elements: z.array(freeformElementSchema).min(1).max(80).describe('What is on the board, placed by you on a 1080 x 1920 column: text, boxes (also lines and bars: a thin box) and circles. Keep text between y 270 and y 1540 and left of x 960, where reel apps do not cover it.'),
+    duration: z.number().min(2).max(30).optional().describe('At least this many seconds, when the picture needs longer than its spoken line'),
+    caption: words(120).optional().describe('One sentence at the bottom of the screen') }),
   z.object({ kind: z.literal('closing'), ...common,
     title: words(40).describe('The takeaway, large'),
     points: z.array(words(60)).max(3).default([]).describe('Up to three short reminders'),
@@ -117,5 +140,6 @@ export const explainerSchema = z.object({
 export type Explainer = z.infer<typeof explainerSchema>;
 export type ExplainerInput = z.input<typeof explainerSchema>;
 export type ExplainerScene = z.infer<typeof explainerSceneSchema>;
+export type FreeformElement = z.infer<typeof freeformElementSchema>;
 /** The scene kinds, for prompts and menus. */
-export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'closing'] as const;
+export const explainerKinds = ['title', 'flow', 'grid', 'steps', 'compare', 'stat', 'chart', 'timeline', 'pile', 'media', 'phone', 'hex', 'freeform', 'closing'] as const;

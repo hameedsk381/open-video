@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderMedia, renderStill } from '@ove/core';
-import { composeVideo, createProvider, planBuild, runVideoAgent, writeCompositionProject, type VideoFormat } from '@ove/ai';
+import { createProvider, planBuild, runVideoAgent, type VideoFormat } from '@ove/ai';
 import { buildReact } from './build';
 import { reactCritiqueFrames, reactVisualCheck } from './react-video';
 import { cliRegistry } from './compose-source';
@@ -42,41 +42,6 @@ export function agentArgs(argv: string[]) {
     providerName: option(argv, '--provider'),
     model: option(argv, '--model'),
   };
-}
-
-/**
- * The planner chose a plain composition: produce it the way `ove ai compose` does (schema-checked JSON, one source of
- * truth), then render with the same pipeline — no `react` layer, so allowCode is not needed.
- */
-async function runJsonAgent(provider: Awaited<ReturnType<typeof createProvider>>, plan: { idea?: string; beats: { name: string; onScreen?: string; seconds?: number; motion?: string }[] },
-  options: { brief: string; dir: string; width: number; height: number; fps: number; durationSeconds: number; shouldRender: boolean }): Promise<number> {
-  console.log('   Route: JSON composition (the planner found no brief that needs bespoke React code)\n');
-  const result = await composeVideo(provider, {
-    width: options.width, height: options.height, fps: options.fps, durationSeconds: options.durationSeconds, brief: options.brief, baseDir: options.dir,
-    motionPlan: { idea: plan.idea, beats: plan.beats }, plan: true, onProgress: message => console.log(message),
-  });
-  const files = await writeCompositionProject(options.dir, result.composition, { force: true });
-  console.log(`📁 Composition written: ${files.composition}`);
-  for (const warning of result.warnings) console.log(`   note: ${warning}`);
-  if (!options.shouldRender) {
-    console.log(`\nNext: ove dev ${files.composition}`);
-    return 0;
-  }
-  console.log(`\n🎥 Rendering video with headless Chromium engine…`);
-  const mp4Path = resolve(options.dir, 'output.mp4');
-  const stillPath = resolve(options.dir, 'preview.png');
-  const midFrame = Math.round(result.composition.durationFrames / 2);
-  await renderStill(result.composition, { frame: midFrame, output: stillPath, baseDir: options.dir });
-  console.log(`📸 Preview captured: ${stillPath} (frame ${midFrame})`);
-  const started = Date.now();
-  let lastReport = 0;
-  const rendered = await renderMedia(result.composition, {
-    baseDir: options.dir, output: mp4Path,
-    onProgress: ({ rendered, total }) => { if (rendered === total || Date.now() - lastReport > 1000) { lastReport = Date.now(); process.stdout.write(`   Rendered ${rendered}/${total} frames\r`); } },
-  });
-  console.log(`\n✨ Render complete in ${((Date.now() - started) / 1000).toFixed(1)}s!`);
-  console.log(`🎬 Video exported: ${rendered.output}`);
-  return 0;
 }
 
 export async function runAgentCli(argv: string[]): Promise<number> {
@@ -134,11 +99,10 @@ Examples:
       const canvas = { width: format === 'reel' ? 1080 : 1920, height: format === 'reel' ? 1920 : 1080 };
       plan = await planBuild(provider, {
         brief: args.brief, ...canvas, fps, durationSeconds: duration,
-        kind: format === 'reel' ? 'social reel' : 'landscape motion-graphics video', registry: await cliRegistry(), paths: ['json', 'react'], allowReact: true, maxAttempts: 2,
+        kind: format === 'reel' ? 'social reel' : 'landscape motion-graphics video', registry: await cliRegistry(), paths: ['react'], allowReact: true, maxAttempts: 2,
         onProgress: message => console.log(message),
       });
-      if (plan?.path === 'json') return runJsonAgent(provider, plan, { brief: args.brief, dir: targetDir, ...canvas, fps, durationSeconds: duration, shouldRender });
-      console.log('   Route: React motion code (the planner found no plain composition that fits)\n');
+      console.log('   Route: React motion code\n');
     } catch { /* planning is optional; fall through to the React agent */ }
   }
 

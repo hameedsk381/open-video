@@ -68,22 +68,20 @@ export async function composeSmart(provider: AiProvider, options: ComposeOptions
   // A brand's colours and fonts are not a suggestion: they replace the planner's, field by field, on every route.
   const brandStyle = brandLook(options.brand);
   if (plan && brandStyle) plan = { ...plan, look: mergeLook(plan.look, brandStyle) };
-  // Which way a designed video is made. The planner chooses, but a weak one answers "json" for nearly everything, and then every video
-  // is a few text cards on a coloured field. Where the host can write React (it will run the code itself), a video is written as React;
-  // a failed build still falls back to a composition. OVE_AI_ROUTE=planner honours the
-  // planner's "json", and OVE_AI_ROUTE=json never writes React.
-  const route = (process.env.OVE_AI_ROUTE ?? '').trim().toLowerCase();
-  const promoted = plan?.path === 'json' && route !== 'planner';
-  if (!needsFull && source.react && route !== 'json' && (plan?.path === 'react' || promoted)) {
-    options.onProgress?.(promoted ? 'Writing this video as React motion code (the default for designed videos)…' : 'Writing this video as React motion code…');
-    try {
-      const made = await source.react(plan!, scripted, mode);
-      // The script travels in the composition whatever route built it, so narration and captions later derive from it.
-      const composition = content ? { ...made.composition, content } : made.composition;
-      return { ...made, composition, attempts: made.attempts + 1, route: 'react' };
-    } catch (error) {
-      options.onProgress?.(`React authoring failed (${(error as Error).message.split('\n')[0]}); writing a full composition instead.`);
-    }
+  // A video is written as React wherever the host can run the code (it executes inside the renderer). The planner's own "json" answer
+  // is not honoured, and a failed React build is an error, not a quiet switch to a composition. JSON authoring is left only for what
+  // React cannot express: a host that cannot run code, batch variable fields, non-image assets, or an explicit `full`.
+  if (!needsFull && source.react) {
+    const reactPlan: BuildPlan = plan
+      ? { ...plan, path: 'react' }
+      : { path: 'react', idea: options.brief, beats: (content?.beats ?? []).map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })), reasons: [] };
+    options.onProgress?.('Writing this video as React motion code…');
+    let made;
+    try { made = await source.react(reactPlan, scripted, mode); }
+    catch (error) { throw new Error(`React authoring failed: ${(error as Error).message}`); }
+    // The script travels in the composition whatever route built it, so narration and captions later derive from it.
+    const composition = content ? { ...made.composition, content } : made.composition;
+    return { ...made, composition, attempts: made.attempts + 1, route: 'react' };
   }
   // The planner's beats and art direction become the motion plan the composition must follow, so planning is never wasted.
   const motionPlan = plan ? { idea: plan.idea, beats: plan.beats, look: plan.look, ...(content ? { content } : {}) } : (content ? { beats: content.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds, motion: beat.motion })), ...(brandStyle ? { look: brandStyle } : {}), content } : undefined);

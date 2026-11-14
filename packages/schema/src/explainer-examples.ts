@@ -30,6 +30,15 @@ export const explainerKindDocs: ExplainerKindDoc[] = [
     example: { kind: 'phone', app: 'Rides', messages: [{ side: 'in', text: 'Where is my ride?' }, { side: 'out', text: 'Two minutes away' }], caption: 'One request, one match.', say: 'The rider asks, and the nearest driver answers.' } },
   { kind: 'hex', shows: 'A map of hexagon cells with some lit and tagged.', use: 'Regions, zones, shards, cells.',
     example: { kind: 'hex', columns: 5, rows: 4, lit: [2, 7, 12], tags: ['A', 'B', 'C'], caption: 'The city is cut into cells.', say: 'The city is cut into hexagon cells, and busy cells light up.' } },
+  { kind: 'freeform', shows: 'A board you lay out yourself: text, boxes (a thin box is a line or bar) and circles, each placed on the 1080 x 1920 column and timed to appear.', use: 'Anything the other kinds cannot draw: a sequence between two parties, a row of slots, a custom diagram. The content decides the layout. Colours may be the look\'s own (accent, accent2, text, muted, surface, bg, red).',
+    example: { kind: 'freeform', step: 'THE REQUEST', elements: [
+      { type: 'box', x: 90, y: 480, w: 330, h: 150, radius: 18, fill: 'surface', stroke: 'accent', at: 0.05, motion: 'pop' },
+      { type: 'text', text: 'Browser', x: 255, y: 530, size: 46, align: 'center', font: 'display', at: 0.08 },
+      { type: 'box', x: 660, y: 480, w: 330, h: 150, radius: 18, fill: 'surface', stroke: 'accent2', at: 0.1, motion: 'pop' },
+      { type: 'text', text: 'Server', x: 825, y: 530, size: 46, align: 'center', font: 'display', at: 0.13 },
+      { type: 'box', x: 440, y: 553, w: 200, h: 6, fill: 'accent', at: 0.3, motion: 'draw' },
+      { type: 'text', text: 'GET /', x: 540, y: 590, size: 34, align: 'center', color: 'muted', font: 'mono', at: 0.35 }],
+      caption: 'One request, one answer.', say: 'The browser asks, and the server answers.' } },
   { kind: 'closing', shows: 'The takeaway: a big title, up to three ticked points, and a call to action.', use: 'Always the last scene.',
     example: { kind: 'closing', title: 'A short link is just an ID', points: ['Generate a unique ID', 'Encode it short', 'Cache the redirect'], cta: 'Follow for more', say: 'That is all a short link is: a unique ID, encoded short, and cached.' } },
 ];
