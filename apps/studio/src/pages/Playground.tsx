@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { go } from '../router';
 import {
   Badge,
   Button,
-  CheckIcon,
   CopyIcon,
   PlayIcon,
   PauseIcon,
