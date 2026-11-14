@@ -317,14 +317,26 @@ const hex: Kind<'hex'> = (s, i) => ({ min: 200, layers: frames => {
   return [...layers, ...caption('hex-caption', s.caption, Math.min(CAPTION_Y, gy + rows * r * 1.5 + r * 1.4 + 40), at(frames, 0.5)), sfx('whoosh', 0, 0.2), ...lit.slice(0, 4).map((_, k) => sfx('pop', at(frames, 0.3) + k * 10, 0.2))];
 } });
 
-const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
-  ...kicker(i, s.step),
-  center('close-title', s.title, 520, { font: '{{fontDisplay}}', weight: 900, size: 130, color: GOLD, maxWidth: 900, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(520, 6, 40, 26)] }),
-  ...s.points.flatMap((point, k) => { const y = 900 + k * 110, start = at(frames, 0.3) + k * 20; return [
-    label(`close-mark-${k}`, '✓', 90, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
-    text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
-  ...tag('cta', s.cta, W / 2, 1260, MINT, at(frames, 0.6), 640),
-  sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
+/**
+ * Where the closing's points and call to action start: below the title, however long it is. The title wraps at the width it is drawn at, so each
+ * few more characters than fit on a line is another line (at most three; past that the type shrinks). Fixed positions let a long title run into the first point.
+ */
+const closingFlow = (title: string, titleTop: number, size: number, maxWidth: number, pointCount: number) => {
+  const lines = Math.min(3, Math.max(1, Math.ceil(title.length / Math.floor(maxWidth / (size * 0.55)))));
+  const pointsTop = titleTop + lines * size + 40;
+  return { pointsTop, ctaTop: pointsTop + pointCount * 100 + 30 };
+};
+const closing: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => {
+  const flow = closingFlow(s.title, 520, 130, 900, s.points.length);
+  return [
+    ...kicker(i, s.step),
+    center('close-title', s.title, 520, { font: '{{fontDisplay}}', weight: 900, size: 130, color: GOLD, maxWidth: 900, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(520, 6, 40, 26)] }),
+    ...s.points.flatMap((point, k) => { const y = flow.pointsTop + k * 100, start = at(frames, 0.3) + k * 20; return [
+      label(`close-mark-${k}`, '✓', 90, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
+      text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
+    ...tag('cta', s.cta, W / 2, flow.ctaTop, MINT, at(frames, 0.6), 640),
+    sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)];
+} });
 
 /* ---- the editorial layout: flush left, no boxes, hairline rules and large numerals (title, stat, steps and closing) ---- */
 const LEFT = 90;
@@ -369,16 +381,19 @@ const stepsEditorial: Kind<'steps'> = (s, i) => ({ min: 90 + s.items.length * 70
   }), ...captionLeft('caption', s.caption, 320 + n * pitch + 20, at(frames, 0.78)), sfx('whoosh', 0, 0.2)];
 } });
 
-const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => [
-  ...kicker(i, s.step),
-  rect('close-rule', LEFT, 330, 1, 12, { fill: GOLD, radius: 6, anims: [grow('width', 170, 4, 24)] }),
-  text('close-title', s.title, LEFT - 6, 380, { font: '{{fontDisplay}}', weight: 900, size: 150, color: GOLD, maxWidth: 920, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(380, 6, 40, 26)] }),
-  ...s.points.flatMap((point, k) => { const y = 900 + k * 110, start = at(frames, 0.3) + k * 20; return [
-    label(`close-mark-${k}`, '→', LEFT, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
-    text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
-  text('cta-url', s.cta, LEFT - 4, 1235, { font: '{{fontDisplay}}', weight: 900, size: 84, color: MINT, maxWidth: 900, maxLines: 1, minSize: 40, anims: [rise(1235, at(frames, 0.6), 30, 22)] }),
-  rect('cta-bar', LEFT, 1341, 1, 10, { fill: GOLD, radius: 5, anims: [grow('width', 420, at(frames, 0.6) + 8, 26)] }),
-  sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)] });
+const closingEditorial: Kind<'closing'> = (s, i) => ({ min: 150, layers: frames => {
+  const flow = closingFlow(s.title, 380, 150, 920, s.points.length);
+  return [
+    ...kicker(i, s.step),
+    rect('close-rule', LEFT, 330, 1, 12, { fill: GOLD, radius: 6, anims: [grow('width', 170, 4, 24)] }),
+    text('close-title', s.title, LEFT - 6, 380, { font: '{{fontDisplay}}', weight: 900, size: 150, color: GOLD, maxWidth: 920, maxLines: 3, minSize: 70, lh: 1.0, anims: [rise(380, 6, 40, 26)] }),
+    ...s.points.flatMap((point, k) => { const y = flow.pointsTop + k * 100, start = at(frames, 0.3) + k * 20; return [
+      label(`close-mark-${k}`, '→', LEFT, y, { size: 52, ls: 0, color: MINT, anims: [fade(start, 10)] }),
+      text(`close-point-${k}`, point, 170, y - 6, { size: 50, weight: 700, maxWidth: 800, maxLines: 2, minSize: 34, lh: 1.15, anims: [rise(y - 6, start, 24, 18)] }), sfx('pop', start + 2, 0.2)]; }),
+    text('cta-url', s.cta, LEFT - 4, flow.ctaTop, { font: '{{fontDisplay}}', weight: 900, size: 84, color: MINT, maxWidth: 900, maxLines: 1, minSize: 40, anims: [rise(flow.ctaTop, at(frames, 0.6), 30, 22)] }),
+    rect('cta-bar', LEFT, flow.ctaTop + 106, 1, 10, { fill: GOLD, radius: 5, anims: [grow('width', 420, at(frames, 0.6) + 8, 26)] }),
+    sfx('whoosh', 0, 0.2), sfx('ding', at(frames, 0.6) + 2, 0.25)];
+} });
 
 /** The scenes that have an editorial layout use it when the design asks for it; every other scene is drawn the same way in every design. */
 const pick = <S extends ExplainerScene['kind']>(card: Kind<S>, editorial: Kind<S>): Kind<S> => (scene, i) => (active.layout === 'editorial' ? editorial(scene, i) : card(scene, i));
