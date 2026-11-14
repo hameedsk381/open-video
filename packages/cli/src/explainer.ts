@@ -144,12 +144,14 @@ export async function buildExplainer(script: Explainer, options: BuildExplainerO
   if (options.react) {
     if (!react) notes.push('React: no scene in this script has a React drawing (compare, chart, flow, grid; 9:16 only), so the video is the stock one.');
     else {
-      const done = await convertToReact(composition, output, { name: 'explainer-react', explainer: react as any });
-      if (done.unsupported.length) {
+      // esbuild, react and react-dom are optional peers of the package: a machine without them gets the stock video, not a failed build.
+      let done: Awaited<ReturnType<typeof convertToReact>> | undefined, failure = '';
+      try { done = await convertToReact(composition, output, { name: 'explainer-react', explainer: react as any }); } catch (error) { failure = (error as Error).message; }
+      if (!done || done.unsupported.length) {
         // The stock scenes use something the React view cannot draw: put the pictures back rather than keep scenes that are blank.
         ({ composition, notes } = compileExplainer(spec, { audio }));
         await writeFile(output, JSON.stringify(composition, null, 2) + '\n');
-        notes.push(`React: not used, the stock scenes need ${done.unsupported.join(', ')}.`);
+        notes.push(done ? `React: not used, the stock scenes need ${done.unsupported.join(', ')}.` : `React: not used (${failure.split('\n')[0]}). The video uses the fixed scenes.`);
       } else { reacted = true; notes.push(`React: ${react.scenes.length} scene${react.scenes.length === 1 ? '' : 's'} drawn with React components (${[...new Set(react.scenes.map(item => item.scene.kind))].join(', ')}).`); }
     }
   }

@@ -9,6 +9,7 @@ All notable changes to MotionRender (formerly Open Video Engine). The published 
 - **A `code` scene:** a file name, up to 14 lines of code and lines picked out one after another, drawn as an editor card (the React kit's `CodeEditor`, or the code typed out in a bare pane with `variant: typed`) and by the stock scenes too. It is in `mr explainer kinds`, the schema and the writer's guide. With it every component of the React kit is in use.
 - A closing scene whose title wraps onto a second line no longer runs into its call to action (the line estimate was too optimistic for wide bold fonts).
 - `CompositionView` draws captions layers that carry inline cues.
+- `mr make` no longer fails on a machine without esbuild, react and react-dom (optional peers of the package): it notes that React was not used and builds the fixed scenes. The Docker `agent` and `studio` images now install the three, so React scenes work there.
 - React scenes make the sounds their stock versions made, and come in with the look's own transition (fade, zoom, wipe or push) instead of a plain fade.
 - The explainer writer is sent back a script that is mostly one scene kind (3 or more, half of the video or more) or that has two neighbouring scenes of the same kind and drawing; freeform scenes are exempt.
 - The two Dokploy compose files (repo root and `infrastructure/dokploy/compose.yml`) are the same stack again, including the landing page service, and a test keeps them so.

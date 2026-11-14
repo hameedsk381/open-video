@@ -70,7 +70,7 @@ Rendering needs nothing. With egress locked down, allow only what the features y
 | `en.wikipedia.org`, `api.worldbank.org`, `api.frankfurter.dev` | `mr facts` and `--research` |
 | your image provider's API | drawn pictures in `media` scenes (`--images`), only if you use them |
 
-Videos with code layers (`code`, `react`, `p5`) run JavaScript while rendering and need `--allow-code`. A sandbox is the right place to allow that for code an agent wrote: the render page already refuses all `http`, `https`, `ws` and `ftp` requests, and the container adds the process-level boundary.
+The image includes esbuild, react and react-dom, so `mr make` draws explainer scenes with React components (its default); without them `mr make` falls back to the older fixed scenes on its own. Videos with code layers (`code`, `react`, `p5`) run JavaScript while rendering and need `--allow-code`. A sandbox is the right place to allow that for code an agent wrote: the render page already refuses all `http`, `https`, `ws` and `ftp` requests, and the container adds the process-level boundary.
 
 ## What has and has not been checked
 

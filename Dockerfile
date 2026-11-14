@@ -70,6 +70,9 @@ CMD ["job-worker"]
 # AGENTS.md, the skills and the MCP config are already in place. The container stays up so commands can be run in it; it runs as the unprivileged
 # node user, and Chromium's own sandbox is off (OVE_CHROMIUM_ARGS=--no-sandbox) because the container is the sandbox.
 FROM chromium AS agent
+# `mr make` draws explainer scenes with React, which is bundled with esbuild: these are optional peer dependencies of the package, so they are installed beside it
+# (the same ranges as the repository's own). The api and worker images do not get them: hosted jobs never run React code.
+RUN npm install -g --omit=dev --ignore-scripts esbuild@^0.28.2 react@19 react-dom@19 && npm cache clean --force
 RUN mkdir -p /work && ove setup /work --local \
  && chown -R node:node /work /home/node
 ENV HOME=/home/node
@@ -98,6 +101,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
 
 FROM chromium AS studio
+RUN npm install -g --omit=dev --ignore-scripts esbuild@^0.28.2 react@19 react-dom@19 && npm cache clean --force
 USER node
 EXPOSE 3100
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
