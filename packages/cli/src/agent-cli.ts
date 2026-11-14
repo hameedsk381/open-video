@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadComposition, renderMedia, renderStill } from '@ove/core';
-import { createProvider, planBuild, runVideoAgent, type VideoFormat } from '@ove/ai';
+import { createProvider, directionShape, planBuild, runVideoAgent, type VideoFormat } from '@ove/ai';
 import { buildReact } from './build';
 import { reactCritiqueFrames, reactVisualCheck } from './react-video';
 import { cliRegistry } from './compose-source';
@@ -13,10 +13,23 @@ const option = (argv: string[], name: string): string | undefined => {
 
 const flag = (argv: string[], name: string): boolean => argv.includes(name);
 
+/** The shapes of videos already made, read from a project folder (its direction.json) or a direction file, so a new video is steered away from them. */
+async function earlierShapes(paths: string[]): Promise<string[]> {
+  const shapes: string[] = [];
+  for (const path of paths) {
+    const file = /\.json$/i.test(path) ? resolve(path) : resolve(path, 'direction.json');
+    let direction: { structure?: { name?: unknown }[] };
+    try { direction = JSON.parse((await readFile(file, 'utf8')).replace(/^﻿/, '')); } catch { throw new Error(`--avoid: cannot read a direction from ${path} (give a project folder with a direction.json, or the file)`); }
+    if (!Array.isArray(direction.structure) || direction.structure.some(beat => typeof beat?.name !== 'string')) throw new Error(`--avoid: ${path} has no beat structure`);
+    shapes.push(directionShape(direction as { structure: { name: string; seconds: number; idea: string }[] }));
+  }
+  return shapes;
+}
+
 /** The agent's settings parsed from the checked arguments index.ts passes ([command, ...args]). */
 export function agentArgs(argv: string[]) {
   const args = argv.slice(1);
-  const values = ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url'];
+  const values = ['--brief', '--duration', '--fps', '--provider', '--model', '--format', '--url', '--avoid'];
   let brief: string | undefined, dir: string | undefined, url: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -39,6 +52,7 @@ export function agentArgs(argv: string[]) {
     shouldRender: !flag(argv, '--no-render'),
     noPlan: flag(argv, '--no-plan'),
     noDirection: flag(argv, '--no-direction'),
+    avoid: option(argv, '--avoid')?.split(',').map(item => item.trim()).filter(Boolean) ?? [],
     providerName: option(argv, '--provider'),
     model: option(argv, '--model'),
   };
@@ -63,6 +77,7 @@ Options:
   --no-render        Generate and compile React code only; skip MP4 rendering
   --no-plan          skip the planner and always run the React agent loop
   --no-direction     skip the creative-direction stage (one fewer model call)
+  --avoid <a,b>      project folders (or direction.json files) of videos already made: this one is steered away from their structure
   --provider <name>  AI provider: groq, freellmapi, openai, anthropic, google, mock (default: groq)
   --model <id>       Model ID override
 
@@ -117,6 +132,7 @@ Examples:
       fps,
       plan,
       direction: args.noDirection ? false : undefined,
+      avoidShapes: await earlierShapes(args.avoid),
       onProgress: msg => console.log(msg),
       visualCheck: reactVisualCheck(targetDir),
       critiqueFrames: reactCritiqueFrames(targetDir),

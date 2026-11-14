@@ -42,6 +42,8 @@ export type AgentOptions = {
   direction?: boolean | CreativeDirection;
   /** The planner's first pass, when it ran: the direction stage refines it instead of inventing a second one. */
   plan?: DirectionPlanInput;
+  /** Shapes of videos already made (directionShape of their direction.json): the direction is steered away from repeating one. */
+  avoidShapes?: string[];
   visualCheck?: (videoPath: string, compositionPath: string) => Promise<{ passed: boolean; report: string; sheet?: Buffer }>;
   /** Renders stills of the built video for the art-director pass. Without it the pass does not run. */
   critiqueFrames?: (compositionPath: string) => Promise<CritiqueFrame[]>;
@@ -247,7 +249,7 @@ export async function runVideoAgent(
   if (options.direction !== false && !direction) {
     const written = await writeDirection(provider, {
       brief: activeBrief, width, height, fps, durationSeconds,
-      brand: activeBrand, plan: options.plan, signal: options.signal, onProgress: options.onProgress,
+      brand: activeBrand, plan: options.plan, avoidShapes: options.avoidShapes, signal: options.signal, onProgress: options.onProgress,
     });
     direction = written.direction;
     if (!direction) options.onProgress?.(`⚠️ No fixed direction: ${written.problems[0] ?? 'the model did not answer in direction form'}. Designing from the brief alone.`);

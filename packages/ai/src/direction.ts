@@ -9,7 +9,11 @@ import type { AiProvider, ChatMessage } from './providers';
 
 export type DirectionBeat = { name: string; seconds: number; idea: string };
 
+/** The decision made before the structure: which shape the video takes, and the shapes passed over. */
+export type DirectionTreatment = { candidates: { structure: string; why?: string }[]; chosen: number; logline?: string; signature?: string };
+
 export type CreativeDirection = {
+  treatment?: DirectionTreatment;
   concept: string;
   art: string;
   type?: { display?: string; body?: string; treatment?: string };
@@ -31,6 +35,8 @@ export type DirectionOptions = {
   durationSeconds: number;
   brand?: BrandPack;
   plan?: DirectionPlanInput;
+  /** Shapes of videos already made (see directionShape). A direction with the same shape is sent back once, so a batch does not share one skeleton. */
+  avoidShapes?: string[];
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
   maxAttempts?: number;
@@ -96,6 +102,7 @@ export function readDirection(reply: unknown, durationSeconds: number): { direct
     if (typeof value === 'string' && colourPattern.test(value.trim())) palette[role] = value.trim();
   }
 
+  const decision = readTreatment(raw.treatment);
   const avoid = Array.isArray(raw.avoid)
     ? raw.avoid.map((entry: unknown) => oneLine(entry, 140)).filter((entry: string | undefined): entry is string => Boolean(entry)).slice(0, 5)
     : [];
@@ -104,6 +111,7 @@ export function readDirection(reply: unknown, durationSeconds: number): { direct
   return {
     problems: [],
     direction: {
+      ...(decision ? { treatment: decision } : {}),
       concept: concept!,
       art: oneLine(raw.art, 600) ?? '',
       ...(type ? { type } : {}),
@@ -116,9 +124,32 @@ export function readDirection(reply: unknown, durationSeconds: number): { direct
   };
 }
 
+/** The treatment, when the model wrote a usable one; dropped otherwise, like every other part of the direction that is only guidance. */
+function readTreatment(raw: unknown): DirectionTreatment | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const value = raw as Record<string, any>;
+  const candidates = (Array.isArray(value.candidates) ? value.candidates : []).slice(0, 4).flatMap((entry: any) => {
+    const structure = oneLine(typeof entry === 'string' ? entry : entry?.structure, 200);
+    const why = typeof entry === 'object' && entry ? oneLine(entry.why, 200) : undefined;
+    return structure ? [{ structure, ...(why ? { why } : {}) }] : [];
+  });
+  const chosen = Number(value.chosen);
+  if (candidates.length < 2 || !Number.isInteger(chosen) || chosen < 0 || chosen >= candidates.length) return undefined;
+  const logline = oneLine(value.logline, 240), signature = oneLine(value.signature, 200);
+  return { candidates, chosen, ...(logline ? { logline } : {}), ...(signature ? { signature } : {}) };
+}
+
+/** A direction's shape: its beat names in order. Two videos with the same shape have the same skeleton, whatever they look like. */
+export const directionShape = (direction: Pick<CreativeDirection, 'structure'>): string => direction.structure.map(beat => beat.name.trim().toLowerCase()).join(' > ');
+
 /** Renders the direction as the section of the coding prompt it becomes. */
 export function directionSection(direction: CreativeDirection): string {
   const lines = [`Concept: ${direction.concept}`];
+  if (direction.treatment) {
+    const chosen = direction.treatment.candidates[direction.treatment.chosen]!;
+    lines.push(`Chosen shape: ${chosen.structure}${direction.treatment.logline ? ` — ${direction.treatment.logline}` : ''}`);
+    if (direction.treatment.signature) lines.push(`Signature moment (the one people remember; build it with the most care): ${direction.treatment.signature}`);
+  }
   if (direction.art) lines.push(`Art direction: ${direction.art}`);
   if (direction.type) {
     const parts = [
@@ -156,11 +187,15 @@ const brandText = (brand: BrandPack): string => {
 const systemText = (options: DirectionOptions): string => {
   const duration = Math.round(options.durationSeconds);
   const brand = options.brand ? brandText(options.brand) : '';
+  const shapes = options.avoidShapes?.length
+    ? ['', '- Videos already made used these structures (beat names in order); yours must not repeat one:', ...options.avoidShapes.map(shape => `  ${shape}`)].join(String.fromCharCode(10))
+    : '';
   const plan = options.plan ? `The planner already made a first pass at this brief; keep what is right and replace what is not, rather than repeating a look you disagree with:
 ${JSON.stringify({ idea: options.plan.idea, look: options.plan.look, beats: options.plan.beats.map(beat => ({ name: beat.name, onScreen: beat.onScreen, seconds: beat.seconds })) })}` : '';
   return `You are the creative director for this video. Before any code is written, decide what this video is and what it looks, sounds and moves like. The direction you give is what the developer builds.
 Reply with ONE JSON object and nothing else:
 {
+  "treatment": { "candidates": [{ "structure": "one shape the video could take", "why": "what it does well" }, "... three genuinely different shapes"], "chosen": 0, "logline": "what the viewer knows at the end that they did not at the start", "signature": "the one moment people will remember" },
   "concept": "what this video is, in one sentence, specific to the brief",
   "art": "the visual language: composition, space, texture, light, colour logic and what makes it recognisable",
   "type": { "display": "<family>", "body": "<family>", "treatment": "how the type is set and moves" },
@@ -170,6 +205,7 @@ Reply with ONE JSON object and nothing else:
   "structure": [{ "name": "Hook", "seconds": 3, "idea": "what happens on screen" }],
   "avoid": ["the visual clichés this particular video must not fall into"]
 }
+- Treatment first: weigh three genuinely different shapes before you decide (a single journey, a before and after, a countdown, a list that turns, one worked example, one unbroken take). The first shape that comes to mind is usually the cliché, so choose from what this subject needs and say why. The structure below follows the chosen shape; something happens in the first 3 seconds, and the ending echoes the opening.${shapes}
 - The direction is yours to invent. There is no house style: a luxury watch, a documentary opener, a children's story and a developer tool must not share a composition, palette, type or motion.
 - Do not reach for defaults. Glass cards, bento grids, neon glow, floating dark gradients and a slow continuous zoom are not starting points; use one only if this brief genuinely earns it.
 - These worlds are starting points, listed in no order of preference. Name the one this subject belongs to, or invent a different one, and then make it specific to this brief rather than copying its tokens:
@@ -215,7 +251,13 @@ export async function writeDirection(provider: AiProvider, options: DirectionOpt
     let reply: unknown;
     try { reply = extractJson(text); } catch (error) { last = (error as Error).message; prior = { text, feedback: last }; continue; }
     const { direction, problems } = readDirection(reply, options.durationSeconds);
-    if (direction) return { direction, problems: [] };
+    if (direction) {
+      const repeated = options.avoidShapes?.includes(directionShape(direction));
+      if (!repeated) return { direction, problems: [] };
+      // The first answer that repeats a video already made goes back once; a second one is kept, because a direction that repeats a shape still beats none.
+      if (attempt < maxAttempts) { last = `The structure (${directionShape(direction)}) is the same as a video that was already made. Weigh the candidate shapes again and choose a different one.`; prior = { text, feedback: last }; continue; }
+      return { direction, problems: ['The structure repeats a video that was already made.'] };
+    }
     last = problems.join('\n');
     prior = { text, feedback: last };
   }
